@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Nonlinear effects and vector decomposition.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Nonlinear effects and vector decomposition.</h2>
+		<p><a href="viewtopic.php%3Ft=463.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=463</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Nonlinear effects and vector decomposition.</h3>
+				<div class="date">Posted: <strong>Sun Aug 13, 2006 5:16 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">I've talked breifly via email with Erwin over this one - he's been very helpful - but I thought I should probably bring it to the forum for wider comment.<br>
+<br>
+I have a really simple system comprising one large cuboid 'world' (500x10x500 units) and a 1x1x1 cube that's sliding along the top surface - propelled by impulses and using code broadly 'lifted' from the CcdPhysicsDemo demo program.  (My application is actually vastly more complex than this - but this is what I boiled it down to in an attempt to isolate a much deeper problem).<br>
+<br>
+If I hit the cube with an impulse directly along the X axis, it slides along for a while, slowing down due to friction - and then stops entirely when it's moving slower than some magic threshold.  Great!<br>
+<br>
+If I hit the cube with an impulse along a vector like maybe (0.9, 0, 0.1), the cube initially slides off at a slight angle to the X axis (as you'd expect) - but as it slows down it abruptly changes direction so that it's moving parallel to the X axis.   I deduced (and Erwin confirms) that this is because bullet is essentially doing the frictional calculations completely independently in the X and Z directions.   When the motion slows down sufficiently, the frictional forces bring the object to a complete halt - but because the calculation is being done independantly along each axis, the slower Z-direction motion is halted before the X-direction motion - so the object changes direction. <br>
+<br>
+Not good!<br>
+<br>
+Mathematically, you can only decompose motion into X, Y and Z axes and treat them separately if the motion is driven by linear functions of speed.  Neither friction nor drag are linear functions of speed - so what bullet is doing is wrong. Erwin tells me that this is a fairly common approximation - but I've played with several other physics packages and have not seen this kind of effect before - so perhaps something is just making it more obvious here.<br>
+<br>
+In my case, I want to push the cube along fairly slowly - and the effect of this problem is that the cube can only be pushed either directly parallel to the axes - or at angles close to 45 degrees to the axes where the speeds are roughly the same in both directions.   It is evident that at these speeds, this 'approximation' has grown big pointy teeth and turned into a big black hairy bug.  All of which makes bullet pretty much unusable for my application (which is seriously annoying because I just spent about 2 weeks learning bullet and integrating it into my application so I could get to the point of finding this out!)<br>
+<br>
+OK - so I need to fix this (or better still, I need to get someone else to fix it for me!) - can someone point me in the direction of the code that does this stuff - and/or suggest the measures I need to take?<br>
+<br>
+Er - oh yes: I'm using SuSE 9.3 Linux on a vanilla 32 bit PC - both bullet 1.8d and 1.9 exhibit the problem.<br>
+<br>
+Thanks in advance.<br>
+<br>
+      Steve.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Aug 13, 2006 11:35 pm</strong></div>
+				<div class="author">by <strong>feltstone</strong></div>
+				<div class="content">I'm new to the Bullet source code and definitely not a physicist...  But you might want to check out file:<br>
+<br>
+ContactConstraint.cpp <br>
+<br>
+and the function:<br>
+<br>
+resolveSingleFriction<br>
+<br>
+You can see the friction being broken down into two seperate vectors.  I am not sure what the solution would be to your problem, though...  A possible coordinate transformation, i.e. velocity vector is rotated to align with an axis and then friction calculations are made and then rotated back?<br>
+<br>
+feltstone</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 14, 2006 1:39 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Yeah - that looks plausible.<br>
+<br>
+If this is the right place in the code then the nonlinearity appears to be coming from the two sets of GEN_set_min and GEN_set_max calls which appear to be clamping 'total' to within +/- limit but doing so independently along the two axes.  So I think it would suffice to say that if one axis needs to be clamped then the other must be reduced by the same proportion...or perhaps don't do the clamp unless both axes need to be clamped...it's hard to say which is right.<br>
+<br>
+Well, at least that gives me a place to start digging.<br>
+<br>
+Many thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 14, 2006 5:00 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Well, replacing the existing 'resolveSingleFriction()' function with the code below seems to fix my sliding block problem - and all of the demo programs APPEAR to function identically.<br>
+<br>
+What I have changed is to say "If the friction down the first tangent direction had to be clamped - then the friction down the second tangent direction must be scaled down by the same proportion...and vice-versa."  That keeps my objects moving in a straight line  no matter which way they slide relative to the axes.<br>
+<br>
+Is there any kind of formal test suite I should run to verify that I havn't broken anything in the process of slashing my way into this?<br>
+<br>
+How do I go about getting this change committed into the next Bullet release?<br>
+<br>
+-------------------------------------------------------------------------------------------------------<br>
+<br>
+float resolveSingleFriction(<br>
+        RigidBody&amp; body1,<br>
+        RigidBody&amp; body2,<br>
+        ManifoldPoint&amp; contactPoint,<br>
+        const ContactSolverInfo&amp; solverInfo<br>
+<br>
+                )<br>
+{<br>
+<br>
+        const SimdVector3&amp; pos1 = contactPoint.GetPositionWorldOnA();<br>
+        const SimdVector3&amp; pos2 = contactPoint.GetPositionWorldOnB();<br>
+        const SimdVector3&amp; normal = contactPoint.m_normalWorldOnB;<br>
+<br>
+        SimdVector3 rel_pos1 = pos1 - body1.getCenterOfMassPosition();<br>
+        SimdVector3 rel_pos2 = pos2 - body2.getCenterOfMassPosition();<br>
+<br>
+        ConstraintPersistentData* cpd = (ConstraintPersistentData*) contactPoint.m_userPersistentData;<br>
+        assert(cpd);<br>
+<br>
+        float combinedFriction = cpd-&gt;m_friction;<br>
+<br>
+        SimdScalar limit = cpd-&gt;m_appliedImpulse * combinedFriction;<br>
+        //if (contactPoint.m_appliedImpulse&gt;0.f)<br>
+        //friction<br>
+        {<br>
+                //apply friction in the 2 tangential directions<br>
+<br>
+                SimdScalar relaxation = solverInfo.m_damping;<br>
+<br>
+                SimdVector3 vel1 = body1.getVelocityInLocalPoint(rel_pos1);<br>
+                SimdVector3 vel2 = body2.getVelocityInLocalPoint(rel_pos2);<br>
+                SimdVector3 vel = vel1 - vel2;<br>
+<br>
+                // 1st &amp; 2nd tangent<br>
+<br>
+                SimdScalar vrel1 = cpd-&gt;m_frictionWorldTangential0.dot( vel ) ;<br>
+                SimdScalar vrel2 = cpd-&gt;m_frictionWorldTangential1.dot( vel ) ;<br>
+<br>
+                // calculate j that moves us to zero relative velocity<br>
+                SimdScalar j1 = -vrel1 * cpd-&gt;m_jacDiagABInvTangent0 ;<br>
+                SimdScalar j2 = -vrel2 * cpd-&gt;m_jacDiagABInvTangent1 ;<br>
+<br>
+                float total1 = cpd-&gt;m_accumulatedTangentImpulse0 + j1 ;<br>
+                float total2 = cpd-&gt;m_accumulatedTangentImpulse1 + j2 ;<br>
+<br>
+                if ( total1 &gt;  limit ) { total2 *=  limit/total1 ; total1 =  limit ; }<br>
+                if ( total1 &lt; -limit ) { total2 *= -limit/total1 ; total1 = -limit ; }<br>
+                if ( total2 &gt;  limit ) { total1 *=  limit/total2 ; total2 =  limit ; }<br>
+                if ( total2 &lt; -limit ) { total1 *= -limit/total2 ; total2 = -limit ; }<br>
+<br>
+                j1 = total1 - cpd-&gt;m_accumulatedTangentImpulse0;<br>
+                j2 = total2 - cpd-&gt;m_accumulatedTangentImpulse1;<br>
+                cpd-&gt;m_accumulatedTangentImpulse0 = total1;<br>
+                cpd-&gt;m_accumulatedTangentImpulse1 = total2;<br>
+                body1.applyImpulse(j1 *  cpd-&gt;m_frictionWorldTangential0,<br>
+                                                                rel_pos1 ) ;<br>
+                body2.applyImpulse(j1 * -cpd-&gt;m_frictionWorldTangential0,<br>
+                                                                rel_pos2 ) ;<br>
+                body1.applyImpulse(j2 *  cpd-&gt;m_frictionWorldTangential1,<br>
+                                                                rel_pos1 ) ;<br>
+                body2.applyImpulse(j2 * -cpd-&gt;m_frictionWorldTangential1,<br>
+                                                                rel_pos2 ) ;<br>
+        }<br>
+        return cpd-&gt;m_appliedImpulse ;<br>
+}</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 14, 2006 4:43 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The error you observe could be because the friction directions are solved indepently. I read somewhere that with Gauss-Seidel you get an ansiotropic friction behaviour, so I suggest that you try the following things:<br>
+<br>
+1) Align the friction impulse with the relative tangential velocity at the contact point. If this is zero choose two arbitrary directions.<br>
+<br>
+2) Apply the friction at the center of the manifold and add an additional twist impulse. <br>
+<br>
+See Erin Cattos presentations for more details...<br>
+<br>
+You could also try to solve the two friction constraints simultaneously (Block Gauss Seidel). Instead of solving two 1D constraints you must solve a 2D LCP instead. I think Erwin has an example for this as well, if not simply use a Danzig method like for example used by Kawachi (seek the forum for links). It might be that this is unecessary, because the tangential directions are orthogonal and the resulting system therefore diagonal, but I never looked into this.<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 14, 2006 10:54 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Um - OK.  Trouble is that I'm not a physics guru and I think I only understood 50% of the words you used!<br>
+<br>
+At any rate - the fix I posted works great.  All I understand of the code is that if you do something to one axis of the motion, you'd better do something proportional to the other axis or it's not going to go straight.  So I just set things up so that if one axis was clamped then the other axis would be reduced proportionately.<br>
+<br>
+This sounds (naively) like a good thing to do - and indeed it works just fine.<br>
+<br>
+But if there is something horribly wrong with doing that physics-wise, I'm happy to be educated!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 15, 2006 2:11 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Steve,<br>
+<br>
+You solution seems okay. The lateral friction strength will dimish the faster the body slides, so that may be undesirable.<br>
+<br>
+Another solution is to adjust m_frictionWorldTangential0 to be parallel to the relative velocity projected into the plane. Then m_frictionWorldTangential1 should be perpendicular to the planar velocity and the normal. I haven't tried this, so be careful if you go this route.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 15, 2006 11:14 am</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>Steve,<br>
+<br>
+You solution seems okay. The lateral friction strength will dimish the faster the body slides, so that may be undesirable.<br>
+<br>
+Another solution is to adjust m_frictionWorldTangential0 to be parallel to the relative velocity projected into the plane. Then m_frictionWorldTangential1 should be perpendicular to the planar velocity and the normal. I haven't tried this, so be careful if you go this route.</div></blockquote>
+
+I think that would be the solution, that is, to project the velocity vector of the moving object over the plane over which the object is slinding.<br>
+<br>
+Then, if the projected vector is below the static friction, you either substract the projected velocity from the original object velocity, or simply set the object velocity to zero.<br>
+<br>
+For dynamic friction, you do the calculus with the projected vector modulus, but, apply the result to the original object velocity, so all axes are affected equally.<br>
+<br>
+The only problem I see, and the reason because Erwin is doing the calculus per axes, is that you need a square root, which can affect performance.<br>
+<br>
+Maybe we could have both methods, a fast and an accurate one, and be able to select which one to use.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Aug 25, 2006 6:52 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks Steve and others for the suggestion.<br>
+<br>
+In the short term, it's probably best to enable multiple friction models that can be chosen in the API.<br>
+<br>
+Added as a feature request here:<br>
+<a href="http://code.google.com/p/bullet/issues/list" class="postlink">http://code.google.com/p/bullet/issues/list</a><br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

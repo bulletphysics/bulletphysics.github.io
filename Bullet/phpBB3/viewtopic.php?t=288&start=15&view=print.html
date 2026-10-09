@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Contact Manifold Generation: A question about GJK - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Contact Manifold Generation: A question about GJK</h2>
+		<p><a href="viewtopic.php%3Ft=288.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=288</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 02, 2006 5:45 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>melax wrote:</cite>In particular when taking the cross product with an edge on the other side there would be two possible options, and you end up just hardcoding one of the choices.   
+</div></blockquote>
+
+I just wanted to find the triangle with the largest area. So for triangle ABC, it would be 0.5 * |AB x BC|. Because I'm only interested in relative area, I don't take the square root and 0.5.<br>
+<br>
+Thanks for the suggestion. However, take a circle with more then 4 points. Wouldn't your algorithms only take triangles along the border into account, not the full area?<br>
+<br>
+A couple of other idea were brought up: Only add a new point if it makes the area bigger. This results in more stable simulation, especially for certain constraint solvers. GJK typically gives points anywhere on the surface.<br>
+<br>
+Another consideration is to only throw away one point per frame. This adds symmetry of adding only one point per frame. It makes simulation also more stable. I haven't had the chance to add this contribution. Although not perfect, I'm happy with the results, and other areas need more urgent attention.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 02, 2006 5:06 pm</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Thanks for the suggestion. However, take a circle with more then 4 points. Wouldn't your algorithms only take triangles along the border into account, not the full area?
+</div></blockquote>
+
+At each "greedy" incremental step the difference in total area by replacing one point <strong class="text-strong">b</strong> with another <strong class="text-strong">b'</strong> *is* the difference in sizes of the two 'border' triangles: the existing one <em class="text-italics">||(b-a)X(c-b)||</em> and the new candidate <em class="text-italics">||(b'-a)X(c-b')||</em>.  The rest of the area is likely to remain unchanged.  I only say "<em class="text-italics">likely</em>" since it is remotely possible that the new point, if far enough out, will also sweep additional area making s neighboring point <em class="text-italics">a</em> or <em class="text-italics">c</em> concave.  That will no longer happen once all the points are in fact somewhere on the limits of the convex contact manifold.  <br>
+<br>
+Say the contact manifold is shaped like an ellipse with more than four points.  Furthermore, when the faces of two bodies are parallel gjk can end up returning any contact point along the edge or in the interior.   So over many frames the persistant manifold algorithm is gets a sequence of contacts that is like random points from within this area.   You would want the algorithm to efficiently converge to the maximum-area rectangle inscribed within the ellipse.  When those less-suitable contact candidates come along (that would reduce area) they are rejected and do not replace the optimal ones (due to the equations proposed).<br>
+<br>
+I didn't explain one detail previously.   Instead of doing dotting the cross product with itself to get the magnitude squared (dot(cp,cp)), I take the dot product with the normal of the contact patch.   The normal doesn't have to be unit length since we only are doing this for comparison with another dot product and/or with zero.  The advantage is you have a signed area.  This way all the points end up in ccw order in the array which just makes life easier.<br>
+<br>
+Referring back to your implementation...<br>
+if instead of just doing the cross product wrt just one edge on the other side of the contact patch, you could sum up the area (do cross products) for both of the other opposing edges (c,d) and (d,a).    Later, if the code was then optimized so that identical terms are dropped from both sides of the comparison equation, then I suspect it would no longer depends on the far point <strong class="text-strong">d</strong> and we would both end up with identical code.<br>
+<br>
+Like I said, it was just a minor suggestion.  Feel free to take it or ignore it.<br>
+<br>
+On the other topics you mention... <br>
+Yes that likely is a good idea to drop points the same way you add them.     <br>
+<br>
+I wish I had more time to try more of these things.  (i'm not the low-level engine guy)</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

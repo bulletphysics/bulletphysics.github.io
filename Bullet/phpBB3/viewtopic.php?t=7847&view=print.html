@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [Solved] Ogre3d + Bullet - Sphere not rolling</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[Solved] Ogre3d + Bullet - Sphere not rolling</h2>
+		<p><a href="viewtopic.php%3Ft=7847.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7847</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[Solved] Ogre3d + Bullet - Sphere not rolling</h3>
+				<div class="date">Posted: <strong>Tue Feb 07, 2012 11:30 pm</strong></div>
+				<div class="author">by <strong>joaopccosta</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I have the following problem. I am using Bullet with Ogre in order to create a bowling game.<br>
+All the physics are perfectly fine except for one thing... When I throw the ball, it doesn't roll. In fact, it seems to slide over the bowling lane... I have tried using different method to apply impulse on the ball, fiddled with the physical properties, double checked that I am creating the correct btCollisionShape, and nothing seems to change it. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+<br>
+Sphere shape and SceneNode creation:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// Create shape in my Physics Manager class
+// ...
+btCollisionShape aBall = new btSphereShape(1.5f);
+createBall("ball", Ogre::Vector3(1.5f, 1.5f, 1.5f), Ogre::Vector3(0,1.5f, -1*(arena_measures.z/2)+10), 200.0, aBall); 
+// ...
+
+void CriterionBowling::createBall(const char *name, const Ogre::Vector3 &amp;size, const Ogre::Vector3 &amp;pos, float mass, btCollisionShape &amp;shape)
+{
+	// Create ogre scene node
+	Ogre::SceneNode* node1 = mSceneMgr-&gt;getRootSceneNode()-&gt;createChildSceneNode(name);
+     
+	// Create our rigidboy using our Bullet Wrapper
+    btRigidBody &amp;body = mPhysics.createBody(btTransform(btQuaternion::getIdentity(), btVector3(pos.x, pos.y, pos.z)), mass, shape);
+	// Set some physical properties
+	//...
+	
+	// Add it to our bowling simulation
+	mBall = new Ball(*node1,body);
+    
+    // Get its mesh 
+    Ogre::Entity *entity = mSceneMgr-&gt;createEntity(name, "sphere.mesh");
+    // Give it a texture
+    entity-&gt;setMaterialName("BowlingBall");
+    node1-&gt;attachObject(entity);	
+}
+</code></pre></div>
+
+So I guess I'm doing everything right until here... correct?<br>
+<br>
+Bowling ball throw and update:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void Ball::throw(const Vector3 force)
+{	
+	// Lock the ball --&gt; player can't control it anymore
+	locked = true;
+
+	this-&gt;mRigidBody.activate(true);
+
+	// Apply force to the rigidbody
+	this-&gt;mRigidBody.applyCentralImpulse(btVector3(force.x,force.y,force.z));	
+
+}
+void Ball::update()
+{
+		// Get Bullet transformation matrix
+		btTransform transform;
+ 
+		// Get the transformation of this rigidbody in the transformation matrix
+		mRigidBody.getMotionState()-&gt;getWorldTransform(transform);
+ 
+		// Obtain the rotation and update the graphical representation
+		btQuaternion rotation(transform.getRotation());
+		node.setOrientation(rotation.getW(), rotation.getX(), rotation.getY(), rotation.getZ());
+		 
+		// Update the position
+		const btVector3 &amp;origin = transform.getOrigin();			
+		node.setPosition(origin.getX(), origin.getY(), origin.getZ());		
+
+
+}
+</code></pre></div>
+What about this part? <br>
+<br>
+I have no clue of I might be doing wrong... Could it be the physical properties of the lane floor and/or ball??<br>
+<br>
+Thanks in advance!<br>
+Cheers, <br>
+Joao</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [Solved] Ogre3d + Bullet - Sphere not rolling</h3>
+				<div class="date">Posted: <strong>Wed Feb 08, 2012 7:10 pm</strong></div>
+				<div class="author">by <strong>joaopccosta</strong></div>
+				<div class="content">It was a problem with using env_map spherical in the ball's texture_unit in the materials script...</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

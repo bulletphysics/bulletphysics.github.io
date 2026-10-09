@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13478" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-09-12T13:58:45+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13478</id>
+
+		<entry>
+		<author><name><![CDATA[renatyv]]></name></author>
+		<updated>2022-09-12T13:58:45+00:00</updated>
+
+		<published>2022-09-12T13:58:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44117#p44117</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44117#p44117"/>
+		<title type="html"><![CDATA[getContactPoints() returns wrong points positions]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44117#p44117"><![CDATA[
+I'm trying to get contact points between rigid body and soft body, see attached zip archive with the source code, .vtk, and .obj files.<br><a href="https://github.com/bulletphysics/bullet3/files/9491400/getContactPointsBug.zip" class="postlink">https://github.com/bulletphysics/bullet ... ntsBug.zip</a><br><br>Here the soft body cylinder is dropped on a plane located at height z=0. After cylinder reaches the plane, z-coordinate of the contact points must be around zero, definitely not z=1. Moreover, contact points in world coordinates for both the plane and cylinder must be approximately the same (z coordinate must not be reversed).<br>But I get the following tuple returned by the p.getContactPoints():<br><blockquote class="uncited"><div>(0, 1, 0, -1, -1, (-2.759741412921471e-12, -2.26367090816533e-12, -1.0), (2.759741412921471e-12, 2.26367090816533e-12, 1.0), (2.759741412921471e-12, 2.26367090816533e-12, 1.0), -0.000944430001919847, 1.0, 0.0, (0.0, 0.0, 0.0), 0.0, (0.0, 0.0, 0.0))</div></blockquote>Look at the contact points and normals, they are completely wrong (probably swapped?): p.getContactPoints() returns contact points coordinates with z=1<br><br>It seems that I get the normals instead of the contact points(z). Moreover, number of contact points is too large.<br><div class="codebox"><p>Code: </p><pre><code>import pybullet as pDEBUG_CAMERA_YAW = 0.0DEBUG_CAMERA_PITCH = -20.0DEBUG_CAMERA_DISTANCE = 0.3p.connect(p.GUI)# p.connect(p.DIRECT)p.setRealTimeSimulation(0)  # 240 fpsp.setPhysicsEngineParameter(enableFileCaching=0)p.resetSimulation(p.RESET_USE_DEFORMABLE_WORLD)p.setGravity(0, 0, -9.8)p.resetDebugVisualizerCamera(cameraDistance=DEBUG_CAMERA_DISTANCE,                             cameraYaw=DEBUG_CAMERA_YAW,                             cameraPitch=DEBUG_CAMERA_PITCH,                             cameraTargetPosition=[0, 0, 0.15])E = 400# nu = 0...0.5, poisson ratio# nu =  0.45nu = 0.45nh_lamda = E*nu/(1+nu)/(1-2*nu)nh_mu = E/2/(1+nu)plane_id = p.loadURDF("plane.urdf",                      basePosition=[0, 0, 0],                      useFixedBase=1)cylinder_id: int = p.loadSoftBody("cylinder.vtk",                                  basePosition=[0, 0, 0.1],                                  baseOrientation=[0, 0, 0, 1],                                  simFileName="cylinder.vtk",                                  mass=0.02,                                  scale=1.0,                                  useNeoHookean=1,                                  NeoHookeanMu=nh_mu,                                  NeoHookeanLambda=nh_lamda,                                  NeoHookeanDamping=0.05,                                  collisionMargin=0.0005,                                  useSelfCollision=0,                                  frictionCoeff=0.05,                                  repulsionStiffness=100)for _ in range(320):    p.stepSimulation()    contact_points = p.getContactPoints()    if len(contact_points) &gt; 0:        print(contact_points[0])        break</code></pre></div>M1 MacBook Pro, pybullet==3.2.5, numpy==1.23.2<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14428">renatyv</a> — Mon Sep 12, 2022 1:58 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

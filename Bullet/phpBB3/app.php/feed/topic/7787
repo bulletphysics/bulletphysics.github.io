@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7787" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2012-11-14T18:07:53+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7787</id>
+
+		<entry>
+		<author><name><![CDATA[dlx]]></name></author>
+		<updated>2012-11-14T18:07:53+00:00</updated>
+
+		<published>2012-11-14T18:07:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29237#p29237</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29237#p29237"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29237#p29237"><![CDATA[
+Hi jarno,<br><br>Do you have any intention to contribute your implementation back to bullet physics?<br><br>Regards.....<br><br><blockquote class="uncited"><div>I've been rewriting a lot of the Bullet softbody collision code redoing the vertex-face collision detection, adding edge-edge detection, supporting self-collision with the same, and sprinkling it with multithreading.<br><br>Like the Brochu et al. paper I do the constant velocity approximation. I initially tried the approach of solving the cubic, but that proved to be too unstable and too slow. Instead I approximated it to a quadratic.<br><br>For example, the vertex-face case is equivalent to determining when the plane of the face moves through the origin (by considering everything relative to the vertex). As all the vertices are moving linearly, this is normally a cubic problem as the normal direction (non-normalised) of the plane changes cubically over time. But for small timesteps the cubic term of the normal direction turns out to be very small compared to the other terms (one reason why solving the cubic tends to be unstable). So I drop it and solve the resulting quadratic.<br>I should note that I use fairly small timesteps compared with typical Bullet use, such as 1/180th of a second.<br><br>The results look quite similar to the ones presented in the paper, with cloth stacking up on itself without self-intersecting.<br><br>I do find that I still need to have a collision margin to avoid vertices from switching sides when sliding over a surface, but it is very small (I default to a few millimetres). I haven't figured out a good and cheap way of keeping track of which side of the (often not closed) surface each vertex should remain while sliding.<br><br>---JvdL---</div></blockquote><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9486">dlx</a> — Wed Nov 14, 2012 6:07 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2012-09-14T14:51:48+00:00</updated>
+
+		<published>2012-09-14T14:51:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28746#p28746</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28746#p28746"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28746#p28746"><![CDATA[
+<blockquote class="uncited"><div>The edge versus edge case can be converted to a vertex versus plane problem by collapsing one edge to a point, and extruding the other edge in the same direction to form a quadrilateral.</div></blockquote>A-ha! That's the trick I was missing. Thanks for the idea!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Fri Sep 14, 2012 2:51 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jarno]]></name></author>
+		<updated>2012-09-14T05:53:48+00:00</updated>
+
+		<published>2012-09-14T05:53:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28741#p28741</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28741#p28741"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28741#p28741"><![CDATA[
+Edge versus edge can actually be transformed to be similar to vertex versus face.<br>In short, vertex versus face with linearly moving vertices is done by:<ol style="list-style-type:decimal"><li>Convert to vertex versus plane by determining the plane equation for the face</li><li>Convert to origin versus plane by considering the problem relative to the vertex</li><li>Solve the resulting cubic equation, or use the quadratic approximation, to get the potential collision time values</li><li>Check each potential collision time for actual collision by evaluating the vertex positions at those times and doing a vertex inside/outside face check</li></ol>The edge versus edge case can be converted to a vertex versus plane problem by collapsing one edge to a point, and extruding the other edge in the same direction to form a quadrilateral.<br>Compute the plane equation for that quadrilateral, and now you have a vertex versus plane problem just like with vertex-face.<br>Solve as before (steps 2 and 3) to get the potential collision times, and check each time with a full edge versus edge intersection test. And yes, this last step does have an annoying number of cases to check with some care needed for numeric stability.<br><br>Some care also has to be taken when computing the plane equation due to degeneracies, for example if the two edges are parallel at the start or end of the time interval.<br><br>I then put the resulting edge-edge collision data in an array similar to what SContact is for vertex-face, and process it in btSoftBody::PSolve_SContacts().<br><br>---JvdL---<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6462">jarno</a> — Fri Sep 14, 2012 5:53 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2012-09-13T19:02:38+00:00</updated>
+
+		<published>2012-09-13T19:02:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28738#p28738</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28738#p28738"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28738#p28738"><![CDATA[
+Do you mind sharing how you handle the edge-edge case? My version is atrocious, but basically works.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Thu Sep 13, 2012 7:02 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jarno]]></name></author>
+		<updated>2012-09-12T03:37:32+00:00</updated>
+
+		<published>2012-09-12T03:37:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28732#p28732</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28732#p28732"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28732#p28732"><![CDATA[
+I've been rewriting a lot of the Bullet softbody collision code redoing the vertex-face collision detection, adding edge-edge detection, supporting self-collision with the same, and sprinkling it with multithreading.<br><br>Like the Brochu et al. paper I do the constant velocity approximation. I initially tried the approach of solving the cubic, but that proved to be too unstable and too slow. Instead I approximated it to a quadratic.<br><br>For example, the vertex-face case is equivalent to determining when the plane of the face moves through the origin (by considering everything relative to the vertex). As all the vertices are moving linearly, this is normally a cubic problem as the normal direction (non-normalised) of the plane changes cubically over time. But for small timesteps the cubic term of the normal direction turns out to be very small compared to the other terms (one reason why solving the cubic tends to be unstable). So I drop it and solve the resulting quadratic.<br>I should note that I use fairly small timesteps compared with typical Bullet use, such as 1/180th of a second.<br><br>The results look quite similar to the ones presented in the paper, with cloth stacking up on itself without self-intersecting.<br><br>I do find that I still need to have a collision margin to avoid vertices from switching sides when sliding over a surface, but it is very small (I default to a few millimetres). I haven't figured out a good and cheap way of keeping track of which side of the (often not closed) surface each vertex should remain while sliding.<br><br>---JvdL---<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6462">jarno</a> — Wed Sep 12, 2012 3:37 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2012-09-11T17:47:22+00:00</updated>
+
+		<published>2012-09-11T17:47:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28730#p28730</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28730#p28730"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28730#p28730"><![CDATA[
+A promising approach is <a href="http://www.cs.ubc.ca/labs/imager/tr/2012/ExactContinuousCollisionDetection/BEB2012.html" class="postlink">Efficient Geometrically Exact Continuous Collision Detection</a> by T. Brochu, E. Edwards, and R. Bridson, Proc. SIGGRAPH 2012. <br><br>It is open-source code and I made a fork that compiles on Windows, Linux and Mac OSX here:<br><a href="https://github.com/erwincoumans/experiments/tree/master/dynamics/exact-ccd" class="postlink">https://github.com/erwincoumans/experim ... /exact-ccd</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Sep 11, 2012 5:47 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[freemancw]]></name></author>
+		<updated>2012-08-09T00:04:22+00:00</updated>
+
+		<published>2012-08-09T00:04:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28496#p28496</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28496#p28496"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28496#p28496"><![CDATA[
+Some additional resources...<br><a href="http://gamma.cs.unc.edu/CSTREAMS/" class="postlink">http://gamma.cs.unc.edu/CSTREAMS/</a><br><a href="http://gamma.cs.unc.edu/research/collision/" class="postlink">http://gamma.cs.unc.edu/research/collision/</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9042">freemancw</a> — Thu Aug 09, 2012 12:04 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dani3L]]></name></author>
+		<updated>2012-06-08T10:27:25+00:00</updated>
+
+		<published>2012-06-08T10:27:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28058#p28058</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28058#p28058"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28058#p28058"><![CDATA[
+There is also the method : <a href="http://www.beosil.com/download/CollisionDetectionHashing_VMV03.pdf" class="postlink">Optimized Spatial Hashing for Collision Detection of Deformable Objects</a> that is used in <a href="http://www.matthiasmueller.info/publications/posBasedDyn.pdf" class="postlink">Position Based Dynamics</a> for cloth simulation.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=5337">Dani3L</a> — Fri Jun 08, 2012 10:27 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mobeen]]></name></author>
+		<updated>2012-01-24T04:52:48+00:00</updated>
+
+		<published>2012-01-24T04:52:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26801#p26801</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26801#p26801"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26801#p26801"><![CDATA[
+HI Erwin,<br>   Thanks for the reply. Well I wanted to see what has been done in collision detection for cloth<br>this includes collision with concave and convex meshes as well as self collision and collision between two clothes. I wanted to see what is the state of the art in this.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8124">mobeen</a> — Tue Jan 24, 2012 4:52 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kloplop321]]></name></author>
+		<updated>2012-01-24T03:18:06+00:00</updated>
+
+		<published>2012-01-24T03:18:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26799#p26799</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26799#p26799"/>
+		<title type="html"><![CDATA[Re: Cloth collision detection-What is the currnt stateof the]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26799#p26799"><![CDATA[
+The issue is still up that cloth does not self collide.<br>Shouldn't that be updated on google code if it is the case?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8992">kloplop321</a> — Tue Jan 24, 2012 3:18 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Hollow shapes</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Hollow shapes</h2>
+		<p><a href="viewtopic.php%3Ft=11962.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11962</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Hollow shapes</h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2017 10:52 am</strong></div>
+				<div class="author">by <strong>ardabbour</strong></div>
+				<div class="content">Hello, I'm trying to detect collision between shapes that can be placed within each other. I created a hollow shape and its filling in SolidWorks, then exported them to URDF format using the popular ROS addon for this job. The STL file used for the mesh is correct and representative of the hollowness of the shape, but the mesh produced in the physics simulation is not really hollow when I use the simple p.loadURDF method. Is there a way to represent hollow 3D shapes?<br>
+<br>
+EDIT: I figured out that if we import shapes as .obj files using the createCollisionShape method and the GEOM_FORCE_CONCAVE_TRIMESH flag, we can represent the shapes correctly. Now the problem is that this is valid only for non-movable objects (as per the pybullet quickstart guide), and I cannot detect collision between two objects whose meshes are made of concave triangles. Does anyone know how to (if possible) detect collision and penetration depth between two moving concave objects?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hollow shapes</h3>
+				<div class="date">Posted: <strong>Wed Jan 03, 2018 5:06 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Yes, you can create a convex decomposition of the object, using HACD. The duck and teddy bear URDF files are examples of this.<br>
+<br>
+<a href="https://github.com/bulletphysics/bullet3/blob/master/data/duck_vhacd.urdf" class="postlink">https://github.com/bulletphysics/bullet ... vhacd.urdf</a><br>
+<a href="https://github.com/bulletphysics/bullet3/blob/master/data/teddy_vhacd.urdf" class="postlink">https://github.com/bulletphysics/bullet ... vhacd.urdf</a><br>
+<br>
+The test_vhacd executable can do this conversion. <br>
+<br>
+Use premake to build Bullet from source to get this binary:<br>
+git clone <a href="https://github.com/bulletphysics/bullet3" class="postlink">https://github.com/bulletphysics/bullet3</a><br>
+cd bullet3/build3<br>
+./premake4_osx gmake<br>
+cd gmake<br>
+ make test_vhacd<br>
+../../bin/test_vhacd_gmake_x64_release</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hollow shapes</h3>
+				<div class="date">Posted: <strong>Tue Jan 23, 2018 9:39 am</strong></div>
+				<div class="author">by <strong>ardabbour</strong></div>
+				<div class="content">Thank you very much, this worked perfectly!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hollow shapes</h3>
+				<div class="date">Posted: <strong>Mon Apr 09, 2018 5:43 pm</strong></div>
+				<div class="author">by <strong>adamweshall</strong></div>
+				<div class="content">I did a similar thing using this plugin for blender<br>
+<br>
+<a href="https://github.com/kmammou/v-hacd" class="postlink">https://github.com/kmammou/v-hacd</a><br>
+<br>
+However, I found pybullet still applied a bounding box to the mesh that was produced anyways. I had to save a number of individual meshes (as STL files) and then add multiple collision geometries to one link.<br>
+<br>
+Or maybe it didn't work because I was using STL file? Should I be using .obj files?<br>
+<br>
+Edit: I think I may have answered my own question. Using a .obj seems work better than using multiple STLs.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hollow shapes</h3>
+				<div class="date">Posted: <strong>Mon Feb 03, 2020 6:18 pm</strong></div>
+				<div class="author">by <strong>Alireza</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=40285#p40285"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=2.html">Erwin Coumans</a> wrote: <a href="viewtopic.php%3Fp=40285.html#p40285" data-post-id="40285" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed Jan 03, 2018 5:06 pm</span></cite>
+Yes, you can create a convex decomposition of the object, using HACD. The duck and teddy bear URDF files are examples of this.<br>
+<br>
+<a href="https://github.com/bulletphysics/bullet3/blob/master/data/duck_vhacd.urdf" class="postlink">https://github.com/bulletphysics/bullet ... vhacd.urdf</a><br>
+<a href="https://github.com/bulletphysics/bullet3/blob/master/data/teddy_vhacd.urdf" class="postlink">https://github.com/bulletphysics/bullet ... vhacd.urdf</a><br>
+<br>
+The test_vhacd executable can do this conversion. <br>
+<br>
+Use premake to build Bullet from source to get this binary:<br>
+git clone <a href="https://github.com/bulletphysics/bullet3" class="postlink">https://github.com/bulletphysics/bullet3</a><br>
+cd bullet3/build3<br>
+./premake4_osx gmake<br>
+cd gmake<br>
+ make test_vhacd<br>
+../../bin/test_vhacd_gmake_x64_release
+</div></blockquote>
+
+<br>
+So when we do the decomposition of a concave stl file with vhacd, we will be left with one obj file in the end that we load inside the urdf right? or for each decomposed convex mesh we should get a separate obj file that we load each differently?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hollow shapes</h3>
+				<div class="date">Posted: <strong>Fri Feb 21, 2020 9:01 pm</strong></div>
+				<div class="author">by <strong>bullet_team</strong></div>
+				<div class="content">It can be 1 obj file that has multiple convex parts. That's how the vhacd util works.<br>
+<br>
+See for example this file:<br>
+<a href="https://github.com/bulletphysics/bullet3/blob/master/data/teddy2_VHACD_CHs.obj" class="postlink">https://github.com/bulletphysics/bullet ... CD_CHs.obj</a><br>
+<br>
+Each convex object is marked with 'o'</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

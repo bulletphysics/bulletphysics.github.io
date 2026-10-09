@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btKinematicCharacterController, forward dir is not forward</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btKinematicCharacterController, forward dir is not forward</h2>
+		<p><a href="viewtopic.php%3Ft=9372.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9372</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btKinematicCharacterController, forward dir is not forward</h3>
+				<div class="date">Posted: <strong>Wed Aug 28, 2013 8:40 pm</strong></div>
+				<div class="author">by <strong>konri100</strong></div>
+				<div class="content">So i've got problem with btKinematicCharacterController.<br>
+<br>
+White lines are bullet debug lines.<br>
+Red arrow is where the forward dir is supposed to be.<br>
+Red lines is where the front of the object is supposed to be.<br>
+Green arrow is where the forward dir really is, at least in this direction the object is going to.<br>
+<br>
+Ogre mesh has inverted rotation so it faces the right direction.<br>
+<br>
+<img src="http://img845.imageshack.us/img845/4027/bb1g.jpg" class="postimage" alt="Image"><br>
+<img src="http://img59.imageshack.us/img59/3897/iyz5.jpg" class="postimage" alt="Image"><br>
+<img src="http://img692.imageshack.us/img692/9766/je8e.jpg" class="postimage" alt="Image"><br>
+<br>
+Some code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9372&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    Ogre::Entity* ent = pSceneMgr-&gt;createEntity("SinbadBody", "Sinbad.mesh");
+    Ogre::SceneNode* sphereNode = pSceneMgr-&gt;getRootSceneNode()-&gt;createChildSceneNode();
+    sphereNode-&gt;attachObject(ent);
+    Ogre::Vector3 halfsize = ent-&gt;getBoundingBox().getHalfSize();
+    ent-&gt;setCastShadows(true);
+
+    sphereNode-&gt;setPosition(0,20,0);
+
+    btConvexShape* capsule = new btBoxShape(ToBullet(halfsize));
+    characterBody = pBullet-&gt;addGhostObject(sphereNode-&gt;getPosition(), capsule, sphereNode);
+
+    btScalar stepHeight = btScalar(0.35);
+    Character = new btKinematicCharacterController(characterBody,capsule,stepHeight);
+    Character-&gt;setJumpSpeed(15);
+    pBullet-&gt;getWorld()-&gt;addCollisionObject(characterBody,btBroadphaseProxy::CharacterFilter,     btBroadphaseProxy::StaticFilter|btBroadphaseProxy::DefaultFilter);
+    pBullet-&gt;getWorld()-&gt;addAction(Character);
+</code></pre></div>
+
+in main loop:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9372&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//character
+    Ogre::SceneNode* characterNode = (Ogre::SceneNode*)(characterBody-&gt;getUserPointer());
+
+    bool forward = false, backward = false, left = false, right = false, jump = false;
+
+    if(pKeyboard-&gt;isKeyDown(OIS::KC_A))
+    {
+        left = true;
+    }
+    else if(pKeyboard-&gt;isKeyDown(OIS::KC_D))
+    {
+        right = true;
+    }
+
+    if(pKeyboard-&gt;isKeyDown(OIS::KC_W))
+    {
+        forward = true;
+    }
+    else if(pKeyboard-&gt;isKeyDown(OIS::KC_S))
+    {
+        backward = true;
+    }
+    if(pKeyboard-&gt;isKeyDown(OIS::KC_SPACE))
+    {
+        jump = true;
+    }
+
+    btTransform xform;
+    xform = characterBody-&gt;getWorldTransform();
+
+    btVector3 forwardDir = xform.getBasis()[2];
+    btVector3 upDir = xform.getBasis()[1];
+    btVector3 strafeDir = xform.getBasis()[1];
+    forwardDir.normalized();
+    upDir.normalized();
+    strafeDir.normalized();
+    btVector3 walkDirection(0,0,0);
+    btScalar walkVelocity(1.1*8.0);// 4 km/h -&gt; 1.1 m/s
+    btScalar walkSpeed(walkVelocity*(DeltaTime/1000.0f));
+
+    Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;(characterBody-&gt;getUserPointer());
+
+    if(left)
+    {
+        turnAngle -= DeltaTime * 0.003f;
+    }
+
+    if(right)
+    {
+        turnAngle += DeltaTime * 0.003f;
+    }
+    xform.setRotation(btQuaternion (btVector3(0.0, 1.0, 0.0), turnAngle));
+    characterBody-&gt;setWorldTransform (xform);
+
+    //here is inverted(?) turnAngle of ogre mesh, so it faces the right direction that the bullet kinematic character is going to
+    node-&gt;setOrientation(Ogre::Quaternion(-(Ogre::Radian)turnAngle, Ogre::Vector3(0.0, 1.0, 0.0)));
+
+    if(forward)
+    {
+        walkDirection += forwardDir;
+    }
+
+    if(backward)
+    {
+        walkDirection -= forwardDir;
+    }
+
+    if(jump &amp;&amp; Character-&gt;canJump())
+    {
+        Character-&gt;jump();
+    }
+
+    Character-&gt;setWalkDirection(walkDirection * walkSpeed);
+</code></pre></div>
+
+in main loop:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9372&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    World-&gt;stepSimulation(Delta, 60);
+
+    for(list&lt;btRigidBody*&gt;::iterator It = Objects.begin(); It != Objects.end(); ++It)
+    {
+        Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;((*It)-&gt;getUserPointer());
+
+        btVector3 Point = (*It)-&gt;getCenterOfMassPosition();
+        node-&gt;setPosition(Ogre::Vector3((float)Point[0], (float)Point[1], (float)Point[2]));
+
+        btQuaternion btq = (*It)-&gt;getOrientation();
+        Ogre::Quaternion quart = Ogre::Quaternion(btq.w(),btq.x(),btq.y(),btq.z());
+        node-&gt;setOrientation(quart);
+
+	}
+
+	for(list&lt;btPairCachingGhostObject*&gt;::iterator it = GhostObjects.begin(); it != GhostObjects.end(); ++it)
+    {
+		Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;((*it)-&gt;getUserPointer());
+        btVector3 Point = (*it)-&gt;getWorldTransform().getOrigin();
+        node-&gt;setPosition(Ogre::Vector3(Point[0], Point[1], Point[2]));
+	}
+
+	World-&gt;debugDrawWorld();
+</code></pre></div>
+
+EDIT:<br>
+<br>
+I did some more tests and here is the code that works perfectly, but i get forward dir not from bullet but from ogre, so maybe i did something wrong with bullet or the forward dir from bullet is wrong:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9372&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    btTransform xform;
+    xform = characterBody-&gt;getWorldTransform();
+
+    btVector3 walkDirection(0,0,0);
+    btScalar walkVelocity(1.1*8.0);// 4 km/h -&gt; 1.1 m/s
+    btScalar walkSpeed(walkVelocity*(DeltaTime/1000.0f));
+
+    Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;(characterBody-&gt;getUserPointer());
+    btVector3 forwardDir = ToBullet(node-&gt;getOrientation() * Ogre::Vector3(0, 0, 1));
+    forwardDir.normalized();
+
+    if(left)
+    {
+        turnAngle += DeltaTime * 0.003f;
+    }
+
+    if(right)
+    {
+        turnAngle -= DeltaTime * 0.003f;
+    }
+    xform.setRotation(btQuaternion (btVector3(0.0, 1.0, 0.0), turnAngle));
+    characterBody-&gt;setWorldTransform (xform);
+
+    if(forward)
+    {
+        walkDirection = forwardDir;
+    }
+
+    if(backward)
+    {
+        walkDirection = -forwardDir;
+    }
+
+    if(jump &amp;&amp; Character-&gt;canJump())
+    {
+        Character-&gt;jump();
+    }
+
+    Character-&gt;setWalkDirection(walkDirection * walkSpeed);
+</code></pre></div>
+
+in main loop:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9372&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    for(list&lt;btPairCachingGhostObject*&gt;::iterator it = GhostObjects.begin(); it != GhostObjects.end(); ++it)
+    {
+		Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;((*it)-&gt;getUserPointer());
+        btVector3 Point = (*it)-&gt;getWorldTransform().getOrigin();
+        node-&gt;setPosition(Ogre::Vector3(Point.getX(), Point.getY(), Point.getZ()));
+
+        btQuaternion btq = (*it)-&gt;getWorldTransform().getRotation();
+        Ogre::Quaternion quart = Ogre::Quaternion(btq.w(),btq.x(),btq.y(),btq.z());
+        node-&gt;setOrientation(quart);
+	}
+</code></pre></div>
+
+So did i just get forward dir from bullet in wrong way or it's buggy?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

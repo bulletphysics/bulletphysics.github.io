@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Regarding strain based dynamics [DONE]</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Regarding strain based dynamics [DONE]</h2>
+		<p><a href="viewtopic.php%3Ft=10353.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10353</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Regarding strain based dynamics [DONE]</h3>
+				<div class="date">Posted: <strong>Thu Jan 22, 2015 10:58 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">hi all.<br>
+   I am trying to implement <a href="http://matthias-mueller-fischer.ch/publications/strainBasedDynamics.pdf" class="postlink">strain based dynamics</a> and i have a slight problem with the implementation. I assume I am doing something wrong. This is for a triangular mesh so i am not considering the tetrahedral constraint.<br>
+<br>
+There are two formulas given for calculating Strain for tri mesh. One in Eq. 11 which is<br>
+S = Q^-1 T P^T P Q^-1<br>
+Q is a 2x2 matrix, P is a 3x2 matrix so in the end S is a 2x2 matrix.<br>
+<br>
+Now from explicit formulas given in Eq. 28, strain ij element can be calculated using<br>
+Sij = fi.fj = (Pci).(Pcj)<br>
+<br>
+P is a 3x2 matrix <br>
+Q is a 2x2 matrix and c[i,j] is one column of it i.e. c[i,j] is 2x1 matrix. So Pci has dimensions 3x2*2x1 = 3x1 hence fi and fj are [3x1] vectors and fi.fj (dot product) will give us a scalar which we will place for ith row and jth col of S so S is a 2x2 matrix.<br>
+<br>
+Now here is where the problem comes in. According to eq. 29 the correction of strain del Sij  = fj ci^T+fi cj^T<br>
+fj and fi are 3x1 column vectors. <br>
+ci is a 2x1 vector and ci^T is 1x2 thus del Sij is going to give me 3x1 * 1x2 = 3x2 matrix<br>
+<br>
+My questions are:<br>
+1) How do I add this del Sij to triangle vertex position? IIRC dp was a 3x1 column vector so it was directly added to positions of each vertex?<br>
+1) Why are there two formulas for calculating Strain? What will be the difference in output if i take the first or the second one?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Fri Jan 23, 2015 4:17 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Nevermind, I think I know the answer. The del S that we calculate is a 3x2 matrix because it contains two column vectors of dp, one for point p1 and second for point p2. For p0, we just calculate it using the dp of p1 and p2. So in the end these are the corrections<br>
+<br>
+calculate S using Eq. 28 or Eq. 11. Using either case, S is a 2x2 matrix<br>
+calculate del S using Eq. 29. del S is a 3x2 matrix<br>
+dp1 = getColumn1(del S);<br>
+dp2 = getColumn2(del S);<br>
+dp3 = -dp1-dp2 as given in eq. 31<br>
+<br>
+So now I think it should work. Thanks anyway for reading my post <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> problem solved.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Wed Mar 25, 2015 4:36 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Dear all,<br>
+   I am at it again. I am still finding difficulties in implementing strain based dynamics paper. I am using it to simulate a piece of cloth hence I need to worry about the triangle constraint. The bending modes work perfectly fine for my cloth but the triangle constraint fails. At the moment, i modify my existing pbd implementation by replacing distance constraints with triangle constraints. Here is how the StepPhysics function is implemented
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10353&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void StepPhysics(float dt ) {
+	ComputeForces();	 
+	IntegrateExplicitWithDampingSBD(dt); //for strain based dynamics
+	
+	ComputeStrains();
+
+	// for collision constraints	
+	UpdateInternalConstraints();	
+	UpdateExternalConstraints();
+	
+	Integrate(dt);
+}
+</code></pre></div>
+
+The IntegrateExplicitWithDampingSBD function replaces IntegrateExplicitWithDamping function of PBD that uses center of mass based formulation. For SBD, it is implemented using Eq. 23 of paper as follows
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10353&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void IntegrateExplicitWithDampingSBD(float dt) {
+        size_t i=0; 
+	float sumVN=0;
+
+	for(i=0;i&lt;total_points;i++) {
+		V[i] *= global_dampening; //global velocity dampening !!!		
+		V[i] = V[i] + (F[i]*dt)*W[i];
+		float lenDP = glm::length(dp[i]);
+		if(lenDP &gt; EPSILON)
+			sumVN = sumVN + glm::dot(V[i], dp[i]/lenDP);
+	}
+	   
+	for(i=0;i&lt;total_points;i++) {
+		float lenDP = glm::length(dp[i]);
+		if(lenDP &gt; EPSILON)
+			V[i] = V[i] - kDamp*sumVN* dp[i]/lenDP;
+	}
+
+	//calculate predicted position
+	for(i=0;i&lt;total_points;i++) {
+		if(W[i] &lt;= 0.0) { 
+			tmp_X[i] = X[i]; //fixed points
+		} else {
+			tmp_X[i] = X[i] + (V[i]*dt);				 
+		}
+	} 
+}
+</code></pre></div>
+
+The ComputeStrains function is defined as follows:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10353&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void ComputeStrains() {
+	
+	memset(&amp;(S[0][0]),0,S.size()*sizeof(glm::mat2));
+	int count = 0;
+	//calculate material coordinates using Eq. 37 page 9
+	for(size_t i=0;i&lt;indices.size();i+=3) {
+		int i0 = indices[i];
+		int i1 = indices[i+1];
+		int i2 = indices[i+2];
+
+		glm::vec3 x0 = X[i0];
+		glm::vec3 x1 = X[i1];
+		glm::vec3 x2 = X[i2];
+
+		glm::mat2x3 P = glm::mat2x3((x1-x0),(x2-x0)); 
+
+		//calculate strains using Eq. 11 page 4
+		glm::mat2x2  Qinv = Q[count];
+		glm::mat2x2 QinvT = glm::transpose(Qinv);
+		 
+		glm::mat3x2 P_T = glm::transpose(P);
+		glm::mat2x2  St = QinvT*P_T*P*Qinv;
+		 
+		S[count++] = St;
+	}
+}
+</code></pre></div>
+
+The matrix Q is precalculated at initialization using the uv coordinates as given in Appendix eq. 37, 38 as follows:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10353&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int count = 0;
+
+//calculate material coordinates using Eq. 37 page 9
+for(i=0;i&lt;indices.size();i+=3) {
+    int i0 = indices[i];
+    int i1 = indices[i+1];
+    int i2 = indices[i+2];
+    glm::vec3 x0 = X[i0];
+    glm::vec3 x1 = X[i1];
+    glm::vec3 x2 = X[i2];
+    
+    glm::vec2 u0 = UV[i0];
+    glm::vec2 u1 = UV[i1];
+    glm::vec2 u2 = UV[i2];
+
+    glm::mat2x3 P = glm::mat2x3((x1-x0),(x2-x0)); 
+    glm::mat2x2 U = glm::mat2x2((u1-u0),(u2-u0));  
+    glm::mat2x2 Uinv = glm::inverse(U); 
+		  
+    glm::mat2x3 T = P*Uinv; 
+    glm::vec3 n1(T[0]);//get first column of T
+    glm::vec3 n2(T[1]);//get second column of T
+    n1 = glm::normalize(n1);  
+    n2 = glm::normalize(n2);
+
+    glm::mat2x2 C = glm::transpose(glm::mat2x3(n1,n2))*P; 
+    Q[count++] = C;  
+}
+</code></pre></div>
+
+Finally, the UpdateTriangleConstraint is implemented as follows:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10353&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void UpdateTriangleConstraint(int index) {
+	TriangleConstraint c = t_constraints[index];
+	float w1 = W[c.p1];
+	float w2 = W[c.p2];
+	float w3 = W[c.p3]; 
+	float invMass = c.w; 
+	if(invMass &lt;= EPSILON)
+		return;
+
+	glm::mat2x2 St = S[index];	//contains sqrt(Strain)
+	glm::mat2x2 C  = Q[index];	//contains Qinv
+	 
+	glm::vec3 x0 = tmp_X[c.p1];
+	glm::vec3 x1 = tmp_X[c.p2];
+	glm::vec3 x2 = tmp_X[c.p3];
+	
+	glm::vec2 Ci = C[0];//get first column of C
+	glm::vec2 Cj = C[1];//get first column of C
+
+	glm::mat2x3 P = glm::mat2x3((x1-x0),(x2-x0)); 
+	glm::mat2x3 F = P*C;
+
+//	glm::vec3 PCi = P*Ci;	//fi
+//	glm::vec3 PCj = P*Cj;	//fj 
+	
+	glm::vec3 fi = F[0]; //get first column of F
+	glm::vec3 fj = F[1]; //get second column of F
+
+ 
+//	std::cout &lt;&lt; "PCi.PCj [" &lt;&lt; glm::dot(PCi, PCj) &lt;&lt; "], fi.fj [" &lt;&lt; glm::dot(fi, fj) &lt;&lt; std::endl;
+	
+	glm::mat2x3 fjci = outerProduct(fj,Ci);
+	glm::mat2x3 ficj = outerProduct(fi,Cj);
+
+	glm::mat2x3 dS = fjci + ficj;
+	glm::vec3  dp2 = dS[0];//(dS[0][0],dS[0][1],dS[0][2]);
+	glm::vec3  dp3 = dS[1];//(dS[1][0],dS[1][1],dS[1][2]);
+	glm::vec3  dp1 = -dp2-dp3;
+
+	//using eq. 35 and 36
+	/*
+	float lamda1 = 2.0f * ((St[0][0]-1.0f)/(invMass*glm::dot(dp1, dp1)))*(St[0][0]);
+	float lamda2 = (St[0][1]     )/(invMass*glm::dot(dp2, dp2));
+	float lamda3 = 2.0f * ((St[1][1]-1.0f)/(invMass*glm::dot(dp3, dp3)))*(St[1][1]);
+	*/
+	
+	//using eq. 33 and 34
+	float lamda1 = (St[0][0]-1.0f) / ( invMass*glm::dot(dp1, dp1) );
+	float lamda3 = (St[1][1]-1.0f) / ( invMass*glm::dot(dp3, dp3) );
+	float lamda2 = (St[0][1]     ) / ( invMass*glm::dot(dp2, dp2) );
+
+	//std::cout &lt;&lt; "l1 " &lt;&lt; lamda1 &lt;&lt; " l2: " &lt;&lt; lamda2 &lt;&lt; " l3: " &lt;&lt; lamda3 &lt;&lt; std::endl;
+	//std::cout &lt;&lt; "Strain: [0][0] -&gt; " &lt;&lt; St[0][0] &lt;&lt; " [1][1] -&gt; " &lt;&lt; St[1][1] &lt;&lt; std::endl;
+
+	if(w1 &gt; EPSILON)
+		dp[c.p1] += -lamda1*w1*dp1*c.k_prime; 
+	
+	if(w2 &gt; EPSILON)
+		dp[c.p2] += -lamda2*w2*dp2*c.k_prime;
+
+	if(w3 &gt; EPSILON)
+		dp[c.p3] += -lamda3*w3*dp3*c.k_prime;
+}
+</code></pre></div>
+I do hope there is someone who can help. I have emailed the author of the paper too but I have not received any response from him.<br>
+<br>
+Thanks,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Thu Mar 26, 2015 1:57 am</strong></div>
+				<div class="author">by <strong>kxiaocai</strong></div>
+				<div class="content">Hi Mobeen, <br>
+<br>
+Is this part correct?<br>
+"<br>
+<span style="color:#4040BF">//using eq. 33 and 34<br>
+   float lamda1 = (St[0][0]-1.0f) / ( invMass*glm::dot(dp1, dp1) );<br>
+   float lamda3 = (St[1][1]-1.0f) / ( invMass*glm::dot(dp3, dp3) );<br>
+   float lamda2 = (St[0][1]     ) / ( invMass*glm::dot(dp2, dp2) );</span><br>
+"<br>
+The denominators should be weighted sum of all the related terms, instead of a dot product, aren't they?<br>
+<br>
+<br>
+All the best,<br>
+Jianping</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Fri Mar 27, 2015 3:43 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi,<br>
+   The denominator is the weighted sum of squared length of delpkS_ii. I calculated the sum of weights (invSum) then did a dot product of delpkS_ii with itself since that should give me the squared length of delpkS_ii.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Sat Mar 28, 2015 7:42 am</strong></div>
+				<div class="author">by <strong>kxiaocai</strong></div>
+				<div class="content"><blockquote><div><cite>mobeen wrote:</cite>Hi,<br>
+   The denominator is the weighted sum of squared length of delpkS_ii. I calculated the sum of weights (invSum) then did a dot product of delpkS_ii with itself since that should give me the squared length of delpkS_ii.</div></blockquote>
+
+Hi, <br>
+<br>
+I mean that, e.g., should lamda1 be as <br>
+float lamda1 = (St[0][0]-1.0f) / [ invMass1*(glm::dot(dp1, dp1)+invMass2*glm::dot(dp2, dp2)+invMass3*glm::dot(dp3, dp3) ) ;<br>
+?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Thu Apr 02, 2015 12:38 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Hi Mobeen,<br>
+<br>
+are you planning to add your Strain Based Dynamics implementation to OpenCloth? That would be great.<br>
+<br>
+I am looking at implementing the tetrahedral constraints presented in this paper for my medical simulator. Maybe you have got ideas for this as well?<br>
+<br>
+Cheers</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Fri Apr 03, 2015 7:19 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Hi Mobeen,<br>
+<br>
+are you planning to add your Strain Based Dynamics implementation to OpenCloth? That would be great.<br>
+<br>
+I am looking at implementing the tetrahedral constraints presented in this paper for my medical simulator. Maybe you have got ideas for this as well?<br>
+<br>
+Cheers</div></blockquote>
+Hi korzen,<br>
+  Yeah this will be integrated in the opencloth project. Moreover there have been some really good progress in the other integrators for instance, the IMEX integrator has been completely rewritten and it is performing really well. I will update the repository soon but before that i need to finish the strain based dynamics approach. <br>
+<br>
+I have already emailed the SBD paper author regarding this error but he has not replied yet. Currently I have managed to finish the bending constraint but the triangle constraint is not done yet. Tetrahedral will be the next logical step after this is finished.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Fri Apr 24, 2015 2:19 am</strong></div>
+				<div class="author">by <strong>kxiaocai</strong></div>
+				<div class="content"><blockquote><div><cite>mobeen wrote:</cite>Hi,<br>
+   The denominator is the weighted sum of squared length of delpkS_ii. I calculated the sum of weights (invSum) then did a dot product of delpkS_ii with itself since that should give me the squared length of delpkS_ii.</div></blockquote>
+
+Hi Mobeen,<br>
+<br>
+Have you solved your problem?<br>
+Recently I implemented a simple 2D version (deformation in 2D plane only, so there is no 'material coordinates' part and bending constraints) and a 3D version as well. <br>
+And both are working well using the formulas in the paper. <br>
+<br>
+Sincerely,<br>
+Jianping</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics</h3>
+				<div class="date">Posted: <strong>Wed Apr 29, 2015 4:18 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi JP,<br>
+   Nope I have not been able to finish it yet. If possible could you please share your sources by emailing them on my NTU email address.<br>
+<br>
+Thanks,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics [DONE]</h3>
+				<div class="date">Posted: <strong>Wed May 13, 2015 1:51 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">OK thanks to help by JP, I was able to implement strain based dynamics both for triangular and tetrahedral objects. <br>
+<br>
+Here is the snapshot of using strain based dynamics with tetrahedral mesh
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1315" class="postimage" alt="sbd_tetra.png" onclick="viewableArea(this);" /></dt>
+						<dd>sbd_tetra.png (22.91 KiB) Viewed 54405 times</dd>
+		</dl>
+		
+		
+			</div>
+
+And here is the snapshot of using strain based dynamics with triangular mesh
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1314" class="postimage" alt="sbd_cloth.png" onclick="viewableArea(this);" /></dt>
+						<dd>sbd_cloth.png (29.44 KiB) Viewed 54405 times</dd>
+		</dl>
+		
+		
+			</div>
+
+I will release the sources with the next OpenCloth update.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics [DONE]</h3>
+				<div class="date">Posted: <strong>Wed May 13, 2015 2:18 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Well done Mobeen, looks really good!<br>
+<br>
+Looking forward to grab the sources. I have partially ported the OpenCloth to Unity3D. <br>
+I will release the sources (+ Position Based Fluids on the GPU (DX11) when I am done, probably in the summer.<br>
+<br>
+Bw<br>
+<br>
+Korzen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics [DONE]</h3>
+				<div class="date">Posted: <strong>Wed May 13, 2015 5:11 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">That's nice korzen303. Keep me informed with ur developments.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics [DONE]</h3>
+				<div class="date">Posted: <strong>Thu May 14, 2015 8:31 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Some more update. I have also managed to implement Barycentric mapping on top of strain based dynamics to apply the tetrahedral deformation to the surface mesh.<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1316" class="postimage" alt="sbd_mapped.png" onclick="viewableArea(this);" /></dt>
+						<dd>sbd_mapped.png (24.47 KiB) Viewed 54362 times</dd>
+		</dl>
+		
+		
+			</div>
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1317" class="postimage" alt="sbd_mapped_2.png" onclick="viewableArea(this);" /></dt>
+						<dd>sbd_mapped_2.png (49.35 KiB) Viewed 54362 times</dd>
+		</dl>
+		
+		
+			</div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding strain based dynamics [DONE]</h3>
+				<div class="date">Posted: <strong>Thu Jun 04, 2015 3:33 pm</strong></div>
+				<div class="author">by <strong>johnsonalpha</strong></div>
+				<div class="content">Can you post a update or the files you used to strain based dynamics many of us would love to use it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

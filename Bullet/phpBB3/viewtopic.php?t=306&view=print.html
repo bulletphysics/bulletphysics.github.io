@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Alternative for EPA Penetration depth</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Alternative for EPA Penetration depth</h2>
+		<p><a href="viewtopic.php%3Ft=306.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=306</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Alternative for EPA Penetration depth</h3>
+				<div class="date">Posted: <strong>Thu Apr 20, 2006 6:56 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">When using the Hybrid GJK, the penetration depth is either determined by GJK, using margins, or by another algorithm, once the depetration is deeper then the sum of the margins.<br>
+<br>
+EPA is one good approach, but it is fairly complicated to get it 100% robust, and its performance has room for improvement.<br>
+<br>
+A cheap alternative that works in practice is:<br>
+<br>
+1) find a good approximation of the MTD (Minimum Translational Distance)<br>
+2) find the points on both objects that give the penetration vector<br>
+<br>
+For (1) you can sample the projection of the origin onto the minkowski sum in a fixed number of directions. For example, in Bullet I use 42 directions, uniformly distributed over the unit sphere. To avoid the cost of 42 virtual function calls, a batch supportingVertex is used. This supportingVertex call can use the non-margin version, and can be optimized using SIMD very well.<br>
+<br>
+For (2), once you found a translational distance, you move the objects out of penetration using the vector, and perform a GJK step to find the closest points. The difference in the distance reported by this GJK query, and the translational distance can be used to correct the estimation error. <br>
+<br>
+This way, the estimated penetration vector exactly puts the objects in touching contact.<br>
+<br>
+It is an approximation that works very well in practice, even tough slighly better directions might exist. Better then failing totally, or spiking in performance. Also, not much accuracy is needed, because deep penetrations should be resolved within a frame, and shallow penetrations are handled using the margins.<br>
+<br>
+You can see implementation details here:<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/MinkowskiPenetrationDepthSolver_8cpp-source.html#l00092" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00092</a><br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 23, 2006 1:07 am</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content">Has any one had any luck implementing the approach described in <a href="http://gamma.cs.unc.edu/DEEP/tvcg.pdf" class="postlink">this paper</a>? They describe why Gino's EPA algorithm has issues (with diagrams!), but I have had no success getting the Gauss mapping robust when trying to emulate their approach.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 23, 2006 5:39 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I implemented some Gauss map stuff, which is essentially an incremental SAT. Unfortunately, it can easily get stuck at local minima, especially in the edge-edge case. However, I'm still hopefully that some other techniques can be combined with Gauss maps to find separating axes that are <em class="text-italics">good enough</em>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jun 26, 2006 5:37 am</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content">Having just got around to implementing my penetration depth calcs the Erwin Coumans way (well roughly), I'm very pleased with how robust and simple it is. Thank you sir.<br>
+<br>
+Now back to playing with Gauss maps...</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Distance constraint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Distance constraint</h2>
+		<p><a href="viewtopic.php%3Ft=8681.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8681</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Distance constraint</h3>
+				<div class="date">Posted: <strong>Mon Dec 17, 2012 11:02 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I have coded the following distance constraint but am having problems with the bias, since the relative position can sometimes be zero, here is the code, please help !<br>
+<br>
+I have tested it without the bias and it still behaves like a point-to-point constraint<br>
+<br>
+Thanks<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8681&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>AMG3DDistanceJoint::AMG3DDistanceJoint(AMG3DRigidBody *pRigidBody1, AMG3DRigidBody *pRigidBody2, AMG3DVector4 vAnchorPoint)
+{
+	m_pRigidBody1	= pRigidBody1;
+	m_pRigidBody2	= pRigidBody2;
+
+	AMG3DMatrix4x4 Rot1, Rot1T, Rot2, Rot2T;
+	AMG3DQuaternion q1 = m_pRigidBody1-&gt;quatOrientation;
+	AMG3DQuaternion q2 = m_pRigidBody2-&gt;quatOrientation;
+
+	q1.toMatrix(&amp;Rot1);
+	Rot1T.transposeOf(Rot1);
+	q2.toMatrix(&amp;Rot2);
+	Rot2T.transposeOf(Rot2);
+
+	localAnchor1 =  Rot1T*(vAnchorPoint - m_pRigidBody1-&gt;position);
+	localAnchor2 =  Rot2T*(vAnchorPoint - m_pRigidBody2-&gt;position);
+
+	initialDistance = (localAnchor1-localAnchor2).magnitude();
+}
+
+void AMG3DDistanceJoint::preStep(AMG3DScalar dt)
+{
+	if(dt&lt;=0.0f)
+		return;
+
+	AMG3DScalar k_biasFactor = (AMG3DPhysicsWorld::g_AMG3D_PositionCorrection) ? 0.2f : 0.0f;
+
+	AMG3DMatrix4x4 Rot1, Rot2;
+	AMG3DQuaternion q1 = m_pRigidBody1-&gt;quatOrientation;
+	AMG3DQuaternion q2 = m_pRigidBody2-&gt;quatOrientation;
+
+	q1.toMatrix(&amp;Rot1);
+	q2.toMatrix(&amp;Rot2);
+
+	AMG3DVector4 ra = Rot1*localAnchor1;
+	AMG3DVector4 rb = Rot2*localAnchor2;
+
+	AMG3DMatrix3x3 I;
+	I.identity();
+	
+	// Compute the bias factor to prevent drift
+	AMG3DVector4 dp = m_pRigidBody1-&gt;position + ra - m_pRigidBody2-&gt;position - rb; // Relative position
+	AMG3DScalar C = dp.magnitude() - initialDistance;
+	bias = k_biasFactor / dt * C;
+	
+	dp.normalize();
+	n = dp; // n = dp/|dp|
+	
+	InvMa = I*m_pRigidBody1-&gt;invMass; // Ma^-1
+	SkewRa = ra.skew(); // [~ra]
+	AMG3DMatrix3x3 InvIa = m_pRigidBody1-&gt;invIWorld; // Ia^-1
+	SkewRaT.transposeOf(SkewRa); // [~ra]T
+
+	InvMb = I*m_pRigidBody2-&gt;invMass; // Mb^-1
+	SkewRb = rb.skew(); // [~rb]
+	AMG3DMatrix3x3 InvIb = m_pRigidBody2-&gt;invIWorld; // Ib^-1
+	SkewRbT.transposeOf(SkewRb); // [~rb]T
+
+	// a = JM^-1JT
+	// a = n.(Ma^-1*n + [~ra]T*Ia^-1*n*[~ra] + Mb^-1*n + [~rb]T*Ib^-1*n*[~rb])
+	a = n.dot(InvMa*n + SkewRaT*InvIa*n*SkewRa + InvMb*n + SkewRbT*InvIb*n*SkewRb);
+}
+
+void AMG3DDistanceJoint::applyImpulse()
+{
+	AMG3DVector4 va = m_pRigidBody1-&gt;velocity;
+	AMG3DVector4 wa = m_pRigidBody1-&gt;angularVelocity;
+	AMG3DVector4 vb = m_pRigidBody2-&gt;velocity;
+	AMG3DVector4 wb = m_pRigidBody2-&gt;angularVelocity;
+
+	// b = -Jvi - beta/h*C
+	AMG3DScalar b = n.reverseOf().dot(va + SkewRaT*wa - vb - SkewRbT*wb) - bias;
+
+	// x = lambda (corrective impulse)
+	lambda = a&gt;0 ? b/a : 0;
+
+	P += lambda; // Accumulate impulse for warm starting (To Do: Add warm starting)
+
+	// vfa = via + Ma^-1*n*1*lambda
+	// wfa = wia + Ia^-1-n*[~ra]*lambda
+	// vfb = vib + Mb^-1*n*-1*lambda
+	// wfb = wib + Ib^-1*n*-[~rb]*lambda
+	m_pRigidBody1-&gt;velocity			+= InvMa*n*lambda;
+	m_pRigidBody1-&gt;angularVelocity	+= m_pRigidBody1-&gt;invIWorld*n*SkewRa*lambda;
+	m_pRigidBody2-&gt;velocity			-= InvMb*n*lambda;
+	m_pRigidBody2-&gt;angularVelocity	-= m_pRigidBody2-&gt;invIWorld*n*SkewRb*lambda;
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Distance constraint</h3>
+				<div class="date">Posted: <strong>Tue Dec 18, 2012 11:43 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Never mind, was a stupid mistake not to use two anchors. Works perfect now with drift correction.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; API refactoring (was ugliness) - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>API refactoring (was ugliness)</h2>
+		<p><a href="viewtopic.php%3Ft=551.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=551</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Sep 24, 2006 9:25 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks Steve!<br>
+<br>
+I will make some plan/preparation very soon, and you can pick some task you if you got time, that is appreciated!<br>
+<br>
+Also, I leave the difficult work on motors/limits up to Dirk <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+I prefer working on (continuous) collision detection and improving the performance and overal programmability etc. Adding the current sequential impulse solver with constraints was enough fun in that area.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Sep 25, 2006 9:18 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The first step in refactoring is committed.<br>
+<br>
+<a href="http://continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=553" class="postlink">http://continuousphysics.com/Bullet/php ... .php?t=553</a><br>
+<br>
+Source code moved to src, 2 new headerfiles for convenience, only the src folder needs to be included in projects (instead of 3 path before, LinearMath, Bullet, BulletDynamics now becomes src).<br>
+<br>
+The files in BulletCollision and BulletDynamics have bt prefix. Other files in Demos and Extras folder should not be touched, they are not part of the library. LinearMath still has prefix Simd and Gen, but some files have been moved away etc.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Sep 25, 2006 5:42 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">I'm surprised that the "Extras/PhysicsInterface" stuff isn't a part of the 'main' package (and hence will be missing the 'bt' prefix).<br>
+<br>
+Those functions aren't demos - they are actually needed - and as far as I can tell, the code doesn't come from someone else's library like the COLLADA and LibXML stuff.<br>
+<br>
+Is there a case for moving them into the new 'src' area?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Sep 25, 2006 6:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>I'm surprised that the "Extras/PhysicsInterface" stuff isn't a part of the 'main' package (and hence will be missing the 'bt' prefix).<br>
+<br>
+Those functions aren't demos - they are actually needed - and as far as I can tell, the code doesn't come from someone else's library like the COLLADA and LibXML stuff.<br>
+<br>
+Is there a case for moving them into the new 'src' area?</div></blockquote>
+
+This CcdPhysicsEnvironment and CcdPhysicsController are experimental mainloops. I am hoping to add TimeWarp or other timestepping algorithms that take time of impact into account. There is also a ParallelPhysicsEnvironment, heading for multi-core. The history of those files is a physics-engine-independent interface. It was used abstracting Havok, Ageia, Mathengine, ODE, Dynamo, Sumo, Bullet etc. Please ignore it for now, and focus on BulletCollision and BulletDynamics.<br>
+<br>
+I will add a DiscreteDynamicsWorld in BulletDynamics very soon. Then all demos will use this, except for some the 'continuuos collision detection, research demo. Once I'm happy with the quality of time-of-impact based physics, I will add a ContinuousDynamicsWorld to BulletDynamics.<br>
+<br>
+So please ignore Demos and Extras in the refactoring, apart from getting it to compile obviously <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink">,  just tackle the src folder. I will get in touch about the details, it would be useful if you can help.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Sep 26, 2006 9:38 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I started working on replacing CcdPhysicsEnvironment with a direct version inside BulletDynamics.<br>
+<br>
+Its objects are just RigidBody, and CollisionShapes.<br>
+<br>
+See <a href="http://svn.sourceforge.net/viewvc/bullet/trunk/src/BulletDynamics/Dynamics/btSimpleDynamicsWorld.cpp?revision=315&amp;view=markup" class="postlink">http://svn.sourceforge.net/viewvc/bulle ... iew=markup</a> for a sneak preview.<br>
+<br>
+Next to btSimpleDynamicsWorld, a btDiscreteDynamicsWorld and byContinuousDynamicsWorld will be added.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 28, 2006 2:32 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">ok, most of the issues have been address hopefully.<br>
+<br>
+Here is a new release with lots of refactoring...<br>
+<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=560" class="postlink">http://www.continuousphysics.com/Bullet ... .php?t=560</a><br>
+<br>
+The CcdPhysicsEnvironment is now obsolete, and replaced by btDynamicsWorld derived classes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 3:25 am</strong></div>
+				<div class="author">by <strong>cippyboy</strong></div>
+				<div class="content">I thought of starting another topic but maybe it should be adressed here.<br>
+<br>
+How about deallocation of stuff ? I don't think I've seen a demo that deallocates anything. Miraculously I see that I first have to remove the ccdphysics controller from the enviroment in order to delete it's shape and then the object and even so, VC8 shows me a ton of memory leaks and it's not from my code (i'm having cases when I don't use it). Could there (ever) be 2 easy functions like : Enviroment-&gt;ClearPhysicalObjects and DeleteEnviroment ? or something like that.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 5:13 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>cippyboy wrote:</cite>I thought of starting another topic but maybe it should be adressed here.<br>
+<br>
+How about deallocation of stuff ? I don't think I've seen a demo that deallocates anything. Miraculously I see that I first have to remove the ccdphysics controller from the enviroment in order to delete it's shape and then the object and even so, VC8 shows me a ton of memory leaks and it's not from my code (i'm having cases when I don't use it). Could there (ever) be 2 easy functions like : Enviroment-&gt;ClearPhysicalObjects and DeleteEnviroment ? or something like that.</div></blockquote>
+
+The CcdPhysicsEnvironment and CcdPhysicsController are obsolete and will be erased from the project. They have been replaced by btDiscreteDynamicsWorld. It's just that not all demos are updated yet (I preferred to get the release out first).<br>
+<br>
+Proper memory handling, including custom memory allocators and reference counting is on the <a href="http://www.continuousphysics.com/mediawiki-1.5.8/index.php?title=BulletTodo" class="postlink">todo list</a>. I will add a demo with a custom memory allocator that keeps track of all allocations, to make sure no leaks happen.<br>
+<br>
+Bullet uses this memory rule: you are responsible to destroy what you construct (*).<br>
+Do you have any trace of a memory leak, which violate this rule?<br>
+<br>
+Thanks!<br>
+Erwin<br>
+<br>
+(*) Bullet has no reference counting yet, but for reference counted objects are an exception to above rule: reference-counted objects will self-destruct as soon as there are no refences to it (its reference count becomes zero)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 6:03 pm</strong></div>
+				<div class="author">by <strong>cippyboy</strong></div>
+				<div class="content">With this initialization<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> CollisionDispatcher*	  dispatcher =new CollisionDispatcher();
+	//
+	SimdVector3 worldAabbMin(-30000,-30000,-30000);
+	SimdVector3 worldAabbMax(30000,30000,30000);
+	//
+	OverlappingPairCache *broadphase=new SimpleBroadphase();
+	//
+	physicsEnvironmentPtr = new CcdPhysicsEnvironment(dispatcher,broadphase);
+	physicsEnvironmentPtr-&gt;setDeactivationTime(2.f);
+	//
+	physicsEnvironmentPtr-&gt;setGravity(0,-10,0);
+ </code></pre></div>
+
+and just one deallocation<br>
+
+ <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+delete physicsEnvironmentPtr;
+
+ </code></pre></div>
+
+gives this
+ <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+Detected memory leaks!
+Dumping objects -&gt;
+{2303} normal block at 0x01D04FD8, 4 bytes long.
+ Data: &lt;xn  &gt; 78 6E DD 00 
+{2301} normal block at 0x01DAEE70, 16384 bytes long.
+ Data: &lt;                &gt; CD CD CD CD CD CD CD CD CD CD CD CD CD CD CD CD 
+{2300} normal block at 0x01DAAE30, 16384 bytes long.
+ Data: &lt;                &gt; 00 00 00 00 01 00 00 00 02 00 00 00 03 00 00 00 
+{2299} normal block at 0x01D82DF0, 163840 bytes long.
+ Data: &lt;                &gt; 00 00 00 00 CD CD CD CD 00 00 00 00 00 00 00 00 
+{2298} normal block at 0x01D62DB0, 131072 bytes long.
+ Data: &lt;                &gt; 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+{2297} normal block at 0x01D62D48, 44 bytes long.
+ Data: &lt;8d   -          &gt; 38 64 DD 00 B0 2D D6 01 00 00 00 00 00 20 00 00 
+{2296} normal block at 0x00875EA0, 1508 bytes long.
+ Data: &lt; d              &gt; C0 64 DD 00 CD CD CD CD 00 00 00 00 00 00 00 00 
+Object dump complete.
+ </code></pre></div>
+
+I guessed that the enviroment self deallocates the Broadphases and all that stuff inside it, guess not ?<br>
+<br>
+EDIT:cleaned unused code</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 6:11 pm</strong></div>
+				<div class="author">by <strong>B_old</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Bullet uses this memory rule: you are responsible to destroy what you construct (*).
+</div></blockquote>
+This can be misleading in my oppinion.<br>
+When you construct the DynamicsWorld you provide pointers to different stuff that YOU have allocated, yet the destructor of DynamicsWorld deletes it by itself.<br>
+At least that is how I understand it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 6:11 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">As Erwin stated. You are responsible for what you allocate. Normally you simply deallocate in opposite order and  IMO this is a very practical solution Erwin uses here. Maybe Erwin should consider to explecitely point out that the Environment class doesn't take the ownership of the passed objects.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 6:16 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+This can be misleading in my oppinion.<br>
+When you construct the DynamicsWorld you provide pointers to different stuff that YOU have allocated, yet the destructor of DynamicsWorld deletes it by itself.<br>
+At least that is how I understand it.
+</div></blockquote>
+
+<br>
+Then you understand it wrong. If I create the Dispatcher with placement new and use a special allocator, how should the Envirnment know about this. You can't simply call delete since you don't know how the object was constructed.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 6:19 pm</strong></div>
+				<div class="author">by <strong>B_old</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btDiscreteDynamicsWorld::~btDiscreteDynamicsWorld()
+{
+	delete m_islandManager ;
+
+	delete m_constraintSolver;
+
+	//delete the dispatcher and paircache
+	delete m_dispatcher1;
+	m_dispatcher1 = 0;
+	delete m_pairCache;
+	m_pairCache = 0;
+}
+</code></pre></div>
+Am I looking in the wrong place?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 6:31 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">This is indeed misleading and IMO this isn't correct. Bullet doesn't know how the object was created and therefore shouldn't destroy the object. Actually this is totally opposite to what Erwin wrote before. Maybe he will comment this himself. The rule of thump is: "Who creates the object should also destroy it". <br>
+<br>
+Erwin:<br>
+For the referenced counted objects you should consider to pass an optional deleter function.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 29, 2006 7:06 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+Am I looking in the wrong place?
+</div></blockquote>
+
+You are looking in the wrong place. On my harddrive is Bullet 2.11 which checks a boolean for ownership.<br>
+<br>
+If the user passes it in, it is false and the user needs to delete it.<br>
+Otherwise, the btDiscreteDynamicsWorld calls a different constructor, and that ownership boolean is true, in which case the destructor deletes it.<br>
+<br>
+There are no reference-counted object yet. As I mentioned before, memory management, custom allocators and reference counting is on the todo/work in progress. So don't make conclusions about memory management, until this is done <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

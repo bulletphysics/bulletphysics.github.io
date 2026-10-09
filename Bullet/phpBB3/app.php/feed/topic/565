@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/565" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-03-05T20:38:53+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/565</id>
+
+		<entry>
+		<author><name><![CDATA[rjobling]]></name></author>
+		<updated>2014-03-05T20:38:53+00:00</updated>
+
+		<published>2014-03-05T20:28:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33088#p33088</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33088#p33088"/>
+		<title type="html"><![CDATA[Re: GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33088#p33088"><![CDATA[
+Hi Erwin<br>Sorry for dragging up this old topic. However I'm trying to understand Gino's method and have been looking at your Bullet implementation.<br><br>The current Bullet code for btSubsimplexConvexCast::calcTimeOfImpact would seem to differ from Gino's writing in a number of way:<br><br>1. You are interpolating the matrices for the bodies rather than shifting the start point of the ray segment as Gino does.<br>2. You are not clearing the simplex when a new time is acquired.<br><span style="color:#80BFFF"><em class="text-italics">3. Your conditions for the VdotR failure would seem to be opposite to those of Gino's.</em></span><br>4. You are incrementing the time value each improvement rather than calculating a new one.<br><br>It does indeed seem to be working great, however I was wondering if you could elaborate on why these differences work?<br>Surely when you interpolate the matrices your old simplex vertices are all invalid?<br>The other stuff is even more puzzling to me, at least right now.<br><br>Update:<br>Okay I figured out the answer to question 3.<br>Your condition is opposite because your "r" is "linVelA-linVelB" in contrast to "linVelB-linVelA".<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10753">rjobling</a> — Wed Mar 05, 2014 8:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-10-01T15:32:11+00:00</updated>
+
+		<published>2006-10-01T15:32:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2003#p2003</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2003#p2003"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2003#p2003"><![CDATA[
+<blockquote class="uncited"><div>Aside from the conversion from world to minkowski space that you mentioned, Gino's algorithm seems a little bit easier to implement. Before setting the values of s and r, you seem to do some sort of transformations with fromA/toA and fromB/toB </div></blockquote>The SubsimplexConvexCast is exactly Gino's formulation, there is no difference. Gino's paper doesn't provide the details how to build the transforms for the minkowski sum, and that is what you are referring to. As I mentioned before, you can ignore the Minkowski sum part or take the ContinuousConvexCollision as a start, which operates in world space.<br><br>We are not dealing with acceleration or ballistic motion.We use piece-wise constant linear and angular velocity during each timestep. You can read Brian Mirtich's PhD, he describes the steps to add gravity/acceleration to the equation.<br><br>At the moment, Bullet's time of impact calculations take two moving objects, and return the fraction between 0 and 1 for time of impact, as well as the  normal at impact and contactpoint.<br>Just take the ConvexCastDemo as a starting point, and integrate the acceleration each step to get new velocities.<br><br>Hope this helps,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sun Oct 01, 2006 3:32 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kevlar]]></name></author>
+		<updated>2006-10-01T06:01:19+00:00</updated>
+
+		<published>2006-10-01T06:01:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1996#p1996</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1996#p1996"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1996#p1996"><![CDATA[
+<blockquote class="uncited"><div>If it is not clear, I should make the demo more obvious. <br><br>The convex cast (==sweep) demo performs time of impact between two linear moving objects, objectA and objectB. Each objects has a starting position (fromA/fromB) and an ending position (toA/toB), both in worldspace. Then internally, the SubsimplexCast algorithm converts this into minkowski space. That's where the intuition usually starts failing. However, this calculation can also be performed in world space. See the ContinuousConvexCollision ( <a href="http://www.continuousphysics.com/Bullet/BulletFull/btContinuousConvexCollision_8cpp-source.html#l00040" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00040</a> ). If you ignore the rotation, you can see the concept and how 'fromA and fromB' are processed. The other version just transforms things into 'relative' MinkowskiSpace.<br><br>In the case of raycasting against a convex object, the ray is represented as a moving sphere. Both this sphere and the convex are passed into the routine to find the hitpoint/fraction/normal.<br><br>Erwin</div></blockquote>Okay, I think I see what fromA and toA are. fromA is the current object position (A.getPosition()) and toA is the final position at the next point in time (A.getPosition() + A.getVelocity()). Then your calculateVelocity function takes toA - fromA = (A.getPosition() + A.getVelocity()) - A.getPosition() = A.getVelocity().<br><br>Aside from the conversion from world to minkowski space that you mentioned, Gino's algorithm seems a little bit easier to implement. Before setting the values of s and r, you seem to do some sort of transformations with fromA/toA and fromB/toB<div class="codebox"><p>Code: </p><pre><code>rayFromLocalA = fromA.inverse()* fromB;rayToLocalA = toA.inverse()* toB;</code></pre></div>It seems like your postitions are specified as matrices then you take the inverse of one and multiply it by the other? I guess what I would like to know is, can the vectors s and r be specified somehow using position/velocity vectors of the two objects A and B(as offsets from world origin [0,0,0]) together with simple operations such as addition, subtraction, cross and dot products?<br><br>As an example:<br>Update accel/vel/pos until contact.<br><br>A is a sphere radius 10.<br><br>A.getPosition() = [0, 50, 0]<br>A.getVelocity() = [0, 0, 0]<br>A.getAcceleration() = [0, -9.8, 0]<br><br><br>B is a sphere radius 10.<br><br>B.getPosition() = [0, 0, 0]<br>B.getVelocity() = [0, 0, 0]<br>B.getAcceleration() = [0, 0, 0]<br><br>Resulting contact point should be approx [0, 10, 0] with normal [0, 1, 0].<br>Does lambda in this algortihm have to lie between 0..1 ?<br><br>Thats is basically all of the information I have to work with currently.<br>Maybe I'm expecting a simple solution to this that just doesn't exist...<br><br>Thanks for your patience with me <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=939">kevlar</a> — Sun Oct 01, 2006 6:01 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-30T16:11:36+00:00</updated>
+
+		<published>2006-09-30T16:11:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1989#p1989</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1989#p1989"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1989#p1989"><![CDATA[
+<blockquote class="uncited"><div><blockquote class="uncited"><div>The 's' is starting point of the ray, in Minkowski space, 'r' is the ray direction. The minus symbols are there, because of the space (Minkowski difference). Basically the raycast is literally casting a point, but the implementation also allows to cast any other convex shape. See the GjkConvexCast demo.<br><br>Hope this helps?<br>Erwin</div></blockquote>So if I had two shapes A and B. I would set the ray starting position to A.position() - B.position() and the ray direction r to ... ?<br><br>In that demo it looks like you are setting the positions of A and B to (0,0,0) and (0,10,0) respectively. I don't quite understand the purpose of the fromA and toA variables. Are those purely for camera transformation? They seem to be passed to the GJK also.<br><br>Thanks for the responses so far.</div></blockquote>If it is not clear, I should make the demo more obvious. <br><br>The convex cast (==sweep) demo performs time of impact between two linear moving objects, objectA and objectB. Each objects has a starting position (fromA/fromB) and an ending position (toA/toB), both in worldspace. Then internally, the SubsimplexCast algorithm converts this into minkowski space. That's where the intuition usually starts failing. However, this calculation can also be performed in world space. See the ContinuousConvexCollision ( <a href="http://www.continuousphysics.com/Bullet/BulletFull/btContinuousConvexCollision_8cpp-source.html#l00040" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00040</a> ). If you ignore the rotation, you can see the concept and how 'fromA and fromB' are processed. The other version just transforms things into 'relative' MinkowskiSpace.<br><br>In the case of raycasting against a convex object, the ray is represented as a moving sphere. Both this sphere and the convex are passed into the routine to find the hitpoint/fraction/normal.<br><br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Sep 30, 2006 4:11 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kevlar]]></name></author>
+		<updated>2006-09-30T07:37:46+00:00</updated>
+
+		<published>2006-09-30T07:37:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1977#p1977</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1977#p1977"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1977#p1977"><![CDATA[
+<blockquote class="uncited"><div>The 's' is starting point of the ray, in Minkowski space, 'r' is the ray direction. The minus symbols are there, because of the space (Minkowski difference). Basically the raycast is literally casting a point, but the implementation also allows to cast any other convex shape. See the GjkConvexCast demo.<br><br>Hope this helps?<br>Erwin</div></blockquote>So if I had two shapes A and B. I would set the ray starting position to A.position() - B.position() and the ray direction r to ... ?<br><br>In that demo it looks like you are setting the positions of A and B to (0,0,0) and (0,10,0) respectively. I don't quite understand the purpose of the fromA and toA variables. Are those purely for camera transformation? They seem to be passed to the GJK also.<br><br>Thanks for the responses so far.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=939">kevlar</a> — Sat Sep 30, 2006 7:37 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[dog]]></name></author>
+		<updated>2006-09-30T15:16:45+00:00</updated>
+
+		<published>2006-09-30T07:01:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1976#p1976</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1976#p1976"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1976#p1976"><![CDATA[
+Ah, should have looked at your closest implementation.<br><br>3-4 cycles average is typical, but some nasty edge cases can have an oscillation (especially with single precision floats) which is why the time out. I see nothing special in your code that would stop this.<br><br>Edit: To be clearer, VERY occasionally it may actually do the 1000 loops. And it may show as a bizarre spike in performance. At least doing something similar did for me. Took me ages to find too.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=60">dog</a> — Sat Sep 30, 2006 7:01 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-30T06:28:24+00:00</updated>
+
+		<published>2006-09-30T06:28:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1975#p1975</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1975#p1975"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1975#p1975"><![CDATA[
+<blockquote class="uncited"><div>But, looking at the referenced code, your version seems a little odd to me. Probably it hasn't been tested much. For instance, I think you need to check for when the simplex is full and flush it, otherwise your GJK class will corrupt (unless I'm reading the code wrong) in some circumstances. Also, you probably only need a time out of 32 not 1000. At least if this code performs the way mine does. And it looks fairly similar.</div></blockquote>There is no overflow: you add points to the voronoi simplex solver, and the 'closest' vector to the origin performs reduction. This implementation is very well tested, in several games and in Blender, for raycasting. Also the mouse picking in the Bullet demos use this code path. In release mode on a modern computer you should be able to do at least 100.000 tests per second (See the Raytracer demo to visualize the Minkowski sum and other GJK shapes).<br><br>The safety 'maximum' of 1000 should never be reached. I haven't had the time to analyze typical number of iterations, but usual GJK, who shares the same voronoi simplex solver, has an average in the range 3 to 4.<br><blockquote class="uncited"><div><br>This is what Bullet does in that class. But what does it all mean?<div class="codebox"><p>Code: </p><pre><code>SimdVector3 s = -rayFromLocalA.getOrigin();SimdVector3 r = -(rayToLocalA.getOrigin()-rayFromLocalA.getOrigin());</code></pre></div></div></blockquote>The 's' is starting point of the ray, in Minkowski space, 'r' is the ray direction. The minus symbols are there, because of the space (Minkowski difference). Basically the raycast is literally casting a point, but the implementation also allows to cast any other convex shape. See the GjkConvexCast demo.<br><br>Hope this helps?<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Sep 30, 2006 6:28 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[dog]]></name></author>
+		<updated>2006-09-30T05:57:31+00:00</updated>
+
+		<published>2006-09-30T05:57:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1974#p1974</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1974#p1974"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1974#p1974"><![CDATA[
+Bullet really is an amazing resource. I wish it had been around when I was first doing this stuff. <br><br>But, looking at the referenced code, your version seems a little odd to me. Probably it hasn't been tested much. For instance, I think you need to check for when the simplex is full and flush it, otherwise your GJK class will corrupt (unless I'm reading the code wrong) in some circumstances. Also, you probably only need a time out of 32 not 1000. At least if this code performs the way mine does. And it looks fairly similar.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=60">dog</a> — Sat Sep 30, 2006 5:57 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kevlar]]></name></author>
+		<updated>2006-09-30T03:58:43+00:00</updated>
+
+		<published>2006-09-30T03:58:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1973#p1973</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1973#p1973"/>
+		<title type="html"><![CDATA[GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1973#p1973"><![CDATA[
+Then I guess btSubsimplexConvexCast is the one described in this paper?<br><a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/papers/&amp;file=jgt04raycast.pdf" class="postlink">jgt04raycast.pdf</a><br><br>This is what Bullet does in that class. But what does it all mean?<div class="codebox"><p>Code: </p><pre><code>SimdVector3 s = -rayFromLocalA.getOrigin();SimdVector3 r = -(rayToLocalA.getOrigin()-rayFromLocalA.getOrigin());</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=939">kevlar</a> — Sat Sep 30, 2006 3:58 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-30T06:29:18+00:00</updated>
+
+		<published>2006-09-29T15:42:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1962#p1962</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1962#p1962"/>
+		<title type="html"><![CDATA[Re: GJK Ray cast]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1962#p1962"><![CDATA[
+<blockquote class="uncited"><div>I believe that Bullet implements the algorithm in "Ray Casting against General Convex Objects with Application to Continuous Collision Detection" by Gino Van Den Bergen.<br><br>I'm now in the process of implementing it as I need to be able to find out the collision point and normal. One thing that I'm slightly confused about though is what the values of s(point) and r(direction) should be. Lets say I have 2 objects A and B, each of which have an acceleration, velocity and position vector associated with them. What do I set the values of s and r to? I've had a quick look at Bullet implementation but it hasn't helped me unfortunately <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused"><br><br>Thanks.</div></blockquote>Bullet contains 3 implementations for Ray/convex casting, all variations on Brian Mirtichs Conservative Advancement, see<br><a href="http://www.continuousphysics.com/Bullet/BulletFull/classbtConvexCast.html" class="postlink">http://www.continuousphysics.com/Bullet ... xCast.html</a><br><br>btGjkConvexCast is the original version by Mirtich, btSubsimplexConvexCast is Gino's contribution mixing the Conservative Advancement loop with GJK loop (just having 1 loop), limited to pure linear motion (good for ray cast and generic convex object sweeps)<br>btContinuousConvexCollision is my contribution, which includes rotation.<br>They all operate in different spaces.<br><br>Which version are you using?<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Sep 29, 2006 3:42 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

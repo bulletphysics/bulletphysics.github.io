@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13347" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-01-07T18:28:33+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13347</id>
+
+		<entry>
+		<author><name><![CDATA[acu192]]></name></author>
+		<updated>2022-01-07T18:28:33+00:00</updated>
+
+		<published>2022-01-07T18:28:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43790#p43790</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43790#p43790"/>
+		<title type="html"><![CDATA[Re: Bullet crash]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43790#p43790"><![CDATA[
+Glad you found your issue!<br><br>That's a common pattern, to make a list of thing you *want* to remove, then remove them in a second loop. I have that pattern in several places in my codebase.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13895">acu192</a> — Fri Jan 07, 2022 6:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[paokakis]]></name></author>
+		<updated>2022-01-07T17:55:32+00:00</updated>
+
+		<published>2022-01-07T17:55:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43788#p43788</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43788#p43788"/>
+		<title type="html"><![CDATA[Re: Bullet crash]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43788#p43788"><![CDATA[
+Thank you for your analysis, it was helpful. I moved around some code and modified the tickcallback function and finally I am crash free. The problem was that I was removing objects from the bullet library while I was iterating through the objects at the same time. My fault, and bullet didn't like it. Now I collect the objects that need to be removed and I remove them in a separate step (After iteration)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13868">paokakis</a> — Fri Jan 07, 2022 5:55 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[acu192]]></name></author>
+		<updated>2022-01-06T03:50:39+00:00</updated>
+
+		<published>2022-01-06T03:50:39+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43787#p43787</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43787#p43787"/>
+		<title type="html"><![CDATA[Re: Bullet crash]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43787#p43787"><![CDATA[
+To expound a bit on my theory...<br><br>Take these two lines of code:<div class="codebox"><p>Code: </p><pre><code>const btCollisionObject* obA = contactManifold-&gt;getBody0();...void* usrDataB = obA-&gt;getUserPointer();</code></pre></div><br>An example of what I'm talking about is: obA is a pointer to memory ... but maybe you freed that memory earlier in the program? If so, you better not touch that memory now or it will go boom on the second line of code above. This situation might have happened if you freed the object but didn't remove it from the dynamics world.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13895">acu192</a> — Thu Jan 06, 2022 3:50 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[acu192]]></name></author>
+		<updated>2022-01-06T03:42:04+00:00</updated>
+
+		<published>2022-01-06T03:42:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43785#p43785</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43785#p43785"/>
+		<title type="html"><![CDATA[Re: Bullet crash]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43785#p43785"><![CDATA[
+C++ is hard. Touch memory wrong *just once* and things explode. In my experience (not just about Bullet, but with any C++ code) the most common issue is that you are sharing a pointer to some objects, the memory for that object gets freed ("delete" in C++) somewhere, but that pointer is still being used by other parts of the code ... and then it gets accessed at some point in the future... and boom, crash! The hard part about this is that (usually) the "bug" is in the code that freed the memory (i.e. it should not have freed it, since the object was still being used elsewhere) ... but that's not where you code crashes. It crashes later on ... at some point in the future ... and the place where is crashes is *not* where the bug is. And, the place where it crashes will *change* from one run to the next (as you mention). Again,the "bug" is not in that place where you code crashes, it is somewhere else (where the memory was freed). This is not the only way to mess up, but it's the most common that I've seen.<br><br>It is also hard because you might think, "oh, I just won't free memory so much" ... and great, now your code doesn't crash anymore! But, now you have memory leaks (which of course *will* make your code crash at some point in the distance future when the OS runs out of memory).<br><br>Anyway, it's unlikely the bug is in Bullet itself. I (and many many other people) have a deployed app that heavily uses Bullet and have never found such a bug. I'm not saying it impossible, but it's unlikely IMO.<br><br>Hope my unhelpful answer... helps some.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13895">acu192</a> — Thu Jan 06, 2022 3:42 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[paokakis]]></name></author>
+		<updated>2022-01-05T20:56:37+00:00</updated>
+
+		<published>2022-01-05T20:56:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43781#p43781</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43781#p43781"/>
+		<title type="html"><![CDATA[Bullet crash]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43781#p43781"><![CDATA[
+Hello to the group,<br><br>I have some problems working with bullet and I am wondering what I'm doing wrong. Here is some code that works on collision :<div class="codebox"><p>Code: </p><pre><code>// collision detectionfor (int i = 0; i &lt; world-&gt;getDispatcher()-&gt;getNumManifolds(); ++i){btPersistentManifold* contactManifold = world-&gt;getDispatcher()-&gt;getManifoldByIndexInternal(i);for (int j = 0; j &lt; contactManifold-&gt;getNumContacts(); ++j){btManifoldPoint&amp; pt = contactManifold-&gt;getContactPoint(j);if (pt.getDistance() &lt; 0.f){const btCollisionObject* obA = contactManifold-&gt;getBody0(); // our objectconst btCollisionObject* obB = contactManifold-&gt;getBody1(); // enemy objectvoid* usrDataA = obB-&gt;getUserPointer();void* usrDataB = obA-&gt;getUserPointer();}}}</code></pre></div>Some times I get an exception / crash on the btManifoldPoint and some time on the btCollisionObject a or b. Does someone know why that is? Am I doing something wrong or Bullet has bugs?<div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1898" class="postimage" alt="Capture.PNG" onclick="viewableArea(this);" /></dt></dl></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13868">paokakis</a> — Wed Jan 05, 2022 8:56 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

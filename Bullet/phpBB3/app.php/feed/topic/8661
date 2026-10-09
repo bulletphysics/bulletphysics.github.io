@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8661" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2012-12-12T23:45:32+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8661</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2012-12-12T23:45:32+00:00</updated>
+
+		<published>2012-12-12T23:45:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29477#p29477</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29477#p29477"/>
+		<title type="html"><![CDATA[Re: Does btParallelConstraintSolver give any speedup?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29477#p29477"><![CDATA[
+<blockquote class="uncited"><div> In our tests we didn't get any benefit from the parallel constraint solver. In fact, we have observed that the parallel constraint solver is often slower than the sequential one. </div></blockquote>Indeed, the btParallelConstraintSolver usually doesn't give speedup: it lacks several of the optimizations that the regular btSequentialImpulseConstraintSolver has.<br><br>Multithreading the btSequentialImpulseConstraintSolver using constraint splitting (see CustomSplitConstraints in btParallelConstraintSolver.cpp) will likely give good speedup,<br>both for single large islands and multiple islands. <br><br>If you have a patch to run separate simulation islands multithreaded, please share it and I'll look if we can apply your patch.<blockquote class="uncited"><div>For the parallel collision dispatcher we did observe speed ups from using multiple cores.</div></blockquote>The SpuGatheringCollisionDispatcher can improve the narrowphase collision detection performance, but it doesn't support all features/collision shape types.<br><br>The latest version of the regular btCollisionDispatcher should be much easier to parallelize, with full features. The only shared resource is the (de) allocation of contact manifolds in the methods btCollisionDispatcher::getNewManifold and btCollisionDispatcher::releaseManifold. Once those two functions are made thread-safe (for example using an atomic compare and swap) the narrowphase becomes embarrasingly parallel.<br><br>Thanks and please keep us updated!<br>Erwin<br><br>By the way, most effort in Bullet went into the regular (sequential) physics pipeline, the PlayStation 3 SPU version and nowadays the OpenCL parallel version.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Dec 12, 2012 11:45 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[alexey.rodriguez]]></name></author>
+		<updated>2012-12-10T22:55:40+00:00</updated>
+
+		<published>2012-12-10T22:55:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29463#p29463</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29463#p29463"/>
+		<title type="html"><![CDATA[Does btParallelConstraintSolver give any speedup?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29463#p29463"><![CDATA[
+Hi there,<br><br>We have posted a message earlier [1] that talks about parallelization experiments we have performed on a modified version of a Bullet benchmark. The benchmark is AppBenchmarks, specifically the 1000 stacks example which we modified to increase the number of islands.<br><br>AppBenchmarks can be compiled to use two parallel algorithms from the Bullet Physics distribution. The first is a parallel constraint solver (btParallelConstraintSolver) and the second is a parallel implementation of the collision dispatcher (SpuGatheringCollision). In our tests we didn't get any benefit from the parallel constraint solver. In fact, we have observed that the parallel constraint solver is often slower than the sequential one. For the parallel collision dispatcher we did observe speed ups from using multiple cores.<br><br>Is it known whether btParallelConstraintSolver gives any speedup? Under what workloads does that happen?<br><br>Thank you!<br><br>Cheers,<br><br>Kristian Kolev and Alexey Rodriguez<br><br>[1] <a href="http://bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=6&amp;t=8660" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... f=6&amp;t=8660</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9734">alexey.rodriguez</a> — Mon Dec 10, 2012 10:55 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

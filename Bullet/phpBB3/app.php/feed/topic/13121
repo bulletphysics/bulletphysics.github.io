@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13121" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-12-07T21:05:27+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13121</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-12-07T21:05:27+00:00</updated>
+
+		<published>2020-12-07T21:05:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43215#p43215</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43215#p43215"/>
+		<title type="html"><![CDATA[Re: Properly set shape data from robotics library to HACD structure]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43215#p43215"><![CDATA[
+First: VHACD works well for many general concave shapes, but is not failproof.  It doesn't work well on non-closed meshes and takes configuration parameters which determine voxel resolutions, iteration limits, etc.  When the config parameters are not appropriate for submitted meshes then you can get bad results. It can fail in two ways: outright failure where it gives up, or it can reach a conclusion but produce geometry that is not-useable for your purposes.  Unfortunately, tuning the parameters for your content is not trivial: sometimes you need insight into details of the algorithm find parameters that work.<br><br>Second: the version of VHACD in bullet/Extras is not the latest.  It looks like Bullet has a version of VHACD from 2016, but the VHACD github repo has changes from as late as May 2020.  You will probably get better results if you were to download the latest VHACD and manually incorporate that into your code.<br><br>Third: (and I dunno if this applies in your case but I mention it for the record for future readers) If you must perform run-time convex decomposition then you would need a convex decomposition algorithm like VHACD.  However, it isn't actually run-time ready for real-time simulations like games, unless you are very careful about moving the decomposition to another thread where it can crunch for anywhere from a few milliseconds to 100's of seconds, depending on how complex is the input you're giving it.  Yes, if you can move your VHACD calculations onto the GPU for 100X speedup, but... that takes dev work and could still take a few seconds at 100% GPU usage if you're feeding it terribly complex stuff.  If your application can take advantage of non-run-time convex decomposition pipelines then (e.g. do the work before you even start the simulation and load data) then you will probably avoid headaches by doing that work and not using VHACD in the run-time.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Mon Dec 07, 2020 9:05 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[leusd1000]]></name></author>
+		<updated>2020-12-07T17:31:08+00:00</updated>
+
+		<published>2020-12-07T17:31:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43212#p43212</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43212#p43212"/>
+		<title type="html"><![CDATA[Properly set shape data from robotics library to HACD structure]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43212#p43212"><![CDATA[
+Hi, I need to implement convex decomposition for dynamic objects. I also using robotics library for getting shape of the object <a href="https://github.com/roboticslibrary/rl/blob/0.7/src/rl/sg/bullet/Shape.cpp#L74" class="postlink">https://github.com/roboticslibrary/rl/b ... pe.cpp#L74</a>. <br>At first I looked at an example <a href="https://github.com/kripken/bullet/blob/master/Demos/ConvexDecompositionDemo/ConvexDecompositionDemo.cpp#L169" class="postlink">https://github.com/kripken/bullet/blob/ ... o.cpp#L169</a>, but it does not suit me as there they use WavefrontObj for getting data, and I receive other structures. For example, for simple cube the array of indexes will have 36 elements, vertices 108 (x, y, z), but HACD structure will require 8 unique points and 12 triangles consisting of points' indexes. For setting the data, I added the <em class="text-italics">addVertex </em>function which saves unique positions of vertices <div class="codebox"><p>Code: </p><pre><code>int addVertex(btVector3 v) {int index = unique_vertices.size();auto it = std::find_if(unique_vertices.begin(), unique_vertices.end(), [v](btVector3 vertex) {return vertex == v; });if (it != unique_vertices.end())index = it - unique_vertices.begin();elseunique_vertices.push_back(v);return index;}</code></pre></div> I debugged example with cube decomposition to see how points were set and by analogy I placed them(which, interestingly, in the example were set in clockwise order).<div class="codebox"><p>Code: </p><pre><code>for (int i = 0; i &lt; this-&gt;indices.size() / 3; i++){int index0 = this-&gt;indices[i * 3];int index1 = this-&gt;indices[i * 3 + 1];int index2 = this-&gt;indices[i * 3 + 2];btVector3 vertex0(this-&gt;vertices[index0 * 3], this-&gt;vertices[index0 * 3 + 1], this-&gt;vertices[index0 * 3 + 2]);btVector3 vertex1(this-&gt;vertices[index1 * 3], this-&gt;vertices[index1 * 3 + 1], this-&gt;vertices[index1 * 3 + 2]);btVector3 vertex2(this-&gt;vertices[index2 * 3], this-&gt;vertices[index2 * 3 + 1], this-&gt;vertices[index2 * 3 + 2]);int v0 = addVertex(vertex0);int v1 = addVertex(vertex1);int v2 = addVertex(vertex2);//clockwise order ?triangle_indices.push_back(v2);triangle_indices.push_back(v1);triangle_indices.push_back(v0);}for (const btVector3&amp; v : this-&gt;unique_vertices){HACD::Vec3&lt;HACD::Real&gt; vertex(v.x(), v.y(), v.z());points.push_back(vertex);}for (int i = 0; i &lt; this-&gt;triangle_indices.size() / 3; i++){HACD::Vec3&lt;long&gt; triangle(this-&gt;triangle_indices[i * 3], this-&gt;triangle_indices[i * 3 + 1], this-&gt;triangle_indices[i * 3 + 2]);triangles.push_back(triangle);}</code></pre></div> In addition to the fact that this method is slow, it also displays complex objects with inaccuracies (with cube everything is ok). Maybe there is a function that converts the data for HACD structure properly, or there are some other ideas how to set data properly?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13813">leusd1000</a> — Mon Dec 07, 2020 5:31 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

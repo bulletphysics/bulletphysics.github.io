@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to compute BoxBox contact point ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to compute BoxBox contact point ?</h2>
+		<p><a href="viewtopic.php%3Ft=11286.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11286</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to compute BoxBox contact point ?</h3>
+				<div class="date">Posted: <strong>Fri Aug 12, 2016 5:55 am</strong></div>
+				<div class="author">by <strong>Jack2016</strong></div>
+				<div class="content">when I read the btBoxBoxCollisionAlgorithm source code to compute BoxBox contact points ,I find it's hard to understand.<br>
+so which book or paper should I refer to,I want to know the principle first</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to compute BoxBox contact point ?</h3>
+				<div class="date">Posted: <strong>Fri Aug 12, 2016 2:13 pm</strong></div>
+				<div class="author">by <strong>jheanley</strong></div>
+				<div class="content">This should be a reasonable start, this is OBB vs OBB collisions. (OBB is Oriented Bounding Box, the other type is AABB or axis aligned bounding box which is somewhat cheaper to compute)<br>
+<br>
+<a href="http://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/" class="postlink">http://www.randygaul.net/2014/05/22/der ... ction-sat/</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to compute BoxBox contact point ?</h3>
+				<div class="date">Posted: <strong>Sat Aug 13, 2016 12:38 am</strong></div>
+				<div class="author">by <strong>Jack2016</strong></div>
+				<div class="content"><blockquote><div><cite>jheanley wrote:</cite>This should be a reasonable start, this is OBB vs OBB collisions. (OBB is Oriented Bounding Box, the other type is AABB or axis aligned bounding box which is somewhat cheaper to compute)<br>
+<br>
+<a href="http://www.randygaul.net/2014/05/22/deriving-obb-to-obb-intersection-sat/" class="postlink">http://www.randygaul.net/2014/05/22/der ... ction-sat/</a></div></blockquote>
+
+this article is very helpful , Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to compute BoxBox contact point ?</h3>
+				<div class="date">Posted: <strong>Mon Aug 15, 2016 5:33 am</strong></div>
+				<div class="author">by <strong>Jack2016</strong></div>
+				<div class="content"><a href="http://gamedev.stackexchange.com/questions/44500/how-many-and-which-axes-to-use-for-3d-obb-collision-with-sat/" class="postlink">http://gamedev.stackexchange.com/questi ... -with-sat/</a><br>
+<br>
+SAT in 3D / compute contact point  implementation detail</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to compute BoxBox contact point ?</h3>
+				<div class="date">Posted: <strong>Tue Aug 16, 2016 2:44 am</strong></div>
+				<div class="author">by <strong>Jack2016</strong></div>
+				<div class="content">In the func dBoxBox2 ,after SAT it's clear to get the collision type which store in the variable "code" -&gt; 1,2,3 / 4,5,6 /9-15<br>
+But then I find it's still not clear about the implementation detail of contact point computing,I read the paper of Erwin GDC10_Contact.pdf<br>
+The paper just give us some description about Box Box Clipping,introduce the concepts of incident face ,reference face,clipping planes,<br>
+still not clear about the implementation detail<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11286&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  // find the normal and non-normal axis numbers of the reference box
+  int codeN,code1,code2;
+  if (code &lt;= 3) codeN = code-1; else codeN = code-4;
+  if (codeN==0) {
+    code1 = 1;
+    code2 = 2;
+  }
+  else if (codeN==1) {
+    code1 = 0;
+    code2 = 2;
+  }
+  else {
+    code1 = 0;
+    code2 = 1;
+  }
+
+  // find the four corners of the incident face, in reference-face coordinates
+  btScalar quad[8];	// 2D coordinate of incident face (x,y pairs)
+  btScalar c1,c2,m11,m12,m21,m22;
+  c1 = dDOT14 (center,Ra+code1);
+  c2 = dDOT14 (center,Ra+code2);
+  // optimize this? - we have already computed this data above, but it is not
+  // stored in an easy-to-index format. for now it's quicker just to recompute
+  // the four dot products.
+  m11 = dDOT44 (Ra+code1,Rb+a1);
+  m12 = dDOT44 (Ra+code1,Rb+a2);
+  m21 = dDOT44 (Ra+code2,Rb+a1);
+  m22 = dDOT44 (Ra+code2,Rb+a2);
+  {
+    btScalar k1 = m11*Sb[a1];
+    btScalar k2 = m21*Sb[a1];
+    btScalar k3 = m12*Sb[a2];
+    btScalar k4 = m22*Sb[a2];
+    quad[0] = c1 - k1 - k3;
+    quad[1] = c2 - k2 - k4;
+    quad[2] = c1 - k1 + k3;
+    quad[3] = c2 - k2 + k4;
+    quad[4] = c1 + k1 + k3;
+    quad[5] = c2 + k2 + k4;
+    quad[6] = c1 + k1 - k3;
+    quad[7] = c2 + k2 - k4;
+  }
+
+  // find the size of the reference face
+  btScalar rect[2];
+  rect[0] = Sa[code1];
+  rect[1] = Sa[code2];
+
+  // intersect the incident and reference faces
+  btScalar ret[16];
+  int n = intersectRectQuad2 (rect,quad,ret);
+  if (n &lt; 1) return 0;		// this should never happen</code></pre></div>
+
+what's the reason to compute 4 cornors, and why quat[0] = c1 - k1 -k3 compute like this<br>
+In order to make it clear about the code above,which paper should I read or refer to ?<br>
+<br>
+after two days to read the src code above, I'm clear now.So I'll share my experience and give a brief description about the algorithm<br>
+1 -&gt; incident face(world coordinate) projected to reference face local coordinate, the local coordinate is 2D<br>
+2 -&gt; compute the contact in reference face local coordinate points which is implemented in func intersectRectQuat2<br>
+3 -&gt; convert the contact points from the local coordinate to world coordinate<br>
+4 -&gt; compute the penetration of each contact point,only the depth &lt;= 0. is contact point</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to compute BoxBox contact point ?</h3>
+				<div class="date">Posted: <strong>Wed Aug 17, 2016 4:18 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">They wrote dBoxBox like that because it made sense to them at the time to write it like that. They probably derive a lot of the math on paper and then translated it into code. If you want to know what c1 - k1 - k3 is then you need to go through the math and draw pictures of what everything is. You can do the math by hand and follow it along. The four points you outline look correct. If you want to read more about contact point computing try searching this forum for posts by Dirk Gregorius, also look up his GDC lecture about generating contacts.<br>
+<br>
+"In order to make it clear about the code above,which paper should I read or refer to ?"<br>
+I suggest to stop looking into ODE and look at the link jheanley gave you if you are stuck. The code there should be easier to understand. You did <a href="https://github.com/RandyGaul/qu3e/blob/master/src/collision/q3Collide.cpp" class="postlink">read the code</a>, right?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to compute BoxBox contact point ?</h3>
+				<div class="date">Posted: <strong>Thu Aug 18, 2016 1:55 am</strong></div>
+				<div class="author">by <strong>Jack2016</strong></div>
+				<div class="content"><blockquote><div><cite>RandyGaul wrote:</cite>They wrote dBoxBox like that because it made sense to them at the time to write it like that. They probably derive a lot of the math on paper and then translated it into code. If you want to know what c1 - k1 - k3 is then you need to go through the math and draw pictures of what everything is. You can do the math by hand and follow it along. The four points you outline look correct. If you want to read more about contact point computing try searching this forum for posts by Dirk Gregorius, also look up his GDC lecture about generating contacts.<br>
+<br>
+"In order to make it clear about the code above,which paper should I read or refer to ?"<br>
+I suggest to stop looking into ODE and look at the link jheanley gave you if you are stuck. The code there should be easier to understand. You did <a href="https://github.com/RandyGaul/qu3e/blob/master/src/collision/q3Collide.cpp" class="postlink">read the code</a>, right?</div></blockquote>
+
+Thanks a lot.<br>
+I have read jHeanley's link,and understand the SAT in 3D .Also read the lecture of Drik  TheSperatingAxisTest.pdf .<br>
+The meaning of "c1 - k1 -k3" is the cornor of the quad which is projected to the reference face,I think I have understood.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

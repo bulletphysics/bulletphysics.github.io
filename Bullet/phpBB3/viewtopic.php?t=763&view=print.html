@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Possible optimization for dynamic Pyramid OBB stacking scene</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Possible optimization for dynamic Pyramid OBB stacking scene</h2>
+		<p><a href="viewtopic.php%3Ft=763.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=763</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Possible optimization for dynamic Pyramid OBB stacking scene</h3>
+				<div class="date">Posted: <strong>Tue Dec 05, 2006 2:49 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">Iterative Solver ( SOR-PGS, 15 iterations with W = 1.1, convergence-testing ), optimized matrix calculations ( i.e. using matrice sparsity ) and contact joints caching. But all it handles only pyramid with 10 OBBs in basement. Collision broad phase is via bounding spheres intersection tests. Is there anything that could rise performance of my engine ( on this scene )? <br>
+Dividing total matrix A on contact groups in this case have no point because all of the cubes connected with contact joint.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Dec 05, 2006 8:34 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Do you use iterative impulses or a PGS method? BTW I suggest using w_sor = 1.0 otherwise you might add energy to the system. I am sure you know that for the case w_sor = 1.0 is SOR equivalent to PGS.<br>
+<br>
+I assume for now you use PGS like solver like in the ODE. What do you solve for? The ODE tries to solve for the constraint forces: <br>
+<br>
+J*W*JT*lambda = -ERP * C / dt2 - J*( v/dt + w*f_ext )<br>
+<br>
+You could reformulate this and solve for impulses instead what might be a little faster since you can integrate forward in time without considering the constraints, compute the correcting impulses, apply those impulse and integrate the positions using the corrected velocities:<br>
+<br>
+J*W*JT*(lambda*dt) = -ERP * C / dt - J*( v + w*f_ext*dt)<br>
+<br>
+Still this this would be slower (and has most propably worse convergence) then using impulse because you implictly solve blockwise. Assume one single spherical joint. With the above method you will need to compute the impulses using:<br>
+<br>
+P = JT * lampda<br>
+<br>
+The contains redundant information since you will compute P1, L1 = r1 x P1, P2 and L2 = r2  x P2 instead of simply applying the computed impulse at the anchor point. You don't use that P2 = -P1 in this case. You also solve blockwise when using impulses what would equivalent to a blockwise PGS which has superior convergence.<br>
+<br>
+Finally one side note. Pyramids and walls are more stable then simple stacks. I suggest stacking 5 boxes (1x1x1) with a mass of 1kg falling down onto each other (preferable also rotated against each other). I checked the method of E. Catto a while ago and this can be handled with one iteration using the accumulated impulse and warmstarting. He also suggest applying the friction at the manifold center instead at each contact point what gets you down from 12 to 7 constraints for a face-face contact and what is a nice improvement as well (I would say both in speed and quality).<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 06, 2006 7:10 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">I'm using PGS, not impulses and w value 1.1 is for faster convergence. Energy gain is possible, but it is a little bit faster than classical PGS algo..<br>
+  Solving for impulses, not for constraint forces is not much faster ( adds about 2 fps to my scene <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> ) but it digs right into simulator basics so it is not preferable way <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+  I'm interested in so-called "warm starting". What is it and why it should add performance or stability in my solver?<br>
+<br>
+P/S: i've always thought that ODE uses direct solver ( something like Dantzig or Lemke ), not iterative ones..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 06, 2006 9:27 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+adds about 2 fps to my scene
+</div></blockquote>
+
+Take what you get <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+
+<blockquote class="uncited"><div>
+but it digs right into simulator basics so it is not preferable way
+</div></blockquote>
+
+What do you mean by this? Can you give an example?<br>
+<br>
+
+<blockquote class="uncited"><div>
+ I'm interested in so-called "warm starting"
+</div></blockquote>
+Warm-Starting means to use your results from the last frame as starting value for the next frame. Basically you save your lambdas and use them in the next frame instead of reseting them to zero. See Erin presentations for ideas how to match contact impulses over frames<br>
+<br>
+
+<blockquote class="uncited"><div>
+i've always thought that ODE uses direct solver
+</div></blockquote>
+The ODE has a direct solver, but in quickstep.cpp you have an iterative (PGS) solver</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 06, 2006 10:07 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><blockquote class="uncited"><div>What do you mean by this? Can you give an example?</div></blockquote>
+It's not for some examples it is for idea <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> I need my simulator to be force-based, not impulse-based <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> [ and remember that this change adds quite small amount of fps to scene ], so this optimization is not needed for me.<br>
+<br>
+About warm starting: sorry i'm confusing terminology and now i understand that warm starting is simple caching lambda values. In this case i have warm starting, yes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 06, 2006 11:05 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Since forces and impulse are linear related - we assume the forces to be constant over the interval dt. You still could compute the force from the accumlated impulse. It is simply F = P/dt<br>
+<br>
+I recommend looking at ODE quickstep.cpp and joint.cpp and see if you can find some clever optimization there that you maybe missed in your code. <br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 06, 2006 11:11 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">Ok, thanks for your replies <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

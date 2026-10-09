@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; MOPP analogue</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>MOPP analogue</h2>
+		<p><a href="viewtopic.php%3Ft=5249.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5249</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>MOPP analogue</h3>
+				<div class="date">Posted: <strong>Sat Jun 12, 2010 12:40 am</strong></div>
+				<div class="author">by <strong>paul.dubois</strong></div>
+				<div class="content">We divide our large world into chunks and wrap all static collision for a chunk into a Hk MOPP. The broadphase contains only a couple static objects -- one for the MOPP, one with a custom heightfield shape.<br>
+<br>
+There seem to be a few possiblilities to do this this in Bullet.<br>
+<br>
+* Forget the container; batch-add all the static objects to the broadphase at runtime. <br>
+CON: Makes shifting the broadphase origin more expensive, forces us to build the acceleration structure at runtime.<br>
+<br>
+* Use btCompoundShape with optional dbvt.<br>
+CON: ray and sweep tests don't use the acceleration structure (<a href="http://code.google.com/p/bullet/issues/detail?id=25" class="postlink">issue 25</a>). Also, seems like a slight abuse of shapes; nobody will care about the combined inertia tensor, for example. Issue 25 looks easy for me to implement, but it _has_ been sitting around for a couple years -- is there some subtlety that I'm missing?<br>
+<br>
+* use btMultiSapBroadphase; add a SAP for each chunk of the world, containing only that chunk's static data.<br>
+<br>
+So, a couple questions:<br>
+btMultiSap or btCompoundShape for static collision? Or something else?<br>
+Is there anything tricky I'm missing about <a href="http://code.google.com/p/bullet/issues/detail?id=25" class="postlink">issue 25</a>?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: MOPP analogue</h3>
+				<div class="date">Posted: <strong>Sun Jun 13, 2010 3:43 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>paul.dubois wrote:</cite>We divide our large world into chunks and wrap all static collision for a chunk into a Hk MOPP. The broadphase contains only a couple static objects -- one for the MOPP, one with a custom heightfield shape.<br>
+<br>
+There seem to be a few possiblilities to do this this in Bullet.<br>
+<br>
+* Forget the container; batch-add all the static objects to the broadphase at runtime. <br>
+CON: Makes shifting the broadphase origin more expensive, forces us to build the acceleration structure at runtime.
+</div></blockquote>
+If you use btDbvtBroadphase, all static objects go in a separate btDbvt tree. It should be efficient.
+<blockquote><div><cite>paul.dubois wrote:</cite>
+* Use btCompoundShape with optional dbvt.<br>
+CON: ray and sweep tests don't use the acceleration structure (<a href="http://code.google.com/p/bullet/issues/detail?id=25" class="postlink">issue 25</a>). Also, seems like a slight abuse of shapes; nobody will care about the combined inertia tensor, for example. Issue 25 looks easy for me to implement, but it _has_ been sitting around for a couple years -- is there some subtlety that I'm missing?
+</div></blockquote>
+no subtlety, too few resources. Please implement it and provide a patch.
+<blockquote><div><cite>paul.dubois wrote:</cite>
+* use btMultiSapBroadphase; add a SAP for each chunk of the world, containing only that chunk's static data.
+</div></blockquote>
+Not recommended, btMultiSapBroadphase is unfinished an suboptimal. First option is best.<br>
+<br>
+We could easily extend the btBvhTriangleMeshShape to accept all types of shapes. Its static acceleration structure is more compact than btDbvt.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: MOPP analogue</h3>
+				<div class="date">Posted: <strong>Wed Jun 16, 2010 6:44 pm</strong></div>
+				<div class="author">by <strong>paul.dubois</strong></div>
+				<div class="content"><blockquote><div><cite>paul.dubois wrote:</cite>
+* Use btCompoundShape with optional dbvt.<br>
+CON: ray and sweep tests don't use the acceleration structure (<a href="http://code.google.com/p/bullet/issues/detail?id=25" class="postlink">issue 25</a>). Also, seems like a slight abuse of shapes; nobody will care about the combined inertia tensor, for example. Issue 25 looks easy for me to implement, but it _has_ been sitting around for a couple years -- is there some subtlety that I'm missing?
+</div></blockquote>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+no subtlety, too few resources. Please implement it and provide a patch.
+</div></blockquote>
+
+For the record, this is not a good solution because of <a href="http://code.google.com/p/bullet/issues/detail?id=348" class="postlink">http://code.google.com/p/bullet/issues/detail?id=348</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

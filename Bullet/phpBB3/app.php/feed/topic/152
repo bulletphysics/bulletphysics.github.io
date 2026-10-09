@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/152" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-10-24T23:12:29+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/152</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2005-10-24T23:12:29+00:00</updated>
+
+		<published>2005-10-24T23:12:29+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=412#p412</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=412#p412"/>
+		<title type="html"><![CDATA[Bullet Pt2Pt Constraint and Jacobian entry]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=412#p412"><![CDATA[
+I renamed some variables to make the source a bit more clear.<br>Basically the JacobianEntry calculates and stores some values to perform constraint correction:<br><br>for two rigidbodies, A and B it precomputes<br><br>angular Jacobian entries J for both bodies<br>Minv Jt for both bodies<br>Adiag, the diagonal entry in the system matrix A = J Minv Jt<br><br>This information can be used in a Gauss-Siedel iterative LCP solver, or to correct the constraint error on a per-body pair.<br><br>Once I got some time I will add some more details, see the renamed variables in JacobianEntry here:<br><a href="http://www.erwincoumans.com/Bullet/BulletFull/annotated.html" class="postlink">http://www.erwincoumans.com/Bullet/Bull ... tated.html</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Oct 24, 2005 11:12 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2005-10-23T13:50:09+00:00</updated>
+
+		<published>2005-10-23T13:50:09+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=404#p404</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=404#p404"/>
+		<title type="html"><![CDATA[RE:]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=404#p404"><![CDATA[
+I thought about the problem and came up with the following idea:<br><br>The velocity update for the two bodies is:<br><br>M * du /dt = f_ext + JT * lambda<br><br>Here u is the generalized velocity vector for body1 and body2, JT is the transposed jacobian and lambda is a vector of langrange multipliers. <br><br>Since we use linear dynamics we can use superposition and apply the external and constraint forces subsequently. So the velocity update because of the the constraint forces becomes:<br><br>M * du /dt =  JT * lambda<br><br>The compatibility equation (velocity constraint) for the two bodies is:<br><br>J * u(t) = 0<br><br>Numerical integration of the Newton-Euler equation:<br><br>        M * ( u(t+dt) - u(t) ) / dt = JT * lambda<br><br>&lt;=&gt; u(t+dt) = u(t) + M^-1*JT*lambda*dt<br><br>Semi-implicit integration, therefore<br><br>J * u(t+dt) = 0<br><br>Plug integrated Euler-Newton into compatibility equation:<br><br>         J * [ u(t) + M^-1*JT*lambda*dt ] = 0<br>&lt;=&gt;  J*M^-1*JT * lambda * dt + J*v(t) = 0 <br><br>This is a linear system: A * x + b = 0<br><br>If we look now sharply we see that J*v(t) is the constraint error and lambda * dt is the wanted impulse. We define<br><br>A := J*M^-1*JT<br>x := lambda * dt<br>b := J*v(t)<br><br>=&gt; lambda = A^-1 * constraint error (J*v(t))<br><br>So the wanted linear and angular impulses for body1 and body2  are simply:<br><br>P = JT * lambda<br><br>Is this correct? <br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Oct 23, 2005 1:50 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2005-10-23T12:45:33+00:00</updated>
+
+		<published>2005-10-23T12:45:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=403#p403</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=403#p403"/>
+		<title type="html"><![CDATA[Bullet Pt2Pt Constraint and Jacobian entry]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=403#p403"><![CDATA[
+I looked at the Point2PointConstraint class and have a question how the constraint is satisfied ( Point2PointConstraint::SolveConstraint( dt ) ). For my understanding two steps have to be taken:<br><br>1.) First calculate the constraint error<br>This is very obvious here. Simply calculate the relative drift and relative velocity at the pivot point.<br><br>2.) Find correction (impulse) such that constraint error is repaired<br>Here I can't follow anymore.<br><br>Questions:<br><br>(1)<br>The Jacobian for the Pt2Pt constraint is a 3 x 12 matrix and it has the following entries:<br><br>J = ( I -R1 -I R2 )<br><br>I    := Identity matrix (3x3)<br>R1 := Cross matrix for offset vector from CM body1 to pivot point in world space (3x3)<br>R2 := Cross matrix for offset vector from CM body2 to pivot point in world space (3x3)<br><br>How does this relate to the JacobianEntry class and what is the "normal" entry in this class?<br><br>(2)<br>We need to find an impulse such that constraint error is resolved. How is this achieved using the JacobianEntry class? Derivation? I have solved this problem by finding an impulse such that relative velocity at the pivot point is resolved, but I don't take the Jacobian into account. So how can use the Jacobian to find the repairing impulse?<br><br>(3)<br>For a hinge joint the resulting impulse would be a 5 x1 vector. How do I build a linear and angular impulse from this data?<br><br>A sketch of the basic idea would be very helpful - especially the role of the Jacobian!<br><br>Regards,<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Oct 23, 2005 12:45 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

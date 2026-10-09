@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9017" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2013-05-01T06:20:17+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9017</id>
+
+		<entry>
+		<author><name><![CDATA[SinisterMephisto]]></name></author>
+		<updated>2013-05-01T06:20:17+00:00</updated>
+
+		<published>2013-05-01T06:20:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30609#p30609</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30609#p30609"/>
+		<title type="html"><![CDATA[Re: Quaternion Integration: velocity and acceleration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30609#p30609"><![CDATA[
+Oh, I found the solution to my problem but thanks.<br><br><br><div class="codebox"><p>Code: </p><pre><code>//Velocity Verlet//RotationsVector3 newW = iInv * t;Quaternion halfQ= PIKHelper.ScaleQ(q, 0.5f);Quaternion qDot = halfQ * (new Quaternion(w.x, w.y, w.z, 0));float qd = Quaternion.Dot(qDot,qDot)* -2.0f;Quaternion qDotDot = halfQ * (new Quaternion(newW.x, newW.y, newW.z, qd));</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=5569">SinisterMephisto</a> — Wed May 01, 2013 6:20 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mikeshafer]]></name></author>
+		<updated>2013-04-30T10:56:25+00:00</updated>
+
+		<published>2013-04-30T10:56:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30603#p30603</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30603#p30603"/>
+		<title type="html"><![CDATA[Re: Quaternion Integration: velocity and acceleration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30603#p30603"><![CDATA[
+So I use slerp in my engine for animation.  The idea between slerp is that you know where you want to go and you want to go somewhere in between.  For physics, you don't know where you're going to end up, but you have a deltaAngularVelocity.  So you do an Euler integration.  I think Bullet does a straight Quaternion integration.  Here is what Bullet does:<br><div class="codebox"><p>Code: </p><pre><code>btQuaternion dorn (axis.x(),axis.y(),axis.z(),btCos( fAngle*timeStep*btScalar(0.5) ));btQuaternion orn0 = curTrans.getRotation();btQuaternion predictedOrn = dorn * orn0;predictedOrn.normalize();predictedTransform.setRotation(predictedOrn);</code></pre></div>This is what I do:<br><div class="codebox"><p>Code: </p><pre><code>   MEHVector4 axisAngle = m_angularVelocity;   axisAngle.SetW(0.0);   axisAngle.Normalize();   axisAngle.SetW(m_angularVelocity.Magnitude() * elapsedSecs);   MEHMatrix4 angularMov;   angularMov.ToRotateFromAxisAngle(axisAngle);      MEHVector3 pos = m_worldMat[3];   m_worldMat *= angularMov;   m_worldMat[3] = pos;</code></pre></div>HTH,<br>Mike<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9133">mikeshafer</a> — Tue Apr 30, 2013 10:56 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[SinisterMephisto]]></name></author>
+		<updated>2013-04-12T18:12:48+00:00</updated>
+
+		<published>2013-04-12T18:12:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30486#p30486</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30486#p30486"/>
+		<title type="html"><![CDATA[Quaternion Integration: velocity and acceleration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30486#p30486"><![CDATA[
+I was wondering how you guys implemented your rotational integrations.<br>I know most books only talk about the first derivative of orientation and most engines only implement the first.<br><br>I saw these functions last night and they were in my head all morning. I am currently on the train home and i though i should just ask before i arrive.<br><div class="codebox"><p>Code: </p><pre><code>q'(q,w) = 1/2qw  //W = anglar velocity transformed into quarternion [w,0]. you knew that.</code></pre></div>But while going through some of Insomniac's publications on their site I read that <br>We should not multiply quaternions with scalar values (As quaternions should ideally be unit when we multiply them with other vectors)<br><br>Hence 0.5f*q should be<div class="codebox"><p>Code: </p><pre><code>slerp(Quaternion.Identity, q, 0.5f);</code></pre></div>But every one I have seen scaled theirs (Basically a lerp) //I guess the inaccuracy is negligible<br><br>Secondly Angular acceleration has me a bit confused.<div class="codebox"><p>Code: </p><pre><code>//q = orientation//W = anglar velocity transformed into Quarternion [w,dot].//dot = -2w'.w' //. = dot product//w' = q' //first derivativeq"(q,w,w') = 1/2qw </code></pre></div>What is the order of operations for  -2w'.w'? <br>Do you use Quaternion.Dot(-2w',w') or -2 * Quaternion.Dot(w',w')?<br><br>the final code <div class="codebox"><p>Code: </p><pre><code>//mimicing s= ut +1/2at^2q(t+dt) = q(t) + q'*dt + 1/2q"dt^2; </code></pre></div>Is there really a need for the angular acceleration (Second derivative)?<br>Would all these lerping and damping that occurs after not increase the amount of error in the system?<br>If you use the physics for some controlled system would it not save you all that extra control logic if every thing was slerped?<br><br>This is probably stupid and I am probably over thinking it.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=5569">SinisterMephisto</a> — Fri Apr 12, 2013 6:12 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

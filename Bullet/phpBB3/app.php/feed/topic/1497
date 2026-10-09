@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1497" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2008-10-03T10:50:03+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1497</id>
+
+		<entry>
+		<author><name><![CDATA[Pierre]]></name></author>
+		<updated>2008-10-03T10:50:03+00:00</updated>
+
+		<published>2008-10-03T10:50:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=10715#p10715</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=10715#p10715"/>
+		<title type="html"><![CDATA[Re: Sweep-and-prune document]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=10715#p10715"><![CDATA[
+<blockquote class="uncited"><div>Is there any reason why you don't encode the max endpoint flag inside your integer endpoint position?</div></blockquote>Well, is there any reason to do so? It's already encoded in the box index, equally efficiently.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=76">Pierre</a> — Fri Oct 03, 2008 10:50 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[John McCutchan]]></name></author>
+		<updated>2007-09-21T13:55:49+00:00</updated>
+
+		<published>2007-09-21T13:55:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5508#p5508</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5508#p5508"/>
+		<title type="html"><![CDATA[Re: Sweep-and-prune document]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5508#p5508"><![CDATA[
+Is there any reason why you don't encode the max endpoint flag inside your integer endpoint position? Like so,<div class="codebox"><p>Code: </p><pre><code>uint32_t ep= (uint32_t&amp;)p;uint32_t mask = -int32_t(ep &gt;&gt; 31) | 0x80000000;ep = ((ep ^ mask) &amp; 0xfffffffe) | (uint32_t)max;</code></pre></div>This does (sometimes) move the endpoints but is safe because min points are always &lt;= their true value and max points are always &gt;= their true value. In both cases the change in endpoint positions are only -1 or +1 respectively.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=148">John McCutchan</a> — Fri Sep 21, 2007 1:55 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2007-09-20T17:40:27+00:00</updated>
+
+		<published>2007-09-20T17:40:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5492#p5492</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5492#p5492"/>
+		<title type="html"><![CDATA[Re: Sweep-and-prune document]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5492#p5492"><![CDATA[
+Pierre, this is a great document and a nice contribution.<br><br>I like the discussion of batch add/removal. This is something that has been missing from the literature. I suppose you would buffer all the asynchronous adds/removes and then batch them together at the beginning of collision detection.<br><br>You seem to gloss over some of the ordering of end-point updates. For example, on page 5 you have the min-point move up before the max-point. Usually you never want the same box's end-points to swap.<br><br>I agree with you that world bounds are a nuisance. Your floating point trick is quite nice. Do you have any suggestion for 16-bit values? float16s? It is a shame that Multi-SAP needs to consider world bounds again.<br><br>It would be nice if your box pruning section described how box pruning works. Does it require a radix sort to be fast?<br><br>I often need to do asynchronous AABB queries and ray casts. Do you suggest using another data structure for this?<br><br>Finally a brief critique of stabbing numbers and markers would be nice.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Thu Sep 20, 2007 5:40 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-09-20T14:24:15+00:00</updated>
+
+		<published>2007-09-20T14:24:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5488#p5488</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5488#p5488"/>
+		<title type="html"><![CDATA[Re: Sweep-and-prune document]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5488#p5488"><![CDATA[
+<blockquote class="uncited"><div>My gut feeling is that performing a smaller (incremental) number of searches (which is O(1) anyway) is a lot better. But granted, I never profiled the alternative. (except when I profiled Bullet against the other SAPs, and found Bullet was slower. But maybe it's for different reasons, I didn't investigate much.)</div></blockquote>The 'O(1)' search has random memory access, which is a bit of a hassle on modern architectures. If traversing pairs of sleeping objects become a bottleneck, keeping them in a separate array might be better. I haven't done benchmarks/comparisons with other broadphases, so I'm happy to change/improve things based on some detailed profiling.<blockquote class="uncited"><div>The fact that Havok uses it or that many games shipped used the technique does not make it the best approach in the world. This is not a solid argument, I'm sure you realize this.<br><br>As far as I can see it still forces the user to provide world-bounds at start of day, right? As a user myself, I find this super painful, not only because sometimes you don't know the bounds ahead of time, but also because - as you said - "better fitting world bound is better". In other words using poor world bounds gives worse performance, and it's one more option for users to screw up. And if they can screw up... they will.</div></blockquote>I argue that an integer broadphase is superior over floating point precision, because it spreads the precision evenly over the (bounded) space. I find that using single float precision gives the user the false impression that all is fine, whereas very far from the origin the AABB's become larger and larger. So the integer broadphase explicitly lets the user deal with this problem indeed. Bringing up Havok was just to show show that it is not just Bullet who succesfully uses this in practice. I agree it's preferable to not give users methods to screw it up, but if it is beneficial for performance/memory usage, users are often happy to bit the bullet. Combining the integerer broadphase with a multi-sap might relieve the pain a bit: if your initial estimated broadphase size doesn't fit, you just add another broadphase next to it.<br><br>Anyhow, I will review my pair management again, and do some more profiling. Did you have some public shared testbed to compare some of those broadphases?<br><br>Thanks for the discussion again, and hope you have a good 'last day' at Ageia, please say hi at everyone over there, in particular Adam, and have a good and safe journey.<br><br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Sep 20, 2007 2:24 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Pierre]]></name></author>
+		<updated>2007-09-20T08:28:59+00:00</updated>
+
+		<published>2007-09-20T08:28:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5485#p5485</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5485#p5485"/>
+		<title type="html"><![CDATA[Re: Sweep-and-prune document]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5485#p5485"><![CDATA[
+Hi Erwin,<br><br>I'm not going to update it immediately: that's my last day at Ageia, my home PC is in a box, and I will not have any time for this before one or two weeks.<br><blockquote class="uncited"><div>This eliminates the need for searching pairs, because the pairs get removed during the overlapping pair traversal, using an additional aabb check for each existing overlapping pair. It is nice for SPUs, reducing random access. This also gets rid of duplicates, so it works nice with a Multi-SAP where multiple broadphases report the same pair.</div></blockquote>Yeah, I know this approach but I don't really like it. Having an extra overlap test for each *existing* pair seems to defeat the purpose of incremental results completely. If I have 20.000 sleeping pairs in my world, I don't want to perform 20.000 extra tests on all of them, that's madness. Never tried it though, it just seems... bad. My gut feeling is that performing a smaller (incremental) number of searches (which is O(1) anyway) is a lot better. But granted, I never profiled the alternative. (except when I profiled Bullet against the other SAPs, and found Bullet was slower. But maybe it's for different reasons, I didn't investigate much.)<br><blockquote class="uncited"><div>Havok also uses the 16-bit or 32-bit quantized integers for the SAP broadphase, not just Bullet. Many games succesfully shipped with this technique, so not everyone shares your 'However this is not a great approach' sentiment . Note that the a better fitting world bound is better, and so is a 32-bit accuracy.</div></blockquote>The fact that Havok uses it or that many games shipped used the technique does not make it the best approach in the world. This is not a solid argument, I'm sure you realize this.<br><br>As far as I can see it still forces the user to provide world-bounds at start of day, right? As a user myself, I find this super painful, not only because sometimes you don't know the bounds ahead of time, but also because - as you said - "better fitting world bound is better". In other words using poor world bounds gives worse performance, and it's one more option for users to screw up. And if they can screw up... they will.<br><br>Transforming the float also gives 32-bit integers, and you don't need the world-bounds, never. So it's quite obviously "better" in my book... I don't know, looks like a clear winner to me.<br><div class="codebox"><p>Code: </p><pre><code>this quantized AABB versus quantized AABB can be made branch-free, which is much faster on XBox 360/PS3. In the optimized BVH (not SAP), some game company reports 3 times speedup.</code></pre></div>Yeah, the branch-free version might be a win on Xbox/PS3. For a SAP though, I doubt this makes much of a difference, as the overlap tests are not really the bottleneck. Probably worth a note anyway.<br><br><br>Thanks, I'll update the doc ASAP.<br><br>- Pierre<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=76">Pierre</a> — Thu Sep 20, 2007 8:28 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-09-19T23:30:36+00:00</updated>
+
+		<published>2007-09-19T23:30:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5476#p5476</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5476#p5476"/>
+		<title type="html"><![CDATA[Re: Sweep-and-prune document]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5476#p5476"><![CDATA[
+Hi Pierre,<br><br>Thanks for the doc, I only briefly skimmed through it, so expect more comments.<br><br>- Could you provide a reference to a forum topic, where we discussed multiple sap broadphases: <a href="http://www.bulletphysics.com/Bullet/phpBB3/viewtopic.php?f=4&amp;t=328" class="postlink">http://www.bulletphysics.com/Bullet/php ... ?f=4&amp;t=328</a><br><br>- Could you add the 5th method for pair management that Bullet currently uses: a sorted array of overlapping pairs?<br>Some game company added this to Bullet, originally from Playstation 3 /XBox 360. This eliminates the need for searching pairs, because the pairs get removed during the overlapping pair traversal, using an additional aabb check for each existing overlapping pair. It is nice for SPUs, reducing random access. This also gets rid of duplicates, so it works nice with a Multi-SAP where multiple broadphases report the same pair.<br><br>- This sort of the overlapping pair array can also be beneficial when organizing a parallel collision detector, with similar types of object pairs in the same batch (think of SPUs, where code/data sizes are limited).<br><br>- Havok also uses the 16-bit or 32-bit quantized integers for the SAP broadphase, not just Bullet. Many games succesfully shipped with this technique, so not everyone shares your 'However this is not a great approach' sentiment <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">. Note that the a better fitting world bound is better, and so is a 32-bit accuracy. It also works nice with Multi-SAP, so each broadphase doesn't need to be very large.<br><br>- this quantized AABB versus quantized AABB can be made branch-free, which is much faster on XBox 360/PS3. In the optimized BVH (not SAP), some game company reports 3 times speedup.<br><div class="codebox"><p>Code: </p><pre><code>//This block replaces the block below and uses no branches, and replaces the 8 bit return with a 32 bit return for improved performance (~3x on XBox 360)inline unsigned testQuantizedAabbAgainstQuantizedAabb(unsigned short int* aabbMin1,unsigned short int* aabbMax1,const unsigned short int* aabbMin2,const unsigned short int* aabbMax2) const{return btSelect((unsigned)((aabbMin1[0] &lt;= aabbMax2[0]) &amp; (aabbMax1[0] &gt;= aabbMin2[0])&amp; (aabbMin1[2] &lt;= aabbMax2[2]) &amp; (aabbMax1[2] &gt;= aabbMin2[2])&amp; (aabbMin1[1] &lt;= aabbMax2[1]) &amp; (aabbMax1[1] &gt;= aabbMin2[1])),1, 0);}</code></pre></div>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Sep 19, 2007 11:30 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Pierre]]></name></author>
+		<updated>2007-09-18T14:21:38+00:00</updated>
+
+		<published>2007-09-18T14:21:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5458#p5458</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5458#p5458"/>
+		<title type="html"><![CDATA[Sweep-and-prune document]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=5458#p5458"><![CDATA[
+Hi,<br><br>Here is a small document about sweep-and-prune. Could you guys double-check it, and tell me if you find obvious mistakes/etc ? The second part is about Multi-SAP and it might provide some useful implementation details. I'll put the file on my website later, right now it has technical issues and I can't upload anything out there. I'll release the source code ASAP but it needs cleaning and I'm in the middle of moving, so, no time for this at the moment.<br><br>- Pierre<dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=12">SAP.rar</a></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=76">Pierre</a> — Tue Sep 18, 2007 2:21 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

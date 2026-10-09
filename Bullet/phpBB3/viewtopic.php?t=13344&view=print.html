@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Receiving global location of constrained objects</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Receiving global location of constrained objects</h2>
+		<p><a href="viewtopic.php%3Ft=13344.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13344</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Receiving global location of constrained objects</h3>
+				<div class="date">Posted: <strong>Thu Dec 30, 2021 9:56 am</strong></div>
+				<div class="author">by <strong>rutracker</strong></div>
+				<div class="content">Hi,<br>
+As part of my code, I use Bullet to simulate constraints between mesh objects using btConvexHullShape.<br>
+I am passing my mesh objects from my code to the world setup and am generating them inside Bullet.<br>
+I have gotten to the point where the simulation runs smoothly, and I want to transfer the new location of the mesh objects into my main code, and I am running into trouble.<br>
+After some experimenting, it seems that when I run the following reduced code the translation works:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13344&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void WorldSetup::stepSimulation(float deltaTime) {
+		btTransform local_position;
+		local_position.setIdentity();
+		m_dynamicsWorld-&gt;getNonStaticRigidBodies().at(0)-&gt;setWorldTransform(local_position);
+		m_dynamicsWorld-&gt;getNonStaticRigidBodies().at(1)-&gt;setWorldTransform(local_position);
+	
+		auto obj1_transform = m_dynamicsWorld-&gt;getNonStaticRigidBodies().at(0)-&gt;getCenterOfMassTransform().inverse();
+		auto obj2_transform = m_dynamicsWorld-&gt;getNonStaticRigidBodies().at(1)-&gt;getCenterOfMassTransform().inverse();
+		translation_data.push_back(obj1_transform);
+		translation_data.push_back(obj2_transform);
+		//Now the translation_data vecotr is sent to my main code where I apply the translation and rotation to their old position.
+}
+</code></pre></div>
+
+The problem occurs when I run my simulation with constraints. I set up the world in the following way:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13344&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void WorldSetup::initPhysics()
+{
+	//code initializing the ground, solver, and more in the code above that I did not mention...
+	
+	//creating a static object
+	btCollisionShape* shape;
+	btDefaultMotionState* motionState;
+	btTransform bodyTransform;
+	btScalar mass;
+	
+	mass = 0.0;
+	shape = new btBoxShape(btVector3(0.5, 0.5, 0.5));
+	btVector3 localInertia = btVector3(0, 0, 0);
+	bodyTransform.setIdentity();
+	motionState = new btDefaultMotionState(bodyTransform);
+	btRigidBody* staticBody = new btRigidBody(mass, motionState, shape, localInertia);
+
+
+	float pos1[4]{ 100,100, 100, 0 };
+	float color1[4]{ 0.2666, 0.2745, 0.29019, 1 };
+
+	float pos2[4]{ 100, 100, 100, 0 };
+	float color2[4]{ 0.2, 0.141, 0.078, 1 };
+	
+	//loading the mesh objects
+	m_data-&gt;m_TranslateSpringBodies.push_back(loadMyMesh(m_vertices_list[0], m_faces_list[0], pos1, color1, 50.0f));
+	m_dynamicsWorld-&gt;addRigidBody(m_data-&gt;m_TranslateSpringBodies.at(0));
+
+	m_data-&gt;m_TranslateSpringBodies.push_back(loadMyMesh(m_vertices_list[1], m_faces_list[1], pos2, color2, 50.0f));
+	m_dynamicsWorld-&gt;addRigidBody(m_data-&gt;m_TranslateSpringBodies.at(1));
+	
+	//adding a single constraint to force object 0 to stay in a single spot (with the static object)
+	btTransform localA;
+	btTransform localB;
+	localA.setIdentity();
+	localB.setIdentity();
+	btGeneric6DofSpring2Constraint* constraint = new btGeneric6DofSpring2Constraint(*staticBody, *m_data-&gt;m_TranslateSpringBodies.at(0), localA, localB EXTRAPARAMS);
+
+	constraint-&gt;setLimit(3, 0, 0);
+	constraint-&gt;setLimit(4, 0, 0);
+	constraint-&gt;setLimit(5, 0, 0);
+
+	constraint-&gt;enableSpring(0, true);
+	constraint-&gt;enableSpring(1, true);
+	constraint-&gt;enableSpring(2, true);
+
+
+	constraint-&gt;setStiffness(0, 50);
+	constraint-&gt;setStiffness(1, 50);
+	constraint-&gt;setStiffness(2, 50);
+
+	constraint-&gt;setDamping(0, 0.5);
+	constraint-&gt;setDamping(1, 0.5);
+	constraint-&gt;setDamping(2, 0.5);
+
+	constraint-&gt;setDbgDrawSize(btScalar(5.f));
+	m_dynamicsWorld-&gt;addConstraint(constraint, true);
+	
+	//adding a spring constraint between object 0 and object 1
+	localA.setIdentity();
+	localA.setOrigin(btVector3(-0.2, 5, 8));
+	localB.setIdentity();
+	localB.setOrigin(btVector3(-3, 3, 14));
+	btGeneric6DofSpring2Constraint* constraint2 = new btGeneric6DofSpring2Constraint(*m_data-&gt;m_TranslateSpringBodies.at(index_a), *m_data-&gt;m_TranslateSpringBodies.at(index_b), localA, localB EXTRAPARAMS);
+
+	constraint2 -&gt;enableSpring(0, true);
+	constraint2 -&gt;enableSpring(1, true);
+	constraint2 -&gt;enableSpring(2, true);
+	constraint2 -&gt;enableSpring(3, true);
+	constraint2 -&gt;enableSpring(4, true);
+	constraint2 -&gt;enableSpring(5, true);
+
+	constraint2 -&gt;setStiffness(0, 50);
+	constraint2 -&gt;setStiffness(1, 50);
+	constraint2 -&gt;setStiffness(2, 50);
+	constraint2 -&gt;setStiffness(3, 50);
+	constraint2 -&gt;setStiffness(4, 50);
+	constraint2 -&gt;setStiffness(5, 50);
+
+	constraint2 -&gt;setDamping(0, 0.5);
+	constraint2 -&gt;setDamping(1, 0.5);
+	constraint2 -&gt;setDamping(2, 0.5);
+	constraint2 -&gt;setDamping(3, 0.5);
+	constraint2 -&gt;setDamping(4, 0.5);
+	constraint2 -&gt;setDamping(5, 0.5);
+
+	m_dynamicsWorld-&gt;addConstraint(constraint2 , true);
+	constraint2 -&gt;setDbgDrawSize(btScalar(5.f));
+}
+</code></pre></div>
+
+Now I try to do get the location the same as with the code at the beginning:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13344&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void WorldSetup::stepSimulation(float deltaTime) {
+		auto obj1_transform = m_dynamicsWorld-&gt;getNonStaticRigidBodies().at(0)-&gt;getCenterOfMassTransform().inverse();
+		auto obj2_transform = m_dynamicsWorld-&gt;getNonStaticRigidBodies().at(1)-&gt;getCenterOfMassTransform().inverse();
+		translation_data.push_back(obj1_transform);
+		translation_data.push_back(obj2_transform);
+		//Now, the translation_data vector is sent to my main code, where I apply the translation and rotation to their old position.
+}
+</code></pre></div>
+Doing the following gives me wildly different results, even if the two objects are close to each other in the simulations. In my main code, they are translated to completely different places. The rotation seems to be correct most of the time.<br>
+<br>
+I have been sitting on it for a few days and have no clue where to continue from here. I think it has something to do with local vs. world coordinates, but I don't know what.<br>
+<br>
+Any help will be greatly appreciated. <br>
+Thank you! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Receiving global location of constrained objects</h3>
+				<div class="date">Posted: <strong>Mon Jan 10, 2022 8:48 am</strong></div>
+				<div class="author">by <strong>rutracker</strong></div>
+				<div class="content">Resolved!<br>
+The problem was with applying the transformation in my code. <br>
+The transformations I received from bullet were correct, but I made an error when applying them.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

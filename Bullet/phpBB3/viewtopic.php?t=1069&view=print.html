@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Box stays on edge/rotates up to be on corner.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Box stays on edge/rotates up to be on corner.</h2>
+		<p><a href="viewtopic.php%3Ft=1069.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1069</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Box stays on edge/rotates up to be on corner.</h3>
+				<div class="date">Posted: <strong>Mon Mar 19, 2007 6:21 pm</strong></div>
+				<div class="author">by <strong>Buzzer</strong></div>
+				<div class="content">I have a simple, handmade physics code.<br>
+Basically I have a concave heightfield for the ground, and box that I'm trying to drop on it.<br>
+<br>
+For simplicities sake, I decided only the corners of the box were substainatal.  I binary search through time in order to find the collision point(s).<br>
+<br>
+Once I do, I go through each corner, and, if it is within a certain distance of the ground it is directly over, I compute the following
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1069&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>ComponentOfLinearVelocityFromAngular = AngularVelocity cross ArmInWorldSpace
+LinearVelocity = PureLinearVelocity + ComponentOfLinearVelocityFromAngular
+NormalVelocity = LinearSpeed projected onto Normal.
+TangentalVelocity = LinearVelocity - NormalVelocity
+
+CorrectionVelocity = -1.5 * NormalVelocity;
+CorrectionTorque = ArmInWorldSpace cross CorrectionVelocity
+</code></pre></div>
+I sum these over any corners that are touching an take the average.  This works a good potion of the time, but often the box rotates up to rest on one corner, or less frequently on an edge.<br>
+<br>
+Any ideas?[/i][/code]</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Box stays on edge/rotates up to be on corner.</h3>
+				<div class="date">Posted: <strong>Tue Mar 20, 2007 2:16 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>Buzzer wrote:</cite>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1069&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>CorrectionTorque = ArmInWorldSpace cross CorrectionVelocity
+</code></pre></div>[/i][/code]</div></blockquote>
+
+It appears that you are trying to create an impulse, but this isn't quite the right equation to do so.<br>
+<br>
+One way to do it is to determine the "effective mass" (my terminology but probably not the correct terminology) when trying to push your object away from the collision at the collision point.  Then you divide the CorrectionVelocity by the effective mass to create an impulse.  Then apply the impulse as you assumably are doing now.<br>
+<br>
+This is how I compute the effective mass given a world offset and world normal:<br>
+<br>
+cross1 = CrossProduct( worldOffset, worldNormal )<br>
+temp = I^-1 * cross1   // I^-1 being the inverse inertia tensor<br>
+cross2 = CrossProduct( temp, worldOffset )<br>
+effMass = DotProduct( cross2, worldNormal ) + 1/mass<br>
+<br>
+so then: impulse = correctionVelocity / effMass<br>
+<br>
+I believe the above method includes the gyro terms which many game physics engines ignore ... I'm not exactly sure how to remove the gyro term from this method, but it's undoubtedly faster if you do.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Mar 20, 2007 3:03 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">... or alternately, try:<br>
+<br>
+<a href="http://www.essentialmath.com/AngularImpulse.pdf" class="postlink">http://www.essentialmath.com/AngularImpulse.pdf</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

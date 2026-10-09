@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11547" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2017-02-25T19:02:47+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11547</id>
+
+		<entry>
+		<author><name><![CDATA[sebjf]]></name></author>
+		<updated>2017-02-25T19:02:47+00:00</updated>
+
+		<published>2017-02-25T19:02:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38939#p38939</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38939#p38939"/>
+		<title type="html"><![CDATA[Re: Damping oscillations in PBD?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38939#p38939"><![CDATA[
+Hi mobeen,<br><br>It is my own framework. The system is very simple. The cloth particles are constrained with edge constraints. The solver performs weighted-averaging over projected positions similar to Weiler el al's Projective Fluids. The weights of the projected positions are scaled by an energy potential that is a function of constraint violation similar to Macklin et al's XPBD. Pseudo Continuous Collision Detection is performed with distance fields, with the response computed by approximating a plane and moving colliding particles to the surface.<br><br>Originally I had asynchronous constraint solves based on per-particle strain value, somewhat like Ozgen and Kallmann's Directional Constraint enforcement. This has been commented out for the moment as removing it improves stability. I think this is more symptomatic than the cause however. By that I mean, asynchronous constraints will always be more unstable than those solved equally between particles, but in the same sense, a set of constraints using energy potentials will always be more unstable than the same set without (when solved in discrete timesteps). <br><br>The 'problem' as I see it, is one of quantisation. Non-linear responses from the collision detection system and constraint solve, combined with non-zero time-steps will always leave the potential for these 'loops' to arise where the system bounces between two states. <br><br>This is what I am guessing is going on of course. Due to the platform I can't walk every step of the solve in the debugger. While I could reduce the time-step, or I could improve the surface approximation of the collision detection system, these don't fundamentally solve the problem if that is it. For example, if two cells of a field that are discontinuous could 'cause' that behaviour, but in reality surfaces can be discontinuous, so I wonder if there is a better system-wide way to solve this.<br><br><br><br><br>Sj<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11737">sebjf</a> — Sat Feb 25, 2017 7:02 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mobeen]]></name></author>
+		<updated>2017-02-25T18:03:34+00:00</updated>
+
+		<published>2017-02-25T18:03:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38938#p38938</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38938#p38938"/>
+		<title type="html"><![CDATA[Re: Damping oscillations in PBD?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38938#p38938"><![CDATA[
+Hi there,<br>  We might be able to help you if you show us how you are doing the solves currently. And is it in bullet or have you created your own framework?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8124">mobeen</a> — Sat Feb 25, 2017 6:03 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sebjf]]></name></author>
+		<updated>2017-02-25T13:11:19+00:00</updated>
+
+		<published>2017-02-25T13:11:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38937#p38937</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38937#p38937"/>
+		<title type="html"><![CDATA[Damping oscillations in PBD?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38937#p38937"><![CDATA[
+Hi,<br><br>In my PBD system, some of the particles are oscillating. I captured a few frames worth of the position buffers and put them into matlab to plot how the positions evolve over time and through the solve.<br><br>The green lines connect each sample to the next in time. The plot looks a little odd on first glance, but you can see what is happening. Between two subsequent frames, small changes in position cause the constraint solves to differ significantly. The collision response then moves the particles into a different location to before, where the constraint and collision solves then move them into the initial position.<br><br>Its like the system is cycling between two steady states.<br><br>There are two ostensible causes to this:<br><br>1. The collision response should have moved particles to the initial place with repulsive force.<br>2. The system should be damped more to avoid the large changes in predicted position, which in turn cause large changes in constraint solve.<br><br>I don't think either are fatal or should be though. Its reasonable for a particle to collide in one frame, then not on another, e.g. if its only just against a surface.<br><br>The behaviour is very dependent on system conditions, e.g. where the particle is re: colliders, timestep count, velocity damping, etc.<br><br>Is there some system wide technique we can apply to prevent this kind of behaviour? It almost looks like its resonating - perhaps something like introducing tiny randomisations into constraint solves?<br><br>Sj<dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1506" class="postimage" alt="Motion of a single particle through capture" onclick="viewableArea(this);" /></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11737">sebjf</a> — Sat Feb 25, 2017 1:11 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

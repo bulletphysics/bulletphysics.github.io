@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13373" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-02-08T15:42:10+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13373</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-02-08T15:42:10+00:00</updated>
+
+		<published>2022-02-08T15:42:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43844#p43844</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43844#p43844"/>
+		<title type="html"><![CDATA[Re: Is there a way to use Dynamics World as a thread safe?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43844#p43844"><![CDATA[
+<blockquote class="uncited"><div>What if my program runs multiple threads , let say 4 threads and all thread randomly access to btDynamicsDiscreteWorldMt-&gt;stepSimulation()..<br>Is it data race or does it cause crash/bug?</div></blockquote>Yes, that would cause crashes and bugs: it is a Bad Idea.<blockquote class="uncited"><div>I also use multiple btRaycastVehicle and multitple rigidbodies, and also threads randomly access to these. inserting, updating, deleting.<br>So I'm afraid it would be data race or crash/bug too..</div></blockquote>Correct.<blockquote class="uncited"><div>It's because I'm using IOCP architecture. IOCP manages thread pool containing multiple threads.. I have no idea which one to pop up and execute operations..(But I can find thread id.)</div></blockquote>You have identified a fundamental problem with multithreaded algorithms.  Good luck.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Feb 08, 2022 3:42 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[tomson0119]]></name></author>
+		<updated>2022-02-08T10:40:25+00:00</updated>
+
+		<published>2022-02-08T10:40:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43843#p43843</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43843#p43843"/>
+		<title type="html"><![CDATA[Re: Is there a way to use Dynamics World as a thread safe?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43843#p43843"><![CDATA[
+<blockquote class="uncited"><div><strong class="text-strong">btDynamicsDiscreteWorldMt</strong> is for multithreaded <strong class="text-strong">world-&gt;stepSimulation()</strong> computation.<br><br>If you just want to run <strong class="text-strong">world-&gt;stepSimulation()</strong> in its own single thread you definitely can't be adding/updating/deleting RigidBodies during the step --&gt; that would cause crashes and/or unexpected bugs.</div></blockquote>What if my program runs multiple threads , let say 4 threads and all thread randomly access to btDynamicsDiscreteWorldMt-&gt;stepSimulation()..<br>Is it data race or does it cause crash/bug?<br><br>I also use multiple btRaycastVehicle and multitple rigidbodies, and also threads randomly access to these. inserting, updating, deleting. <br>So I'm afraid it would be data race or crash/bug too..<br><br>It's because I'm using  IOCP architecture. IOCP manages thread pool containing multiple threads.. I have no idea which one to pop up and execute operations..(But I can find thread id.)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14249">tomson0119</a> — Tue Feb 08, 2022 10:40 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-02-08T05:08:03+00:00</updated>
+
+		<published>2022-02-08T05:08:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43842#p43842</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43842#p43842"/>
+		<title type="html"><![CDATA[Re: Is there a way to use Dynamics World as a thread safe?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43842#p43842"><![CDATA[
+<strong class="text-strong">btDynamicsDiscreteWorldMt</strong> is for multithreaded <strong class="text-strong">world-&gt;stepSimulation()</strong> computation.<br><br>If you just want to run <strong class="text-strong">world-&gt;stepSimulation()</strong> in its own single thread you definitely can't be adding/updating/deleting RigidBodies during the step --&gt; that would cause crashes and/or unexpected bugs.  What I have done in the past is: on <strong class="text-strong">thread0</strong> (user/network input thread) I accumulate all change operations (adds/updates/deletes) onto lists.  That is, I don't perform the operations but instead save the information required to do them.  Then, once per frame I lock the mutex and "throw" those lists of pending operations over to <strong class="text-strong">thread1</strong> (simulation thread) where they are done right before the step, and all that work is done without a lock because the lists being consumed there are not the ones where changes are accumulating on the other thread.  The lock only happens when transferring the data to the other thread.<br><br>Note: in this architecture <strong class="text-strong">thread0</strong> doesn't ever operate directly on <strong class="text-strong">RigidBodies</strong>.  Instead it operates on <strong class="text-strong">GameObjects</strong> (the renderables) and all operations on corresponding <strong class="text-strong">RigidBodies</strong> are done in <strong class="text-strong">thread1</strong>.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Feb 08, 2022 5:08 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kcjsend2]]></name></author>
+		<updated>2022-02-07T17:15:46+00:00</updated>
+
+		<published>2022-02-07T17:15:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43841#p43841</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43841#p43841"/>
+		<title type="html"><![CDATA[Re: Is there a way to use Dynamics World as a thread safe?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43841#p43841"><![CDATA[
+Thank you for your answer.<br>What I'm mainly worried about right now is Context Switching while running Step Simulation.<br>This is because if Context Switching to another thread occurs while Step Simulation is being performed, and if a rigid body is added, deleted, or referenced from a changed thread, there may be a problem.<br><br>I know I can do Lock to solve this problem, but I'm asking because I think it will be the best performance to make most of the functions thread safe.<br><br>Is btDynamicsDiscreteWorldMt class designed to prevent this? I don't know if I understand correctly.<br><br>When I saw the mention of double buffering, is there a way to copy all the information in one Dynamics World (gravity value, included rigid bodies, vehicles...) to another Dynamics World?<br>If possible, it would be nice to keep the pointer to the rigid body referenced from the outside and the pointer to the vehicle from the outside available.<br><br>If you find grammar awkward, it's because of machine translation. I'm sorry for the poor grammar.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14021">kcjsend2</a> — Mon Feb 07, 2022 5:15 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-02-07T16:24:04+00:00</updated>
+
+		<published>2022-02-07T16:24:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43839#p43839</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43839#p43839"/>
+		<title type="html"><![CDATA[Re: Is there a way to use Dynamics World as a thread safe?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43839#p43839"><![CDATA[
+Bullet itself does not ask for a lock on anything, therefore if you are experiencing contention performance problems on the lock around the <strong class="text-strong">world-&gt;stepSimulation()</strong> then you're doing it wrong.  You need to either <strong class="text-strong">(a)</strong> use finer grained locks or <strong class="text-strong">(b)</strong> use some other technique (e.g. double-buffering or data-throwing) to reduce your lock durations.<br><br>If the advice above is not clear, and you want to share an outline of your architecture (e.g. what data you're locking and why) I'd be willing to offer more specific advice about how to speed it up.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Mon Feb 07, 2022 4:24 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kcjsend2]]></name></author>
+		<updated>2022-02-07T06:48:58+00:00</updated>
+
+		<published>2022-02-07T06:48:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43836#p43836</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43836#p43836"/>
+		<title type="html"><![CDATA[Is there a way to use Dynamics World as a thread safe?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43836#p43836"><![CDATA[
+I try to use Bullet physics on my IOCP server, but there's a problem<br>Because btDiscreteDynamicsWorld does not thread safe, it is necessary to use Lock, which causes a lot of performance loss.<br>Is there a way for me to stepSimulation safely without using Lock?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14021">kcjsend2</a> — Mon Feb 07, 2022 6:48 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

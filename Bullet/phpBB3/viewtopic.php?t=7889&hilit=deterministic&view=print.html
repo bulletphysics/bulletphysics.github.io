@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Again Determinism</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Again Determinism</h2>
+		<p><a href="viewtopic.php%3Ft=7889.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7889</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Again Determinism</h3>
+				<div class="date">Posted: <strong>Fri Feb 17, 2012 7:38 pm</strong></div>
+				<div class="author">by <strong>Drager</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I read all posts in the forum about determinism and how to achive it.<br>
+But I dont get it working. This is what I do:<br>
+<br>
+I save the current transformation state by getting getWorldTransform() from all btRigidbodys.<br>
+(Note: I ensured that there is no force / velocity on any object).<br>
+<br>
+Then I run the simulation.<br>
+<br>
+After this I do the following steps:<br>
+<br>
+- Remove all objects from dynamicWorld.<br>
+- Delete and recreated all elements of bullet:<br>
+        btSoftRigidDynamicsWorld<br>
+	btAxisSweep3<br>
+	btGhostPairCallback<br>
+	btDefaultCollisionConfiguration<br>
+	btCollisionDispatcher<br>
+	btSequentialImpulseConstraintSolver<br>
+<br>
+- Reset btRigidbodys state:<br>
+        setAngularVelocity(btVector3(0,0,0));<br>
+ 	setLinearVelocity(btVector3(0,0,0));<br>
+	clearForces();<br>
+	forceActivationState(ACTIVE_TAG);<br>
+	setDeactivationTime(0);<br>
+        setWorldTransform with the transformation saved before<br>
+<br>
+- Then I readd all rigidbodies to dynamic world and rerun the simulation.<br>
+<br>
+I always get different results, additionally I checked that the following is implemented / done correctly:<br>
+   - fixed time steps<br>
+   - framerate independent<br>
+   - btAxisSweep3::resetPool()<br>
+   - btSequentialImpulseConstraintSolver::reset()<br>
+   - assure that the elements are added in the same order.<br>
+<br>
+Is there anything I missed?<br>
+<br>
+Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Again Determinism</h3>
+				<div class="date">Posted: <strong>Sat Feb 18, 2012 9:05 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Just re-create <span style="color:#FF0000">everything</span> from scratch, including the rigid bodies (there is some state kept internally too).<br>
+And make sure to insert the data in exactly the same order to the world.<br>
+<br>
+I just fixed the open source <a href="http://dynamica.googlecode.com" class="postlink">Maya Dynamica plugin</a> to be <span class="posthilit">deterministic</span>, by re-creating all data, and it works fine.<br>
+<br>
+Note that re-creating all data from scratch is necessary for Bullet 2.x, but for Bullet 3.x I'll make sure it will not be necessary.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Again Determinism</h3>
+				<div class="date">Posted: <strong>Sat Feb 18, 2012 10:04 pm</strong></div>
+				<div class="author">by <strong>Drager</strong></div>
+				<div class="content">Hello Erwin,<br>
+<br>
+Thanks for your answer!<br>
+<br>
+I finally got it working, additionally to your suggestion I had to change another thing.<br>
+<br>
+I was setting the saved btTransform in the btRigidBodyConstructionInfo via btDefaultMotionState, when construction the rigidbody.<br>
+This did not work!<br>
+<br>
+If I construct btDefaultMotionState with standard constructor and after this I set the btTransform with<br>
+btRigidBody::setWorldTransform it works.<br>
+<br>
+I don't know whats the difference between these two methods, <br>
+I only had a short look at the btRigidbody Constructor and it seems it does a lot of this with the Transformation...<br>
+<br>
+Thanks for your help<br>
+<br>
+Michael</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Again Determinism</h3>
+				<div class="date">Posted: <strong>Sat Feb 18, 2012 10:13 pm</strong></div>
+				<div class="author">by <strong>Toadcop</strong></div>
+				<div class="content"><blockquote class="uncited"><div>but for Bullet 3.x I'll make sure it will not be necessary.</div></blockquote> some info on possible "released date' ? or how is the development progress ?<br>
+3.X promises to bring some new essential features.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Again Determinism</h3>
+				<div class="date">Posted: <strong>Mon Feb 20, 2012 1:18 pm</strong></div>
+				<div class="author">by <strong>Drager</strong></div>
+				<div class="content">Another question:<br>
+<br>
+Now I got determinism with the already added objects, <br>
+as soon as I add another object, I get a different simulation result, also if the new object doesn't interact with the already added elements.<br>
+<br>
+E.g. I add an element which doesn't interact with the objects at the beginning but it will interact after some time.<br>
+So I would expect, that the simulation runs <span class="posthilit">deterministic</span> until the new element interacts with the already added objects.<br>
+<br>
+This is obviously not the case.<br>
+So is there a chance to get the simulation more <span class="posthilit">deterministic</span> also when adding objects?<br>
+<br>
+I also noticed that very small (0.001) changes in the object origin, results in completly different results.<br>
+Can I achieve better results, when scaling the whole world?<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Again Determinism</h3>
+				<div class="date">Posted: <strong>Mon Feb 20, 2012 11:26 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+So I would expect, that the simulation runs <span class="posthilit">deterministic</span> until the new element interacts with the already added objects.
+</div></blockquote>
+
+Unfortunately it is not that simple.<br>
+<br>
+Any change in the world, including adding a non-interacting objects, can cause the simulation to diverge. It goes beyond the scope of this quick answer to digg very deep, but one example would be that the broadphase acceleration structures will be different. This can cause a difference in the order of overlapping objects, which in turn will lead in a different constraint ordering. This will lead to different results.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Again Determinism</h3>
+				<div class="date">Posted: <strong>Tue Feb 21, 2012 7:56 am</strong></div>
+				<div class="author">by <strong>Drager</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Unfortunately it is not that simple.<br>
+<br>
+Any change in the world, including adding a non-interacting objects, can cause the simulation to diverge. It goes beyond the scope of this quick answer to digg very deep, but one example would be that the broadphase acceleration structures will be different. This can cause a difference in the order of overlapping objects, which in turn will lead in a different constraint ordering. This will lead to different results.
+</div></blockquote>
+
+Ok I see.<br>
+Is there some keyword for this problem? <br>
+so I can search to get a deeper understanding for this.<br>
+<br>
+I also tried to add the objects at the beginning and then moving it, but also this will destroy determinsm.<br>
+(also if the objects never interact with the other objects).<br>
+<br>
+Is there any chance to reduce this effect somehow?<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Again Determinism</h3>
+				<div class="date">Posted: <strong>Thu Jul 17, 2014 6:04 pm</strong></div>
+				<div class="author">by <strong>robb</strong></div>
+				<div class="content">Hi, I am facing a related issue, although I wouldn't call it a 'determinism' issue.<br>
+<br>
+If anyone figured out anything useful or could throw some light at my problem that'd be really great, thanks!<br>
+<br>
+Here's the other thread:<br>
+<a href="viewtopic.php%3Ff=9&amp;t=10015.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... =9&amp;t=10015</a><br>
+<br>
+Cheers</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

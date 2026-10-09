@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; COLLADA specification pdf document feedback (physics)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>COLLADA specification pdf document feedback (physics)</h2>
+		<p><a href="viewtopic.php%3Ft=1886.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1886</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>COLLADA specification pdf document feedback (physics)</h3>
+				<div class="date">Posted: <strong>Wed Feb 06, 2008 8:26 pm</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">I'm preparing some feedback for the physics section of the collada specification pdf document.   Currently there are a number of missing, insufficient, or just completely incorrect explanations.  For example, the discussion of angular velocity describes something that looks like yaw pitch roll (i.e. an orientation) instead of an axis whose length corresponds to the rate of spin.  Also, the document tries to use degrees in places where it is completely innapropriate such as with torque.   Joint limits are ok for using degrees - the conventional way to express angles in collada.<br>
+<br>
+I've been checking over the bullet collada wrapper implementation and Ratcliff's dae2xml to make sure any change in explanation will be consistent with your guys's usages.  Thank goodness I haven't seen angular velocity get scaled by pi/180 in anybody's code.   So currently the document describes something different than what the code does.  Fixing the document should fix that.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Wed Feb 06, 2008 8:52 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">(split the posting into a separate topic, makes it more clear)<br>
+
+<blockquote><div><cite>melax wrote:</cite>So currently the document describes something different than what the code does.  Fixing the document should fix that.</div></blockquote>
+
+Indeed, this must have been a misunderstanding. I recall stressing it should be such axis whose length in radians corresponds to the rate of spin/angular velocity.<br>
+<br>
+There might be some other inconsistencies. <br>
+<br>
+By the way, I'm not happy about the way COLLADA spec, and DOM implementation deals with INF/-INF for constraint limits. I rather had a separate method to indicates +/- infinity, because it is a pain to re-use a floating point value for this representations.<br>
+<br>
+Furthermore, scaling should not be in the transform for rigid bodies. It should be extracted and either baked into the geometry or left at the local shape level. Bullet only allows to provide a local shape scaling, and the transform (btTransform) doesn't even let you include scaling, it just has a quaternion and a position vector <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+Last but not least, currently the Bullet ColladaConverter doesn't deal with transform accumulation correctly, because it was hard to get the order of transforms out of the DOM. This is a bug that needs fixing in the ColladaConverter code. So for the time being, users better accumulate a tranform stack (transforms/rotations), into a single transform. And leave out scaling.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: COLLADA specification pdf document feedback (physics)</h3>
+				<div class="date">Posted: <strong>Thu Feb 07, 2008 11:15 pm</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">In the short term I've suggested a number of small document fixes to the Collada physics specification that will hopefully help improve the description of the current schema.   <br>
+<br>
+The last thing I want to do is break any existing code or content.  Its actually interesting to compare the two very different implementations Bullet's Collada Dom based importer, and the physx based dae2xml converter.   Fortunately, the proposed changes will actually help the spec's description better reflect how the data is being used in practice by these tools.  <br>
+<br>
+In the medium term, there are some improvements that probably should be made to the design and the schema.  Additionally there are things like heightfields and convex hulls of non-point primitives that are used in practice, but require "extra" nodes to embed this information into collada.  <br>
+<br>
+I recognize that most people dont have time to get heavily involved in the khronos collada initiative.  That's ok.  The last thing I want to do is be "pushy" about any of this.  I just wanted to let people know that there is an ongoing effort to keep up various collaborations and help improve the schema &amp; spec.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Sat Feb 09, 2008 2:58 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite> I recall stressing it should be such axis whose length in radians corresponds to the rate of spin/angular velocity.</div></blockquote>
+I recall making the same argument myself.  sigh.  <br>
+<br>
+I just checked the Maya import and export implementation and unfortunately the code there looks like it scales the magnitude of the spin vector by 180/pi on export and back again on import.   So it looks like we have different interpretations of the schema after all.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>There might be some other inconsistencies. </div></blockquote>
+
+Indeed.  In addition to clarification in the docs (spec), some design (schema) fixes will be needed.  The consequence of not doing so is evident in the lack of consistency amongst the different implementations.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: COLLADA specification pdf document feedback (physics)</h3>
+				<div class="date">Posted: <strong>Sat Feb 09, 2008 3:44 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">Obviously, the collada physics design should make sense.  For example, an ellipsoid should be specified by 3 floats (radii) instead of 2.  These three floats would correspond to the radius along the x y and z axes in that order.  With that in mind, refer to the capsule element in Collada.  The capsule is a swept ellipsoid.  However this element is currently specified by only 2 radiuses at the endpoints.   Clearly this should be 3.<br>
+<br>
+Furthermore, instead of creating a separate cylinder element, why not use a capsule but just set the y radius to 0 (assuming we are using 3 radiuses and the capsule is oriented along y).  i.e. since we can easily create a cylinder using the capsule element, there is no need to also have the cylinder in the schema - its redundant.  As before, Physics engines that only support spherical/circular capsules can continue to use the first radius and just ignore the other two radiuses and/or spit out a warning.<br>
+<br>
+Now consider that the Collada has added support for tapered capsules where one end of the capsule is wider than the other.  Apparently there was sufficient usage/interest to have this added to the spec. There have been some concerns about how these shapes are defined.  (ambiguity and possibility of concavity)   Furthermore, it does seem like a very special case.   If you add tapered capsules, what's next?  buckyballs with rounded edges?  Where do you stop?  Instead of creating one-off elements, it would be better if there was an simple and general way to specify things like tapered capsules, rounded buckyballs, and other rounded primitives using a minimum amount of information. <br>
+<br>
+Fortunately, (thanks to a brilliant suggestion by Erwin) there is such an elegant solution to creating tapered capsules and other collision shapes.  Consider that the tapered capsules is simply the convex hull of two ellipsoid shapes.  Specifying it in this manner removes the ambiguity as to how is the volume between the two ellipsoids defined.  Now not every collision system will support tapered capsules, but any gjk based system that supports ellipsoids easily could.  When finding the support point for a given direction it checks both ellipsoids and picks the best answer at each iteration.  Keeping that in mind, its easy to see that this doesn't have to be limited to just two ellipsoids, nor to even just ellipsoids.  One can create a cone using a point and a disc (ellipsoid with 1 radius set to 0) or a rounded cone using a point and an ellipsoid.<br>
+<br>
+The way the data for a tapered capsule might look in a collada file could be something roughly like:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1886&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> &lt;rigidbody&gt;
+   &lt;hullshape&gt;
+         &lt;ellipsoid&gt;  &lt;/ellipsoid&gt;
+         &lt;ellipsoid&gt;  &lt;/ellipsoid&gt;
+   &lt;/hullshape&gt;
+ &lt;/rigidbody&gt;
+</code></pre></div>
+
+The idea being that the rigidbody's shape is the hull of the 2 nested primitives which in this case are ellipsoids.<br>
+<br>
+Please ignore any specific details about the way the xml is expressed in the above example.  I realize its not exacly the way collada expresses things.  I oversimplified it on purpose.  What I dont want to see happen is the discussion turns to fileformat xml syntax issues.  When the dicussions go down that road the physics gurus eyes glaze over and they walk away.  This is unfortunate since these are the people most needed at the table.  Otherwise you could end up with a specification saying something silly such as angular velocity is measured in degrees.     <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+comments welcome</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Sat Feb 09, 2008 6:09 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Furthermore, scaling should not be in the transform for rigid bodies. It should be extracted and either baked into the geometry or left at the local shape level. Bullet only allows to provide a local shape scaling, and the transform (btTransform) doesn't even let you include scaling, it just has a quaternion and a position vector <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+Last but not least, currently the Bullet ColladaConverter doesn't deal with transform accumulation correctly, because it was hard to get the order of transforms out of the DOM. This is a bug that needs fixing in the ColladaConverter code. So for the time being, users better accumulate a tranform stack (transforms/rotations), into a single transform. And leave out scaling.
+</div></blockquote>
+
+As far as I can tell, the only other place in Collada you see "rotate" and "translate" is in the scene graph - a hierarchy of nodes.   That makes sense in that context.  You traverse your children nodes spawning objects, lights, geometry, and cameras along the way.  Standard tree traversal here.  Pushing and popping the current state as you decend and come back up, etc..   Its a scene traversal, and you can think of it as executing commands.  Note that "rotate" and "translate" are verbs.<br>
+<br>
+Now consider the context of defining a rigid body and its properties.  The usage of an arbitrary sequence (script) of movement commands to specify things, like the center of mass for example, seems inappropriate.  I dont specify an ambient color by starting at the origin of the color cube and translating to the color I want:  "&lt;diffuse&gt;&lt;translate&gt;r g b&lt;/translate&gt;&lt;/diffuse&gt;".   I would just say "&lt;diffuse&gt;r g b&lt;/diffuse&gt;".   I dont see any practial application where someone would ever animate the center of mass of a rigid body using a sequence of multiple bones.  It can be hard to justify making a change to the file format for terminology reasons alone, but given that the current design is actually causing implementation problems then its clear that this needs to be revisted.  I'd propose that the mass frame be represented something like:
+<ul>
+<li>&lt;center_of_mass&gt;x y z &lt;/center_of_mass&gt; (float3 position)</li>
+<li>&lt;principle axis alignment&gt;  x y z w &lt;/principle axis alignment&gt; (quat orientation)</li></ul>
+It can still be thought of as the mass reference frame.<br>
+<br>
+Likewise, the same principles apply to the way joints/contraints are attached to rigidbodies, perhaps called joint_pivot and joint_axis_alignment. <br>
+Similarly for shapes, these are fixed parts of a rigidbody.  A shape "HAS-A" position and orientation, the same way a spotlight "HAS-A" diffuse color.<br>
+Again, drop the arbitrary sequence of rotates, translates, and other "commands" from shape and just use a single "position" and "orientation".<br>
+<br>
+If the current design isn't working, then it should be improved to help the standard be more successful.  In addition to avoiding the problems and making some sort of collada physics compliance even possible, these improvements to the design are more understandable and will be a better fit with the physics apis.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Sat Feb 09, 2008 6:19 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+By the way, I'm not happy about the way COLLADA spec, and DOM implementation deals with INF/-INF for constraint limits. I rather had a separate method to indicates +/- infinity, because it is a pain to re-use a floating point value for this representations.
+</div></blockquote>
+
+So you're suggesting a separate flag that would indicate whether the constraint is free or limited along a particular axis?<br>
+<br>
+Just curious, Would -FLOAT_MAX/FLOAT_MAX work in your case?  (assuming the importer/DOM/whatever undersood max float and gave that value to you within the code)?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

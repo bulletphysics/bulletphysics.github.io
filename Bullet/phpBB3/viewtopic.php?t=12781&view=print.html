@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Simulating an KUKA LBR iwaa</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Simulating an KUKA LBR iwaa</h2>
+		<p><a href="viewtopic.php%3Ft=12781.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12781</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Simulating an KUKA LBR iwaa</h3>
+				<div class="date">Posted: <strong>Sun Oct 13, 2019 9:48 pm</strong></div>
+				<div class="author">by <strong>Decker</strong></div>
+				<div class="content">Hey, there!<br>
+<br>
+Currently I am attempting to simulate a KUKA LBR iwaa robot using Bullet3, an in-house renderer and C++. <br>
+I tried two approaches:
+<ul>
+<li>- btHingeConstraint<br>
+- btMultibody</li>
+</ul>
+
+Both approaches failed. The former approach fails the following way:<br>
+All links of the robot 'explode' into different directions. At this point, I am not sure what I am doing wrong.<br>
+Given an URDF description, how could one calculate the proper position of the first joint?<br>
+<br>
+Using the latter approach, my application crashes on the first simulation step, telling me that one joint is untyped,<br>
+although, after verifying with the Debugger, every joint created is an revolute-joint.<br>
+<br>
+Is there something I am doing wrong?<br>
+<br>
+NOTE: I cannot rely on BulletRobotics, thus I am parsing the URDF description and creating the render objects myself.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simulating an KUKA LBR iwaa</h3>
+				<div class="date">Posted: <strong>Mon Oct 14, 2019 5:24 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">Could you provide a complete simple test? thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simulating an KUKA LBR iwaa</h3>
+				<div class="date">Posted: <strong>Fri Oct 18, 2019 2:02 am</strong></div>
+				<div class="author">by <strong>Decker</strong></div>
+				<div class="content">Hey there! <br>
+Sorry for the late reply; I was been busy with this semesters start.<br>
+<br>
+Today I found time to tinker around with it again and settled for hinge constraints. My goal was to get just one hinge to work.<br>
+Let's suppose we have the following URDF definition (just an excerpt from bullet's kuka.urdf):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12781&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  &lt;link name="calib_kuka_arm_base_link"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0"/&gt;
+      &lt;!-- static base, disable dynamics for this link --&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0.055"/&gt;
+      &lt;inertia ixx="0.00381666666667" ixy="0" ixz="0" iyy="0.0036" iyz="0" izz="0.00381666666667"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="assets/models/kuka_lwr/arm_base.ply"/&gt;
+      &lt;/geometry&gt;
+      &lt;material name="Orange"/&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="assets/models/kuka_lwr/arm_base_convex.ply"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint name="kuka_arm_0_joint" type="revolute"&gt;
+    &lt;origin rpy="0 0 0" xyz="0 0 0.11"/&gt;
+    &lt;axis xyz="0 0 1"/&gt;
+    &lt;limit effort="204" lower="-2.96705972839" upper="2.96705972839" velocity="1.91986217719"/&gt;
+    &lt;dynamics damping="0.1"/&gt;
+    &lt;parent link="calib_kuka_arm_base_link"/&gt;
+    &lt;child link="kuka_arm_1_link"/&gt;
+  &lt;/joint&gt;
+  &lt;link name="kuka_arm_1_link"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="2.0"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0.04 0.130"/&gt;
+      &lt;inertia ixx="0.0136666666667" ixy="0" ixz="0" iyy="0.0118666666667" iyz="0" izz="0.003"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 3.14159265359" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="assets/models/kuka_lwr/arm_segment_a.ply"/&gt;
+      &lt;/geometry&gt;
+      &lt;material name="Orange"/&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 3.14159265359" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="assets/models/kuka_lwr/arm_segment_a_convex.ply"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+</code></pre></div>
+
+The way I understood the URDF specification, the pivot in a would be (0, 0, 0.11), pivot in b would be(0, 0, 0) and the axis in a and b (0, 0, 1).<br>
+So I assumed, that following code would work:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12781&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   for (std::size_t it = 1; it &lt; link_count; ++it) {
+      const auto&amp; link = _robot-&gt;link(it);
+      const auto&amp; joint = link.parent_joint();
+
+      btVector3   pivot_in_b = joint.origin().getOrigin(); // Specifies the offset off the joint in its local frame; here (0, 0, 0.11)
+      btVector3   pivot_in_a = { 0, 0, 0 };                        // Is this assumption right?
+
+      // TODO: Offset collision shape???
+
+      auto hinge = new btHingeConstraint(
+         *_rigid_bodies[it - 1],
+         *_rigid_bodies[it],
+         pivot_in_a,
+         pivot_in_b,
+         joint.axis(),
+         joint.axis()
+      );
+
+      hinge-&gt;enableMotor(true);
+      hinge-&gt;setMaxMotorImpulse(1000);
+
+      auto component = new constraint_component{};
+      component-&gt;constraint = hinge;
+      _entities[it].add_component(component);
+   }
+</code></pre></div>
+
+Is this the right assumption? If not, how would I calculate the pivot points and axis?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

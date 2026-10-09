@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; mac osx maya 2009 plugin</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>mac osx maya 2009 plugin</h2>
+		<p><a href="viewtopic.php%3Ft=3856.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=3856</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Wed Jul 22, 2009 5:48 pm</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">Hi all, I wonder if anyone can help me compile the plugin for osx maya2009.<br>
+I'm on a intel mac with 10.5.5 xcode 3.0<br>
+I've downloaded 2.75rc6, and linked the files to my xcode maya plugin template.<br>
+I know this template works with much less complicated plugins....<br>
+I feel confident I've linked to all the correct source files and maya devkit files but I can't get past these errors:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Undefined symbols:
+  "rigidBodyNode::typeName", referenced from:
+      __ZN13rigidBodyNode8typeNameE$non_lazy_ptr in affectsNode.bundle-i386-master.o
+  "sliderConstraintNode::typeName", referenced from:
+      __ZN20sliderConstraintNode8typeNameE$non_lazy_ptr in affectsNode.bundle-i386-master.o
+  "collisionShapeNode::creator()", referenced from:
+      __ZN18collisionShapeNode7creatorEv$non_lazy_ptr in affectsNode.bundle-i386-master.o
+</code></pre></div>
+there are 62 similar errors. A bit of googling of '$non_lazy_ptr' reveals a few people with such errors, but not with any solutions to the dynamica plugin.<br>
+<br>
+I've also tried the included makefile with even less success, quickly getting the error:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>make: *** No rule to make target `nailConstraintNode.h', needed by `pluginMain.o'.  Stop.</code></pre></div>
+
+What would be great is a working xcode project (or makefile), known to work on a similar setup... I'd try a maya2008 project file and try changing that if there is one...<br>
+Many thanks in advance if anyone can help:)<br>
+Dave.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Wed Jul 22, 2009 7:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Some files have been added and removed to the MayaPlugin.<br>
+(Undefined symbols:  "class::typeName", referenced from [...] means class.cpp is missing, if class is implemented in class.cpp)<br>
+<br>
+Attached is an updated Makefile.mac
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>make -f Makefile.mac
+make -f Makefile.mac install
+</code></pre></div>
+Can you try it out, and see if it helps?<br>
+<br>
+Also, could you share the precompiled Maya 2009 plugin, by attaching the zipped version? Some people requested it.<br>
+Thanks a lot,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Thu Jul 23, 2009 4:17 pm</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">Hi Erwin, thanks for getting back so quickly.<br>
+<br>
+Well, I feel I got somewhat closer... but no cigar yet.<br>
+<br>
+the makefile didn't fly straight away, I had to make a few changes. Specifically, I changed the maya include line to an explicit directory:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>MAYA_INCLUDE=-I/Applications/Autodesk/maya2009/devkit/include
+</code></pre></div>
+I also changed 2008 to 2009 and the plug path:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>MAYA_PLUG_IN_PATH=/Users/Shared/Autodesk/maya/plug-ins
+</code></pre></div>
+After this there was some progress... all the .o files got built, but the make stopped when it couldn't find any libs...<br>
+<br>
+I'd already built the demos and recalled seeing the libs in various folders, so I created a directory $(BULLET)/out/macosxx86/optimize/libs and put all the libs in there.<br>
+<br>
+Now this is where I'm at... the libs are found EXCEPT for libxml, yet it is absolutely in the directory:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Pro1-2:MayaPlugin davegreenwood$ cd /Bullet/out/macosxx86/optimize/libs 
+Pro1-2:libs davegreenwood$ ls -a
+.				libBulletCollision.a		libColladaDom.a			libIff.a
+..				libBulletDynamics.a		libConvexDecomposition.a	libLinearMath.a
+.DS_Store			libBulletMultiThreaded.a	libGIMPACTUtils.a		libOpenGLSupport.a
+libBulletColladaConverter.a	libBulletSoftBody.a		libGLUI.a			libxml.a
+Pro1-2:libs davegreenwood$ 
+</code></pre></div>
+here's the error:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Pro1-2:MayaPlugin davegreenwood$ make -f Makefile.mac
+g++ pluginMain.o colladaExport.o rigidBodyNode.o rigidBodyArrayNode.o collisionShapeNode.o solver.o bt_solver.o dSolverNode.o dSolverCmd.o dRigidBodyCmd.o dRigidBodyArrayCmd.o pdbIO.o drawUtils.o constraint/dHingeConstraintCmd.o constraint/dSliderConstraintCmd.o constraint/hingeConstraintNode.o constraint/sixdofConstraintNode.o constraint/dNailConstraintCmd.o constraint/dsixdofConstraintCmd.o constraint/nailConstraintNode.o constraint/sliderConstraintNode.o -ldl -shared -L/Bullet/out/macosxx86/optimize/libs -L/Bullet/src -lBulletColladaConverter -lcolladadom -llibxml  -lGIMPACTUtils -lbulletdynamics -lbulletcollision -lbulletmath  -L/Applications/Autodesk/maya2009/Maya.app/Contents/MacOS -lOpenMaya -lFoundation -Wl,-executable_path,/Applications/Autodesk/maya2009/Maya.app/Contents/MacOS  -lOpenMayaUI -lOpenMayaFX -lOpenMaya -lFoundation -framework OpenGL -o dynamicaMayaPlugin.bundle
+ld: library not found for -llibxml
+collect2: ld returned 1 exit status
+make: *** [dynamicaMayaPlugin.bundle] Error 1</code></pre></div>
+
+I know it finds the other libs, because if I remove the -llibxml flag from the makefile, there is no complaint of libs not found, and the build continues, but of course fails with various xml errors...<br>
+<br>
+I'm very happy to give this all I can, I know quite a few people are after an osx binary. <br>
+Anyway, I'm hoping you might be able to shed a little light... maybe someone might have an xcode project?<br>
+<br>
+Thanks for your help so far.<br>
+Dave.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Thu Jul 23, 2009 7:22 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The MayaPlugin for Mac OSX assumes that the libraries are build using jam. Jam is included in the Bullet distribution, just change to the Bullet/jam-2.5 folder, call 'make' and 'sudo make install'. Then, once jam is available for your system, you just call './autogen.sh', './configure', 'jam'<br>
+<br>
+Alternatively, you need to rename libxml.a to liblibxml.a (the build system already adds the 'lib' prefix to the name libxml).
+<blockquote class="uncited"><div>
+linked the files to my xcode maya plugin template.
+</div></blockquote>
+Can you share this maya plugin template? 
+<blockquote class="uncited"><div>
+maybe someone might have an xcode project?
+</div></blockquote>
+CMake is becoming the main Bullet build system, but not all projects have been ported over to using it. CMake can generate XCode projectfiles. Perhaps we can try to generate the Maya plugin using CMake, based on your template?<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Thu Jul 23, 2009 9:57 pm</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">Hi Erwin, here's the xcode template I've been using for some simple plugins of my own. I can also compile the maya devkit plugins using this, but I'm not sure how well it will work on anyone else's system.
+<div class="inline-attachment">
+			
+		
+		
+				<dl class="file">
+			<dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="download/file.php%3Fid=302">Maya Templates.zip</a></dt>
+						<dd>(18.56 KiB) Downloaded 1594 times</dd>
+		</dl>
+		
+			</div>
+Anyway, to install just expand the zip to /Developer/Library/Xcode/Project Templates.<br>
+<br>
+I got past the libxml hurdle (by renaming to liblibxml), and ran straight into bulletmath. Now that's a lib I don't have here, I have linearMath.a which I tried substituting but doesn't work. So looks like I'm at a stop again. I have all the other libs in the makefile.<br>
+<br>
+Are cmake files available for the maya plugin? I used that for the demos successfully, so I'm happy to give that a go.<br>
+<br>
+Thanks again for your help<br>
+Dave.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 10:00 am</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">Hi Erwin, some good news... I've managed to compile the maya plugin on my system, actually using my xcode template in the end.<br>
+The file is too big to attach here, so for a while I've put it here:<br>
+PLEASE SEE POST BELOW<br>
+<br>
+I've not tested beyond loading the plug and clicking a few buttons, and there where a few warnings in the compile:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>/Users/davegreenwood/Documents/MayaPlugDev/bullet276/MayaPlugin/constraint/bt_sixdof_constraint.h:40: warning: unused variable 'sixdof'
+/Users/davegreenwood/Documents/MayaPlugDev/bullet276/MayaPlugin/constraint/bt_sixdof_constraint.h: In member function 'virtual void bt_sixdof_constraint_t::set_AngLimit(float, float)':
+/Users/davegreenwood/Documents/MayaPlugDev/bullet276/MayaPlugin/constraint/bt_sixdof_constraint.h:46: warning: unused variable 'sixdof'</code></pre></div>
+
+all relating to sixdof, plus a few linking warnings:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>ld: warning std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; std::operator+&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;(std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;, std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;)has different visibility (1) in /usr/lib/libstdc++-static.a(string-inst.o) and (2) in /Users/davegreenwood/Documents/MayaPlugDev/bullet276/MayaPlugin/build/bullet.build/Default/dynamicaMayaPlugin.build/Objects-normal/dynamicaMayaPlugin.bundle-i386-master.o
+ld: warning std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; std::operator+&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;(char const*, std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;)has different visibility (1) in /usr/lib/libstdc++-static.a(string-inst.o) and (2) in /Users/davegreenwood/Documents/MayaPlugDev/bullet276/MayaPlugin/build/bullet.build/Default/dynamicaMayaPlugin.build/Objects-normal/dynamicaMayaPlugin.bundle-i386-master.o
+ld: warning __ZStplIcSt11char_traitsIcESaIcEESbIT_T0_T1_ERKS6_S8_.eh has different visibility (1) in /usr/lib/libstdc++-static.a(string-inst.o) and (2) in /Users/davegreenwood/Documents/MayaPlugDev/bullet276/MayaPlugin/build/bullet.build/Default/dynamicaMayaPlugin.build/Objects-normal/dynamicaMayaPlugin.bundle-i386-master.o
+ld: warning __ZStplIcSt11char_traitsIcESaIcEESbIT_T0_T1_EPKS3_RKS6_.eh has different visibility (1) in /usr/lib/libstdc++-static.a(string-inst.o) and (2) in /Users/davegreenwood/Documents/MayaPlugDev/bullet276/MayaPlugin/build/bullet.build/Default/dynamicaMayaPlugin.build/Objects-normal/dynamicaMayaPlugin.bundle-i386-master.o
+ld: warning std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; std::operator+&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;(std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;, std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;)has different visibility (2) in /Users/davegreenwood/Documents/MayaPlugDev/bullet276/Extras/BulletColladaConverter/Debug/libBulletColladaConverter.a(ColladaConverter.o) and (1) in /usr/lib/libstdc++-static.a(string-inst.o)
+ld: warning __ZStplIcSt11char_traitsIcESaIcEESbIT_T0_T1_ERKS6_S8_.eh has different visibility (2) in /Users/davegreenwood/Documents/MayaPlugDev/bullet276/Extras/BulletColladaConverter/Debug/libBulletColladaConverter.a(ColladaConverter.o) and (1) in /usr/lib/libstdc++-static.a(string-inst.o)
+</code></pre></div>
+
+Anyway, if anyone would care to test it, please report your findings.<br>
+<br>
+Thanks<br>
+Dave.<br>
+<br>
+oops, I just noticed I named the zip incorrectly, the file contains 2.75 rc6 not 2.76 rc5, the link is fine though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 10:57 am</strong></div>
+				<div class="author">by <strong>cgbeige</strong></div>
+				<div class="content">hey dave - crossposting from cgsociety<br>
+<br>
+I ran the test scenes and I think there are some problems. The field ones seem to work . The peanut box and others that involve collisions don't work - there are no rigid body interactions so the peanuts and spheres just sail through the objects. here's the error output from the peanut box:<br>
+<br>
+Code:<br>
+<br>
+// Error: line 1: Plug-in, "dynamica.bundle", was not found on MAYA_PLUG_IN_PATH. // // Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica276rc5ForMaya2009OSX/scenes/peanutBox.ma line 65: The dRigidBody 'dRigidBodyShape1' has no '.ac' attribute. // // Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica276rc5ForMaya2009OSX/scenes/peanutBox.ma line 65: No object matches name: .ac // // Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica276rc5ForMaya2009OSX/scenes/peanutBox.ma line 539: The dRigidBody 'dRigidBodyShape2' has no '.ac' attribute. // // Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica276rc5ForMaya2009OSX/scenes/peanutBox.ma line 539: No object matches name: .ac // // File read in 0 seconds. // Warning: This file is from an older version of Maya. If saved, it will not be readable by previous versions. // // Error: Error reading file. // // Error: Error reading file. //<br>
+<br>
+<br>
+<br>
+The peanut funnel doesn't show any peanuts - just a falling funnel. The 2008 plug-in wasn't stable but I remember it did get the RB collisions to work. And the speed was definitely better. the donuts scene is kind of funny to watch since it chugs along at .5 FPS and then doesn't collide when the cube reaches the donuts. This is on an 8-core Nehalem Mac Pro with 24GB of RAM.  <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 11:52 am</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">I did:<br>
+listAttr dRigidBodyShape1;
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3856&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// Result: message caching isHistoricallyInteresting nodeState binMembership boundingBox boundingBoxMin boundingBoxMinX boundingBoxMinY boundingBoxMinZ boundingBoxMax boundingBoxMaxX boundingBoxMaxY boundingBoxMaxZ boundingBoxSize boundingBoxSizeX boundingBoxSizeY boundingBoxSizeZ center boundingBoxCenterX boundingBoxCenterY boundingBoxCenterZ matrix inverseMatrix worldMatrix worldInverseMatrix parentMatrix parentInverseMatrix visibility intermediateObject template ghosting instObjGroups instObjGroups.objectGroups instObjGroups.objectGroups.objectGrpCompList instObjGroups.objectGroups.objectGroupId instObjGroups.objectGroups.objectGrpColor useObjectColor objectColor drawOverride overrideDisplayType overrideLevelOfDetail overrideShading overrideTexturing overridePlayback overrideEnabled overrideVisibility overrideColor lodVisibility renderInfo identification layerRenderable layerOverrideColor renderLayerInfo renderLayerInfo.renderLayerId renderLayerInfo.renderLayerRenderable renderLayerInfo.renderLayerColor ghostingControl ghostCustomSteps ghostPreSteps ghostPostSteps ghostStepSize ghostFrames ghostRangeStart ghostRangeEnd ghostDriver renderType renderVolume visibleFraction motionBlur visibleInReflections visibleInRefractions castsShadows receiveShadows maxVisibilitySamplesOverride maxVisibilitySamples geometryAntialiasingOverride antialiasingLevel shadingSamplesOverride shadingSamples maxShadingSamples volumeSamplesOverride volumeSamples depthJitter ignoreSelfShadowing primaryVisibility referenceObject compInstObjGroups compInstObjGroups.compObjectGroups compInstObjGroups.compObjectGroups.compObjectGrpCompList compInstObjGroups.compObjectGroups.compObjectGroupId underWorldObject localPosition localPositionX localPositionY localPositionZ worldPosition worldPosition.worldPositionX worldPosition.worldPositionY worldPosition.worldPositionZ localScale localScaleX localScaleY localScaleZ inCollisionShape solver mass restitution friction linearDamping angularDamping initialPosition initialPositionX initialPositionY initialPositionZ initialRotation initialRotationX initialRotationY initialRotationZ initialVelocity initialVelocityX initialVelocityY initialVelocityZ initialSpin initialSpinX initialSpinY initialSpinZ ca_rigidBody ca_rigidBodyParam ca_solver // 
+</code></pre></div>
+and you can see the dRigidBody no longer has those attributes, I checked the source, and there not there either. Maybe we can look at the latest version of the windows source, if that works properly?<br>
+Dave.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 1:43 pm</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">In the light of cgbeige pointing out the mismatched attr names, I compiled the plug with 2.73sp1<br>
+<br>
+PLEASE SEE POST BELOW<br>
+<br>
+I had no errors or warnings with compile, but my initial tests indicate it doesn't work:(<br>
+<br>
+Anyway, have a go, see if we can shed some light on this.<br>
+<br>
+I did wonder about the actual mel scripts, if they are making the right connections etc...<br>
+<br>
+Dave.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 3:22 pm</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">Going back to the first compile I did... I didn't update the scripts...<br>
+get them here:<br>
+<br>
+<a href="http://code.google.com/p/bullet/source/browse/#svn/trunk/Extras/MayaPlugin/scripts" class="postlink">http://code.google.com/p/bullet/source/ ... in/scripts</a><br>
+<br>
+Dave.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 5:05 pm</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">Hi all, I've had another look at the 275rc6 files.<br>
+This time I've managed to compile without errors or warnings. Please disregard the earlier files and try this one:<br>
+<br>
+<a href="http://www.highend3d.com/maya/downloads/plugins/dynamics/DynamicaMaya2009OSX-5901.html" class="postlink">http://www.highend3d.com/maya/downloads ... -5901.html</a><br>
+<br>
+I've also included the latest scripts.<br>
+<br>
+Dave.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 5:19 pm</strong></div>
+				<div class="author">by <strong>cgbeige</strong></div>
+				<div class="content">great - setup of new scenes works. sphere, cube, mesh RB works fine and I had them run down some planes. Loading the included scenes produce the same results though (no collisions):<br>
+<br>
+// Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica275rc6ForMaya2009OSX/scenes/peanutBox.ma line 65: The dRigidBody 'dRigidBodyShape1' has no '.ac' attribute. // <br>
+// Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica275rc6ForMaya2009OSX/scenes/peanutBox.ma line 65: No object matches name: .ac // <br>
+// Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica275rc6ForMaya2009OSX/scenes/peanutBox.ma line 539: The dRigidBody 'dRigidBodyShape2' has no '.ac' attribute. // <br>
+// Error: file: /Volumes/MYBACK/DOWNLOADS_MB/Dynamica275rc6ForMaya2009OSX/scenes/peanutBox.ma line 539: No object matches name: .ac //</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 5:24 pm</strong></div>
+				<div class="author">by <strong>cgbeige</strong></div>
+				<div class="content">tried a voronoi mesh test:<br>
+<a href="http://www.3eige.com/ars/voronoibullet.mov" class="postlink">http://www.3eige.com/ars/voronoibullet.mov</a><br>
+<br>
+Not sure how to get the collisions to be a bit more realistic. Also, this still seems slow for bullet.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 5:29 pm</strong></div>
+				<div class="author">by <strong>davegreenwood</strong></div>
+				<div class="content">those included scenes are definitely not going to work now, as the later source code doesn't use those attribute names.<br>
+Keep testing;)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: mac osx maya 2009 plugin</h3>
+				<div class="date">Posted: <strong>Fri Jul 24, 2009 5:46 pm</strong></div>
+				<div class="author">by <strong>cgbeige</strong></div>
+				<div class="content">so the constraints work nicely. There are some odd behaviours with some of the meshes though:<br>
+<br>
+<a href="http://www.3eige.com/cgtalk/voronoibullet2.mov" class="postlink">http://www.3eige.com/cgtalk/voronoibullet2.mov</a><br>
+<br>
+I think the speed is not a problem now since I realized it was because I was using mesh-based collisions it's faster when you use convex hull arrays. <br>
+<br>
+anyway, this is all I can do for today. I have to get to work on this contract.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

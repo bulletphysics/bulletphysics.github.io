@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13209" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-05-20T03:33:55+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13209</id>
+
+		<entry>
+		<author><name><![CDATA[ASmartRobot]]></name></author>
+		<updated>2021-05-20T03:33:55+00:00</updated>
+
+		<published>2021-05-20T03:33:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43431#p43431</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43431#p43431"/>
+		<title type="html"><![CDATA[Camera Intrinsics &amp; Extrinsics, Depth to Point Cloud]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43431#p43431"><![CDATA[
+Hello,<br><br>Recently I've been working on a project which requires simulating a camera and obtaining the point cloud information from PyBullet. I have looked into the PyBullet way of handling cameras, and have got some initial results, but the results don't quite make sense. The following are the screenshots<div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1876" class="postimage" alt="Screenshot from 2021-05-19 23-12-21.png" onclick="viewableArea(this);" /></dt></dl></div>This shows my task of trying to capture point clouds from the depth image. I have traced the rays from the camera center to each of the point as shown in the white lines, but strangely, they don't intersect with the table.<div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1875" class="postimage" alt="Screenshot from 2021-05-19 23-11-55.png" onclick="viewableArea(this);" /></dt></dl></div>This one shows the point cloud visualization in Open3D. The extracted point cloud looks fine, although a bit tilted, and the table is successfully extracted.<br><br><strong class="text-strong">My approach is the following:</strong><br><strong class="text-strong">0. obtain the intrinsics matrix and extrinsics matrix by the following equation:</strong> (assuming image has same height and weight, denoted by W)<br>fx = fy = W / tan(fov * PI / 180 / 2)<br>cx = cy = W/2     (center x, y)<br>(this is the standard intrinsics matrix as defined in <a href="http://ksimek.github.io/2013/08/13/intrinsic/" class="postlink">http://ksimek.github.io/2013/08/13/intrinsic/</a>)<br><strong class="text-strong">obtain the extrinsics matrix by following:</strong><br><a href="http://ksimek.github.io/2012/08/22/extrinsic/" class="postlink">http://ksimek.github.io/2012/08/22/extrinsic/</a><br>and<br><a href="https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function" class="postlink">https://www.scratchapixel.com/lessons/m ... t-function</a>.<br>Since I just need the pose/transform of the camera in the world frame, I simply obtain the pose matrix as:<br><br>T =<br>[<br>right_x, up_x, forward_x, Px<br>right_y, up_y, forward_y, Py<br>right_z, up_z, forward_z, Pz<br>0, 0, 0, 1<br>]<br><br>where right, up and forward are the corresponding vectors of the camera (also shown in the RGB colors in the screenshot), and [Px, Py, Pz] is the camera center position in the world frame.<br>    <br><strong class="text-strong">1. from depth image pixel index, obtain the x, y and z locations in the camera frame by:</strong><br>x_cam = -(j - cx) / dx * depth_image<br>y_cam = -(i - cx) / dx * depth_image<br>z_cam = -depth_image<br><br><strong class="text-strong">2. transform from the locations in the camera frame to the world frame by:</strong><br>T * [x_cam[k], y_cam[k], z_cam[k], 1]<br>(this is done for each of the point k, and then concatenated together.<br><br>I think my approach is reasonable, and should work if the intrinsic matrix and extrinsic matrix are given, which is usually the case when using ROS. However, as shown in the screenshot, the traced rays should go much further to intersect with the table.<br><br>I have spent several days on this problem, and it seems the resources online are limited regarding this issue. Any help or recommendation of resources would be much appreciated! Thank you!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13977">ASmartRobot</a> — Thu May 20, 2021 3:33 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

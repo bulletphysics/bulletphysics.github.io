@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Asking for Expertise's Opinion for &quot;the ultimate&quot; solution</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Asking for Expertise's Opinion for &quot;the ultimate&quot; solution</h2>
+		<p><a href="viewtopic.php%3Ft=6186.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6186</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Asking for Expertise's Opinion for &quot;the ultimate&quot; solution</h3>
+				<div class="date">Posted: <strong>Mon Jan 03, 2011 3:36 pm</strong></div>
+				<div class="author">by <strong>KeKe</strong></div>
+				<div class="content">Hi Guys,<br>
+This is my first post, so please don't fire at me if I asked something really stupid  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> <br>
+<br>
+First of all, This is a great Place to learn about physics knowledge and with such great physics engine actually make things a lot easier in the first place, thanks for all contributions <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I'm new (very very new) to Physics simulation world indeed, this is my first physics engine touched, and tried to create a game out of it, but I've encounter a problem even though I don't know if it's normal.<br>
+<br>
+I've searched the forum for almost a week, browsed all possible related threads. But for my question doesn't seem to be able to find a "perfect" solution.<br>
+<br>
+Scenario:<br>
+I have a kinematic object that I can animate through changing it's position, and I have a dynamic object on top of the Kinematic object, but if I change the position (Gradually in small steps not like teleporting ) of the kinematic object, the dynamic object on top of the Kinematic object doesn't seem to move along with the "animate" kinematic object.. But I suppose there is friction on both object materials? so is this normal?<br>
+<br>
+If it's not normal, could anyone point me a direction how can I make the dynamic object move along with the kinematic object?<br>
+<br>
+If it's normal (the way this engine is designed), Could any expertise provide an "Ultimate" solution or a "better" solution for my case?<br>
+<br>
+I've thought of some solutions but for me it feels like "Band-Aid" solutions..<br>
+1. Create constraints on the contact points when the 2 object is touched each other (is this possible? )<br>
+2. Just simply move the dynamic object position with the Kinematic when they got contact call back (is this possible? or is it good to do this way? )<br>
+3. Just simply set the velocity of the dynamic object with the kinematic object's velocity ( is this possible ? or is it good ? )<br>
+4. Just simply set the impulse on the dynamic object for each step simulation which might be the same with kinematic object ( is this possible? would it be out of sync for the 2 objects? )<br>
+<br>
+<br>
+Any Suggestions or Directions that's best suited for my situation would be much Appreciated  <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes">  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+Thanks A Lot!  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Tue Jan 04, 2011 12:10 am</strong></div>
+				<div class="author">by <strong>lulzfish</strong></div>
+				<div class="content">If you're only setting the position, then Bullet is just sliding the kinematic object under the dynamic object, and assuming that you didn't want any physics to be invoked when you do that. No matter how big or small the steps, setting position is always considered to be teleportation from the engine's perspective.<br>
+<br>
+I think most physics engines do this, it's something that makes sense to a human but is ambiguous to a computer (Because maybe you DO want to teleport something, and then it would be bad if the dynamic object flew away accidentally)<br>
+<br>
+I would try setting the velocity of the kinematic object somehow, that way when Bullet checks on the collision, it will notice that one object is moving and the other is not, and it should apply friction. If it saw the object as "moving with velocity V" and not "teleporting in very small steps" then it should work.<br>
+<br>
+There's a btRigidBody::setLinearVelocity (const btVector3 &amp;), I would start there, assuming that kinematic objects also use btRigidBody.<br>
+<br>
+Oh, and by "ultimate" you might be thinking of "best practice". <a href="http://en.wikipedia.org/wiki/Best_practices" class="postlink">http://en.wikipedia.org/wiki/Best_practices</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Tue Jan 04, 2011 8:07 am</strong></div>
+				<div class="author">by <strong>KeKe</strong></div>
+				<div class="content"><blockquote><div><cite>lulzfish wrote:</cite>If you're only setting the position, then Bullet is just sliding the kinematic object under the dynamic object, and assuming that you didn't want any physics to be invoked when you do that. No matter how big or small the steps, setting position is always considered to be teleportation from the engine's perspective.<br>
+<br>
+I think most physics engines do this, it's something that makes sense to a human but is ambiguous to a computer (Because maybe you DO want to teleport something, and then it would be bad if the dynamic object flew away accidentally)<br>
+<br>
+I would try setting the velocity of the kinematic object somehow, that way when Bullet checks on the collision, it will notice that one object is moving and the other is not, and it should apply friction. If it saw the object as "moving with velocity V" and not "teleporting in very small steps" then it should work.<br>
+<br>
+There's a btRigidBody::setLinearVelocity (const btVector3 &amp;), I would start there, assuming that kinematic objects also use btRigidBody.<br>
+<br>
+Oh, and by "ultimate" you might be thinking of "best practice". <a href="http://en.wikipedia.org/wiki/Best_practices" class="postlink">http://en.wikipedia.org/wiki/Best_practices</a></div></blockquote>
+
+<br>
+Thanks a lot lulzfish!!<br>
+That really clarifies a lot of things to me, and thanks for correcting my poor English..  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed">  <br>
+However, In my situation, I have a Kinematic object that user can control, which is to be able to be dragged by the user's mouse, so if I set the linear velocity, which the object might not be sync-ing with the mouse movement, is there anyway I can do this with velocity setting and still sync with the movement of the mouse??  <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> <br>
+<br>
+In the meanwhile, I'll keep trying down this path, Thanks a lot for the help! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Tue Jan 04, 2011 1:23 pm</strong></div>
+				<div class="author">by <strong>lulzfish</strong></div>
+				<div class="content"><blockquote><div><cite>KeKe wrote:</cite>In my situation, I have a Kinematic object that user can control, which is to be able to be dragged by the user's mouse, so if I set the linear velocity, which the object might not be sync-ing with the mouse movement, is there anyway I can do this with velocity setting and still sync with the movement of the mouse??  <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> </div></blockquote>
+I think it can work if each frame does something like this:<br>
+<br>
+1. Get the new mouse position<br>
+2. Generate the new kinematic location from the mouse position<br>
+3. let movementVector = newPosition - currentPosition<br>
+4. Either:<br>
+4a. let velocityVector = movementVector * steppingRate<br>
+4b. let velocityVector = movementVector / steppingRate<br>
+(I think it is probably divide, but I haven't tested these)<br>
+5. Overwrite the kinematic's velocity with velocityVector<br>
+6. Step Bullet<br>
+<br>
+And of course, if the mouse isn't being used, reset the velocity to 0 so the object doesn't fly away when the user lets go of it.<br>
+<br>
+That way at each frame, the kinematic object will be given exactly enough velocity for Bullet to move it to the new mouse position within the next physics step.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Wed Jan 05, 2011 8:41 am</strong></div>
+				<div class="author">by <strong>KeKe</strong></div>
+				<div class="content"><blockquote><div><cite>lulzfish wrote:</cite><blockquote><div><cite>KeKe wrote:</cite>In my situation, I have a Kinematic object that user can control, which is to be able to be dragged by the user's mouse, so if I set the linear velocity, which the object might not be sync-ing with the mouse movement, is there anyway I can do this with velocity setting and still sync with the movement of the mouse??  <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> </div></blockquote>
+I think it can work if each frame does something like this:<br>
+<br>
+1. Get the new mouse position<br>
+2. Generate the new kinematic location from the mouse position<br>
+3. let movementVector = newPosition - currentPosition<br>
+4. Either:<br>
+4a. let velocityVector = movementVector * steppingRate<br>
+4b. let velocityVector = movementVector / steppingRate<br>
+(I think it is probably divide, but I haven't tested these)<br>
+5. Overwrite the kinematic's velocity with velocityVector<br>
+6. Step Bullet<br>
+<br>
+And of course, if the mouse isn't being used, reset the velocity to 0 so the object doesn't fly away when the user lets go of it.<br>
+<br>
+That way at each frame, the kinematic object will be given exactly enough velocity for Bullet to move it to the new mouse position within the next physics step.</div></blockquote>
+
+Hi lulzfish,<br>
+I'm currently trying the method you suggested, but I got something wants to clarify a bit since I'm so new to Bullet  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> <br>
+<br>
+I tried to set the "setLinearVelocity" of my Kinematic object, but it doesn't seem to be moving?? while trying on the normal "dynamic" object(mass=10) is working fine, I just want to know if this is normal that I can't set kinematic objects' velocity? or if it's not, am I having something setup wrong?<br>
+<br>
+As in my knowledge, I know that by setting mass = 0, and "flag" to Kinematic I can control it, but when I use setLinearVelocity, it doesn't seem to work,  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused">  just confused..  <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Wed Jan 05, 2011 1:22 pm</strong></div>
+				<div class="author">by <strong>lulzfish</strong></div>
+				<div class="content">I haven't actually used Bullet much, but I think this thread is similar to your problem:<br>
+<a href="viewtopic.php%3Ft=688.html#p" class="postlink">http://www.bulletphysics.org/Bullet/php ... &amp;f=9&amp;t=688</a><br>
+<br>
+Erwin recommended (4-5 years ago, hope it's still right) to disable sleeping on kinematics that need to be moving around.<br>
+<br>
+And apparently you can subclass btMotionState somehow to create a controller for a kinematic object, then Bullet will automatically calculate its velocity every frame if you send the position and rotation through the motion state.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Wed Jan 05, 2011 2:19 pm</strong></div>
+				<div class="author">by <strong>KeKe</strong></div>
+				<div class="content"><blockquote><div><cite>lulzfish wrote:</cite>I haven't actually used Bullet much, but I think this thread is similar to your problem:<br>
+<a href="viewtopic.php%3Ft=688.html#p" class="postlink">http://www.bulletphysics.org/Bullet/php ... &amp;f=9&amp;t=688</a><br>
+<br>
+Erwin recommended (4-5 years ago, hope it's still right) to disable sleeping on kinematics that need to be moving around.<br>
+<br>
+And apparently you can subclass btMotionState somehow to create a controller for a kinematic object, then Bullet will automatically calculate its velocity every frame if you send the position and rotation through the motion state.</div></blockquote>
+
+Thanks a lot lulzfish!<br>
+I've saw that thread already and I did everything that Erwin suggested to do, I set the Kinematic flag and also deactivate the sleep but I still can't move the object by "setLinearVelocity",  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"> I also tried "HARD" to understand the CcdPhysicsDemo too, but still doesn't get any luck  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"> (probably because my lack of experience in physics simulation concept?  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed">  )<br>
+<br>
+Because I'm relatively new to this field not only with Bullet but the whole physics simulation stuff, so the MotionState method seemed to be a lot more complicated than I could conquer. I still think that such an easy problem shouldn't need any "customized" motionstate.. <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"> <br>
+<br>
+Anyway, I'll try all my best to keep working on this issue, but still thanks a lot for all the suggestions and advises lulzfish, God Bless You!!  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing">  <br>
+<br>
+If I got any further progress I'll come up and post a solution <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> <br>
+If you come up with any other ideas please don't hesitate to share it, Thanks! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Thu Jan 06, 2011 4:48 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">I thought setting the body to be Kinematic and control it by setting velocity should work as you expect. If not, it should be simple to fix too.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Fri Jan 07, 2011 3:11 pm</strong></div>
+				<div class="author">by <strong>KeKe</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>I thought setting the body to be Kinematic and control it by setting velocity should work as you expect. If not, it should be simple to fix too.</div></blockquote>
+
+Hi, Thanks for the comment, but I really don't know how to check because the 3D engine I'm using is SIO2, and I'm not sure if it's because some setting I'm missing for SIO2 or not, I just can't get the Kinematic object to move with "setLinearVelocity" even though I checked all the settings suggested here by Erwin (Set object mass=0, set deactivate flag, set object to Kinematic flag), I have no clue at all and don't know where to start debugging...<br>
+<br>
+But I surely "CAN" move the rigid body with "setLinearVelocity" without any problems at all. I don't even need to set the object to be Kinematics. But I can't use rigid body since it must be given a Mass, which caused my desired object to have "gravity effect" that I don't want on my Kinematics object.<br>
+<br>
+Well I'll still keep trying with my limited knowledge about Bullet, but if anyone else have better suggestion or might know there are some settings might affect a little please don't hesitate to share!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+Thanks a lot! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Asking for Expertise's Opinion for &quot;the ultimate&quot; soluti</h3>
+				<div class="date">Posted: <strong>Sun Jan 09, 2011 12:09 pm</strong></div>
+				<div class="author">by <strong>KeKe</strong></div>
+				<div class="content"><blockquote><div><cite>KeKe wrote:</cite><blockquote><div><cite>ngbinh wrote:</cite>I thought setting the body to be Kinematic and control it by setting velocity should work as you expect. If not, it should be simple to fix too.</div></blockquote>
+
+Hi, Thanks for the comment, but I really don't know how to check because the 3D engine I'm using is SIO2, and I'm not sure if it's because some setting I'm missing for SIO2 or not, I just can't get the Kinematic object to move with "setLinearVelocity" even though I checked all the settings suggested here by Erwin (Set object mass=0, set deactivate flag, set object to Kinematic flag), I have no clue at all and don't know where to start debugging...<br>
+<br>
+But I surely "CAN" move the rigid body with "setLinearVelocity" without any problems at all. I don't even need to set the object to be Kinematics. But I can't use rigid body since it must be given a Mass, which caused my desired object to have "gravity effect" that I don't want on my Kinematics object.<br>
+<br>
+Well I'll still keep trying with my limited knowledge about Bullet, but if anyone else have better suggestion or might know there are some settings might affect a little please don't hesitate to share!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+Thanks a lot! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div></blockquote>
+
+<br>
+Hello, I actually used a "band-aid" solution because I really can't get my kinematic object to move with setLinearVelocity<br>
+<br>
+The way I do it is funny, I use transformation instead of setLinearVelocity to move the object, but still call setLinearVelocity to apply the velocity on the Kinematic object. The Bullet solver can calculate the interaction between any dynamic object with the Kinematic object and apply the proper friction simulation, and it actually works quite well...<br>
+<br>
+I just don't think it is the proper way to do it, but since currently can't get Kinematic object to move with setLinearVelocity, I just use normal transformation I used before to change the location but yet setting the velocity at the same time....<br>
+<br>
+This is pretty funny to me  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing">  but currently can't get any better than this..  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

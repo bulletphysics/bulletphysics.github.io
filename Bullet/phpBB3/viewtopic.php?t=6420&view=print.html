@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Mesh Loading</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Mesh Loading</h2>
+		<p><a href="viewtopic.php%3Ft=6420.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6420</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Mesh Loading</h3>
+				<div class="date">Posted: <strong>Mon Feb 28, 2011 11:48 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">Hello I am really excited to integrate Bullet into my rapily growing game engine! <br>
+<br>
+I have a thread designed to manage physics and have all the graphics and scene data constructs ready to go. I have integrated the most recent build of bullet into my Microsoft Visual Studio 2010 project and successfully got a DX teapot to use the matrix of a bullet collision shape sphere to rotate along a plane being pulled against it by gravity.<br>
+<br>
+My mesh format will be Collada later on but for the time being I am using .x and .sdkmesh files (I am aware of the massive list of flaws with that!). I have the ability to read them into Blender in order to convert them to .bullet format (although I have not found the thing I need to add to Blender to do that export yet! A cue would be appreciated <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> ). I have the meshes in ID3DXMesh Format in my engine for the time being.<br>
+<br>
+My main question is are there any tutorials on parsing meshes into bullet from my mesh container for the graphics (Direct X) API?<br>
+<br>
+I have seen:<br>
+<br>
+Concave Physics Demos example of using btBulletWorldImporter to load in an external mesh file from .bullet format, What other formats can it take? I have seen many things about the collision shapes you can apply to meshes but would love a tutorial on the mesh loading step.<br>
+<br>
+#ifndef SERIALIZE_TO_DISK<br>
+#include "btBulletWorldImporter.h"<br>
+#endif //SERIALIZE_TO_DISK<br>
+<br>
+btBulletWorldImporter import(0);//don't store info into the world<br>
+if (import.loadFile("myShape.bullet")) //Can this take many formats or exclusively the bullet format?<br>
+<br>
+I will certainly look for and find the blender to ".bullet" route into getting physics running but I would love to be able to import all mesh data from the one file if anyone had a tutorial or general guide on what to lookup for that.<br>
+<br>
+I cannot wait to load in my own meshes the first thing I am going to do is code in a raycast vehicle and drive around  <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"> <br>
+<br>
+Thanks for any help<br>
+<br>
+Enlightened One</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2011 1:51 am</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">To clarify the resource for making .bullet files appears to be missing .dll files. <br>
+<br>
+"Blender-2.49b-custom-Bullet-2.76_2010may31" is missing zlib.dll and does not include python25.dll despite requiring it to run, I can only acquire python25.dll the zlib.dll necessary to run the project is bespoke to the application!<br>
+<br>
+Thats here <a href="http://code.google.com/p/bullet-physics-editor/downloads/list" class="postlink">http://code.google.com/p/bullet-physics ... loads/list</a><br>
+<br>
+That is the only source I was aware of for loading data into bullet so I am back to my drawing board to try and figure out a means of parsing the data from other formats.<br>
+<br>
+EO</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2011 2:35 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">I have continued my attempts to integrate Bullet in a nice and friendly way, here is an attempt at loading in a basic .x mesh and parsing it to Bullet format.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6420&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> 
+void LoadXFile( char* MeshFilename, ID3DXMesh* &amp;Mesh )
+{
+	//Zero Mesh and create buffer
+	Mesh = 0;
+	ID3DXBuffer* MeshBuffer  = 0;
+
+	//Load and optimize the mesh
+	D3DXLoadMeshFromX( MeshFilename, D3DXMESH_MANAGED, D3DDevice, &amp;MeshBuffer, 0, 0, 0, &amp;Mesh);
+	Mesh-&gt;OptimizeInplace( D3DXMESHOPT_ATTRSORT | D3DXMESHOPT_COMPACT | D3DXMESHOPT_VERTEXCACHE, (DWORD*)MeshBuffer-&gt;GetBufferPointer(), 0, 0, 0);
+
+	//Release and zero the buffer
+	MeshBuffer-&gt;Release(); MeshBuffer = NULL;
+
+	btBvhTriangleMeshShape* btTriMeshShape;
+
+	btTriangleIndexVertexArray* mIndexVertexArray;
+
+	DWORD *pIndexBuffer;
+	DWORD *pVertexBuffer;
+
+	//Find a working example of a working locked vertex buffer then continue trying to adapt this parsing code!
+	Mesh-&gt;LockVertexBuffer(D3DLOCK_READONLY, (void**)&amp;pVertexBuffer);
+	Mesh-&gt;LockIndexBuffer(D3DLOCK_READONLY, (void**)&amp;pIndexBuffer);
+
+	mIndexVertexArray = new btTriangleIndexVertexArray(Mesh-&gt;GetNumFaces(),
+														(int*) &amp;pIndexBuffer,
+														Mesh-&gt;GetNumBytesPerVertex() * 3,
+														Mesh-&gt;GetNumVertices,
+														(btScalar*) &amp;pVertexBuffer,
+														Mesh-&gt;GetNumBytesPerVertex());
+
+	Mesh-&gt;UnlockIndexBuffer();
+	Mesh-&gt;UnlockVertexBuffer();
+
+	btVector3 aabbMin(-10000,-10000,-10000), aabbMax(10000,10000,10000);
+
+	bool useQuantizedAabbCompression = true;
+
+	btTriMeshShape  = new btBvhTriangleMeshShape(mIndexVertexArray, true);
+}
+</code></pre></div>
+
+This will crash on the last line because the "btTriangleIndexVertexArray" setup does not appear to work with this configuration, my mesh is a simple cube with the normals facing inward. I am desperate for an implementation of mesh loading that uses blender, 3DS Max 2010 or works by parsing in another mesh, I am completely unable to use the SDK until I fix this. <br>
+<br>
+I am using Bullet 2.77 my demo folder includes a benchmark folder that uses btTriangleIndexVertexArray however I cannot seem to find how anything interacts with the various arrays such as LandscapeVtx in order to load in data.<br>
+<br>
+I am currently taking a step back to a more desperate approach using the following code just to load in something I can interact with.<br>
+<br>
+ btTriangleMesh* trimesh = new btTriangleMesh();<br>
+ for ( i=0;i&lt;numTriangles;i++)<br>
+{<br>
+        trimesh-&gt;addTriangle(triangles<em class="text-italics">.vertex0,triangles<em class="text-italics">.vertex1,triangles<em class="text-italics">.vertex2);<br>
+}<br>
+<br>
+btCollisionShape* shape = 0;<br>
+<br>
+//static, non-moving world environment geometry<br>
+bool useQuantization = true;<br>
+shape  = new btBvhTriangleMeshShape(trimesh,useQuantization);</em></em></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2011 3:42 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">Tried another means of getting the vertex index process to work with no luck<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6420&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>LPDIRECT3DINDEXBUFFER9 lpIndexBuffer;
+D3DINDEXBUFFER_DESC pd3dIndexBufDesc;
+LPDIRECT3DVERTEXBUFFER9 lpVertexBuffer;
+
+//Find a working example of a working locked vertex buffer then continue trying to adapt this parsing code!
+Mesh-&gt;LockVertexBuffer(D3DLOCK_READONLY, (void**)&amp;lpVertexBuffer);
+Mesh-&gt;LockIndexBuffer(D3DLOCK_READONLY, (void**)&amp;lpIndexBuffer);
+
+	Mesh-&gt;GetIndexBuffer(&amp;lpIndexBuffer);
+	Mesh-&gt;GetVertexBuffer(&amp;lpVertexBuffer);
+
+	lpIndexBuffer-&gt;GetDesc(&amp;pd3dIndexBufDesc);
+
+	int indexStride;
+
+	if (pd3dIndexBufDesc.Format == D3DFMT_D32)
+	{
+		indexStride = 32;
+	}
+	else
+	{
+		indexStride = 16;
+	}
+	
+	mIndexVertexArray = new btTriangleIndexVertexArray(Mesh-&gt;GetNumFaces(),
+														(int*)lpIndexBuffer,
+														indexStride,
+														Mesh-&gt;GetNumVertices(),
+														(btScalar*)lpVertexBuffer,
+														Mesh-&gt;GetNumBytesPerVertex());
+
+	Mesh-&gt;UnlockIndexBuffer();
+	Mesh-&gt;UnlockVertexBuffer();
+
+</code></pre></div>
+
+Hits the same crashing point but this rules out the mesh format being wrong.<br>
+graphicsbase = (float*)(vertexbase+tri_indices[0]*stride);<br>
+<br>
+Indicies seems abit high to correctly reference the mesh I am sure I do not have 1867381924 indicies!<br>
+<br>
+If you feed in zero for the indicies this method fails outright with 24 verticies for a cube the mesh is obviously not indexed so I guess I need to determine if a mesh is indexed and use the other triangle method if it is not. Why is this not documented anywhere?!<br>
+<br>
+unsigned int* tri_indices= (unsigned int*)(indexbase+gfxindex*indexstride);<br>
+graphicsbase = (float*)(vertexbase+tri_indices[0]*stride);<br>
+<br>
+Sad face and back to trying to extract triangles individually I go. Before that I will experiment in indexing the mesh when exporting it to save time and gain efficiency.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2011 6:42 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">I was able to get partial success by ignoring indicies because my mesh formats exporter is ancient but the triangle reading data fell apart 160 odd triangles into parsing a mesh throwing unreadable values into the mix which cannot have been an allignment problem, I am guessing it has something to do with only partial components of the single mesh object being indexed which I did not think was possible, I did get many triangles out but when trying to use it as a convex shape btQuantizedBvh.h started throwing errors at around line 355. This parsing becoming arbitrary and complex leaves me completely up a creek. The Blender version for exporting does not work 3DSMAX 2010 is not supported and I do not have access to Maya.<br>
+<br>
+Can someone <span style="color:#FF0000">PLEASE FIX THE BLENDER BULLET EXPORTER BY PROVIDING THE MISSING DLLS! (above) SO I CAN LOAD IN .BULLET FILES!</span> I have zero capacity to switch the entire engine out to Collada in time for my schedule and I am desperate to get a prototype of the physics running as soon as possible my scene has 3 meshes and I want to include a raycast vehicle.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2011 10:41 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">Okay I have discovered that the patch is something you can not load as an update but if you drag into the preferences window it also loads into the main window and you can close the preferences window which repeatedely loads the scene and you have a version of the house being destroyed over and over. Now I just need to figure out how to use thats converting capabilities and I am back in the game.<br>
+<br>
+I hope someone finds this thread and realises that the modified blender file is of absolutely no value you just have to force the patched scene to load into blender.<br>
+<br>
+I will keep this thread posted on how I get on in the hope of it beind useful or at the very least eventually inspiring someone to write a tutorial which I might have to write when I have this figured out.<br>
+<br>
+EO</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Thu Mar 03, 2011 7:49 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">the zlib.dll was uploaded and Blender 2.5 will support .bullet exporting I have succeeded in exporting mesh files I am confident I can load them in!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Sat Mar 12, 2011 9:04 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">From now on, you don't need a patched version of Blender anymore: Blender 2.56 trunk (revision 35500) onwards has .bullet export.<br>
+<br>
+I uploaded a precompiled Windows 32bit binary of Blender here, with a sample .blend file that exports a .bullet<br>
+<a href="http://code.google.com/p/bullet-physics-editor/downloads/list" class="postlink">http://code.google.com/p/bullet-physics ... loads/list</a><br>
+<br>
+You need the latest Bullet trunk version for the latest btBulletWorldImporter, with btScaledBvhTriangleMesh support.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Sun Mar 13, 2011 3:01 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">Thats excellent news, thank you for the full compile!<br>
+<br>
+To clarify if I set a large mesh structure say a plane in the shape of a bowl (like the one below) as a "static" triangle mesh it will automatically be read in as a btScaledBvhTriangleMesh shape by trunk 2321 or greater?<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=673" class="postimage" alt="Image1.jpg" onclick="viewableArea(this);" /></dt>
+						<dd>Image1.jpg (110.52 KiB) Viewed 47426 times</dd>
+		</dl>
+		
+		
+			</div>
+This was added using a rewritten version of world importer from another thread so that a triangle mesh rigid body could be loaded from Blender properly although serializing it failed as this was not patched.<br>
+<br>
+How dramatic would the difference be between a btScaledBvhTriangleMesh and a 0 mass rigid body in terms of speed of processing with a vast number of triangles? My 0 mass rigid body terrain struggles as the number of objects rolling on this massive shape increases. I am going to run some tests to see how big a speed boost I get between the old and new method but if you have any early words of wisdom for optimising such a huge structure (beside increasing the margin) I would be glad to hear it!<br>
+<br>
+Also I am loading in a .bullet world per mesh on the initialisation of a scene as it allows for a mix of objects to be loaded independently into a world based on a users made script, are there any catches with doing this I need to be aware of?<br>
+<br>
+Thank you for your excellent physics engine!<br>
+<br>
+EnlightenedOne</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Sun Mar 13, 2011 3:54 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">I attempted to use the new blender method with trunk 2321 and failed "Unsupported shape type 22", warning file DNA is different than built in. The DNA of the file is newer than that which is built in. Therefore I figure that 2321 cannot be the right trunk version, however it looks like the latest trunk! can you clarify what version of the trunk I need to be using?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Sun Mar 13, 2011 4:36 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You need revision 2338 or later.<br>
+<br>
+I just uploaded a <a href="http://code.google.com/p/bullet/downloads/list" class="postlink">new download</a> for convenience. Normally you need to manually do a svn checkout, as <a href="http://code.google.com/p/bullet/source/checkout" class="postlink">explained here</a>.<br>
+<br>
+Does it work for you?<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Sun Mar 13, 2011 4:41 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">downloading will keep you posted!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Sun Mar 13, 2011 4:57 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">It works, loaded in with the serialize demo no problem, do I need to convert it to btScaledBvhTriangleMesh now I have it loaded in? or is there a way to set this in Blender when using a static triangle mesh?<br>
+<br>
+Great work! EO</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Mesh Loading</h3>
+				<div class="date">Posted: <strong>Sun Mar 13, 2011 11:26 pm</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">It is being done by default my apologise!<br>
+<br>
+If I partition the large mesh how likely is it that objects transitioning between the two Triangle Mesh shapes might collide when sliding over a seam? Would the heightfield array col shape be able to hack having a much larger triangle count in comparison?<br>
+<br>
+Thanks for the great support on this issue Erwin I can get the ball rolling nicely with what I had before but this is a great boost to getting physics meshes in! I am looking to rotate and scale all objects loaded per bullet file by a set of rotations and then my physics data will be all set I am aware instancing is not possible so wont bother trying my hand at that.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

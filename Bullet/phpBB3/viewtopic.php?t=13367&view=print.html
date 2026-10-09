@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Can I reuse these Parameters when I make new DynamicsWorld?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Can I reuse these Parameters when I make new DynamicsWorld?</h2>
+		<p><a href="viewtopic.php%3Ft=13367.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13367</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Can I reuse these Parameters when I make new DynamicsWorld?</h3>
+				<div class="date">Posted: <strong>Thu Feb 03, 2022 5:36 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">hello.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13367&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	mBtCollisionConfiguration = std::make_unique&lt;btDefaultCollisionConfiguration&gt;();
+
+	mBtDispatcher = std::make_unique&lt;btCollisionDispatcher&gt;(mBtCollisionConfiguration.get());
+
+	mBtOverlappingPairCache = std::make_unique&lt;btDbvtBroadphase&gt;();
+
+	mBtSolver = std::make_unique&lt;btSequentialImpulseConstraintSolver&gt;();
+
+	mBtDynamicsWorld = std::make_unique&lt;btDiscreteDynamicsWorld&gt;(mBtDispatcher.get(), mBtOverlappingPairCache.get(), mBtSolver.get(), mBtCollisionConfiguration.get());</code></pre></div>
+
+I'm trying to make few number of dynamics world, but I can't sure i can reuse these parameters. (configuration, dispatcher, solver)<br>
+If I have to create another dynamics world object, do I have to create a new parameters?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Can I reuse these Parameters when I make new DynamicsWorld?</h3>
+				<div class="date">Posted: <strong>Fri Feb 04, 2022 3:53 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content"><strong class="text-strong">CollisionConfiguration</strong> = yes it is possible but depending on what you're doing you might not want to.  If you look at the declaration of the base <strong class="text-strong">btCollisionConfiguration</strong> interface you'll see the only thing its API requires is that the configuration manage some memory pools.  Meanwhile the <strong class="text-strong">btDefaultCollisionConfiguration</strong> has a hard-coded memory pool size of 4096 elements for each of its two pools.  If you were to share between multiple worlds you might hit the pool limits.  If you're running many small (e.g. few objects) worlds then maybe you could get by with just one configuration for all of them.<br>
+<br>
+Meanwhile, there is some benefit to maintaining good memory "residency".  If you were to make a <strong class="text-strong">GiantCollisionConfiguration</strong> class and step each world sequentially in a single thread the worlds would scatter their allocations across the big collective pools and you might actually get better performance by keeping each pool smaller and perform less thrashing of CPU memory caches.<br>
+<br>
+Here is an idea: measure how much of the pools your worlds are consuming and then implement <strong class="text-strong">TunedCollisionConfiguration</strong> which is a straight copy of <strong class="text-strong">btDefaultCollisionConfiguration</strong> but with smaller pool limits that still satisfy your expected worlds' needs.<br>
+<br>
+<strong class="text-strong">btDefaultCollisionConfiguration</strong> is not thread-safe so you wouldn't be able to share it between worlds running on different threads.<br>
+<br>
+<strong class="text-strong">Dispatcher</strong> = no, definitely not.<br>
+<br>
+<strong class="text-strong">OverlappingPairCache</strong> = no, no definitely not.<br>
+<br>
+<strong class="text-strong">Solver</strong> = yes this is possible.  The <strong class="text-strong">btSequentialImpulseConstraintSolver</strong> maintains some "pools" but they are actually unbounded <strong class="text-strong">btAlignedObjectArray&lt;T&gt;</strong> instances so you don't have to worry about hitting limits.  They expand as necessary but do not release memory: when there are piles of objects colliding all at once the pools grow to accomodate and then they keep their sizes in case there is a similar event in the future.  It is possible sharing one of these could save you some memory.  Nevertheless, the concern of thrashing the CPU memory caches could actually hinder the speed of the simulation algorithms.  You's have try both ways to measure the tradeoffs.  Not thread-safe.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

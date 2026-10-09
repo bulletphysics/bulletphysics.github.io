@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Parallel LCP solving methods?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Parallel LCP solving methods?</h2>
+		<p><a href="viewtopic.php%3Ft=177.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=177</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Parallel LCP solving methods?</h3>
+				<div class="date">Posted: <strong>Tue Nov 15, 2005 11:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">In rigid body simulation contact solving, each step in the iterative scheme like Gauss Seidel requires the result from the previous step. This makes it difficult to parallelize. Jacobi method on the other hand can be easier implemented in parallel. A mix between Jacobi and Gauss Seidel, a kind of block solving process might enable faster solving for multiprocessor architectures.<br>
+<br>
+Does anyone have ideas, experience or references to papers about parallel LCP solver methods that fit a small memory footprint?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 16, 2005 6:39 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">One way to think about this is to visualize how GS operates on the body-constraint graph. Assume constraints only operate on one or two bodies. GS processes each constraint in turn, adjusting the net force that acts on the two bodies.<br>
+<br>
+Two constraints that affect different pairs of bodies can be solved independently. Imagine a vertical stack of boxes. Two independent GS loops can operate, one from the top down, the other from the bottom up. When they get half way, the results must be merged.<br>
+<br>
+Perhaps such an approach can be generalized to make an efficient parallel PGS solver.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 16, 2005 7:07 am</strong></div>
+				<div class="author">by <strong>russ</strong></div>
+				<div class="content">right: this kind of partitioninig (i.e. to minimize the interactions between different parts of a graph) is common in sparse matrix code in high performance computing - both to minimize the amount of fill-in during factorization, and to minimize the amount of interprocessor communication during parallelization. there are many algorithms to generate effective orderings (lots of research results here). some matrix structures (such as tree or mesh structures) have optimal orderings that can be computed easily, but matrices with arbitrary structures (e.g. resulting from collision detection) require fairly complex algorithms. for a realtime GS solver you could easily spend more time computing a good non-interaction ordering than you'd save by parallelization.<br>
+<br>
+i think some testing is in order: try block gauss-siedel with various block sizes and compare the resulting accuracy (i.e. convergence rate). if it's "good enough" then i'd forego the tricky reordering algorithms. you might find, for example, that you could do one extra GS iteration to make up for some reasonable block size.<br>
+<br>
+what other approximations to GS lend themselves to parallelization? i parallelized ODE a while ago (on an SGI altix machine) by unrolling the inner loop of GS and simply not worrying about data dependence or competing updates to the same output elements. the result: accuracy indistinguishable from the serialized version.<br>
+<br>
+russ.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Parallel LCP solving methods?</h3>
+				<div class="date">Posted: <strong>Thu Nov 17, 2005 11:23 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content">has anybody already looked into this?<br>
+<br>
+"Matrix Multisplitting Methods with Applications to the Linear Complementarity Problems"<br>
+<br>
+<a href="http://lsec.cc.ac.cn/~bzz/Public/series.html" class="postlink">http://lsec.cc.ac.cn/~bzz/Public/series.html</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 17, 2005 6:21 pm</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">For implementation on a Cell processor, which I'm guessing you're most interested in Erwin <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink">  I'd probably use a buffering scheme.  Where you have a buffer on each processor for the delta of the solution values of the constraints shared between two blocks.<br>
+ <br>
+You would order your constraints, to solve the non-shared elements first. After updating from the buffer and solving the shared elements, you would kick the results off to the other processors.  Those results would get collected in the buffer.  By the time you've finished your next iteration on the non-shared constraints, the results from the other processors should be ready to use.  So the shared constraints would kind of lag one iteration behind ( is it Jacobi iteration here? ).  <br>
+<br>
+I'm assuming you're using an LCP solver that is linear in performance per iteration, not a "Big Matrix" solver.  One problem I see is that when complementarity fails on a constraint and you have to "undo" the forces applied, this may need some special handling, or it may just work out.   <br>
+<br>
+I'm making some assumptions about the Cell's DMA capabilities here, that it can DMA into a buffer while the SPU is chugging away on the current iteration.  For a more standard multi-core processor, you would use "restrict" on the non-shared elements and have a separate loop to handle the shared elements which will require reading and writing to memory.  Hope the rambling style of my writing isn't too confusing.<br>
+<br>
+- Michael Alexander Ewert</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

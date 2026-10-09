@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; specific collada file failure</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>specific collada file failure</h2>
+		<p><a href="viewtopic.php%3Ft=1811.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1811</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>specific collada file failure</h3>
+				<div class="date">Posted: <strong>Sat Jan 05, 2008 8:31 am</strong></div>
+				<div class="author">by <strong>DrakkenWulf</strong></div>
+				<div class="content">I'm in the first stages of a new project, and am having a terrible time getting things to work.  I've enclosed a sample collada file.  Dropping it into the 2.66A version of ColladaDemo, I cannot get the two dice to collide and then just sit on the larger box below them.  I've tried subdividing the surfaces, exporting them as boxes only, all to no avail.  Dice each have mass 1.0, and the box is 'static' (has mass 0.)<br>
+<br>
+I really don't want to back out and move to a different engine.  Any suggestions?  <br>
+<br>
+The 'full' version entails the dice colliding with the tabletop area, as well as the walls of the craps table. That was failing too, hence why I went to test versions.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Mon Jan 07, 2008 5:00 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The collada file has extremely large gravity:   &lt;gravity&gt;0 -980 0&lt;/gravity&gt;<br>
+Bullet collada importer doesn't apply the &lt;unit meter="0.01" name="centimeter"/&gt; at the moment, so please avoid scaling, and use 1 unit = 1 meter.<br>
+<br>
+If you manually change gravity to 9.8 it works much better, please check attached file.<br>
+<br>
+Hope this helps,<br>
+Erwin<br>
+<br>
+Some general tips to avoid instable simulations: avoid scaling, make sure dynamic (moving) objects are not smaller then 0.2 units in any direction, avoid large mass ratios.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Mon Jan 07, 2008 6:10 pm</strong></div>
+				<div class="author">by <strong>DrakkenWulf</strong></div>
+				<div class="content">Thank you for your prompt reply.  The gravity value was the default from the ColladaMaya exporter, was not aware it was off by so much.  After fixing that and splitting some polygons up to more naturally match my dice, the full version of the scene is now working again.<br>
+<br>
+To others using the ColladaMaya tools: be sure to 'freeze' any non-translate and rotation transforms before exporting.  I had a scale transform applied to the dice and that is lost during conversion.  Also, have been having a lot of problems getting some objects to show up in the right places from the bullet demos.  Turns out that ColladaMaya is not exporting the center of mass information at all, and even if you try to fix it in code it won't work.  <br>
+<br>
+Also, had more success getting btConvexTriangleMeshShape to interact with a btBvhTriangleMeshShape than i did with a seemingly simpler btBoxShape.<br>
+<br>
+I'm attaching a sample file, in case anyone wants to use it as a test case.  Note how you have to rotate the camera *down* to see the tabletop *above* the dice, even tho the original model has the floor below them.  The origin of the tabletop is the world origin, but that is getting confused on import.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Thu Jan 10, 2008 3:53 pm</strong></div>
+				<div class="author">by <strong>DrakkenWulf</strong></div>
+				<div class="content">More stuff I've learned, for others to make use of.<br>
+<br>
+The collada importer really does need to take into account the visual node transforms in order to get output from ColladaMaya to import properly.  The physics description does not include the full information needed, things will be offset in odd ways.<br>
+<br>
+Also, if your initial btTransform is given a scale as part of the transform, it breaks the collision detection.  This is *not* a bug, as you should clean your transform before sending it to btTransform.  Once I cleaned the transform (normalizing the rotation part of the matrix) and applied the 'leftover' scale to the original vert points (during shape creation) the dice hit the table perfectly!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Wed Feb 06, 2008 5:34 pm</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>The collada file has extremely large gravity:   &lt;gravity&gt;0 -980 0&lt;/gravity&gt;<br>
+Bullet collada importer doesn't apply the &lt;unit meter="0.01" name="centimeter"/&gt; at the moment ...  </div></blockquote>
+
+The collada wrapper appears to scale most everything to be in meters.  For example when creating a sphere it gets the radius as follows:  domFloat radius = radiusRef-&gt;getValue()*m_unitMeterScaling;<br>
+<br>
+It might be hard to prevent people in the future from exporting a collada file in some other unit system or scale.  This inital problem could be fixed by also applying the scaling to the gravity value that is read from the collada file.  Refer to line 310 of extras/bulletcolladaconverter/colladaconverter.cpp .</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: specific collada file failure</h3>
+				<div class="date">Posted: <strong>Wed Feb 06, 2008 7:03 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Good point Stan, we should fix that.<br>
+<br>
+By the way, we have been improving COLLADA Physics support for upcoming Bullet 2.67 version.<br>
+<br>
+It will be possible to take an arbitrary Bullet dynamics world, attach the ColladaConverter and export a snapshot to .dae.<br>
+It supports collision geometry, rigidbodies and generic 6dof constraints. So you can use Bullet API to create COLLADA Physics content, without needing to digg into the COLLADA DOM etc.<br>
+<br>
+I haven't played with this feature yet, my collegue wrote it. It would be nice to add 'export .dae' and 'import .dae' buttons in the Bullet demos.<br>
+<br>
+It should help with debugging and reproducing problems, without having access to the full source code.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

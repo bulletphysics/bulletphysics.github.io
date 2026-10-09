@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Varying the center of mass of an object</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Varying the center of mass of an object</h2>
+		<p><a href="viewtopic.php%3Ft=12494.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12494</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Varying the center of mass of an object</h3>
+				<div class="date">Posted: <strong>Wed Nov 14, 2018 10:57 pm</strong></div>
+				<div class="author">by <strong>alina</strong></div>
+				<div class="content">Hi everyone,<br>
+<br>
+I'm trying to set up a simulation of a planar pusher-slider system for data-collection. For this I want to reuse a couple of different object shapes (given by meshes) and vary their centre of mass between different trials: Think of boxes filled with different content: this alters the mass distribution without changing the shape.<br>
+<br>
+I've seen <a href="viewtopic.php%3Ft=2209.html" class="postlink">this</a> post which is somewhat related, but as it is almost 10 years old I'm not sure if it is still valid in the current version. <br>
+<br>
+What I've tried so far is to create a multiBody and offset the collisionFramePosition and visualFramePosition to emulate a com that is not at the<br>
+center of the mesh. However, I'm not sure if that correctly alters the center of mass for simulation or if I just offset frame positions without physical meaning.<br>
+<br>
+Is my approach correct?<br>
+And if not, is there an easy (procedural) way of achieving what I need?<br>
+<br>
+<br>
+Thanks a lot,<br>
+Alina</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Varying the center of mass of an object</h3>
+				<div class="date">Posted: <strong>Sat Nov 17, 2018 2:16 pm</strong></div>
+				<div class="author">by <strong>richardbloemenkamp</strong></div>
+				<div class="content">A not-so-elegant solution may be to add a fixed-linked cube to you mesh object and position it inside the mesh-object. You can then position it where you want the center of mass to be. Then you give almost all the mass to that little cube and reduce the mass of the mess-object. Your moments of inertia may be wrong then but if you are modeling boxes with objects then I think most other solutions also give the wrong moments of inertia.<br>
+However I suspect there are more elegant solutions to what you want.<br>
+Another issue, you may have, is to get a realistic surface sliding friction.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Varying the center of mass of an object</h3>
+				<div class="date">Posted: <strong>Sat Nov 24, 2018 2:03 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=41589#p41589"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13089.html">alina</a> wrote: <a href="viewtopic.php%3Fp=41589.html#p41589" data-post-id="41589" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed Nov 14, 2018 10:57 pm</span></cite>
+<br>
+What I've tried so far is to create a multiBody and offset the collisionFramePosition and visualFramePosition to emulate a com that is not at the<br>
+center of the mesh. However, I'm not sure if that correctly alters the center of mass for simulation or if I just offset frame positions without physical meaning.<br>
+<br>
+Is my approach correct?
+</div></blockquote>
+Yes, it is OK. In PyBullet, when loading a URDF file, you would modify the center of mass using the &lt;inertia&gt; tag.<br>
+
+<blockquote class="uncited"><div>
+is there an easy (procedural) way of achieving what I need?
+</div></blockquote>
+
+Instead of loading a URDF from file, you can also use PyBullet.createMultibody.<br>
+Similar to URDF loading, you can either shift the collision and visual frame, or you shift the baseInertialFramePosition.<br>
+<br>
+See <a href="https://github.com/erwincoumans/bullet3/blob/master/examples/pybullet/examples/shiftCenterOfMass.py" class="postlink">https://github.com/erwincoumans/bullet3 ... rOfMass.py</a><br>
+Shifting the visual+collision meshes has the same effect on COM to shifting the inertia COM the opposite direction.<br>
+<br>
+There is also some rudimentary UrdfEditor that may help, you can initializeFromBulletBody, saveUrdf and createMultibody.<br>
+python -m pybullet_utils.examples.combineUrdf</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Varying the center of mass of an object</h3>
+				<div class="date">Posted: <strong>Mon Mar 23, 2020 2:36 pm</strong></div>
+				<div class="author">by <strong>Alvin</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I am running a simulation where a robot arm hits a cylinder. This cylinder is meant to represent a water bottle, so when I vary the amount of water in the bottle, the center of mass should also change. I am able to successfully change the center of mass, but the resulting simulation is definitely wrong (as shown in this video: <a href="https://drive.google.com/file/d/1OwCucktO7yFhmqA8WL9UObkAXo_eoWNa/view?usp=sharing" class="postlink">https://drive.google.com/file/d/1OwCuck ... sp=sharing</a>).<br>
+<br>
+As you saw in the video, I've changed the center of mass to be the very top of the bottle. I'm sure I'm doing something wrong though since the bottle shouldn't be flipping so strangely to have this center of mass be at the bottom. I am happy to share all my code, but here are the main components that define this simulation:<br>
+<br>
+[EDIT] I realize that center of mass will never actually be the top of the bottle, but the water bottle is just an example. I would like to extend this simulation to other objects that could theoretically have a very high center of mass. <br>
+<br>
+Any help would be greatly appreciated!<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12494&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+
+BOTTLE_H = 0.1905  # bottle height (m)
+center_of_mass = [0, 0, 0.1905]
+
+col_id = p.createCollisionShape(
+        shapeType=p.GEOM_CYLINDER,
+        radius=bottle.radius, 
+        height=bottle.height)
+        
+bottle_id = p.createMultiBody(
+                baseMass=bottle_mass,
+                baseInertialFramePosition=center_of_mass,
+                baseCollisionShapeIndex=col_id,
+                basePosition=[0, 0, 0])
+
+p.changeDynamics(
+                bodyUniqueId=bottle_id, 
+                linkIndex=-1,  # no links, -1 refers to bottle base
+                lateralFriction=0.1)  # static sliding friction
+
+</code></pre></div>
+
+Notice I don't touch rollingFriction or spinningFriction. Some strange behavior occurs when I play with these values.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

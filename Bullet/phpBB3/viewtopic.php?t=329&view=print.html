@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; an idea on 'friction with cloth' feedback appreciated</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>an idea on 'friction with cloth' feedback appreciated</h2>
+		<p><a href="viewtopic.php%3Ft=329.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=329</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>an idea on 'friction with cloth' feedback appreciated</h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 11:12 pm</strong></div>
+				<div class="author">by <strong>asmithers</strong></div>
+				<div class="content">I've a problem with constraints not actually using friction therefore they PULL an object along the ground when they shouldn't.<br>
+<br>
+quick overview on why... a constriant is meant to pull keep two particles apart at a set distance if that distance is exceeded then the particles spring will move them together using equal forces.  When pinned we only move the unpinned particle the full distance.<br>
+<br>
+I've seen some peoples implementation of collision where they temporarily pin that particle so that the objects other constraints dont pull it out of collision. Something I dont do, I do things slightly different, resulting in no lost spring forces.  The application though is similar (except I dont need to pin).<br>
+<br>
+so this leads me to pinning, I hate it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Its artifical and incorrect its infinite mass, and infinite friction its effectively a cheat.  <br>
+<br>
+so how about if I stored ALL friction into a map, rather than using a PIN map. ?  <br>
+<br>
+Each particle has a friction value, that friction say for what was normally pinned is now 100% friction or 1.0.  This means when the constraint pair goes to move, 100% friction would indicate no motion, biasing purely the free spring.  <br>
+<br>
+Now when a particle hits the ground or collides to a surface we specify that materials friction value, it is then applied to the particle. The friction is used to dampen the verlet motion. As well as used to help stop cloth movement when it is touching the floor, reducing the pull it has.  <br>
+<br>
+from a constriant computation we get <br>
+<br>
+t = (Magnitude - springLength)/springLength<br>
+amount = (t*springLength) * factor<br>
+i+=dir*amount<br>
+j-=dir*amount<br>
+<br>
+factor use to be 0.5 in the old method or 1.0 if pinned. Then we'd move the constraint along the direction by this amount.<br>
+<br>
+now instead I want to compute the amount of motion using seperate friction values which biases how much to move<br>
+<br>
+iAmount = (t*springLength) * iFriction<br>
+jAmount = (t*springLength) * jFriction<br>
+i+=dir*iAmount<br>
+j-=dir*jAmount<br>
+<br>
+iFriction and jFriction are computed which I haven't worked out yet <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"> Just sounding this out for a general approach.<br>
+<br>
+any feedback appreciated including recommened whitepapers on friction for cloth on surfaces ? <br>
+<br>
+thanks<br>
+<br>
+andi</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 09, 2006 1:38 am</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">That looks pretty reasonable ( assuming you only use it to modify the tangent direction ).  You may want to allow the constraint to actually stretch a bit each iteration, i.e. allow iFriction+jFriction &lt; 1.0.  Over multiple iterations/frames your constraints will still converge, and it may give you better looking results ( or not <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I implemented friction by effectively damping out the velocity at the contact point.  I would move the x_current back towards x_prev based on my friction function.  Which can result in some weird, twitchy artifacts.  Also the most likely candidate as the source of the instability I get occasionally.  Let us know how your friction method works out.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

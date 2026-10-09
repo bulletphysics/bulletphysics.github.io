@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Irrlicht graphics engine + bullet example[beginner level]</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Irrlicht graphics engine + bullet example[beginner level]</h2>
+		<p><a href="viewtopic.php%3Ft=5138.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5138</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Irrlicht graphics engine + bullet example[beginner level]</h3>
+				<div class="date">Posted: <strong>Sun May 23, 2010 6:16 am</strong></div>
+				<div class="author">by <strong>Lil_Margin</strong></div>
+				<div class="content">I made this today, its only one file(main.cpp) (so its more understandable for the novice)<br>
+Hint *if you want the class version look at the bottom of this post*<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=5138&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include &lt;irrlicht.h&gt; 
+#include &lt;btBulletDynamicsCommon.h&gt; 
+
+class MotionState : public btMotionState 
+{ 
+
+public: 
+
+   MotionState(const btTransform&amp; initalTransformation, irr::scene::ISceneNode* const node) : 
+      node(node), initalTransformation(initalTransformation) 
+   { 
+
+   } 
+
+   void getWorldTransform(btTransform&amp; worldTrans) const 
+   { 
+      worldTrans = this-&gt;initalTransformation; 
+   } 
+
+   void setWorldTransform(const btTransform&amp; worldTrans) 
+   { 
+      worldTrans.getOpenGLMatrix(matr.pointer()); 
+
+      this-&gt;node-&gt;setRotation(matr.getRotationDegrees()); 
+      this-&gt;node-&gt;setPosition(matr.getTranslation()); 
+   } 
+
+private: 
+
+   irr::scene::ISceneNode* const node; 
+
+   irr::core::matrix4 matr; 
+
+   btTransform initalTransformation; 
+}; 
+
+int main() 
+{ 
+   irr::IrrlichtDevice* device = irr::createDevice(); 
+   irr::video::IVideoDriver* driver = device-&gt;getVideoDriver(); 
+   irr::scene::ISceneManager* smgr = device-&gt;getSceneManager(); 
+
+
+   btDbvtBroadphase* broadphase = new btDbvtBroadphase; 
+   btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration; 
+   btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration); 
+   btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver; 
+
+   btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration); 
+   dynamicsWorld-&gt;setGravity(btVector3(0, -9.80665, 0)); 
+
+
+
+   irr::scene::ICameraSceneNode* camera = smgr-&gt;addCameraSceneNode(); 
+   camera-&gt;setPosition(irr::core::vector3df(0.0f, 5.0f, -15.0f)); 
+
+
+
+
+   btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0.0, 1.0, 0.0), 1.0); 
+   btDefaultMotionState* groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1),btVector3(0,-1,0))); 
+
+   btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0,groundMotionState,groundShape,btVector3(0.0, 0.0, 0.0)); 
+   btRigidBody* groundRigidBody = new btRigidBody(groundRigidBodyCI); 
+   dynamicsWorld-&gt;addRigidBody(groundRigidBody); 
+
+
+
+
+   irr::scene::IMeshSceneNode* sphere = smgr-&gt;addSphereSceneNode(1.0f); 
+   sphere-&gt;setMaterialFlag(irr::video::EMF_LIGHTING, false); 
+
+   btCollisionShape* fallShape = new btSphereShape(1.0); 
+   MotionState* fallMotionState = new MotionState(btTransform(btQuaternion(0.0, 0.0, 0.0, 1.0), btVector3(0.0, 50.0, 0.0)), sphere); 
+   btScalar mass = 1.0; 
+   btVector3 inertia(0.0, 0.0, 0.0); 
+   fallShape-&gt;calculateLocalInertia(mass, inertia); 
+
+   btRigidBody::btRigidBodyConstructionInfo fallRigidBodyCI(mass, fallMotionState, fallShape, inertia); 
+   btRigidBody* fallRigidBody = new btRigidBody(fallRigidBodyCI); 
+   dynamicsWorld-&gt;addRigidBody(fallRigidBody); 
+
+
+
+
+   irr::ITimer* const timer = device-&gt;getTimer(); 
+   irr::u32 then = timer-&gt;getTime(); 
+
+   while (device-&gt;run()) 
+   { 
+      const irr::u32 now = timer-&gt;getTime(); 
+      const btScalar frameDeltaTime = (btScalar)(now - then)*0.001; // Time in seconds 
+      then = now; 
+
+      dynamicsWorld-&gt;stepSimulation(frameDeltaTime, 10); 
+
+      driver-&gt;beginScene(true, true, irr::video::SColor(255, 133, 133, 133)); 
+      smgr-&gt;drawAll(); 
+      driver-&gt;endScene(); 
+   } 
+
+
+   // Clean up behind ourselves like good little programmers 
+   dynamicsWorld-&gt;removeRigidBody(fallRigidBody); 
+   delete fallRigidBody-&gt;getMotionState(); 
+   delete fallRigidBody; 
+
+   dynamicsWorld-&gt;removeRigidBody(groundRigidBody); 
+   delete groundRigidBody-&gt;getMotionState(); 
+   delete groundRigidBody; 
+
+   delete fallShape; 
+   delete groundShape; 
+
+   delete dynamicsWorld; 
+   delete solver; 
+   delete dispatcher; 
+   delete collisionConfiguration; 
+   delete broadphase; 
+
+   device-&gt;drop(); 
+
+   return 0; 
+} 
+}
+</code></pre></div>
+ Hint : the plane isn't really drawed...<br>
+<br>
+Credit : credit to RandomMesh for giving me a better code then i had previous.<br>
+<br>
+<strong class="text-strong">If you have any suggestions for improvement let me know.</strong><br>
+<br>
+I hope this helps someone. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+<br>
+** admin ** LINK to spam upload site removed. Please attach a zipped .c++ file next time</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

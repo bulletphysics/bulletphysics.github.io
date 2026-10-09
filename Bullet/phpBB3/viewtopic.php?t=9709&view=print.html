@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Importing a .bullet file from Blender</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Importing a .bullet file from Blender</h2>
+		<p><a href="viewtopic.php%3Ft=9709.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9709</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Importing a .bullet file from Blender</h3>
+				<div class="date">Posted: <strong>Mon Jan 27, 2014 5:00 pm</strong></div>
+				<div class="author">by <strong>rob_marc2003</strong></div>
+				<div class="content">Hi there,<br>
+<br>
+After exporting a scene in Blender into .bullet file format according to <a href="http://www.youtube.com/watch?v=fv-Oq5oe8Nw" class="postlink">this</a>, I load the respective .bullet file in a simple application following the serialization <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Bullet_binary_serialization" class="postlink">wiki</a>:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9709&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btBulletWorldImporter* fileLoader = new btBulletWorldImporter(dynamicsWorld);
+fileLoader-&gt;loadFile("h:\\testFile.bullet");</code></pre></div>
+
+Question: how can I access rigid body parameters (like mass, dimensions, inertia etc.) in the Bullet world inside my program?<br>
+<br>
+Thanks,<br>
+R</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Importing a .bullet file from Blender</h3>
+				<div class="date">Posted: <strong>Tue Jan 28, 2014 3:29 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I would guess after import you can access the rigid bodies, joints, and shapes from the world interface and iterate all the information you need.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Importing a .bullet file from Blender</h3>
+				<div class="date">Posted: <strong>Tue Jan 28, 2014 6:13 pm</strong></div>
+				<div class="author">by <strong>rob_marc2003</strong></div>
+				<div class="content">I've managed to access rigid body properties via the following lines:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9709&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for(int i=0; i &lt; fileLoader-&gt;getNumRigidBodies(); i++)
+{
+	btCollisionObject* obj = fileLoader-&gt;getRigidBodyByIndex(i);
+	btRigidBody* body = btRigidBody::upcast(obj);		
+
+	// properties
+	printf("  object name = %s\n", fileLoader-&gt;getNameForPointer(body));	// The Blender object name
+    printf("  get position = (%4.3f,%4.3f,%4.3f)\n", 
+		body-&gt;getCenterOfMassPosition().getX(),
+		body-&gt;getCenterOfMassPosition().getY(), 
+		body-&gt;getCenterOfMassPosition().getZ());			// Blender CoM
+	printf("  get local scaling = (%4.3f,%4.3f,%4.3f)\n", 
+		body-&gt;getCollisionShape()-&gt;getLocalScaling().getX(),
+		body-&gt;getCollisionShape()-&gt;getLocalScaling().getY(),
+		body-&gt;getCollisionShape()-&gt;getLocalScaling().getZ());		// Blender Dimensions
+	if (body-&gt;getInvMass() == 0)
+		printf("  static object\n");
+	else
+	{
+		printf("  mass = %4.3f\n", 1/body-&gt;getInvMass());		// Blender Mass
+		printf("  get gravity (z!) = %4.3f\n", body-&gt;getGravity().getZ());	// Blender Gravity
+	}
+	printf("\n");
+}</code></pre></div>
+
+I still don't know how to access the contstraints (i.e. hinges) after importing the .bullet file. Any thoughts on that?<br>
+<br>
+Cheers,<br>
+Rob</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Importing a .bullet file from Blender</h3>
+				<div class="date">Posted: <strong>Thu Jan 30, 2014 3:13 pm</strong></div>
+				<div class="author">by <strong>rob_marc2003</strong></div>
+				<div class="content">short Update:<br>
+I've managed to access the hinges and it's properties: 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9709&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for(int i=0; i &lt; dynamicsWorld-&gt;getNumConstraints(); i++)
+	{
+		btTypedConstraint*	constraint=dynamicsWorld-&gt;getConstraint(i);
+		printf("  constraint type = %i\n", constraint-&gt;getConstraintType());
+		printf("  collision shape type = %i\n", constraint-&gt;getRigidBodyA().getCollisionShape()-&gt;getShapeType());	
+		printf("  get partA axisVector (part of quaternion) = (%4.3f,%4.3f,%4.3f)\n",
+			constraint-&gt;getRigidBodyA().getCenterOfMassTransform().getRotation().getX(),
+			constraint-&gt;getRigidBodyA().getCenterOfMassTransform().getRotation().getY(),
+			constraint-&gt;getRigidBodyA().getCenterOfMassTransform().getRotation().getZ());
+		printf("  get partA CenterOfGeometry = (%4.3f,%4.3f,%4.3f)\n",
+			constraint-&gt;getRigidBodyA().getCenterOfMassPosition().getX(),
+			constraint-&gt;getRigidBodyA().getCenterOfMassPosition().getY(),
+			constraint-&gt;getRigidBodyA().getCenterOfMassPosition().getZ());
+		
+	}</code></pre></div>
+Although I still can't find a way how to access a constraint's related rigidbodies names (i.e. hinge-&gt;rigidBodyA-&gt;name and hinge-&gt;rigidBodyB-&gt;name).<br>
+<br>
+Any thoughts on this?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

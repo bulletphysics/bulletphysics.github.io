@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet 2.74 released: constraint visualization</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet 2.74 released: constraint visualization</h2>
+		<p><a href="viewtopic.php%3Ft=3177.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=3177</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet 2.74 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Fri Feb 06, 2009 6:50 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Bullet 2.74 is available for download:<br>
+<a href="http://code.google.com/p/bullet/downloads/list" class="postlink">http://code.google.com/p/bullet/downloads/list</a><br>
+<br>
+New features:<br>
+
+<ul>
+<li> Constraint limits visualization, see Bullet/Demos/ConstraintDemo, thanks Roman Ponomarev</li>
+<li> All constraints can use the new generic SIMD optimized innerloop</li>
+<li> Improved Cone-twist and Generic 6DOF constraint, thanks Eddy Boxerman</li>
+<li> Buoyancy demos, see Bullet/Demos/HeightFieldFluidDemo, thanks John McCutchan</li>
+<li> Option for one-shot multiple-contact generation, use defaultCollisionConfiguration-&gt;setConvexConvexMultipointIterations()</li>
+<li> Improved ColladaConverter, with support for hinge and point 2 point constraint export</li>
+<li> Dynamica Maya plugin works for Maya 2009 now, thanks to Lawrence Chai from Disney Animation</li>
+<li> Some workaround to avoid crashes in character controller - dynamic object interaction</li>
+<li> Soft body self-collision, when using convex collision clusters</li>
+<li> deterministic btDbvtBroadphase, use broadphase-&gt;resetPool(dispatcher), and see DemoApplication::clientResetScene</li>
+<li> btActionInterface to make it easier to integrate your custom character, vehicle actions into the physics pipeline</li>
+<li> Updated Bullet_User_Manual.pdf for Bullet 2.74</li>
+<li> Numerous other fixes and contributions since 2.73 sp1 release, thanks everyone!</li></ul>
+
+<img src="http://bulletphysics.com/constraint_visualization.PNG" class="postimage" alt="Image"><br>
+<br>
+Thanks again everyone for all the contributions.<br>
+Please report if there are any issues, and enjoy,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 beta1 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Sat Feb 07, 2009 12:43 pm</strong></div>
+				<div class="author">by <strong>pico</strong></div>
+				<div class="content">Hi,<br>
+<br>
+how is the "Option for one-shot multiple-contact generation" used?<br>
+<br>
+thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 beta1 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Sat Feb 07, 2009 11:05 pm</strong></div>
+				<div class="author">by <strong>ola</strong></div>
+				<div class="content">Hi, thanks for the update! Looking forward to trying out the new features.<br>
+<br>
+I'm using the current SVN version (1610) now, and since a while back the mouse picking of objects in the demo applications has been broken. For example, when trying to pick a cylinder in the CcdPhysicsDemo, the simulation explodes (cylinders flying everywhere quickly), or it aborts due to the assert in btQuaternion for a value of 0. This seems to be a general issue in all demos that allow picking up objects with the mouse. I'm not quite sure at which revision this was broken, I can look further into it if you like.<br>
+<br>
+I'm running this on Linux, 32 bit, and it's compiled with double precision. <br>
+<br>
+Best regards,<br>
+Ola<br>
+<br>
+EDIT:<br>
+I just tried the Bullet demos in single precision mode. The picking issues are gone, so it seems that the demos are only broken in double precision mode!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 beta1 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Mon Feb 09, 2009 8:10 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>pico wrote:</cite>
+how is the "Option for one-shot multiple-contact generation" used?
+</div></blockquote>
+A convenience method for btDefaultCollisionConfiguration has just been added in the latest SVN trunk, so it will be available in the next/final Bullet 2.74 release:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3177&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	///collision configuration contains default setup for memory, collision setup
+	m_collisionConfiguration = new btDefaultCollisionConfiguration();
+	m_collisionConfiguration-&gt;setConvexConvexMultipointIterations(3);
+</code></pre></div>
+Until this convenience method has been added, please use the following snippet. Note that this feature decreases performance, so it is switched off by default.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3177&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btConvexConvexAlgorithm::CreateFunc* convexConvex = (btConvexConvexAlgorithm::CreateFunc*)m_collisionConfiguration-&gt;getCollisionAlgorithmCreateFunc(CONVEX_SHAPE_PROXYTYPE,CONVEX_SHAPE_PROXYTYPE);
+	convexConvex-&gt;m_numPerturbationIterations = 3;
+</code></pre></div>
+
+<blockquote class="uncited"><div>
+I just tried the Bullet demos in single precision mode. The picking issues are gone, so it seems that the demos are only broken in double precision mode!
+</div></blockquote>
+Picking seems to work fine under Windows 32bit, compiled using double-precision. Did you try a full clean rebuild? We'll do some testing of Linux double-precision built, you can track progress on the <a href="http://code.google.com/p/bullet/issues/detail?id=192" class="postlink">issue here</a>.<br>
+<br>
+Thanks for the feedback, <br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 beta1 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Tue Feb 10, 2009 8:20 am</strong></div>
+				<div class="author">by <strong>ola</strong></div>
+				<div class="content">Hi Erwin, thanks for the feedback! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+I've posted more test results in the issue, I guess the discussion should proceed there.  I've tried separate clean builds to be sure it's nothing in my svn directory. The problem still remains.<br>
+<br>
+Best regards,<br>
+Ola</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Tue Mar 03, 2009 11:54 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Issue should be fixed and final Bullet 2.74 build has been uploaded.<br>
+<br>
+Please keep feedback and discussions in this forum,<br>
+Enjoy!<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Wed Mar 04, 2009 12:16 pm</strong></div>
+				<div class="author">by <strong>gjaegy</strong></div>
+				<div class="content">Erwin,<br>
+has split impulse been re-added in this release ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Wed Mar 04, 2009 12:45 pm</strong></div>
+				<div class="author">by <strong>nadro</strong></div>
+				<div class="content">Great job, thanks for all Bullet DevTeam members <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Mar 15, 2009 10:33 am</strong></div>
+				<div class="author">by <strong>thloh85</strong></div>
+				<div class="content">Great job bullet physics team, you guys ROCKS</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Sun Mar 15, 2009 5:07 pm</strong></div>
+				<div class="author">by <strong>nikki</strong></div>
+				<div class="content">Hey! Congrats on the new release!<br>
+<br>
+I'm going to download it, but I have a quick question: Does the new constraint-drawing code use the existing line-drawing callbacks? Or do we have to implement some more functions?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Wed Mar 18, 2009 4:02 am</strong></div>
+				<div class="author">by <strong>rponomarev</strong></div>
+				<div class="content">Hello,<br>
+<br>
+All constraint drawing functions are based on btIDebugDraw::drawLine() call<br>
+so they should work if you have this function implemented<br>
+<br>
+Thanks,<br>
+Roman</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.74 released: constraint visualization</h3>
+				<div class="date">Posted: <strong>Sat Mar 21, 2009 8:49 pm</strong></div>
+				<div class="author">by <strong>nikki</strong></div>
+				<div class="content"><blockquote><div><cite>rponomarev wrote:</cite>All constraint drawing functions are based on btIDebugDraw::drawLine() call<br>
+so they should work if you have this function implemented</div></blockquote>
+Sorry for the late reply, but great news! So I get the new feature for free! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

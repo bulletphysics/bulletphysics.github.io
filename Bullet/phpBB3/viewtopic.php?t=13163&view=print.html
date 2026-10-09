@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Player moving on a sphere surface</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Player moving on a sphere surface</h2>
+		<p><a href="viewtopic.php%3Ft=13163.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13163</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Player moving on a sphere surface</h3>
+				<div class="date">Posted: <strong>Wed Feb 17, 2021 10:27 pm</strong></div>
+				<div class="author">by <strong>Eturcim</strong></div>
+				<div class="content">Hello there,<br>
+<br>
+I am moving a rigidbody (the character) on the surface of a sphere, like what is described in this former post <a href="viewtopic.php%3Fp=34525.html#p34525" class="postlink">viewtopic.php?p=34525#p34525</a> <br>
+<br>
+I am facing the following issue that I am having hard time to solve:<br>
+After moving the character, it's starts spinning really slightly around it's Y axis.<br>
+<br>
+As a side note, I am using Ammo.js which is a javascript/webassembly port of Bullet 2.82, but this has no impact on the problem. <br>
+<br>
+To "stick" the player (a dynamic rigidbody with a cylinder shape) to the sphere (a static rigid body with a sphere shape), here is the code, called on each game loop iteration:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13163&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>_applyAttraction() {
+    let sphereOrigin = this.body.getWorldTransform().getOrigin();
+    let characterOrigin = this._characterEntity.body.getWorldTransform().getOrigin();
+
+    // compute and apply sphere gravity to character body
+    let sphereAttractionForce = new ammo.btVector3(
+      characterOrigin.x() - sphereOrigin.x(),
+      characterOrigin.y() - sphereOrigin.y(),
+      characterOrigin.z() - sphereOrigin.z()
+    );
+    sphereAttractionForce.normalize();
+    sphereAttractionForce.op_mul(gravity);
+    this._characterEntity.body.applyForce(sphereAttractionForce, ammo.btVector3(0, 0, 0));
+
+    // align character up with sphere origin
+    const gravityDirection = bt2ThreeVec3(sphereAttractionForce).normalize().multiplyScalar(-1);
+
+    // extract up axis of character transform basis
+    let characterUp = new THREE.Vector3();
+    this._characterEntity.graphic.matrixWorld.extractBasis(
+      new THREE.Vector3(),
+      characterUp,
+      new THREE.Vector3()
+    );
+
+    // apply rotation to align up with gravity vector
+    let verticalAlignmentRotation = new Quaternion()
+      .setFromUnitVectors(characterUp, gravityDirection)
+      .multiply(bt2ThreeQuat(this._characterEntity.body.getWorldTransform().getRotation()));
+
+    this._characterEntity.body.getWorldTransform().setRotation(three2BtQuat(verticalAlignmentRotation));
+  }
+  </code></pre></div>
+
+And to move the character on the sphere (I removed the code dealing with the mouse controlled orientation since it is irrelevant to track down the problem). This code is also called on every game loop iteration:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13163&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>let scalingFactor = 0.02;
+    let moveX = inputController.getMoveX();
+    let moveZ = inputController.getMoveZ();
+
+    if (moveX === 0 &amp;&amp; moveZ === 0) return;
+
+    let movement = new THREE.Vector3(moveX, 0, moveZ).normalize();
+    movement.multiplyScalar(scalingFactor);
+    let wantedWorldPos = this.graphic.localToWorld(movement);
+    this.body
+      .getWorldTransform()
+      .setOrigin(new ammo.btVector3(wantedWorldPos.x, wantedWorldPos.y, wantedWorldPos.z));
+</code></pre></div>
+
+In plain English here is what I am doing:<br>
+<br>
+1) Get the direction from the player to the sphere<br>
+2) Apply a force using that vector: <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13163&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>this._characterEntity.body.applyForce(sphereAttractionForce, ammo.btVector3(0, 0, 0));</code></pre></div>
+3) Align the player Up with the gravity direction, to do so I:<br>
+ 3) a. normalize and "flip" gravity vector direction<br>
+ 3) b. extract character up vector and compute the quaternion which give the rotation to align this up vector with the gravity vector<br>
+ 3) c. compute the new player orientation by applying quaternion from 3.b to it's current orientation<br>
+4) Apply movement (from keyboard inputs), in details:<br>
+  4) a. get a vector resulting from the requested movement alongside x and z axis<br>
+  4) b. convert this vector from player local basis to world basis <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13163&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> this.graphic.localToWorld(movement);</code></pre></div>
+  4) c. set the new transform origin with this new vector<br>
+<br>
+  The project may be seen here  <a href="https://ai-gallery.vercel.app/" class="postlink">https://ai-gallery.vercel.app/</a> with the spinning issue I am describing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Player moving on a sphere surface</h3>
+				<div class="date">Posted: <strong>Thu Feb 18, 2021 2:28 pm</strong></div>
+				<div class="author">by <strong>Eturcim</strong></div>
+				<div class="content">Answering my own question:<br>
+<br>
+The character's rigid body was missing angular damping (which was causing the spinning to occur):<br>
+Calling <strong class="text-strong">setDamping </strong> on the character's rigidbody with value greater than 0 for angularDamping solves the issue.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

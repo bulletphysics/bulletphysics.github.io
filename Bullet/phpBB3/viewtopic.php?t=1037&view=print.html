@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; GDC Tutorial '07</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>GDC Tutorial '07</h2>
+		<p><a href="viewtopic.php%3Ft=1037.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1037</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>GDC Tutorial '07</h3>
+				<div class="date">Posted: <strong>Sun Mar 11, 2007 7:44 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I revised my physics tutorial for this year's GDC. You can download it here:<br>
+<br>
+<a href="http://www.gphysics.com/downloads" class="postlink">http://www.gphysics.com/downloads</a><br>
+<br>
+Eventually, you should be able to find the other sections of the tutorial at:<br>
+<br>
+<a href="http://www.essentialmath.com" class="postlink">http://www.essentialmath.com</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GDC Tutorial '07</h3>
+				<div class="date">Posted: <strong>Tue Mar 20, 2007 2:41 pm</strong></div>
+				<div class="author">by <strong>mkotsalainen</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I revised my physics tutorial for this year's GDC.
+</div></blockquote>
+
+Thanks for posting this! You have a great way of explaining a complex subject in an accessible style.<br>
+<br>
+On the page called "A Recipe for J", you write that one should steer clear of the partial derivatives. Could you explain this?<br>
+<br>
+matti</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Mar 20, 2007 5:44 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Normally in textbooks they ask you to compute Jacobians by computing partial derivatives. If you sit down and try to do this, you'll find that it is quite tedious. On the other hand, you get Jacobian in a simpler fashion by computing the time derivative of the position constraint and isolating the velocity terms.<br>
+<br>
+So there are two methods to compute the Jacobian and I'm suggesting that one method is easier than another.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 21, 2007 3:57 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Erin, apart from those 2 methods I think there is a 3rd popular method to compute Jacobian: <br>
+<br>
+Empirical: measuring the effect of applying a unit-impulse.  It is mentioned in <a href="http://home.iae.nl/users/starcat/dynamo" class="postlink">Bart Barenbrug PhD thesis and Dynamo library</a>.<br>
+<br>
+I've seen some people using this in combination with Featurestone-style constraint solving.<br>
+<br>
+Have you tried that?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 21, 2007 5:45 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Erwin, in my tutorial I show that the Jacobian maps constraint impulses from constraint space into Cartesian space. In order to apply the test impulse (lambda) you must convert it to Cartesian space (P). This implies that you already know the Cartesian space Jacobian.<br>
+<br>
+Now when we consider a joint coordinate formulation (Featherstone), we need the joint space Jacobian. Actually, what we are after is the effective mass:<br>
+<br>
+effective_mass = inv(J * invM * JT)<br>
+<br>
+Given the current velocity error (Cdot), the effective mass tells us how to compute lambda to send the velocity error to zero:<br>
+<br>
+effective_mass * delta_Cdot = lambda<br>
+<br>
+Compare the above formula to:<br>
+<br>
+mass * acceleration = force<br>
+<br>
+The two formulas are completely analogous, the just operate in different spaces.<br>
+<br>
+To compute the effective mass we need to apply lambda in constraint space, then compute the resulting acceleration in Cartesian space, then project the result back into constraint space.<br>
+<br>
+In detail, we provide a test lambda (lambda_test), then use our Cartesian space Jacobian to compute P. When then apply P to the body tree and use Featherstone's algorithm to compute the change in the joint velocities. From the change in the joint velocities we can get the change in the body velocities. We then apply the Cartesian space Jacobian to the body velocity delta to get the constraint space velocity delta (delta_Cdot_test). Then we can determine the effective mass:<br>
+<br>
+effective_mass = lambda_test / delta_Cdot_test<br>
+<br>
+This is a fairly involved process, but it only takes order N time. I have implemented this in a joint coordinate version of Box2D. I will release the source for this soon.<br>
+<br>
+I think Barenbrug's dissertation is pushing the idea of the effective mass, but he operations with position constraints, so he computes:<br>
+<br>
+effective_mass = lambda_test / delta_C_test<br>
+<br>
+I'm not yet willing to operate at the position level for rigid bodies because impulses are the natural language for dealing with collisions and friction, and you still can get a reaction force (joint breaking, etc).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 21, 2007 6:41 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It is a terminology issue, on page 38 of his PhD, Bart Barenbrug defines the Jacobian as:<br>
+<br>
+Jacobian dC/dR as 'dependency between constraint error and restriction value (impulse/force etc).<br>
+<br>
+Indeed, it is a unit-impulse method to measure the effective mass, given you know the axis/direction in the right space.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 29, 2007 8:03 am</strong></div>
+				<div class="author">by <strong>MarkZ</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I have found the slides and code very useful it understanding rigid body systems. I have been looking at the joint implementation in the Box2D demo and am unsure how it relates to the formulas from the slides. I cannot work what method the joint is using to calculate the constraint impulse and was wondering if someone could point me in the right direction?<br>
+<br>
+Cheers,<br>
+Mark.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 29, 2007 8:25 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The formula goes like this:<br>
+<br>
+1) Position constraint (x := position, R := Orientation matrix, r' vector from COM to anchor in body space)<br>
+C(x1, R1, x2, R2) = x2 + R2 * r2' - x1 - R1 * r1' = x2 + r2 - x1 - r1 <br>
+<br>
+2) Velocity constraint<br>
+dC/dt = J * v = v2 + w2 x r2 - v1 - w1 x r1<br>
+<br>
+3) Jacobian (through inspection)<br>
+J = [ -I3  |  skew(r1)  |  I3  |  -skew(r2) ]<br>
+<br>
+<br>
+<br>
+Now the algorithm:<br>
+<br>
+a) We seek an impulse P...<br>
+v' = v + W * P<br>
+<br>
+b) ...such that the post-velocities satisfy the velocity constraint...<br>
+J * v' = 0<br>
+<br>
+c) ...also knowing the impulse direction<br>
+P = JT * lambda<br>
+<br>
+<br>
+Finally you get:<br>
+J * W * JT * lambda = - J * v -&gt; lambda = -J * v / ( J * W * JT )<br>
+<br>
+Not that the effective mass matrix J * W * JT can vary between 1 x 1 and 6 x 6 for binary constraints depending on the removed number of degrees of freedom. Finally plugging in the Baumgarte term (stabilization) yields:<br>
+<br>
+lambda = -( 0.1* C / dt + J * v ) / ( J * W * JT )<br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 2:19 am</strong></div>
+				<div class="author">by <strong>MarkZ</strong></div>
+				<div class="content">Thanks for that Dirk that clears up a lot. I was wondering what I3 is? I know it is probably going to be a diagonal matrix related to the mass of the object but I'm not sure on the exact components?<br>
+<br>
+Cheers,<br>
+Mark.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 3:29 am</strong></div>
+				<div class="author">by <strong>Eternl Knight</strong></div>
+				<div class="content">If I am reading it correctly - I believe I3 is the 3x3 identity matrix.<br>
+<br>
+--EK</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 4:24 am</strong></div>
+				<div class="author">by <strong>MarkZ</strong></div>
+				<div class="content">Of course, I was thinking of W when I replied  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed">, speaking of which leads me to another stupid question, in W do we use the local or world inverse inertia matrix for each of the bodies?<br>
+<br>
+Cheers,<br>
+Mark.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 8:41 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">W contains the global inertia tensor (a 3x3 matrix). So the W matrix is block diagonal. It contains four 3x3 matrices on its diagonal. Note that you usually don't build this matrix in memory. If you multiply J * W * JT by hand or e.g. Matlab you end up with an easy formula for your effective mass. (I do it by hand since it is really good practise).<br>
+<br>
+One hint:<br>
+Often the result is something like this (usually four additative terms):<br>
+K = n1 * w1 * n1 + n2 * w2 * n2 + ...<br>
+<br>
+Since length(n1) == 1 you end up with K = w1 + w2 + ...<br>
+<br>
+A good exercise is to build the effective mass for a non-penetration constraint and then end up with the formula in Baraff's Siggraph course. After this I would do the same for a spherical joint (ball-socket). The result must be the same as the collision matrix K in Mirtich's PhD. Try it and come back if you have problems and I try to help. <br>
+<br>
+Note:<br>
+w1 == inv(mass1)<br>
+n1 is some axis in world space, e.g. the collision normal or a hinge axis<br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

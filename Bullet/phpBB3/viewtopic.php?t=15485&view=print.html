@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; URDF importing correctly on one machine, incorrectly on another. Same code.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>URDF importing correctly on one machine, incorrectly on another. Same code.</h2>
+		<p><a href="viewtopic.php%3Ft=15485.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=15485</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>URDF importing correctly on one machine, incorrectly on another. Same code.</h3>
+				<div class="date">Posted: <strong>Tue Oct 10, 2023 10:04 am</strong></div>
+				<div class="author">by <strong>DanielSJohnson</strong></div>
+				<div class="content">Hi everyone,<br>
+<br>
+I'm having a strange bug where my code works fine on one machine (Machine A), but on another (Machine B) Bullet fails to load the URDF file correctly. However, when the URDF file is loaded incorrectly it doesn't return a negative ID or throw any errors, it just responds to subsequent calls involving the file incorrectly.<br>
+<br>
+The following is a minimal example that recreates the problem on my two machines:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=15485&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include &lt;b3RobotSimulatorClientAPI_NoGUI.h&gt;
+#include &lt;btBulletDynamicsCommon.h&gt;
+#include &lt;iostream&gt;
+
+using namespace std;
+
+int minimal_recreation(){ 
+
+    b3RobotSimulatorClientAPI_NoGUI* sim = new b3RobotSimulatorClientAPI_NoGUI();
+
+    bool isConnected = sim-&gt;connect(eCONNECT_SHARED_MEMORY);
+    if (!isConnected)
+    {
+        cout&lt;&lt;"Using direct mode"&lt;&lt;endl;
+        isConnected = sim-&gt;connect(eCONNECT_DIRECT);
+    }
+    else
+    {
+        cout&lt;&lt;"Using shared memory"&lt;&lt;endl;
+    }
+
+    sim-&gt;resetSimulation();
+    sim-&gt;setGravity(btVector3(0, 0, -9.8));
+    sim-&gt;setNumSolverIterations(100);
+    b3RobotSimulatorSetPhysicsEngineParameters args;
+    sim-&gt;getPhysicsEngineParameters(args);
+
+    const char* corin_path="basics/models/Drake_Corin.urdf";
+
+    int CorinId = sim-&gt;loadURDF(corin_path);
+    cout&lt;&lt;"loading corin with ID "&lt;&lt;CorinId&lt;&lt;" and path "&lt;&lt;corin_path&lt;&lt;endl;
+    int numJoints=sim-&gt;getNumJoints(CorinId);
+    cout&lt;&lt;"    corin has "&lt;&lt;numJoints&lt;&lt;" joints"&lt;&lt;endl;
+
+    return 0;
+}</code></pre></div>
+On both machines this code compiles and runs without errors. On Machine A this prints:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=15485&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Using direct mode
+loading corin with ID 0 and path basics/models/Drake_Corin.urdf
+    corin has 24 joints</code></pre></div>
+
+which is correct. Machine B prints:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=15485&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Using direct mode
+loading corin with ID 0 and path basics/models/Drake_Corin.urdf
+    corin has 0 joints</code></pre></div>
+which is incorrect.<br>
+<br>
+Can anyone advise on why this might be? The URDF file is identical and both machines are running this release of bullet.<br>
+The only difference I can think of is that Machine A is running Ubuntu 18.04, but Machine B is running Ubuntu 20.04. Though I'm unsure why that would cause this problem.<br>
+<br>
+If anyone has any advice on what I could try to solve this problem or to learn more i'd be very thankful!<br>
+<br>
+<span style="text-decoration:underline">Additional tests described below:</span><br>
+<br>
+First i wanted to check if it was something to do with my URDF file, so I tried it with the humanoid.urdf file from the data directory (which I moved to basics/models for consistency) . On machine A i got:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=15485&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Using direct mode
+loading robot with ID 0 and path basics/models/humanoid.urdf
+    robot has 33 joints</code></pre></div>
+Whereas on machine B i got:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=15485&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Using direct mode
+loading robot with ID 0 and path basics/models/humanoid.urdf
+    robot has 0 joints</code></pre></div>
+Which implies to me that this issue isn't being caused by my URDF file<br>
+<br>
+As a further test, if I use the Python library urdfpy to load the same file it works fine and correctly identifies the links on both machines. I use this code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=15485&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>from urdfpy import URDF
+
+robot=URDF.load('basics/models/Drake_Corin.urdf')
+for joint in robot.joints:
+    print(joint.name)
+robot.show()</code></pre></div>
+And it correctly prints out the names of the 24 joints and then correctly visualises the robot on both machine A and machine B.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: URDF importing correctly on one machine, incorrectly on another. Same code.</h3>
+				<div class="date">Posted: <strong>Thu Oct 12, 2023 9:12 am</strong></div>
+				<div class="author">by <strong>DanielSJohnson</strong></div>
+				<div class="content">Ok so, after a lot of tinkering I have now fixed this problem on my end. Posting here in case anyone else experiences this.<br>
+<br>
+Basically, I was having strange behaviours on machine B with a number of bullet functions. In this example the problems were caused by sim-&gt;getPhysicsEngineParameters(args);, but I also observed some problems elsewhere in my codebase relating to sim-&gt;getDyanmicsInfo. These were caused by the install being a bit bugged. I'm not sure why, but none of the official install options work for me.<br>
+
+<ul><li>vcpkg does not contain the robotics functions I was interested in</li>
+<li>premake failed to build for reasons I don't entirely understand</li>
+<li>executing ./build_cmake_pybullet_double.sh appeared to work (this is what I did on machine B) but then produced undefined behaviour for several functions.</li></ul>
+
+In the end what worked for me was building bullet the good old fashioned way:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=15485&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>mkdir build
+cd build
+cmake .. -DBUILD_SHARED_LIBS=ON
+make</code></pre></div>
+After doing this, the behaviour of Machine B lined up with what I expected, though I have no idea why. So anyone else having this issue, maybe try that?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: URDF importing correctly on one machine, incorrectly on another. Same code.</h3>
+				<div class="date">Posted: <strong>Fri May 02, 2025 7:25 am</strong></div>
+				<div class="author">by <strong>otis</strong></div>
+				<div class="content"><a href="https://sprunkigame.org/" class="postlink"><span style="color:#FFFFFF"><span style="font-size:1%;line-height:116%">Sprunki Game</span></span></a> Have you tried compiling Bullet from source with debug flags on Machine B to trace the import process?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

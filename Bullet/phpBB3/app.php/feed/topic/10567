@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10567" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2015-05-28T09:34:08+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10567</id>
+
+		<entry>
+		<author><name><![CDATA[BeRo]]></name></author>
+		<updated>2015-05-28T09:34:08+00:00</updated>
+
+		<published>2015-05-28T09:34:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35625#p35625</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35625#p35625"/>
+		<title type="html"><![CDATA[Re: 3D convex hull SAT face clipping implementation question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35625#p35625"><![CDATA[
+Okay, thanks, so as I have now implemented it in my physics engine, where I'm pushing now the respective clipped vertices (of shapr A or B) to reference plane of shape A, regardless of which shape (A or B) is the reference convex hull and which (A or B) is the incident convex hull, so that feature flip-flops are prevented.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11290">BeRo</a> — Thu May 28, 2015 9:34 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[RandyGaul]]></name></author>
+		<updated>2015-05-20T18:20:53+00:00</updated>
+
+		<published>2015-05-20T18:20:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35563#p35563</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35563#p35563"/>
+		<title type="html"><![CDATA[Re: 3D convex hull SAT face clipping implementation question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35563#p35563"><![CDATA[
+In Erin Catto's code he starts out detecting collision against colliderA vs colliderB. Once the axis of minimum penetration is found he renames the collider's face it came from as the reference face. Then then most anti-normal face on the other collider is named the incident face. The incident face is clipped against the side planes of the reference face, and all resulting clipped points are culled by a plane test against the reference face (keep points that are penetrating). This gives you clip points that contribute to the manifold in an intelligent way, without generating too many unnecessary clip points.<br><br>Since features could have come from either colliderA or colliderB, Catto uses an if statement near the end of his collision routines to make any necessary bookkeeping swaps.<br><br>Another thing that Catto suggested (and Dirk in his recent GDC presentation on contact creation) is to bias which collider contributes to the reference face, to prevent excessive feature flip-flops (which makes the final if-statement prefer one code path over the other).<br><br>As far as I know this kind of technique is what is used for modern SAT implementations. To me the face naming mostly seems to be a code abstraction, and not much more. As long as your clip points contribute to the manifold in an intelligent way, it probably won't matter how you obtain them (aside from memory/performance).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10235">RandyGaul</a> — Wed May 20, 2015 6:20 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[BeRo]]></name></author>
+		<updated>2015-05-15T03:17:00+00:00</updated>
+
+		<published>2015-05-15T03:17:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35511#p35511</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35511#p35511"/>
+		<title type="html"><![CDATA[3D convex hull SAT face clipping implementation question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=35511#p35511"><![CDATA[
+Hello guys,<br><br>i'm rewriting my old 3D physics engine PAPPE in the moment, which I wrote in anno 2007, because it was buggy as hell. The rewrite is almost complete now (except continuous collision detection), but I've some open questions yet, so the first question here (the other second open "which CCD&amp;CP solution is the best for discrete-&gt;CCD&amp;CP code upgrade case" question will be a own forum topic later). <br> <br>Is it the (or also a) correct way, that the reference face for 3D convexhull(HullA)&lt;-&gt;convexhull(HullB) SAT clipping in my implementation is always on HullA, and the clipping incident face always on HullB? At least, in this case the contact points are always directly automatically coherence and consistent/ without plane reprojection (among other things for warm starting for the nearest new-&gt;old feature-ID-key-free contact point search between last and current frame). It seems, that Bullet does also in this way. At least this way implementation works pretty well so far for me, and I saw no failure cases at my tests so far.<br>    <br>The alternative way should be that a face from HullB could also the clip reference face (rg. when face B SAT seperation &gt; face A SAT seperation), where the contact points would be projected to the HullA in-this-case-now incident face then, but will be it the more correct way? It seems, that the most other open source physics engines and collision detection libraries, which I could find (but not Bullet), does it in this way.<br><br>Or in other words, what are the pros&amp;cons of the two possible face-face-clipping implementation ways?<br><br>My code of my 3D convex-hull-vs-convex-hull collision detection =&gt; <a href="http://pastebin.com/J0yjHMh6" class="postlink">http://pastebin.com/J0yjHMh6</a> <br><br>A physics engine test youtube capture video of my physics engine =&gt; test <a href="https://www.youtube.com/watch?v=QGO5Bk1JdbM" class="postlink">https://www.youtube.com/watch?v=QGO5Bk1JdbM</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11290">BeRo</a> — Fri May 15, 2015 3:17 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

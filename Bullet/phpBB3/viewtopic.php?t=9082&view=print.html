@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Contact penetration resolution</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Contact penetration resolution</h2>
+		<p><a href="viewtopic.php%3Ft=9082.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9082</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Contact penetration resolution</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 6:37 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">I'm in the process of revisiting an old physics system and have a question about resolving penetrations with contacts. Is ERP the right (only?) way to resolve contact penetration, or should something be done outside of the simulation? I'm trying to remember where I saw it, but I feel like ODE or Havok might have had contact relaxation that operated outside of the dynamics solver, driving objects back towards their ideal contact threshold. Certainly this old system has a step like that, but it seems to me that ERP is more efficient and appropriate.<br>
+<br>
+Any thoughts on this?<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Contact penetration resolution</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 8:49 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">ODE uses ERP - they invented the term. The correct term for ERP is Baumgarte stabilization. ERP/Baumgarte means that instead of computing the relative velocity at your contact to become zero you add a little bias proportional to the penetration depth. If the penetration is deep this can go terrible wrong and your objects gain a lot of momentum and shoot off to the starts. The other alternative is to have a non-linear penetration solver which only operates on the position and doesn't effect the momentum. This is a separate pass over the constraints after solving the position. Box2D has such a system. A hybrid method is the split impulse as found e.g. in Bullet. The difference between the later two is that you recompute the Jacobian for each constraint while the split impulse uses the Jacobian from the beginning of the timestep and keeps it constant. <br>
+<br>
+Baumgarte is more efficient. Split impulse works reasonable good for contacts, but sucks for joints. Post-projection gives the best quality, but is the most expensive. You can find a comparison here (check the position correction notes):<br>
+<br>
+<a href="https://code.google.com/p/box2d/source/browse/trunk/Box2D/Box2D/Dynamics/b2Island.cpp" class="postlink">https://code.google.com/p/box2d/source/ ... Island.cpp</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Contact penetration resolution</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 10:30 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">Dirk,<br>
+<br>
+Once again thanks for the information. I guess the code I am looking at has the post-step because it is quite exact, adjusting the position only, but also contains the ERP. I'll do some thinking about what I  can afford to do in our environment.<br>
+<br>
+Best,<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Contact penetration resolution</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 11:58 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You should not mix Baumgarte Stabilization and Post-Projection. Just use one or the other! I would also not correct the full error in the penetration solver. I usually use a factor between 0.1-0.2 even though it seems feasible to correct the full penetration. The reason is that for oblong shapes you will overshoot quite significantly. <br>
+<br>
+I would make sure that your velocity solver doesn't add any bias for the penetration recovery. There might be some bias to model restitution though. If you have a post projection solver make sure you only resolve a fraction of the penetration. Usually something between 0.1-0.2 to avoid overshooting.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Contact penetration resolution</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 4:01 am</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">Dirk,<br>
+<br>
+I agree - after experimenting with the code base using an ERP of 0.2 works quite well. When I used it after defeating the contact position relaxation step, contacts seem to be resolving pretty well. Thanks again.<br>
+<br>
+S</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

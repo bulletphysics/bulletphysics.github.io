@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13430" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-05-08T21:52:27+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13430</id>
+
+		<entry>
+		<author><name><![CDATA[Bernard]]></name></author>
+		<updated>2022-05-08T21:52:27+00:00</updated>
+
+		<published>2022-05-08T21:52:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44009#p44009</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44009#p44009"/>
+		<title type="html"><![CDATA[Re: Jitter when a btBoxShape moves against a btConvexHullShape.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44009#p44009"><![CDATA[
+<blockquote class="uncited"><div>Make the conveyor <strong class="text-strong">kinematic</strong> instead of <strong class="text-strong">static</strong>, give it a non-zero velocity but don't change its position.  Then <strong class="text-strong">dynamic</strong> objects that touch it will pick up the non-zero velocity from the collision and will move along.</div></blockquote>Thanks! As you said, using the CF_KINEMATIC_OBJECT flag and setting a linear velocity does work. Good to know.<br><br>I'm not shocked to see that the motion characteristics are unchanged; the box on the btConvexHull still judders and rotates. But at least I can eliminate incorrectly setting up the btManifoldPoint struct as a cause.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14159">Bernard</a> — Sun May 08, 2022 9:52 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-05-05T14:59:05+00:00</updated>
+
+		<published>2022-05-05T14:59:05+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44004#p44004</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44004#p44004"/>
+		<title type="html"><![CDATA[Re: Jitter when a btBoxShape moves against a btConvexHullShape.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44004#p44004"><![CDATA[
+Make the conveyor <strong class="text-strong">kinematic</strong> instead of <strong class="text-strong">static</strong>, give it a non-zero velocity but don't change its position.  Then <strong class="text-strong">dynamic</strong> objects that touch it will pick up the non-zero velocity from the collision and will move along.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu May 05, 2022 2:59 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Bernard]]></name></author>
+		<updated>2022-05-05T00:05:13+00:00</updated>
+
+		<published>2022-05-05T00:05:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44003#p44003</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44003#p44003"/>
+		<title type="html"><![CDATA[Jitter when a btBoxShape moves against a btConvexHullShape.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44003#p44003"><![CDATA[
+I've been running into an issue with the motion of btBoxShapes sliding against btConvexHullShapes[1], in this case using a custom friction callback[2] to simulate a box on a conveyor belt.<br><br>I've attached an example adapted from the BasicExample project that demonstrates the problem, the box on the left running on a btBoxShape and the box on the right running on  btConvexHullShape. The box on running on the btBoxShape moves as I would expect -- in a straight line, no rotation, no jitter. The box on the btConvexHullShape judders and jitters as it travels, rotating.<br><br>The box appears to be penetrating the btConvexHullShape and being repeatedly forced out. Changing the margin changes the failure state (the box starts to roll along with larger margins, and lower margins do nothing). It may be that there is a sweet spot margin that causes the shape to act like the conveyor made of a btBoxShape, but if there is I do not know how to compute it.<br><br>I've seen reports that using more substeps or a higher fixed timestep can fix or allieviate the issue, and indeed changing CommonRigidBodyBase::stepSimulation's stepSimulation call to stepSimulation(deltaTime, 12, 1.0 / 240.0) makes the motion appear smoother, but it still spins about.<br><br>My question is if this is a bug or (more likely) from a misunderstanding or misuse of Bullet on my part? If the latter, can anyone point out my mistake?<br><br>As it stands, I ended up using btBoxShapes to model conveyor belts and it seems to work okay, but approximating curves and cut-offs (conveyors that start or end with an edge at an angle) with boxes is less than ideal, and would like to be able to model the more complex surfaces with different shapes.<br><br>Cheers!<br><br>[1]: In the example I've used a btConvexHullShape, but the problem occurs with a btBvhTriangleMeshShape and a btCompoundShape made up of btTriangleShapes.<br><br>[2]: I considered the alternative of setting the velocity of a static object causing dynamic objects that collide with that static object to move, but that behaviour seems to have regressed (or been intentionally removed) at some point: <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10121" class="postlink">viewtopic.php?t=10121</a><dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1930">ConveyorDemo.zip</a></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14159">Bernard</a> — Thu May 05, 2022 12:05 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

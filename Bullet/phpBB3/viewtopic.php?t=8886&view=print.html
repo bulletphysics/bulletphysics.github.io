@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Sequential impulses and warm starting</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Sequential impulses and warm starting</h2>
+		<p><a href="viewtopic.php%3Ft=8886.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8886</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 10:08 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">I have identified a problem related to friction in my impulse solver and don't know what's causing the problem. I disabled friction, enabled warm starting, accumulating impulses and position correction and things work fine. Can someone tell me what the problem is? Implementing friction in 3D is tricky. I have tried the alternative constraint method, and still get the same problem.<br>
+<br>
+When I disable warm starting, the simulation is stable for the simple cases, except when stacking boxes.<br>
+<br>
+Dirk, I have used the btPlaneSpace approach you recommended when the relative velocity in the normal direction is zero.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8886&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void AMG3DRigidBodyCollisionResponder::computeMasses(const AMG3DScalar&amp; dt)
+{
+	if(m_bSkipCollision)
+		return;
+
+	if(dt&lt;=0.0f)
+		return;
+
+	const AMG3DScalar k_allowedPenetration = 0.01f;
+	AMG3DScalar k_biasFactor = (AMG3DPhysicsWorld::g_AMG3D_bPositionCorrection) ? 0.2f : 0.0f;
+
+	for(int i=0; i&lt;m_cdContactData.iNumContacts; ++i) {
+		AMG3DVector4 normal = m_cdContactData.contacts[i].vContactNormal;
+
+		AMG3DVector4 rap = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody1-&gt;m_vPosition;
+		AMG3DVector4 rbp = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody2-&gt;m_vPosition;
+
+		AMG3DVector4 rapcrossn = rap.cross(normal);
+		AMG3DVector4 rbpcrossn = rbp.cross(normal);
+
+		// Compute the normal mass
+		AMG3DScalar Kn = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;
+		Kn += ( (m_pRigidBody1-&gt;m_matInvIWorld*rapcrossn).cross(rap) + (m_pRigidBody2-&gt;m_matInvIWorld*rbpcrossn).cross(rbp) ).dot(normal);
+		m_cdContactData.contacts[i].massNormal = 1.0f/Kn;
+
+		AMG3DVector4 vap = m_pRigidBody1-&gt;m_vVelocity + m_pRigidBody1-&gt;m_vAngularVelocity.cross(rap);
+		AMG3DVector4 vbp = m_pRigidBody2-&gt;m_vVelocity + m_pRigidBody2-&gt;m_vAngularVelocity.cross(rbp);
+
+		// Relative velocity
+		AMG3DVector4 vab = vap - vbp;
+
+		// The tangent vector depends on relative velocity and therefore needs to be computed every time the velocity is updated
+		// Calculate the tangent vector
+		AMG3DVector4 vabn = normal*(vab.dot(normal));
+		AMG3DVector4 vabt = vab - vabn;
+		AMG3DVector4 t1, t2;
+
+		if(vabt.magnitude()&gt;0) {
+			vabt.normalize();
+			t1 = vabt;
+			AMG3DVector4Cross(&amp;t2, t1, normal);
+		}
+		else {
+			normal.buildOrthoBasis(&amp;t1, &amp;t2);
+		}
+
+		//AMG3DVector4 rapcrosst1 = rap.cross(t1);
+		//AMG3DVector4 rbpcrosst1 = rbp.cross(t1);
+
+		//// Compute the tangent mass in the first direction
+		//AMG3DScalar Kt1 = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;
+		//Kt1 += ( (m_pRigidBody1-&gt;m_matInvIWorld*rapcrosst1).cross(rap) + (m_pRigidBody2-&gt;m_matInvIWorld*rbpcrosst1).cross(rbp) ).dot(t1);
+		//m_cdContactData.contacts[i].massTangent1 = 1.0f/Kt1;
+
+		//AMG3DVector4 rapcrosst2 = rap.cross(t2);
+		//AMG3DVector4 rbpcrosst2 = rbp.cross(t2);
+
+		//// Compute the tangent mass in the second direction
+		//AMG3DScalar Kt2 = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;
+		//Kt2 += ( (m_pRigidBody1-&gt;m_matInvIWorld*rapcrosst2).cross(rap) + (m_pRigidBody2-&gt;m_matInvIWorld*rbpcrosst2).cross(rbp) ).dot(t2);
+		//m_cdContactData.contacts[i].massTangent2 = 1.0f/Kt2;
+
+		// Compute the bias (prevents sinking, useful for stacking)
+		m_cdContactData.contacts[i].bias = k_biasFactor / dt * AMG3D_MATH_MAX(0.0f, m_cdContactData.contacts[i].sPenetrationDepth - k_allowedPenetration);
+	
+		if(AMG3DPhysicsWorld::g_AMG3D_bWarmStarting) {
+			AMG3DVector4 P = m_cdContactData.contacts[i].Pn*normal;/* + m_cdContactData.contacts[i].Pt1*t1 + m_cdContactData.contacts[i].Pt2*t2;*/
+
+			m_pRigidBody1-&gt;m_vVelocity			+= P*m_pRigidBody1-&gt;m_sInvMass;
+			m_pRigidBody1-&gt;m_vAngularVelocity	+= m_pRigidBody1-&gt;m_matInvIWorld*rap.cross(P);
+		
+			m_pRigidBody2-&gt;m_vVelocity			-= P*m_pRigidBody2-&gt;m_sInvMass;
+			m_pRigidBody2-&gt;m_vAngularVelocity	-= m_pRigidBody2-&gt;m_matInvIWorld*rbp.cross(P);
+		}	
+	}
+}
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 10:12 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">I couldn't paste my applyImpulse code for some reason. I assume you calculate friction at each iteration rather than once per frame as it depends on relative velocity</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 4:51 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Personally I interleave non-penetration and friction constraints and solve the two friction constraints after each non-penetration constraint. Non-penetration and friction constraints are pretty much the same. Just replace the normal with the tangent in your formulas. One tricky detail is to clamp against the *accumulated* impulse and not the *delta* impulse. You also need to compute the new relative velocity after each constraint.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 11:35 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">What about the normal and tangent masses? Are these pre-computed once per frame before the impulse iterations, or for the tangent impulses, they need to be computed at each iteration since the relative velocity changes?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 11:46 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">No, you keep the tangent directions constant over the frame. They are just computed once at the beginning when you setup the Jacobians. Therefore the masses are also constant. A nice project would be to try the friction method used in the Guendelman paper "Non-convex stacking". You would need to change the method to account for the accumulated impulses though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Fri Feb 22, 2013 12:26 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Ok, let's forget about the relative velocity for a minute and use two tangent directions by btPlaneSpace. Now I only have to compute the masses seen by the impulse only once per frame since they no longer depend on the tangent vectors which depend on relative velocity.<br>
+<br>
+My stack is stable now with warm starting and impulse accumulation. Now I am getting overshoot, so I disabled the bias and have a stable stack, but the objects are visually penetrating into each other. I will spend some time tuning the bias and see how that goes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Fri Feb 22, 2013 4:03 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Tuning the bias factor didn't do anything.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8886&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_cdContactData.contacts[i].bias = k_biasFactor / dt * AMG3D_MATH_MAX(0.0f, m_cdContactData.contacts[i].sPenetrationDepth - k_allowedPenetration);</code></pre></div>
+
+I calculate the bias above where the penetration depth is +ve and the allowed penetration is 0.01, with a bias factor of 0.2<br>
+<br>
+I ran a test as follows:<br>
+<br>
+Let 5 boxes fall onto each other (they keep bouncing up and down with spongy contact), then I disable the bias and the normal impulse converges. Perhaps I am not supposed to add the bias impulse to the warm starting impulse for the next frame? <br>
+<br>
+All I can find on the internet is code to make the box stack sleep when the velocity is below a threshold, but I want to achieve stability first before masking the problem. The faster the impulse converges, the sooner the body is put to sleep.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Fri Feb 22, 2013 10:48 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">For anyone who is interested, just as I was about to give up, I thought of something that fixed the problem to an extent:<br>
+<br>
+1) Increase the thickness of the clipping planes by increasing the plane epsilon to 10^-2 (after experimenting with various epsilon values). <br>
+2) DO not clip against the face plane (normal pointing inside the clipping OBB), but rather just discard points that are on the wrong side of the plane. Use the penetration depths retrieved from the separating axis test, which is the same penetration depth for all contacts. Since I was using the distance of each contact point to the face plane to get the penetration depths, this caused jittery behaviour when stacking 6 boxes and the stack fell.<br>
+<br>
+Now I can stack 15 boxes at 30 iterations, 10 boxes at 10 iterations with no problems. I don't know if this is a good result but it's the best I can do so far, hope that helps anyone experiencing the same problems</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Fri Feb 22, 2013 6:16 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">This sounds right. IIRC the ODE clips ( or clipped ) against the reference plane, but Box2D does not. Personally I never clipped against the reference face, so I cannot tell the difference.<br>
+<br>
+Here is another thing regarding friction I forgot yesterday. Since you use the relative velocity to build you tangent frame you directions change frequently. You need to project your old friction impulse onto the new axes. Here is how you can do this:<br>
+Vector3 friction = lambda1 * old_tangent1 + lambda2 * old_tangent2 // here lambda1 and lambda2 are the accumulated friction impulses<br>
+lambda1 = dot( friction, new_tangent1 );<br>
+lambda2 = dot( friction, new_tangent2 );</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Mon Mar 04, 2013 11:34 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">I am currently getting a stable stack when dropping boxes from 1m apart at 25 iterations with contact caching. Any iterations below/above that causes the stack to collapse. However starting the boxes off close together keeps the stack stable.<br>
+<br>
+I assume this is a problem with the clipping algorithm when it generates more than 4 contacts when clipping against the side planes and not the face plane. In Box2D it's easier to achieve stability as there are 2 contacts at most. Does bullet clip against the face plane?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Mon Mar 04, 2013 11:42 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">After a thorough test, 1-9 iterations is unstable<br>
+<br>
+10 is stable<br>
+11 has a slight bounce but is stable<br>
+12 causes collapse<br>
+<br>
+It seems like floating point error or the extra contacts are problematic</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Mon Mar 04, 2013 9:01 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">How do you match the contact points between frames? A stack of 5 boxes should be stable at 8 iterations, probably even at 5 (with some initial bounces).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Tue Mar 05, 2013 7:53 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">I am stacking 10 boxes, I match the contacts by comparing the two edges making them up in the manifold. I use the algorithm from Box2D Lite to store the old impulses with the new contact data. I will look into it based on what you told me the iterations should be, and try to get the boxes stable at 10 iterations as Box2D Lite does</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Tue Mar 05, 2013 5:17 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">A crucial point for stacking stability is to allow for some penetration. Otherwise you loose contact points and warmstarting information. Make sure you don't resolve the full penetration, but add the linear slob. <br>
+<br>
+Say you have a penetration of -0.01. You want to resolve -0.01 + LINEAR_SLOB. If the penetration is above -LINEAR_SLOP you clamp to zero.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sequential impulses and warm starting</h3>
+				<div class="date">Posted: <strong>Fri Mar 08, 2013 5:19 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks Dirk, I have done that, but it makes no impact.<br>
+<br>
+The bias impulse seems to be adding the extra bounce, I will look into it and post my solution when I find the problem</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

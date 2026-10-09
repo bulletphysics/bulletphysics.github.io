@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/5857" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2011-03-31T21:33:38+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/5857</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2011-03-31T21:33:38+00:00</updated>
+
+		<published>2011-03-31T21:33:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22837#p22837</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22837#p22837"/>
+		<title type="html"><![CDATA[Re: allowedCcdPenetration questions]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22837#p22837"><![CDATA[
+<blockquote class="uncited"><div>continuous sweeps would not detect hits unless body0 and body1 penetrate more than allowedCcdPenetration</div></blockquote>This is the correct interpretation. I just fixed a bug, latest svn trunk should work now:<br><a href="http://code.google.com/p/bullet/source/detail?r=2362" class="postlink">http://code.google.com/p/bullet/source/detail?r=2362</a><br><br>Sorry for the long delay in handling that issue,<br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Mar 31, 2011 9:33 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sfreeland]]></name></author>
+		<updated>2011-01-27T18:22:10+00:00</updated>
+
+		<published>2011-01-27T18:22:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21918#p21918</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21918#p21918"/>
+		<title type="html"><![CDATA[Re: allowedCcdPenetration questions]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21918#p21918"><![CDATA[
+I'm having exactly the same problem.  There is a test at the end of btContinuousConvexCollision::calcTimeOfImpact():<br><div class="codebox"><p>Code: </p><pre><code>if ((projectedLinearVelocity+ maxAngularProjectedVelocity)&lt;=result.m_allowedPenetration){    return false;}</code></pre></div>In the case of shapecasts, result.m_allowedPenetration is initialized from btDispatcherInfo::m_allowedCcdPenetration, which defaults to 0.04.  Unless I'm sorely mistaken, this means that the shapecasts used in btKinematicCharacterController::stepForwardAndStrafe() will always fail given a sufficiently slow speed of movement, or a sufficiently high framerate.<br><br>I'd like to reiterate paul.dubois' question:  what is the expected behaviour?  Also, what is the effect of tweaking btDispatcherInfo::m_allowedCcdPenetration?<br><br>Thanks in advance,<br>- Steve<br><br>Edit:  In case this clarification helps, here's the relevant part of the commit log from the introduction of btDispatcherInfo::m_allowedCcdPenetration (revision 1193):<br><br>erwin.coumans  08/07/2008 8:08:49 PM         <br>+ improved KinematicCharacterController<br>+ improved btSubsimplexConvexCast, btContinuousConvexCollision and btGjkConvexCast to support configuration that start in touching/penetration, required for 'sliding'.<br><br>Edit 2:  Ah, I see this issue has already been been reported: <a href="http://code.google.com/p/bullet/issues/detail?id=347" class="postlink">http://code.google.com/p/bullet/issues/detail?id=347</a><br>Almost a year old now...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6687">sfreeland</a> — Thu Jan 27, 2011 6:22 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[paul.dubois]]></name></author>
+		<updated>2010-10-29T19:13:35+00:00</updated>
+
+		<published>2010-10-29T19:13:35+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20705#p20705</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20705#p20705"/>
+		<title type="html"><![CDATA[allowedCcdPenetration questions]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20705#p20705"><![CDATA[
+A couple questions about allowedCcdPenetration.<br><br>What is the intent of allowedCcdPenetration? Is it designed to improve gjk stability, or perhaps to allow the user to ignore grazing contacts? Or am I on the wrong track here?<br><br>Also, what is the expected effect? I previously thought it was something like a backwards collision margin -- continuous sweeps would not detect hits unless body0 and body1 penetrate more than allowedCcdPenetration. However, in this situation:<br><br>- allowedCcdPenetration is the default (0.04)<br>- body0 and body1 are slightly penetrating (say 0.03)<br>- body0 performs a short (0.03) convex sweep test into body1<br><br>I expect to receive a hit at the point where body0 penetrates 0.04 units into body1; or, perhaps an hit at t=0. Instead, it seems as if all sweeps of length &lt; 0.04 return with no result. Specifically, the check in btContinuousConvexCollision::calcTimeOfImpact examines projected velocity instead of max penetration, which seems incorrect if there is pre-existing penetration. Is this the expected/desired behavior, or a bug?<br><br>The concrete case I'm looking at is a character proxy, which can walk substantially into collision when moving slowly.<br><br>(edit: added a bit of clarification)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6691">paul.dubois</a> — Fri Oct 29, 2010 7:13 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

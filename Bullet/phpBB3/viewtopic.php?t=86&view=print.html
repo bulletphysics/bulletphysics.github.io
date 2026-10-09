@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Post Stabilization</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Post Stabilization</h2>
+		<p><a href="viewtopic.php%3Ft=86.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=86</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Post Stabilization</h3>
+				<div class="date">Posted: <strong>Wed Aug 10, 2005 9:06 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Dear group,<br>
+<br>
+I implemented post stabilization today like proposed in the PhD of B. Cline. Especially for contacts this has the advantage that the interpenetration resolvement  doesn't contribute to the pesistent momentum. One thing that is not clear from the paper is if I need to rebuild the Jacobian after the position update or if I can use the same Jacobian like before the position update?<br>
+Second Bradley stated that the actual result of the LPC is a velocity rather then a displacement. So do I need to integrate the result after running the LCP solver? I use the same LCP solver like the ODE (SOR). I only set the CFM to zero and simply pass the penetration depth as b. Is this correct?<br>
+<br>
+What about mixing Baumgarte and Post Stabilization. When I do this I need to find the penetration depth after the position update that has been resolved through the Baumgarte term: ERP * Depth / dt. I did this by saving the contact point also in relative coordinates to the involved collision geometries. This way I am able to compute the new penetration depth after the position update and feed this into the second LCP.  Any other recommendations? What are your experiences?<br>
+<br>
+Maybe we start a poll - what do you prefer:<br>
+<br>
+a) Penalty method - aka Baumgarte stabilization for Time-Stepping<br>
+b) Post Stabilization<br>
+c) A hybrid form of both<br>
+<br>
+Regards,<br>
+<br>
+Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Post Stabilization</h3>
+				<div class="date">Posted: <strong>Tue Aug 16, 2005 5:06 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>DonDickieD wrote:</cite>
+I implemented post stabilization ...[snip]... has the advantage that the interpenetration resolvement  doesn't contribute to the pesistent momentum.</div></blockquote>
+
+Persistent momentum? <br>
+
+<blockquote><div><cite>DonDickieD wrote:</cite>
+One thing that is not clear from the paper is if I need to rebuild the Jacobian after the position update or if I can use the same Jacobian like before the position update?
+</div></blockquote>
+
+Yes you can reuse your Jacobians, just ignore the tangential directions. This means you can solve for the constraint impulse/force and the projection in the same step. This is easily implemented using something like PGS, you work on two Lagrange multiplier vectors and right hand sides at the same time.<br>
+
+<blockquote><div><cite>DonDickieD wrote:</cite>
+Second Bradley stated that the actual result of the LPC is a velocity rather then a displacement. So do I need to integrate the result after running the LCP solver?
+</div></blockquote>
+
+It is just first order world physics, but set delta_t = 1 and use a simple Euler update scheme, this works fine for me.<br>
+
+<blockquote><div><cite>DonDickieD wrote:</cite>
+ I use the same LCP solver like the ODE (SOR). I only set the CFM to zero and simply pass the penetration depth as b. Is this correct?
+</div></blockquote>
+
+Yes, and throw away tangential directions as well. Note you can still keep the regularization if you want. This improves the numerics and dampens the projection lengths (alleviates overshooting, but do not remove the problem:-)<br>
+
+<blockquote><div><cite>DonDickieD wrote:</cite>
+What about mixing Baumgarte and Post Stabilization. 
+</div></blockquote>
+
+Post- and pre stabilization is good for different things. As far as I know people already mix the two kinds of stabilization.<br>
+
+<blockquote><div><cite>DonDickieD wrote:</cite>
+ This way I am able to compute the new penetration depth after the position update and feed this into the second LCP.  Any other recommendations? What are your experiences?
+</div></blockquote>
+
+Do your error correction before the dynamics then you can ``trust'' your penetration depths. Or solve for both the constraint forces and projections using the same LCP.<br>
+<br>
+There is little difference in whether you do projection followed by dynamics or vice versa. Any cyclic permutation of the same order of events in your simulation loop will get you to the same place. The difference in the choices have more to do with praticalities... howto estimate good penetration depths after a position update (without having to run another collision query) kind of problems...<br>
+<br>
+On a side-note Baraff used post-stabilization formulated as an LCP prior to Cline, see<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=86&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>@article{618272,
+ author = {David Baraff},
+ title = {Interactive Simulation of Solid Rigid Bodies},
+ journal = {IEEE Comput. Graph. Appl.},
+ volume = {15},
+ number = {3},
+ year = {1995},
+ issn = {0272-1716},
+ pages = {63--75},
+ doi = {http://dx.doi.org/10.1109/38.376615},
+ publisher = {IEEE Computer Society Press},
+ address = {Los Alamitos, CA, USA},
+ }
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 16, 2005 7:56 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+howto estimate good penetration depths after a position update (without having to run another collision query) kind of problems... 
+</div></blockquote>
+
+I do this by storing the contact point in reltative coordinates. Such that I can transform back into world space after the Baumgarte correction and project it onto the collision normal. I did some simple tests and it seemed to work. If I use an ERP of 0.2 I can assume that the same contact still exists and find the new penetration depth this way.<br>
+<br>
+Regards,<br>
+<br>
+Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>I'm that dude with the paper you guys are talking about</h3>
+				<div class="date">Posted: <strong>Wed Oct 05, 2005 1:50 am</strong></div>
+				<div class="author">by <strong>mbcline</strong></div>
+				<div class="content">Glad to see that someone outside my thesis committee was interested in reading my thesis!  It's been a couple years since I wrote it or thought about it at any depth, but I'll do my best to try to answer your questions about it.<br>
+
+<blockquote class="uncited"><div>
+One thing that is not clear from the paper is if I need to rebuild the Jacobian after the position update or if I can use the same Jacobian like before the position update?
+</div></blockquote>
+
+The Jacobian is a function of the positions of the bodies, so it will be different after you update the bodies.  So, yes when I implemented it I would recalc the jacobian after doing the position update, but before the post-stabilization.  <br>
+<br>
+Assuming small time steps though, the difference in J before and after doing the position update might not be all that large, and so the post-stabilization step might work reasonably well even if you don't update the Jacobian.  I've never tried it, so I don't know how well it would work.  As Kenny points out, this would allow you to potentially collapse the two LCP's into one big one.  I have heard that Anitescu, who I cite a bunch of times in my thesis, published a paper showing this a little after my thesis.<br>
+
+<blockquote class="uncited"><div>
+Second Bradley stated that the actual result of the LCP is a velocity rather then a displacement. So do I need to integrate the result after running the LCP solver?
+</div></blockquote>
+
+The way I was doing it was a two-step approach that involved solving two LCP's per time-step<br>
+<br>
+1. Solve a velocity-level LCP - Find a velocity that satisfies all velocity-constraints<br>
+2. Using that velocity, update the positions of the bodies<br>
+3. Solve a position-level LCP - Find a delta-position to add to the position from step 2 so that the new position satisfies all position-constraints.<br>
+
+<blockquote class="uncited"><div>
+On a side-note Baraff used post-stabilization formulated as an LCP prior to Cline, see (...citation...)
+</div></blockquote>
+
+I'm not sure I've run across that one.  Does anyone have an electronic copy of this?  I could not locate one online.  It's entirely possible that Baraff thought of the idea a decade before me.   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+
+<blockquote class="uncited"><div>
+(Erwin wrote this to me in a separate private message:)<br>
+<br>
+Does your paper apply to the typical situation where you can choose between solving the positional/zero order part either combined with first order/velocity LCP or as a seperate LCP ? Or is it just for small drift due to numerical instability ? Or did I mix up post and pre stabilization ?
+</div></blockquote>
+
+The post-stabilization LCP was just to counteract the small drift encountered after solving the velocity LCP and updating the position.  <br>
+<br>
+Mike Cline</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Post Stabilization</h3>
+				<div class="date">Posted: <strong>Tue Oct 11, 2005 12:32 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>kenny wrote:</cite>
+On a side-note Baraff used post-stabilization formulated as an LCP prior to Cline, see<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=86&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>@article{618272,
+ author = {David Baraff},
+ title = {Interactive Simulation of Solid Rigid Bodies},
+ journal = {IEEE Comput. Graph. Appl.},
+ volume = {15},
+ number = {3},
+ year = {1995},
+ issn = {0272-1716},
+ pages = {63--75},
+ doi = {http://dx.doi.org/10.1109/38.376615},
+ publisher = {IEEE Computer Society Press},
+ address = {Los Alamitos, CA, USA},
+ }
+</code></pre></div></div></blockquote>
+in the paper above contact constraints are treated as bilateral constraints. So it's not formulated as an LCP like in Cline is it?<br>
+<br>
+from the Baraff's paper:<br>
+<br>
+"<br>
+We will compute constraint force magnitudes by treating all the contact <br>
+constraints as bilateral constraints and solving the linear equation<br>
+<br>
+Af = -b<br>
+"</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Advice needed on implementation of a physical VR character controller</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Advice needed on implementation of a physical VR character controller</h2>
+		<p><a href="viewtopic.php%3Ft=13089.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13089</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Advice needed on implementation of a physical VR character controller</h3>
+				<div class="date">Posted: <strong>Sat Oct 17, 2020 10:09 pm</strong></div>
+				<div class="author">by <strong>msub2</strong></div>
+				<div class="content"><strong class="text-strong"><span style="font-size:128%;line-height:116%">Terms defined</span></strong>
+<ul>
+<li>Smooth Locomotion - The translation of a player based off a movement vector from a controller that is rotated by the current rotation of the head.</li>
+<li>Snap Turning - The instantaneous (or near-instantaneous, depending on implementation) rotation of a player by a specified number of degrees.</li>
+<li>Smooth Turning - The rotation of a player by a constant amount based on the intensity of X-axis input from a controller.</li>
+</ul>
+<strong class="text-strong"><span style="font-size:128%;line-height:116%">Background</span></strong><br>
+I'm currently working on creating a physical VR character controller for use in WebXR experiences, starting with <a href="https://aframe.io/docs/1.0.0/introduction/#what-is-a-frame" class="postlink">A-Frame</a>. The aim right now is simply to make it so that the player is unable to smooth locomote through a static physics body. I'm currently using <a href="https://github.com/n5ro/aframe-physics-system" class="postlink">aframe-physics-system</a>, which implements <a href="https://github.com/kripken/ammo.js" class="postlink">ammo.js</a>, the JavaScript port of Bullet via Emscripten, but I believe the concepts should still be general enough that this shouldn't be an issue. By default, aframe-physics-system creates a btDiscreteDynamicsWorld with iterations set to 10, maxSubSteps set to 4, and a fixedTimeStep of .01667. <a href="https://github.com/n5ro/aframe-physics-system/blob/master/AmmoDriver.md" class="postlink">Here</a> is the documentation on the Ammo driver for further information.<br>
+<br>
+<strong class="text-strong"><span style="font-size:128%;line-height:116%">The Issue</span></strong><br>
+Up to now, I've been unable to find a good solution for handling collision. My initial thought was to simply have a dynamic body for the player and impart forces on it to move and rotate. While this did give me the collision I was looking for, it introduced problems with my snap turning and smooth turning implementations. Before introducing physics, I was manually setting the position and rotation of the player, but it seems this gets overridden when trying to do it on a dynamic body, even if I do it through the setOrigin and setRotation functions on the world transform. <br>
+<br>
+My second thought was to make the body kinematic, so I can use the code I've already written for the non-physics character controller to move and rotate, but now I have to handle collisions manually. Right now, the closest thing I have to a solution is to check how many bodies the player is currently colliding with, and reversing their input by 3 times as much until they're no longer colliding. This <em class="text-italics">technically</em> works, but obviously introduces insane amounts of jittering as the player goes in and out of an object, so it's far from ideal. I thought instead I could maybe do a raycast from the player position towards their direction of movement, and halt any movement where the difference between the raycast hit and the player position is below a certain point. This works very inconsistently, and the player can often still move right through the static body. I believe this is a consequence for the difference between the tickrate of the program and the actual physics system, but I'm at a loss for how to potentially solve it.<br>
+<br>
+<strong class="text-strong"><span style="font-size:128%;line-height:116%">Raycast Collision Check Code:</span></strong>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13089&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//This code makes use of three.js for handling player entity position in the A-Frame scene.
+//direction is an array with the desired movement vector
+//this.world is a reference to the btDiscreteDynamicsWorld
+let pos = this.player.object3D.position;
+let bRayFromWorld = new Ammo.btVector3(pos.x, pos.y + 0.5, pos.z); //y is raised to be roughly center mass, as cube I'm colliding with is floating
+let bRayToWorld = new Ammo.btVector3(pos.x + (direction[0] * 1.25), pos.y + (direction[1] * 1.25), pos.z + (direction[2] * 1.25));
+let bRayResultCallback = new Ammo.ClosestRayResultCallback(bRayFromWorld, bRayToWorld);
+this.world.rayTest(bRayFromWorld, bRayToWorld, bRayResultCallback);
+let hitPos = new THREE.Vector3(bRayResultCallback.get_m_hitPointWorld().x(), bRayResultCallback.get_m_hitPointWorld().y(), bRayResultCallback.get_m_hitPointWorld().z());
+this.distance = pos.distanceTo(hitPos);
+</code></pre></div>
+
+This is the code I have to calculate distance. The player would ideally stop moving once distance drops below a certain point, but it typically only works when I'm not moving at max speed, and often I can still clip through the static body by waggling the controller joystick a bit.<br>
+<br>
+That's about where I'm at currently. If anyone has any suggestions, or needs further examples of code, let me know.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Advice needed on implementation of a physical VR character controller</h3>
+				<div class="date">Posted: <strong>Mon Oct 19, 2020 4:28 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I bet there is a way to solve your snap-turn and smooth-turn problems when using a dynamic character but I don't know enough of your setup to be sure.  Nevertheless I will offer advice for things to try:<br>
+<br>
+<strong class="text-strong">(1)</strong> Instead of imparting forces/torques to move/orient your character try slamming its velocities.  So to move forward you would slam its <strong class="text-strong">linearVelocity</strong> in the direction you want and to rotate you would slam its <strong class="text-strong">angularVelocity</strong> toward the intended rotation.  There are gotchas with this approach of course and it often requires tuning.  For example: when you get close to your rotation goal you must slow the angular velocity so you don't overshoot, and you'll need some slop threshold for which you consider yourself "close enough", else you can get oscillations.<br>
+<br>
+<strong class="text-strong">(2)</strong> Ideally a velocity slamming technique use an "action", rather than setting it after the "step".  Dunno how that would work in ammo.js but in C++ you would derive from <strong class="text-strong">btActionInterface</strong> and implement custom logic in your <strong class="text-strong">CustomAction::updateAction()</strong> method.  The reason the Action system works well is because Bullet will call <strong class="text-strong">updateAction()</strong> on every registered action every substep - an action has time to overwrite any changes the simulation may have on object transforms and velocities that it cares about.<br>
+<br>
+<strong class="text-strong">(3)</strong> If your character a capsule and only rotates about the vertical axis then you could try a semi-kinematic method which will give you absolute control over the rotation part.  You could use the "inverse inertia tensor hack" to make the character's inertia tensor effectively infinite on all axes.  The result is: it can move dynamically in linear space, but in rotation space it is kinematic and you can set the rotation or angular velocity to whatever you want.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

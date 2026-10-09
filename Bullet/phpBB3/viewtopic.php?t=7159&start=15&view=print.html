@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; appHACDDemo (and Convex Decomposition tool) - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>appHACDDemo (and Convex Decomposition tool)</h2>
+		<p><a href="viewtopic.php%3Ft=7159.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7159</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: appHACDDemo (and Convex Decomposition tool)</h3>
+				<div class="date">Posted: <strong>Tue Jun 04, 2013 11:34 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>ananas wrote:</cite>I've manged to successfully compile and launch HACDdemo, but I am struggling with decomposition of a torus-like mesh. I see that BulletDefaultTorusMesh.off gets decomposed properly for all but one objects in the torus demo, but if I replace it with my torus mesh created in blender with "spin" tool, and exported to the waveform format it doesn't have central hole.<br>
+Could you give some hints on how to create a torus mesh that would fit the convex decomposition algorithm requirements?</div></blockquote>Well, you should see the code (inside HACDDemo.cpp) I used to "fill the hole" in the default torus mesh: this was made with some settings of the HACD parameters.<br>
+Once you detect the right parameters, you must replicate them in the "appHACDDemoCmdLineParams.txt" file and save the file before decomposing the mesh.<br>
+I'm not sure abut it, but I think that if you simply drag (on Windows) the torus.off file contained in the demo onto the appHACDDemo.exe icon, its  central hole will be filled (with the default values of the HACD params in "appHACDDemoCommanLineParams.txt"). <br>
+So you can use it as a test to see if your changes in the HACD params are actually detected by the program. (*) <br>
+<br>
+(*) Please note that if you're using a unix system, this is more difficult to achieve. Anyway any changing parameter (from the default values of the HACD parameters) in "appHACDDemoCmdLineParams.txt" should be displayed in the console (so you are sure that the program is finding it). I suggest you launch the appHACDDemo.exe from the folder of the model you want to decompose.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: appHACDDemo (and Convex Decomposition tool)</h3>
+				<div class="date">Posted: <strong>Sun Jun 16, 2013 9:09 pm</strong></div>
+				<div class="author">by <strong>ananas</strong></div>
+				<div class="content">After increasing nClusters param my mesh got decomposed succesfuly. But collission of the two btCompoundShapes produced by the HACDdemo has malfunctions - objects penetrate each other and intensive shaking occurs. The issue doesn't appear when I test collision of this btCompoundShape with btConvexHullShape. My shape is decomposed to 192 child shapes - could this cause performance issue?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: appHACDDemo (and Convex Decomposition tool)</h3>
+				<div class="date">Posted: <strong>Wed Jun 19, 2013 6:37 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>ananas wrote:</cite>objects penetrate each other and intensive shaking occurs. The issue doesn't appear when I test collision of this btCompoundShape with btConvexHullShape.</div></blockquote>This may be caused by the size of the clusters being too small. In addition you can play with the collision margin and see what's happaning. There is no golden rule that you can use here as far s I know. You can use a smaller Bullet timestep and see if it's something related to the simulation performance too.
+<blockquote><div><cite>ananas wrote:</cite>My shape is decomposed to 192 child shapes - could this cause performance issue?</div></blockquote>For sure (when you collide it with another compound shape, the number of collision shapes involved in the contact resolution may be very big). Maybe you can try and use V-HACD to reduce it (since the shapes should not overlap), but I've never experienced performance problems because of this overlap so far: anyway having another decomposition algorithm to exploit might help in having a lower number of decomposed collision clusters, and that will probably help in your case (anyway V-HACD doesn't allow you to specify the number of vertices per cluster: so you might have pros and cons).<br>
+<br>
+P.S. you can try changing the size of your mesh and see what's happening too.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: appHACDDemo (and Convex Decomposition tool)</h3>
+				<div class="date">Posted: <strong>Wed Mar 25, 2015 7:52 pm</strong></div>
+				<div class="author">by <strong>sussumu</strong></div>
+				<div class="content">I'm just a beginner, so this may seem a little stupid but I couldn't set up the load .bcs method.<br>
+<br>
+I imported the "btBulletWorldImporter.h" from Extras folder and it went alright. Also used the function provided by you but I'm getting this:<br>
+<br>
+"Error C2039: 'btCollisionShape' : is not a member of 'btBulletWorldImporter'"<br>
+<br>
+I looked the files and btCollisionShape is a class from btWorldImporter and btBulletWorldImporter derives from it, so it should work.<br>
+<br>
+<br>
+I know that there are another methods to achieve this mesh decomposition but actually I'm searching for an easy one since this is just a small part from my project. Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: appHACDDemo (and Convex Decomposition tool)</h3>
+				<div class="date">Posted: <strong>Thu Mar 26, 2015 12:54 pm</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>sussumu wrote:</cite>I'm just a beginner, so this may seem a little stupid but I couldn't set up the load .bcs method.</div></blockquote> First: this "Tool/Demo" is rather old and won't work with the current "git" version of VHACD-2: I've just added a note in the first post. I suppose you use the plain HACD version.
+<blockquote><div><cite>sussumu wrote:</cite>I imported the "btBulletWorldImporter.h" from Extras folder and it went alright. Also used the function provided by you</div></blockquote>
+Do you mean this code ?<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7159&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	#include &lt;BulletWorldImporter/btBulletWorldImporter.h&gt;		// In "Bullet/Extra/Serialize". Needs link to: BulletWorldImporter.lib
+	btCollisionShape* Load(const char* filename,bool verbose)	{	
+		btBulletWorldImporter loader(0);//don't store info into the world
+		loader.setVerboseMode(verbose);
+		if (!loader.loadFile(filename)) return NULL;
+	
+		btCollisionShape* shape = NULL;
+		if (loader.getNumCollisionShapes()&gt;0) shape = loader.getCollisionShapeByIndex(0);
+	
+		//TODO: Cleaner way:
+		// 1) Deep clone Collision Shape	
+		// 2) loader.deleteAllData(); // deletes all (collision shapes included)
+		// 3) return Deep cloned Collision Shape
+	
+		// Here we don't delete all data from the loader. (leaks?)
+		return shape;	
+	}</code></pre></div>
+<blockquote><div><cite>sussumu wrote:</cite>but I'm getting this:<br>
+"Error C2039: 'btCollisionShape' : is not a member of 'btBulletWorldImporter'"<br>
+I looked the files and btCollisionShape is a class from btWorldImporter and btBulletWorldImporter derives from it, so it should work.</div></blockquote>Well, maybe something is changed in the btBulletWorldImporter.h/cpp code and now that code does not work anymore.
+<ul><li>What version of Bullet are you using ? (I've never tested it with the version of Bullet2 that can be found in the Bullet3 repository)</li>
+<li>Have you tried using "btHACDCompoundShape.h" alone (i.e. without serialization) ? Does it work ?</li>
+<li>That error is strange. Have you compiled the cpp files in the folder: Extra/Serialization/btBulletWorldImporter/*.cpp (not sure, but maybe Extra/Serialization/BulletFileLoader/*.cpp are required as well).</li>
+<li>In the version I use btBulletWorldImporter derives from btWorldImporter that derives from nothing. btCollisionShape is really NOT a member of btBulletWorldImporter.</li></ul></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: appHACDDemo (and Convex Decomposition tool)</h3>
+				<div class="date">Posted: <strong>Thu Mar 26, 2015 4:47 pm</strong></div>
+				<div class="author">by <strong>sussumu</strong></div>
+				<div class="content">I saw this V-HACD and read how to include it (<a href="http://kmamou.blogspot.com.br/2014/12/v-hacd-20-in-your-project.html" class="postlink">http://kmamou.blogspot.com.br/2014/12/v ... oject.html</a>) but I'm really a beginner and don't know what to do with the data that it returns in line 18.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7159&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>IVHACD::ConvexHull ch;</code></pre></div>
+
+Probably I should study the code in Bullet examples because I think I can found the answers there.<br>
+<br>
+I'm using the last version 2 from github. I forgot to compile the libraries before but I tried today and it gave me a lot of "incorrect number of arguments" errors.<br>
+<br>
+Can you point me other ways to generate a custom bullet shape with precision? I use it to create concave shapes for tweezers that are really small e detailed. Then I'll have to use it with soft body organs, so I really need that precision. I achieved good results with your program, setting the variables on that text file.<br>
+<br>
+Thanks again!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: appHACDDemo (and Convex Decomposition tool)</h3>
+				<div class="date">Posted: <strong>Sat Mar 28, 2015 7:33 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>sussumu wrote:</cite>I saw this V-HACD and read how to include it [...] I'm using the last version 2 from github.</div></blockquote> Then you can't use appHACDDemo tool in the first place, because I wrote:<blockquote><div><cite>Flix wrote:</cite>First: this "Tool/Demo" is rather old and won't work with the current "git" version of VHACD-2: I've just added a note in the first post. I suppose you use the plain HACD version.</div></blockquote> So, no way you can generate a ".bcs" shape using V_HACD2, unless you write the code (and that's not very easy if you're a beginner  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> ).<br>
+
+<blockquote><div><cite>sussumu wrote:</cite>Can you point me other ways to generate a custom bullet shape with precision? I use it to create concave shapes for tweezers that are really small e detailed. Then I'll have to use it with soft body organs, so I really need that precision. I achieved good results with your program, setting the variables on that text file.</div></blockquote> Then, if you have saved a good .bcs shape, you just need to be able to compile Bullet with serialization support to be able to load it back in your program (".bcs" files are the same as ".bullet" files: they just contain a single collision shape).<br>
+If you can make a Bullet program that can load a ".bullet" file (and there's one example in the Bullet Demos, the Serialization Demo AFAIR), you "should" be able to load a ".bcs" file as well, using the code I posted... unless some recent changes in the Bullet2 libraries prevent you to do so. That's why I was asking about your version of Bullet: to understand if it's still possible to load ".bcs" files.<br>
+<br>
+As an alternative, if you manually compile the HACD library (it's not the same as V-HACD, and it's much easier to compile: just include all its .cpp files in your project and add a few include directories to find the headers), you can manually use the file "btHACDCompoundShape.h" alone (it's part of the appHACDDemo tool): you can copy and paste in your source code a portion of "that text file" with the variables that are good for you (you might need to adapt the pasted code slightly: but "that text file" syntax is very compatible with C++): this way you can get around to loading ".bcs" files at the cost of generating the collision shape at init time in your program (not the best strategy at all, but if you really can't load a ".bcs" file...  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused"> ).<br>
+<br>
+Hope this helps  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

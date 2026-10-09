@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to create the contact manifold ? - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to create the contact manifold ?</h2>
+		<p><a href="viewtopic.php%3Ft=39.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=39</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2005 12:38 pm</strong></div>
+				<div class="author">by <strong>Stephane Redon</strong></div>
+				<div class="content">Hey Erwin, <br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+- how do you determine the distance of the contact points ? Do you use discrete collision detection for that ? Or do you update the distance incrementally ?</div></blockquote>
+It's indeed updated incrementally (euclidean distance): for example, for an edge / edge contact that you have detected at some time step, you track the locations of the nearest points on the edges at each time step, and you compute the distance between these points. For vertex / face<br>
+it's the same, you track the closest point of the face to the vertex. These distances are computed at the end of a time step, for all known contact points, for example to determine whether repositioning is necessary. However, these known contacting pairs also undergo CCD during the regular CCD computations, to make sure this distance never reaches zero.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+- do you convert 'distance space' into 'time-of-impact' space ? Do you use linear+angular velocity for that ? And do you project this on the seperating axis ? <br>
+<br>
+Another problem: for example for a featurepair vertex-face:<br>
+If a vertex is approaching 'almost' parallel to the face, the location of the contact might vary a lot, even for small differences in distances in the face-normal direction.</div></blockquote>
+
+I'm not sure I understand the separating axis question <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">. I don't compute distances between OBBs for the OBB/OBB continuous tests, just conservative bounds with interval arithmetic, and don't use separating axes for E/E and V/F tests. <br>
+<br>
+I use 'time-of-impact' space to position the objects slightly before the time of impact, essentially with the method described in our EG2002 paper to tune the CCD precision. Basically, if you have a screw motion over a time interval [0,1], you know the length dl of the path followed by any point of the object during any time sub-interval: <br>
+<br>
+dl=sqrt(s*s+w*w*r*r)*dt <br>
+<br>
+where s is the total translation in the screw motion, w is the total rotation, r is the 'screw radius' of the vertex, i.e. it's distance to the screw axis, and dt the length of the time sub-interval (clearly, all points of an object with same screw radius travel the same distance over a same time sub-interval). dl can be seen as a 'time-of-impact space distance', and is always longer than the euclidean distance, because the points that are going to contact do not necessary follow straight paths. So, if you want to guarantee that the euclidean distance is smaller than some threshold, it's enough to guarantee that the 'time-of-impact space distance' dl is smaller than this threshold.<br>
+<br>
+Now say you want to position the objects slightly before colliding, i.e. you want to make sure that the distance dl is smaller than some threshold e0. If you know the time of impact is tc, you can position the objects at time tc-dt with:<br>
+<br>
+dt&lt;e0/sqrt(s*s+w*w*r*r)<br>
+<br>
+This will ensure that the 'time-of-impact space distance' between the objects, and thus the euclidean distance between the contacting features, is smaller than e0. In the case of a vertex trajectory almost parallel to a face, the vertex will be very close to the face at that time tc-dt, so the objects will undergo a repositioning step, which should (unless there are other constraints elsewhere), push the vertex away from the face in the direction of the face normal (using CCD to perform the repositioning <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink">).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Fast Collision Detection using Representative-Triangles</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Fast Collision Detection using Representative-Triangles</h2>
+		<p><a href="viewtopic.php%3Ft=2013.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=2013</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Sun Mar 30, 2008 2:16 pm</strong></div>
+				<div class="author">by <strong>kuxv</strong></div>
+				<div class="content">Hi, <br>
+  I've discovered paper on fast collision detection <a href="http://www.cs.unc.edu/~geom/RTRI/" class="postlink">http://www.cs.unc.edu/~geom/RTRI/</a> <br>
+It is about bounding volume hierarchies of triangle features(i.e. vertices, edges, faces). <br>
+Now because I'm new to Bullet I would like to know if this could be integrated and if so then how ?<br>
+I'll be happy to implement it so if anybody can help me with kick-off so I can start coding right now it would be very appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Sun Mar 30, 2008 4:23 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It should be straightforward to integrate another collision detector into Bullet. There are a few examples of doing so.<br>
+<br>
+Best way is to check out Bullet/Demos/MovingConcaveDemo. It registers the optional GIMPACT concave collision detection.<br>
+Note that GIMPACT and Bullet already have an AABB tree that could be re-used for other purposes.<br>
+<br>
+Also, there is the ODE box-box algorithms adapted for Bullet in Bullet/Extras/AlternativeCollisionAlgorithms, as example code.<br>
+<br>
+Let us know how you get on,<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Sun Mar 30, 2008 6:07 pm</strong></div>
+				<div class="author">by <strong>kuxv</strong></div>
+				<div class="content">Thanks for quick reply, I'll look at it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Wed Apr 30, 2008 6:13 pm</strong></div>
+				<div class="author">by <strong>kuxv</strong></div>
+				<div class="content">HI, I've taken a look at bullet source code and I have some more questions to ask. There is AABB tree implemented(as you told me) in btOptimizedBvh.h. It stores individual mesh triangles at leafs of the tree. If there are 2 potentionaly colliding pairs from Broadphase and they are stored as BVHs, then these two BVHs are compared. Then triangles which are suspicious are compared for intersection in Narrowphase. Am I correct or had I misunderstood something ?<br>
+<br>
+If I'm correct it should be easy to implement technique mentioned in that paper from my first post. Because all I need is to take this AABB tree and add some more info to each leaf and use this info later in Narrowphase.<br>
+<br>
+Any notes welcome. Thank you.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Tue May 06, 2008 10:08 pm</strong></div>
+				<div class="author">by <strong>kuxv</strong></div>
+				<div class="content">I have another question. My target here is to make discrete collision detection of 2 and more TriMeshes. I want to represent them using AABB trees. Those meshes should move and react on collisions when thay occure. Is it OK to use  btBvhTriangleMeshShape for this? If not why? <br>
+<br>
+Thanks for help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Tue May 06, 2008 11:21 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kuxv wrote:</cite>I have another question. My target here is to make discrete collision detection of 2 and more TriMeshes. I want to represent them using AABB trees. Those meshes should move and react on collisions when thay occure. Is it OK to use  btBvhTriangleMeshShape for this? If not why? <br>
+<br>
+Thanks for help.</div></blockquote>
+
+No, there is currently no collision detection between two btBvhTriangleMeshShapes. Purpose of btBvhTriangleMeshShape is for static non-moving collision shapes, such as non-changing world environments, buildings etc. So there is no collision detection or resolution between static objects.<br>
+<br>
+By default, Bullet only registers and handles convex versus concave collision detection, in btConvexConcaveCollisionAlgorithm. This uses btOptimizedBvh. btOptimizedBvh only implements a BVH tree versus AABB traversal, not a BVH tree versus BVH tree traversal.<br>
+<br>
+If you really need moving concave triangle meshes, you can try to use btGImpactMeshShape. Please check Bullet/Demos/MovingConcaveDemo how to use this.<br>
+Collision detection between btGImpactMeshShape uses btGImpactQuantizedBvh. Bullet/Extras/GIMPACT/Bullet/btGImpactQuantizedBvh.h is very similar to btOptimizedBvh, and it implements BVH tree versus BVH tree.<br>
+<br>
+btGImpactCollisionAlgorithm implements the interaction (and tree traversal) between two btGImpactMeshShapes. You need to register this algorithm, because by default it is not part of Bullet.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Wed Oct 22, 2008 8:45 am</strong></div>
+				<div class="author">by <strong>kuxv</strong></div>
+				<div class="content">Hi,<br>
+<br>
+  it's been some time from my first post. I've talked with Nathanael regarding implementation of RTRI in bullet soft body.<br>
+I need to create data structure holding topological information of nodes/faces. That one is easy.<br>
+Then comes harder part and that's why I need some help. It's regarding contacts generation.<br>
+Acording to Nathanael it will require a new contact type and solver. Generalized face/face with barycentric masses weighting.<br>
+I know absolutly nothing about this. I've tried google of course, but no luck <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+If anybody can give me some info on this or direct me somewhere where I can find more information about this it would be very appreciated.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Fast Collision Detection using Representative-Triangles</h3>
+				<div class="date">Posted: <strong>Wed Oct 29, 2008 11:26 pm</strong></div>
+				<div class="author">by <strong>kuxv</strong></div>
+				<div class="content">So when I was looking for face-face contact generation I've came upon this <a href="http://mis.hevra.haifa.ac.il/~ishimshoni/papers/TroppTalShimshoni.pdf" class="postlink">http://mis.hevra.haifa.ac.il/~ishimshon ... mshoni.pdf</a>. There is even source code included. It takes 2 triangles and tells whenever they intersects or now. But I don't think this is what is meant by contact generation. I would really appreceiate some info on this. I think that contact generation stands for points or areas which actually intersects when 2 triangles intersects. Am I right?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

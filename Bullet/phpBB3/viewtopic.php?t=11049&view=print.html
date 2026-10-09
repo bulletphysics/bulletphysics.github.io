@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Correcting angular velocities in an angular constraint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Correcting angular velocities in an angular constraint</h2>
+		<p><a href="viewtopic.php%3Ft=11049.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11049</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Correcting angular velocities in an angular constraint</h3>
+				<div class="date">Posted: <strong>Sun Feb 21, 2016 4:09 am</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">Hello.<br>
+<br>
+I'm implementing a physics engine with rigid bodies with constraints using Baltman and Radeztsky's article: <a href="http://twvideo01.ubm-us.net/o1/vault/gdc04/slides/using_verlet_integration.pdf" class="postlink">http://twvideo01.ubm-us.net/o1/vault/gd ... ration.pdf</a><br>
+<br>
+I want to speak about angle constraint between two bodies (section 8 ). The idea is as follows. We determine a relative orientation of a body B relative to a body A: we calculate a corresponding quaternion (\delta q^a_body = \bar q^a (q^b  \bar q^a) q^a). Then if it does not satisfy angular constraints (which constraint imaginary components of the relative orientation quaternion \delta q^a_body s.t. sin(minXangle/2) &lt;= \delta q^a_body.x &lt;= sin(maxXangle/2) and so on), we divide the corresponding correction between bodies so the constraint to be satisfied.<br>
+<br>
+It is also good to change angular velocities. To do this we're implementing "an angular collision" (formulas 8.11, 8.12). And here comes the question. To get satisfactory results we need to implement a collision only if angular velocities are making constraint violation worse and do nothing if angular velocities are already making situation better, aren't we? How can I determine if it is the case?<br>
+<br>
+What came first into my mind is to just calculate a derivative of the \delta q^a_body and consider angular velocities "bad" if \delta q^a_body.x &lt; sin(minXangle/2) and d/dt(\delta q^a_body.x).x &lt; 0 (or similar to y and z). This is indeed a correct test whether angular velocities are "bad". But the result is not satisfactory because when we're implementing "an angular collision" we're changing all components of angular velocities, even that should be unchanged (e.g. when we're implementing a distance constraint -- rigid rod between particles -- we should correct only longitudinal velocities components keeping normal velocities components unchanged). How can I decide "which components of angular velocities" should I change?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Correcting angular velocities in an angular constraint</h3>
+				<div class="date">Posted: <strong>Tue Feb 23, 2016 1:50 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I'm probably not fully considering your problem, but is there a solution where you can temporarily convert the quaternions to a rotation around an axis? (I'm talking about either the 4-component "axis and angle" or the similar 3-component "axis rotation" which is simply the unit axis multiplied by the angle of rotation.)<br>
+<br>
+My opinion is that it would be a lot easier to isolate and debug the correct "components of angular velocity". But then again, I've never really understood quaternions. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Correcting angular velocities in an angular constraint</h3>
+				<div class="date">Posted: <strong>Sat Feb 27, 2016 1:58 pm</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">Thanks for the answer!<br>
+<br>
+If I understood you correctly, no. What I want to do is to forbid some body orientations. So there would be some allowed rotations and some forbidden. In 2d a rotation can be described by knowledge where some particular vector, (1, 0) for example, goes. So 2d rotations can be thought of as a circle. And circle can be "unfolded" to a line: we can think of a circle as a line factored bo 2 \pi. So to describe some region in the space of 2d rotations it's enougth to set limit like min_angle &lt;= angle &lt;= max_angle.<br>
+<br>
+In 3d the space of rotations is more complicated. And even its "unfolding" (universal covering, as topologists say) is a three-dimensional sphere. Unit quaternions are just a convenient way to speak (and more importantly, do calculations) about this sphere.<br>
+<br>
+When we want to constraint 3d rotations, we need to select some region of allowed rotations in the space of 3d rotations (SO(3)) or on its unfolding (unit quaternions). This is essentially what I was trying to do constraining the quaternion's components (sin(minXangle/2) &lt;= \delta q^a_body.x &lt;= sin(maxXangle/2), etc). Maybe it's not the best way to do it. If you know abother way, some article, please let me know. There is always a last resort to dive into Bullet source, but I hope there is some text, waiting for me <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> What it the correct way to describe, lets say, a shoulder joint?<br>
+<br>
+What I definitely understood is that article is outdated, and the modern way to simulate the constraints is to get velocity constraints, differentiating the constraint equations and to correct velocities (and positions too, using NGS) according to it. The Jacobian matrix will give the velocity corrections I need. But there's still an issue that angular constraint is inequality... I What are good texts about inequality constraints in real time physics simulation (besides Erin Catto's "Uderstanding Constraints" (which is great, btw, but I want some diversity)).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

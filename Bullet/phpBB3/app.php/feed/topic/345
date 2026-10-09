@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/345" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-06-07T18:32:17+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/345</id>
+
+		<entry>
+		<author><name><![CDATA[mewert]]></name></author>
+		<updated>2006-06-07T18:32:17+00:00</updated>
+
+		<published>2006-06-07T18:32:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1142#p1142</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1142#p1142"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1142#p1142"><![CDATA[
+Dirk, thanks for the reply.  <br><br>I took a quick read over the Cline thesis section on stabilization.  So the term stabilization and Baumgart comes from DAE/ODE literature.  That makes sense now.  Thing is, most people doing real-time physics ( in games ) approach the problem from a geometric point of view.  Which tends to result in better optimizations/easy-to-understand code.  I find it _way_ easier to code up new constraint types using geometry rather than calculus.  The principle of virtual work is very simple in a geometric interpretation, so it's not like you are violating anything either.<br><br>So we would be using a projection scheme.  I think the problem with stability I am seeing is due to the fact that we are applying the drift correction a step late.  We are recovering from penetration by modifying the position/rotation of a body ( rather than through velocity ).  If we did the penetration recovery step before we solved for constraint forces, that would be an implicit step rather than an explicit one.  i.e. solve for constraint forces at the projected position rather than the current one.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=323">mewert</a> — Wed Jun 07, 2006 6:32 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-06-07T16:36:55+00:00</updated>
+
+		<published>2006-06-07T16:36:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1141#p1141</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1141#p1141"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1141#p1141"><![CDATA[
+Ok, I try my best. In a rigid body simulation you normally have:<br><br>dx/dt = v<br>dv/dt = W * f<br><br>Constraints are expressed as algebraic implicit equations (e.g. x^2 - r^2 = 0)<br><br>C(x,q) = 0<br><br>This builds what is called an differential algebraic system (DAE).  The algebraic equations (constraints) "create" forces such that the (position) constraints remain satisfied. E.g. for the a mass point on a circle the algebraic equation results in a force canceling out all "accelerations" not tangential to the circle. <br><br>You typically get:<br><br>dx/dt = v<br>dv/dt = W * (f_ext + f_c)<br><br>with f_c = JT*lambda<br><br>The direction of the force is know because of the gradients (Jacobian) of the constraint equation. In the example the gradient of the circle is normal to the tangent at each location on the circle.  So you have to solve the following system:<br><br>dx/dt = v<br>dv/dt = W * (f_ext + JT*lambda)<br><br>C(x,q) = 0 where dC/dx = J<br><br>The classical approach to solve this DAE of index 2 is to build the second derivative of the constraint equation. Note that a geometric constraint also imposes a velocity and an acceleration constraint onto a system - sometimes refered to as hidden constraints. E.g. for a ball joint you require that the anchor always are on the point in space. It also requires that the relative velocity and acceleration at the anchor are equal. For my knowledge the known physic engines solve on the velocity level and you get the known velocity constraint with the "famous" Jacobian matrix: <br><br>dC/dt = dC/dx * dx/dt = J * v = 0<br><br>In this form when solving on the velocity level you will get quite some drift - that is the position constraints will not be satisfied which is for example a ball joint drifting apart at the anchor. In order to stabilze this you now put the position constraint equation into the velocity constraint and get<br><br>J * v = tau * C(x,q) / dt <br><br>This is what is know as Baumgarte stabilization. You find a good explanation of this in the 2005 GDC paper of Erin Catto. The term tau * C(x,q) / dt equals 'c' in ODE terminology.<br><br>In this form you add some extra velocity to the persistent momentum of the body which might result in overshoot. A solution to this is to solve two times - first for the velocity error and second for the drift. This is called projection. See ro example the master thesis of Bradley Cline for this...<br><br>HTH<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Wed Jun 07, 2006 4:36 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mewert]]></name></author>
+		<updated>2006-06-06T23:11:28+00:00</updated>
+
+		<published>2006-06-06T23:11:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1135#p1135</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1135#p1135"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1135#p1135"><![CDATA[
+We effectively teleport our bodies out of penetration.  So we change the position without affecting the velocity.  Is this non-standard?  It wasn't super unstable, but my goal was a linear stack of 8 boxes remaining completely motionless for at least 5 min, that didn't happen with the penetration recovery.<br><br>I don't really know what post-stabilization or projection means in this context.  Projection of what?  Stabilization of who, when?  Baumgart, wtf?  No wonder physics is still one of the least commonly understood disciplines in game development.  Someone needs to make a multi-context glossary available for real-time physics <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">   Apologies for the ranting. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_mad.gif" width="15" height="15" alt=":x" title="Mad">  I guess in defense, graphics has their fair share of confusing acronyms and old-world last names.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=323">mewert</a> — Tue Jun 06, 2006 11:11 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-06-06T09:00:01+00:00</updated>
+
+		<published>2006-06-06T09:00:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1131#p1131</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1131#p1131"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1131#p1131"><![CDATA[
+I never had problems with warmstarting and stabilization (Baumgarte or Projection). If you look at the examples of Erin Catto they work actually perfect with stabilization enabled. Do you have any explanations for this? What kind of non-standard stabilization did you use if I might ask?<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Tue Jun 06, 2006 9:00 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mewert]]></name></author>
+		<updated>2006-06-05T23:10:49+00:00</updated>
+
+		<published>2006-06-05T23:10:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1130#p1130</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1130#p1130"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1130#p1130"><![CDATA[
+We had a similar drift problem.  After implementing warm starting ( and contact point caching ) the problem went away.  <br><br>So you need to keep track of contact points that are the same between frames, and store the constraint force applied at the previous frame.  Start your solution vector with those values.  <br><br>This worked perfectly when no penetration recovery was employed.  I had to mess around a bit to get our non-standard penetration recovery to behave properly without upsetting the stack. So make sure your stack exhibits no horizontal drift when you disable penetration recovery( "baumgart" or "post-whatever-stabilization", I think are the terms in use ) first.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=323">mewert</a> — Mon Jun 05, 2006 11:10 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jiangwei]]></name></author>
+		<updated>2006-05-26T03:04:48+00:00</updated>
+
+		<published>2006-05-26T03:04:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1091#p1091</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1091#p1091"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1091#p1091"><![CDATA[
+<blockquote class="uncited"><div>-I meant if you choose an arbitrary direction or align the first tangential direction with the raltive tangential velocity. This might give you better results...</div></blockquote>remiss of i not to read your post carefully,sorry for my mistake.<br>yes,i used raltive tangential velocity direction as my first tangent direction,these box slick and slide behaved well.but,after boxs had stopped for a few seconds these boxs begain to sliding ......<br>To my thinking,numerical error creeps leads to this undesired sliding.<br>I had try to use fixed time step and 100 iterations ,the boxs stack is more stable as before,but the begain sliding when after boxs stopped for a few seconds is also happened...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=361">jiangwei</a> — Fri May 26, 2006 3:04 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-05-24T09:03:53+00:00</updated>
+
+		<published>2006-05-24T09:03:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1075#p1075</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1075#p1075"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1075#p1075"><![CDATA[
+- How do you choose the tangential direction at the contact point / manifold center?<br><br>I meant if you choose an arbitrary direction or align the first tangential direction with the raltive tangential velocity. This might give you better results...<br><br>Try a fixed timestep of 60 hz at 10 iterations if you warmstart and tell me if this works. One thing I came across but actually never looked into more sorrowly is that is might be better to solve the friction constraints at the end of the loop. So you might want to try to order your constraints like this:<br><br>- Joints<br>- Contacts<br>- Friction<br><br>Let me know if you get different results with other ordering...<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Wed May 24, 2006 9:03 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jiangwei]]></name></author>
+		<updated>2006-05-23T11:39:20+00:00</updated>
+
+		<published>2006-05-23T11:39:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1058#p1058</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1058#p1058"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1058#p1058"><![CDATA[
+Thank you for you reply !<br><blockquote class="uncited"><div>- How many contact points do you generate? </div></blockquote>every vertex of box.<blockquote class="uncited"><div>- Do you use SAT or GJK with some kind of manifold like Erwin? </div></blockquote>Yes.<blockquote class="uncited"><div>- How do you choose the tangential direction at the contact point / manifold center?  </div></blockquote>Contact point.<blockquote class="uncited"><div>- How many friction constraints do you define per point - two?</div></blockquote>Yes ,per point have two direction friction constranits.<blockquote class="uncited"><div>- Do you solve for the friction at every contact point or at the center of the manifold like suggested by A. Moravanzky in GPG 4 or Erin Catto at the GDC?</div></blockquote>Every contact.<blockquote class="uncited"><div>- What is the gravity?</div></blockquote>-9.8<blockquote class="uncited"><div>- What is the timestep? Is it constant or fluctuating?</div></blockquote>Fluctuating.<blockquote class="uncited"><div>- How many iterations?</div></blockquote>8<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=361">jiangwei</a> — Tue May 23, 2006 11:39 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-05-23T09:00:31+00:00</updated>
+
+		<published>2006-05-23T09:00:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1057#p1057</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1057#p1057"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1057#p1057"><![CDATA[
+This is a very difficult to say from the information you are providing. <br><br>- How many contact points do you generate? <br>- Do you use SAT or GJK with some kind of manifold like Erwin? <br>- How do you choose the tangential direction at the contact point / manifold center?  <br>- How many friction constraints do you define per point - two?<br>- Do you solve for the friction at every contact point or at the center of the manifold like suggested by A. Moravanzky in GPG 4 or Erin Catto at the GDC?<br>- What is the gravity?<br>- What is the timestep? Is it constant or fluctuating?<br>- How many iterations?<br><br>Do you have any validation code that measures the constraint error ( that is the relative velocity in direction of the tangents) after running the PGS solver and applying the correcting impulses / forces?<br><br>As Erin said in another thread here. You really should make sure that two boxes (1x1x1) with 1kg mass are stable at a gravity of 10 with a constant timestep of 60 Hz at about 10 iterations. This should be stable even without warmstarting from my experience. If this doesn't work it is very likely that you are doing something wrong in either your constraint setup or solving.  The best way to validate your solver later is a simple stack of about 5 boxes like e.g. the two stack demos in Erin Cattos 2D engine from the GDC this year...<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Tue May 23, 2006 9:00 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jiangwei]]></name></author>
+		<updated>2006-05-23T04:36:32+00:00</updated>
+
+		<published>2006-05-23T04:36:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1056#p1056</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1056#p1056"/>
+		<title type="html"><![CDATA[About correct error and stack stable]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1056#p1056"><![CDATA[
+Hi all<br>    My physics engine used PGS to solve the LCP and use error reduction parameter ,it can run correctly when exist few boxs in physics world ,but when i build a box stack then begin to honrizontal moved and quake.<br>the box stack that collapseed only in 2 second.<br>    My question is how to correct this error?which correct error tips is used by commerical physics engine?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=361">jiangwei</a> — Tue May 23, 2006 4:36 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

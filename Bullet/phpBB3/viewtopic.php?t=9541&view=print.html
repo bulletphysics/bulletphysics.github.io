@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Constraints Derivation for Rigid Body Simulation in 3D</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Constraints Derivation for Rigid Body Simulation in 3D</h2>
+		<p><a href="viewtopic.php%3Ft=9541.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9541</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Constraints Derivation for Rigid Body Simulation in 3D</h3>
+				<div class="date">Posted: <strong>Tue Nov 12, 2013 10:52 pm</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content">Hello. I have been using this forum for many years now and I have learned so many things here. Now, it's my turn to share.<br>
+<br>
+During the development of my 3D physics library, I had to model different constraints like contacts, friction and some joints between rigid bodies. I'm using a Sequential Impulses solver as described in Erin Catto's presentation at GDC. As you probably know, we need to compute the Jacobian matrix J, the effective mass matrix K and also the bias velocity vector b for each type of constraint. In Erin's presentation, contact and friction are well explained but sometimes it is difficult to find the derivation of those quantities for others constraints like joints in 3D. Since I had to derive those constraints for my physics library, I have written a document that gives the details of the calculations.<br>
+<br>
+Here is the list of the constraints that are covered in this document:<br>
+<br>
+- Contact and Friction<br>
+- Ball-And-Socket joint<br>
+- Slider joint (with motor and limits)<br>
+- Hinge joint (with motor and limits)<br>
+- Fixed joint<br>
+<br>
+You can download the document <a href="http://danielchappuis.ch/download/ConstraintsDerivationRigidBody3D.pdf" class="postlink">here</a>.<br>
+<br>
+I hope it will be useful. Do not hesitate to let me know if you find something wrong.<br>
+<br>
+----------<br>
+Daniel Chappuis<br>
+Switzerland<br>
+<a href="http://www.danielchappuis.ch" class="postlink">http://www.danielchappuis.ch</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraints Derivation for Rigid Body Simulation in 3D</h3>
+				<div class="date">Posted: <strong>Wed Nov 13, 2013 1:19 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Wow this paper looks very professional, and the information seems great. I just wanted to say thanks for making a public contribution. Very helpful for others studying the same information!<br>
+<br>
+I noticed that your slider joint contains the Jacobian of: [-t, -((r1 + u) x t), t, (r2 x t)]<br>
+<br>
+Although a valid jacobian one body is not getting any recognition of the u vector. Since the angular terms aren't symmetric the Jacobian is basically assuming that one of the bodies doesn't change orientation. To come to a Jacobian with symmetric angular terms (for ease of use) one could redefine the velocity to be in terms of the slider axis itself, yielding a Jacobian:<br>
+<br>
+[-t, -(t x c) / 2, t, (t x c) / 2]<br>
+<br>
+Where c is r2 - r1, or the slider axis between each anchor point. Does this make any sense?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraints Derivation for Rigid Body Simulation in 3D</h3>
+				<div class="date">Posted: <strong>Wed Nov 13, 2013 7:16 pm</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content"><blockquote><div><cite>RandyGaul wrote:</cite>
+I noticed that your slider joint contains the Jacobian of: [-t, -((r1 + u) x t), t, (r2 x t)]<br>
+<br>
+Although a valid jacobian one body is not getting any recognition of the u vector. Since the angular terms aren't symmetric the Jacobian is basically assuming that one of the bodies doesn't change orientation. To come to a Jacobian with symmetric angular terms (for ease of use) one could redefine the velocity to be in terms of the slider axis itself, yielding a Jacobian:<br>
+<br>
+[-t, -(t x c) / 2, t, (t x c) / 2]<br>
+<br>
+Where c is r2 - r1, or the slider axis between each anchor point. Does this make any sense?</div></blockquote>
+Hello. Thanks for your answer. Actually, I think this is because my vectors n1 and n2 are world-space vectors computed from a slider  axis<br>
+vector that is stored in the local-space of body 1. This was not explained very well in document and I have updated it. Therefore, I think the angular terms seem to be asymmetric in the Jacobian matrix because they are defined with respect to body 1.<br>
+<br>
+Consider p1 and p2 the world-space positions of the anchor points. We have:<br>
+<br>
+u = p2 - p1 = x2 + r2 - x1 - r1<br>
+<br>
+Therefore, we have:<br>
+<br>
+Angular term of body 1 : -((r1 + u) x n1) = -((p2 - x1) x n1)<br>
+Angular term of body 2 : (r2 x n1) = ((p2 - x2) x n1)<br>
+<br>
+which looks much more symmetric. I think it is also the way the Prismatic joint constraint has been derived in Box2D as you can see <a href="https://code.google.com/p/box2d/source/browse/trunk/Box2D/Box2D/Dynamics/Joints/b2PrismaticJoint.cpp" class="postlink">here</a>.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

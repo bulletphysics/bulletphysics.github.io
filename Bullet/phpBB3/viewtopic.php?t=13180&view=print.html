@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Use of api（CreateFromTriMesh）</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Use of api（CreateFromTriMesh）</h2>
+		<p><a href="viewtopic.php%3Ft=13180.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13180</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Use of api（CreateFromTriMesh）</h3>
+				<div class="date">Posted: <strong>Wed Mar 24, 2021 2:28 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">static btSoftBody* CreateFromTriMesh(btSoftBodyWorldInfo&amp; worldInfo,<br>
+	const btScalar* vertices,<br>
+		const int* triangles,<br>
+		int ntriangles,<br>
+		bool randomizeConstraints = true);<br>
+Hello, can you help me explain what these parameters represent and how to obtain them?<br>
+const btScalar* vertices,<br>
+const int* triangles,<br>
+int ntriangles,<br>
+thank you very much</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Use of api（CreateFromTriMesh）</h3>
+				<div class="date">Posted: <strong>Wed Mar 24, 2021 2:46 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">You should examine the implementation of <strong class="text-strong">btSoftBodyHelpers::CreateFromTriMesh()</strong> inside the CPP file to see how they are used.  But I would guess:<br>
+<br>
+<strong class="text-strong">const btScalar* vertices</strong> is a pointer to a buffer of btScalar representing the float or double (depending on if btScaler is a float or double) values the vertices.  I would assume (but you can verify by looking at the code) the vertices are in order: <strong class="text-strong">xyzxyzxyx...</strong>, where each set of three represents a 3D point.<br>
+<br>
+<strong class="text-strong">const int* triangles</strong> is a pointer to a buffer of int indices representing offsets to points inside the vertices buffer.  I would assume (but you can verify by looking at the code) the indices are ordered in sets of three: <strong class="text-strong">abcabcabc...</strong> where each <strong class="text-strong">abc</strong> indexes the three points of a triangle.<br>
+<br>
+<strong class="text-strong">int ntriangles</strong> is "number of triangles".  This means the <strong class="text-strong">triangles</strong> buffer must be <strong class="text-strong">3*ntriangles</strong> long.  The length of the <strong class="text-strong">vertices</strong> buffer doesn't matter to the function call: if done correctly the <strong class="text-strong">triangles</strong> indices should never offset outside of it.<br>
+<br>
+<strong class="text-strong">bool randomizeConstraints = true</strong> determines if the constraints in the soft body should be solved randomly or systematically.  I think: best to leave this <strong class="text-strong">true</strong> unless you really know how the SoftBody solver works.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Use of api（CreateFromTriMesh）</h3>
+				<div class="date">Posted: <strong>Wed Mar 31, 2021 6:35 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">Thank you very much for your reply.<br>
+<br>
+I tried to use btSoftBodyHelpers::CreateFromTriMesh and btSoftBodyHelpers::CreateFromConvexHull to create the softbody but it has been unsuccessful. Could you please tell me why?<br>
+<br>
+<img src="http://m.qpic.cn/psc?/V14M18zN39zIp3/ruAMsa53pVQWN7FLK88i5mEj2SDH6ULwIpVlyN2ezDVC1iVGX4.505WrMvdAzk8ox9fwOGrCrHcx5I2aXi0DjftcUD9fI7KlVWz8b3nf2FM!/mnull&amp;bo=hwUcAAAAAAADB7w!&amp;rf=photolist&amp;t=5" class="postimage" alt="Image"><br>
+<br>
+m_size=0 and -	m_softBodySolver	0x0000000000000000 &lt;NULL&gt;	btSoftBodySolver *</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Use of api（CreateFromTriMesh）</h3>
+				<div class="date">Posted: <strong>Wed Mar 31, 2021 2:43 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I looked at the code for <strong class="text-strong">btSoftBody</strong>.  AFAICT the <strong class="text-strong">m_collisionDisabledObjects</strong> vector date member of that class is used when linking soft bodies together with "anchors".  If you're not doing that then you would expect that vector container to be empty.<br>
+<br>
+The <strong class="text-strong">m_bodySolver</strong> is set internally, implicitly when adding the body to the world.  The code for setting it looks like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13180&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>        // Set the solver that handles this soft body
+        // Should not be allowed to get out of sync with reality
+        // Currently called internally on addition to the world
+        void setSoftBodySolver(btSoftBodySolver* softBodySolver)
+        {
+                m_softBodySolver = softBodySolver;
+        }</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

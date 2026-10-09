@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bad inertia tensor properties, setting inertia to zero for link</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bad inertia tensor properties, setting inertia to zero for link</h2>
+		<p><a href="viewtopic.php%3Ft=13248.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13248</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bad inertia tensor properties, setting inertia to zero for link</h3>
+				<div class="date">Posted: <strong>Tue Jul 27, 2021 2:00 pm</strong></div>
+				<div class="author">by <strong>andytgl</strong></div>
+				<div class="content">When trying load an URDF via <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13248&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>loadURDF()</code></pre></div> with flag <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13248&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>URDF_USE_INERTIA_FROM_FILE</code></pre></div>
+I have noticed that pybullet will set the inertia to zero if the sum of the inertia on two principal components of the inertia tensor is smaller than the third remaining (for example if i_xx + i_yy &lt; i_zz), throwing the error message <blockquote class="uncited"><div>Bad inertia tensor properties, setting inertia to zero for link</div></blockquote>
+This is caused by the following lines <a href="https://github.com/bulletphysics/bullet3/blob/5ae9a15ecac7bc7e71f1ec1b544a55135d7d7e32/examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp#L460" class="postlink">https://github.com/bulletphysics/bullet ... r.cpp#L460</a>.<br>
+My questions are:
+<ul>
+<li>Why these checks are in place?</li></ul>
+<ul><li>How can I avoid this check, and correctly load the inertia specified in the URDF?</li> </ul>
+I have also noticed that if we let pybullet compute the inertia from the geometric properties speified in an URDF (by not setting the URDF_USE_INERTIA_FROM_FILE flag), the obtained inertia may not respect the property that is being enforced by loadURDF()<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bad inertia tensor properties, setting inertia to zero for link</h3>
+				<div class="date">Posted: <strong>Tue Jul 27, 2021 3:34 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I believe those are correct sanity checks for the inertia tensor eigen values: it is impossible for one value to exceed the sum of the other two.  After a half hearted search online I couldn't find a mention or proof of that theorem however I offer my own partial proof:    <br>
+<br>
+Consider the simplest possible configuration: a point mass <strong class="text-strong">M</strong> at some vector <strong class="text-strong">R</strong>.  The inertia tensor coefficient about each principal axis is given by <strong class="text-strong">I = M * r^2</strong> where r is the perpendicular distance between the mass and the axis. Specifically they are:<br>
+<br>
+<strong class="text-strong">Ix = M * (Ry^2 + Rz^2)<br>
+Iy = M * (Rz^2 + Rx^2)<br>
+Iz = M * (Ry^2 + Rx^2)</strong><br>
+<br>
+Let us assume that for some <strong class="text-strong">R</strong> it is possible for <strong class="text-strong">Ix &gt; Iy + Iz</strong>:<br>
+<br>
+<strong class="text-strong">M * (Ry^2 + Rz^2) &gt; M * (Rz^2 + Rx^2 + Ry^2 + Rx^2)</strong><br>
+<br>
+Divide both sides by <strong class="text-strong">M</strong>:<br>
+<br>
+<strong class="text-strong">Ry^2 + Rz^2 &gt; Rz^2 + Ry^2 + 2 * Rx^2</strong><br>
+<br>
+Subtract <strong class="text-strong">(Ry^2 + Rz^2)</strong> from both sides:<br>
+<br>
+<strong class="text-strong">0 &gt; 2 * Rx^2</strong><br>
+<br>
+This final statement is impossible for all possible values of <strong class="text-strong">Rx</strong>.  Therefore we must conclude that our assumption above is false for all values of <strong class="text-strong">R</strong>.  In other words: it must be true:    <br>
+<br>
+<strong class="text-strong">Ii &lt;= Ij + Ik</strong><br>
+<br>
+For the various convolutions of <strong class="text-strong">xyz = ijk</strong>.<br>
+<br>
+I've proved it is true for a point mass.  The inertia tensor of a real object with non-zero volume is the integral of its point masses.  I posit but do not prove here (I'm not actually a mathematician): it can be proved that the integral of point elements that obey the property: <strong class="text-strong">Ii &lt;= Ij + Ik</strong> must also obey that property.<br>
+<br>
+In short: the inertia tensor in your URDF is wrong.  You will have to recompute it.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

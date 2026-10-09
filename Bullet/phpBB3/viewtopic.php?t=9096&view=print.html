@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; PGS Iteration: local vs. global</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>PGS Iteration: local vs. global</h2>
+		<p><a href="viewtopic.php%3Ft=9096.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9096</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 4:44 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Hi there,<br>
+<br>
+Interesting thing I stumbled across while implementing my own block solver.  Most physics engines are doing collisions pair-wise (as am I).  This brings up the question: what order do you solve this binomial collision problem?  I have to look more into bullet to see if it comes up with an "optimal ordering" of solving colliding pairs.  Basically, in a PGS solver, you have the choice of resolving collisions like 1):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9096&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for n iterations
+   for every colliding pair
+      solve constraints
+   end
+end
+</code></pre></div>
+
+or 2):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9096&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for every colliding pair
+   for n iterations
+      solve constraints
+   end
+end
+</code></pre></div>
+
+I call 1) global and I call 2) local.  In my engine, I found that doing the following gives "more robust results":<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9096&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for m iterations
+   for every colliding pair
+      for n iterations
+         solve constraints
+      end
+   end
+end
+</code></pre></div>
+
+Of course, then there is one drawback:  the time complexity is O(m*n) which is slower than the usual 10 iterations we see.  The difference in doing local vs. global solving is profound.  You will get virtually two different results, although I've found in a multi-body system, the global method performs better.<br>
+<br>
+Anybody have experience with this problem?  Any ideas on the optimal method?  If I set m to 30 and n to 3, I can stack boxes fine, but 90 iterations is a little ridiculous for a game.  Anyway, let me know your thoughts.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 4:20 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I'm not sure what other people do, but I just consider a single collision as a constraint, to be solved generically along with every other constraint. I suppose that's closer to your global solution.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 9:37 pm</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">How many iterations do you have to use for successful box stacking?<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 10:47 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">For 5 boxes around 4-8 iterations @ 60 Hz. Depends whether they start resting or if you drop them onto each other. After this the iterations scale with the number of boxes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 1:34 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Wow that's a really low amount of iterations.  Maybe I'm doing something wrong.  I'll look into it.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 2:12 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I just checked. For 5 boxes starting nicely touching I need 4 velocity and 1 position iterations. If the boxes fall onto each other from 0.5 meters I need 8 and 2 iterations.<br>
+You will need warmstarting for this to work. With warmstarting you essentially get an amortized iteration count over several frames.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 2:56 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Bah, I just divide displacement by the timestep and group everything as velocity constraints.  Maybe I should separate them like you do.  I'm not sure my warmstarting is accurate.  For a given contact point, I store the impulse last calculated and use it (multiply by M^-1J^T) to form my guess for PGS in the next frame.  Do you think collision is a factor?  I'm not box clipping, I'm using GJK.  But with more iterations it definitely stacks--so I don't know...<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 4:39 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Correct me if I'm wrong, but the reason Erin's paper says you need a "cache" for feature sets is because the contact points will come and go and you will want to store that memory somewhere so the next time that feature set is encountered, we have an impulse value ready for the solver.  My understanding was that contact points are persistent and this alone is the cache.  I think I was looking at it wrong, what do you think?<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Thu May 16, 2013 10:01 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You keep a cache of contact points so you can match up old with new contact points based on the contact ID. If you can match two points you copy over the accumulated impulse from the last frame. In a persistent manifold you just find one contact point frame and need a contact point cache to find all four points.<br>
+<br>
+The first cache is about warmstarting the contact solver and the second one is about building contact geometry. In the later one the warmstarting comes for free.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Fri May 17, 2013 3:22 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Ah.  I thought there were two different cases.  Thanks for clearing it up.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Wed May 22, 2013 11:31 pm</strong></div>
+				<div class="author">by <strong>SinisterMephisto</strong></div>
+				<div class="content">Dirk How long do you keep the old contacts? I am sure they get rapidly less useful as time passes and they are psuedo warm starters in a sense.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Wed May 22, 2013 11:56 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I match contact points from the last frame with the current frame. I don't rescue points over several frames. That is why it is very important to make sure that your contact doesn't break (e.g. due to overshooting).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Fri May 24, 2013 6:19 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">Dirk,<br>
+<br>
+Do you use the feature pair as a key, or a distance calculation? Currently I am doing a distance calculation but I am wondering if I should change to a feature key as suggested in the GPG4 article. Upside is faster search and unique contacts, even when updated. Downside is that contact point generation has to be more sophisticated. For example: when generating contacts between a capsule and a plane I need to generate a pair of contacts for the line each frame with a key for each end of the segment... maybe that's not such a bad idea, but returning just one point a frame seems to work.<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: PGS Iteration: local vs. global</h3>
+				<div class="date">Posted: <strong>Fri May 24, 2013 7:44 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content"><blockquote><div><cite>sphet wrote:</cite>Dirk,<br>
+<br>
+Do you use the feature pair as a key, or a distance calculation? Currently I am doing a distance calculation but I am wondering if I should change to a feature key as suggested in the GPG4 article. Upside is faster search and unique contacts, even when updated. Downside is that contact point generation has to be more sophisticated. For example: when generating contacts between a capsule and a plane I need to generate a pair of contacts for the line each frame with a key for each end of the segment... maybe that's not such a bad idea, but returning just one point a frame seems to work.<br>
+<br>
+S</div></blockquote>
+I suggest going with feature pairs if possible. The only downside, like you said, is it is harder to do. If you'd like a good reference for generating feature pair information take a look at all of Box2D's collision routines. The nice thing about feature information is you can use indices as features for generalized polygons if you store feature information in an array. I actually just implemented generalized polygon vs polygon collision detection with the help of Dirk's GDC lecture, partially for the purpose of simpler feature pair generation.<br>
+<br>
+IIRC the most recent version of Box2D has a feature pair like so:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9096&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>struct featurePair
+{
+  union
+  {
+    struct
+    {
+      char indexA;
+      char typeA;
+      char indexB;
+      char typeB;
+    };
+    unsigned id;
+  };
+};</code></pre></div>
+
+This style is in my opinion pretty cool. A and B are the colliding objects. The type of feature can be in 2D either a face or vertex. In 3D you throw edges into the mix. The index is an index into an array of features, such as face normals or vertices. The id can be used for integral comparison of feature pairs, and is very fast. What makes this easier to derive is using feature indices for generalized polygons, which lets you think in terms of your algorithm loop instead of cold-hard geometrical representations.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

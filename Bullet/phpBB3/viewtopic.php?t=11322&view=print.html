@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Quaternion rotational constraints</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Quaternion rotational constraints</h2>
+		<p><a href="viewtopic.php%3Ft=11322.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11322</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Quaternion rotational constraints</h3>
+				<div class="date">Posted: <strong>Fri Sep 02, 2016 6:50 am</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">I've begun researching quaternion constraints, and am trying to implement a simple constraint that locks a body's orientation to a target orientation (i.e. a 3 DoF constraint). My constraint is defined as:<br>
+<br>
+C = β * ϴ^-1; β = target orientation, ϴ = body orientation, i.e. the delta between the body and target orientations is 0.<br>
+<br>
+Deriving C:<br>
+<br>
+dC/dt = 0.5 * β * (w * ϴ)^-1; w here is a pure quaternion with real part equal to 0<br>
+         = 0.5 * β * ϴ^-1 * -w; w^-1 = -w for pure quaternions<br>
+         = -0.5 * G(β) * E(ϴ^-1)^T * w; G and E are defined as per <a href="http://umu.diva-portal.org/smash/get/diva2:140361/FULLTEXT01.pdf" class="postlink">this</a> (see 14.1 and associated notation)<br>
+<br>
+J by inspection is then:<br>
+<br>
+J = [ 0 -0.5 * G(β) * E(ϴ^-1)^T ]<br>
+<br>
+Computing K:<br>
+<br>
+K = 0.25 * G(β) * E(ϴ^-1)^T * I^-1 * E(ϴ^-1) * G(β)<br>
+<br>
+K is a 4x4 matrix, which to me means we are removing 4 DoF as per quaternion-space, or 3 DoF as per R^3 (this could be an entirely incorrect assumption).<br>
+<br>
+Computing lambda for the position constraint is then:<br>
+<br>
+λ = K^-1 * -C; C here is represented as (C.W, C.X, C.Y. C.Z) for matrix multiplication, λ is a 4-vector<br>
+<br>
+I then calculate my impulse as:<br>
+<br>
+P = J^T * λ<br>
+<br>
+J^T yields me E(ϴ^-1) * G(β)^T, which is a 3x4 matrix, which allows me to convert λ back into R^3. This impulse is then applied normally to the body.<br>
+<br>
+I believe my derivation is sound, however this does not work. I believe either my algebra is mistaken or my initial constraint equation is incorrect. If anyone can offer any advice and help me come to better understand quaternion constraints it would be much appreciated.<br>
+<br>
+- Joe Lubertazzi</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

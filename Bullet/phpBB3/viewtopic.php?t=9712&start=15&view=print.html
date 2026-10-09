@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rigid body box stacking - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rigid body box stacking</h2>
+		<p><a href="viewtopic.php%3Ft=9712.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9712</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Fri Jan 31, 2014 1:10 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You need two friction axes. Imagine you apply an impulse orthogonal to t1 + t2 inside the contact plane. The object would have no resistance and could move freely. Just keep your friction basis constant over a frame and also don't recompute the effective friction mass and you should be fine! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Fri Jan 31, 2014 8:03 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>I have tested this in real production code that actually shipped and trust me it is a real world problem. If you want to push an object from A to B in a game and it moves on an arc rather than a straight line this will be indeed a problem. If objects slide on planes and actually also rotate around the up-axis that is a problem. Sorry student projects and personal testing don't count! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> You also might want to come up with better test cases!</div></blockquote>
+Cool thanks a lot for the perspective Dirk, I appreciate it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Fri Jan 31, 2014 10:17 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks Dirk, none of that seems to make a difference. I debugged it thoroughly with a simple case (box falling straight on a plane without friction) and found that the accumulated impulses from the four contact points come out as 1.108, 0.665, 1.108, 0.665 on the contacts diagonal to each other. Do you expect that the accumulated impulses should be same at all points, from a very small drop height? These are the accumulated impulses after 10 iterations, however the impulses at all of the points converge to zero.<br>
+<br>
+Warm starting with those uneven accumulated impulses seems wrong.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sat Feb 01, 2014 11:28 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Ok I think I found the problem, it's the clipping algorithm epsilon. I use Sutherland-Hodgman and it returns 4 contacts, however when I clip them against the face plane, sometimes it retains 3 contacts, which is most likely what causes the box to wobble. The impulse solver is fine as it converges, then when there's 3 contact points, it starts up with the bouncing again. In Box2D it's easier for this not to happen because there's a maximum of only 2 contact points to deal with. <br>
+<br>
+I used the smallest penetration depth from SAT for all contacts, retaining all of the points returned from the clipping algorithm and the stack is stable, but the boxes look unevenly stacked as expected.<br>
+<br>
+I am not sure if this is a common problem, any ideas for a solution? The clipping of the line segment to a plane or the clipping points to the face plane epsilon need stability but I am not sure if this is simply achieved by thicker planes, as inevitably clipping against the face plane will remove contacts.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sat Feb 01, 2014 9:34 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content"><blockquote><div><cite>c0der wrote:</cite>Ok I think I found the problem, it's the clipping algorithm epsilon. I use Sutherland-Hodgman and it returns 4 contacts, however when I clip them against the face plane, sometimes it retains 3 contacts, which is most likely what causes the box to wobble. The impulse solver is fine as it converges, then when there's 3 contact points, it starts up with the bouncing again. In Box2D it's easier for this not to happen because there's a maximum of only 2 contact points to deal with. <br>
+<br>
+I used the smallest penetration depth from SAT for all contacts, retaining all of the points returned from the clipping algorithm and the stack is stable, but the boxes look unevenly stacked as expected.<br>
+<br>
+I am not sure if this is a common problem, any ideas for a solution? The clipping of the line segment to a plane or the clipping points to the face plane epsilon need stability but I am not sure if this is simply achieved by thicker planes, as inevitably clipping against the face plane will remove contacts.</div></blockquote>
+I'm assuming you're using sutherland hodgman clipping? This is the routine I always hear people recommend. There's a robust implementation in Ericson's Orange Book. The idea of making the clipping routine robust is to have 3 cases of line segment to plane for each point: in front, behind and on the plane. With these three cases I've found the most robust clipping implementation for myself thus far.<br>
+<br>
+You shouldn't need too big of an epsilon, however you do need to make sure that you have a penetration slop for contact resolution that is upheld (you don't want the clipping epsilon higher than the penetration slop, or clipping will lower your frame coherence).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 1:18 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">From the SAT you obtain the axis of minimum penetration. This defines your reference face. Now you find the most anti-parallel face on the other body. Next you clip the incident face against the side planes of the reference plane and finally keep the points below the reference face. The penetration distance for each point is the distance of that point to the reference plane and not the distance returned from SAT.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 4:24 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Dirk, that's exactly what I did. The step where I discard contacts that are above the reference face causes a loss of contact point, which causes the instability.<br>
+<br>
+Randy, if I have those 3 cases, I am discarding points infront of the face plane (outside the OBB) technically, so the only valid case will be "behind the plane". How do your contacts look? Do you always get 4 if it's a straight face on face or the occasional 3 or 1 contact?<br>
+<br>
+Attached the most stable case, where the clipping algorithm for flat face on face returns some higher points than others, maybe due to the initial impulse accumulation being different at 2 contacts. Do you expect to get the same accumulated impulse at the four contacts to warmstart with?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 5:53 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">I will have 4 to 5 contacts if boxes are resting on each other, usually 4. With sutherland-hodgman the algorithm should not reject any points that you need. If you like I can type out the various cases in psuedo code if I have some spare time tomorrow.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 7:14 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks alot. I reverted back to what Dirk said, which is the correct way I had before. What's really weird is that when I have 10 iterations, a stack of 5 is almost instantly stable, but when I increase iterations to 15, energy gets introduced into the system. Something seriously wrong here. I don't really think it's the clipping anymore because I toggled a breakpoint when the number of contacts become 1, and this happens after a bit of jiggling among the boxes causes them to be uneven. It's just some really weird problem that makes no logical sense.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 9:52 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Ran another test, I zero'd the velocities (6 box stack), then unzero'd them and they started up again. So I disabled the bias and the impulses converged at 10 iterations. <br>
+<br>
+Another test, disabled friction, stepped through, and the bias &amp; penetration depths were uniform on all 4 contacts for the first few frames until the boxes slipped off each other. It now appears that the problem lies in the friction computation, maybe a creeping error in the alignment of the tangent vectors, will investigate further.<br>
+<br>
+Here is my code to compute the two tangents from the normal vector:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	if (fabsf(x)&gt;=fabsf(y))
+	{
+		// x or z is the largest magnitude component, swap them
+		AMG3DScalar sInvLength = 1 / (x*x + z*z);
+		(*pTangent1).x = -z * sInvLength;
+		(*pTangent1).y = 0.0f;
+		(*pTangent1).z = x * sInvLength;
+		(*pTangent2).x = y * (*pTangent1).z;
+		(*pTangent2).y = z*(*pTangent1).x - x*(*pTangent1).z;
+		(*pTangent2).z = -y * (*pTangent1).x;
+	}
+	else
+	{
+		// y or z is the largest magnitude component, swap them
+		AMG3DScalar sInvLength = 1 / (y*y + z*z);
+		(*pTangent1).x = 0.0f;
+		(*pTangent1).y = z * sInvLength;
+		(*pTangent1).z = -y * sInvLength;
+		(*pTangent2).x = y*(*pTangent1).z - z*(*pTangent1).y;
+		(*pTangent2).y = -x * (*pTangent1).z;
+		(*pTangent2).z = x * (*pTangent1).y;
+	}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 9:29 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">At a glance the idea of what you have looks okay. Try swapping it out with a little bit of my code and see if you notice a difference, maybe this can help you isolate your bug:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>inline void GenerateOrthonormalBasis( const Vec3&amp; w, Vec3 *u, Vec3 *v )
+{
+  real absX = std::abs( w.x );
+  if(absX &gt; std::abs( w.y ) &amp;&amp;
+     absX &gt; std::abs( w.z ))
+  {
+    u-&gt;x = -w.y;
+    u-&gt;y = w.x;
+    u-&gt;z = 0.0f;
+  }
+  else
+  {
+    u-&gt;x = 0.0f;
+    u-&gt;y = w.z;
+    u-&gt;z = -w.y;
+  }
+
+  u-&gt;NormalizeThis( );
+  *v = Cross( w, *u );
+  v-&gt;NormalizeThis( );
+}</code></pre></div>
+
+Edit: And then Erin posted something better:<br>
+<a href="http://box2d.org/2014/02/computing-a-basis/" class="postlink">http://box2d.org/2014/02/computing-a-basis/</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Mon Feb 03, 2014 1:46 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks a lot Randy, it still behaves the same way. Is this the approach you follow (see code)? I will attach the impulse code after as it's long.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void AMG3DRigidBodyCollisionResponder::computeMasses(const AMG3DScalar&amp; dt)
+{
+	if(m_bSkipCollision)
+		return;
+
+	if(dt&lt;=0.0f)
+		return;
+	
+	const AMG3DScalar k_allowedPenetration = 0.01f;
+	AMG3DScalar k_biasFactor = (AMG3DPhysicsWorld::g_AMG3D_bPositionCorrection) ? 0.1f : 0.0f;
+
+	for(int i=0; i&lt;m_cdContactData.iNumContacts; ++i) {
+		AMG3DVector4 normal = m_cdContactData.contacts[i].vContactNormal;
+		
+		m_rap[i] = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody1-&gt;m_vPosition;
+		m_rbp[i] = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody2-&gt;m_vPosition;
+
+		m_rapcrossn[i] = m_rap[i].cross(normal);
+		m_rbpcrossn[i] = m_rbp[i].cross(normal);
+
+		// Compute the normal mass
+		AMG3DScalar Kn = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;
+		Kn += ( m_pRigidBody1-&gt;m_matInvIWorld * m_rapcrossn[i].cross(m_rap[i]) + 
+				m_pRigidBody2-&gt;m_matInvIWorld*m_rbpcrossn[i].cross(m_rbp[i]) ).dot(normal);
+		m_cdContactData.contacts[i].massNormal = 1.0f/Kn;
+
+		// Compute the bias (prevents sinking, useful for stacking)
+		m_cdContactData.contacts[i].bias = k_biasFactor / dt * 
+							AMG3D_MATH_MAX(0.0f, m_cdContactData.contacts[i].sPenetrationDepth - k_allowedPenetration);
+
+		// Calculate the tangent vector. To Do: Research relative velocity tangent vector
+		AMG3DVector4 vap = m_pRigidBody1-&gt;m_vVelocity + m_pRigidBody1-&gt;m_vAngularVelocity.cross(m_rap[i]);
+		AMG3DVector4 vbp = m_pRigidBody2-&gt;m_vVelocity + m_pRigidBody2-&gt;m_vAngularVelocity.cross(m_rbp[i]);
+
+		// Relative velocity
+		AMG3DVector4 vab = vap - vbp;
+
+		AMG3DVector4 vabn = normal*(vab.dot(normal));
+		AMG3DVector4 vabt = vab - vabn;
+
+		//if(vabt.magnitude()&gt;0) {
+		//	vabt.normalize();
+		//	m_t1 = vabt;
+		//	AMG3DVector4Cross(&amp;m_t2, normal, m_t1);
+		//}
+		//else {
+			
+			normal.buildOrthoBasis(&amp;m_t1, &amp;m_t2);
+		//}
+
+		m_rapcrosst1[i] = m_rap[i].cross(m_t1);
+		m_rbpcrosst1[i] = m_rbp[i].cross(m_t1);
+
+		// Compute the tangent mass in the first direction
+		AMG3DScalar Kt1 = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;
+		Kt1 += ( m_pRigidBody1-&gt;m_matInvIWorld * m_rapcrosst1[i].cross(m_rap[i]) + 
+				 m_pRigidBody2-&gt;m_matInvIWorld * m_rbpcrosst1[i].cross(m_rbp[i]) ).dot(m_t1);
+		m_cdContactData.contacts[i].massTangent1 = 1.0f/Kt1;
+
+		m_rapcrosst2[i] = m_rap[i].cross(m_t2);
+		m_rbpcrosst2[i] = m_rbp[i].cross(m_t2);
+
+		// Compute the tangent mass in the second direction
+		AMG3DScalar Kt2 = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;
+		Kt2 += ( m_pRigidBody1-&gt;m_matInvIWorld * m_rapcrosst2[i].cross(m_rap[i]) + 
+				 m_pRigidBody2-&gt;m_matInvIWorld * m_rbpcrosst2[i].cross(m_rbp[i]) ).dot(m_t2);
+		m_cdContactData.contacts[i].massTangent2 = 1.0f/Kt2;
+		
+		if(AMG3DPhysicsWorld::g_AMG3D_bWarmStarting) {
+			//AMG3DVector4 P = m_cdContactData.contacts[i].Pn*normal + m_cdContactData.contacts[i].Pt1*m_t1 + m_cdContactData.contacts[i].Pt2*m_t2;
+
+			// Project old friction impulse onto new tangent basis
+			AMG3DVector4 oldt1 = m_cdContactData.contacts[i].Pt1 * m_cdContactData.contacts[i].t1; 
+			AMG3DVector4 oldt2 = m_cdContactData.contacts[i].Pt2 * m_cdContactData.contacts[i].t2;
+
+			AMG3DVector4 P = m_cdContactData.contacts[i].Pn*normal + oldt1.dot(m_t1) * m_t1 + oldt2.dot(m_t2) * m_t2;
+
+			// Store old tangent vectors to be used for next frame
+			m_cdContactData.contacts[i].t1 = m_t1;
+			m_cdContactData.contacts[i].t2 = m_t2;
+
+			m_pRigidBody1-&gt;m_vVelocity			+= P*m_pRigidBody1-&gt;m_sInvMass;
+			m_pRigidBody1-&gt;m_vAngularVelocity	+= m_pRigidBody1-&gt;m_matInvIWorld*m_rap[i].cross(P);
+		
+			m_pRigidBody2-&gt;m_vVelocity			-= P*m_pRigidBody2-&gt;m_sInvMass;
+			m_pRigidBody2-&gt;m_vAngularVelocity	-= m_pRigidBody2-&gt;m_matInvIWorld*m_rbp[i].cross(P);
+		}	
+	}
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 09, 2014 8:18 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">I tried a simple case, box falling on another box of equal size and slightly off-center with each other, without friction. I also disabled the angular velocity update, so then the box is stable. Once I enable angular velocity update, the box keeps sliding and eventually falls off. I would expect that if the box is stationary, this shouldn't happen.<br>
+<br>
+If I enable angular velocity, the error keeps creeping slowly over time, hence this could be a problem with my integrator. Here is my code, any suggestions?<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void AMG3DRBCuboid::updatePosition(const AMG3DScalar&amp; dt)
+{
+	if(dt&lt;=0.0f)
+		return;
+
+	// May want to update the velocity of a kinematic body
+	// e.g. Camera/player interaction
+//	if(m_sMass&lt;=0.0f)
+//		return;
+
+	// Dynamic and kinematic bodies can move
+	if(m_eType==AMG3D_PHYSICS_RIGID_BODY_TYPE_STATIC)
+		return;
+
+	if(m_eState==AMG3D_PHYSICS_RIGID_BODY_STATE_SLEEPING)
+		return;
+
+	m_vPosition += m_vVelocity*dt;
+	
+	m_quatOrientation.addScaledVector(m_vAngularVelocity, dt);
+	m_quatOrientation.normalize();
+	
+	updateWorldTransformMatrix();
+
+	m_OBB.transformBy(m_matWorldTransform);
+
+	if(AMG3DPhysicsWorld::g_AMG3D_bAutoClearForces) {
+		clearNetForce();
+		clearNetTorque();
+	}
+
+	if(AMG3DPhysicsWorld::g_AMG3D_bEnableSleeping)
+		updateSleepState(dt);
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Sun Feb 09, 2014 8:08 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">I'd need to see the functions<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_quatOrientation.addScaledVector(m_vAngularVelocity, dt);
+   m_quatOrientation.normalize();</code></pre></div>
+
+Maybe we can look at your velocity update as well.<br>
+<br>
+This all can also come from an incorrect calculation in radii during collision resolution. Maybe you could double check these terms specifically. I see you pasted this above but I don't have time to comb through it.<br>
+<br>
+If it comes down to it maybe you can set up a very simple test case (like two boxes) and do the math by-hand and figure out what your impulses should be. If you can do this and step through your code you can easily see where the mistake(s) are in the first couple iterations.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigid body box stacking</h3>
+				<div class="date">Posted: <strong>Mon Feb 10, 2014 4:25 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks Randy, will do that tonight. Here is the rest of the code<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void AMG3DQuaternion::addScaledVector(const AMG3DVector4&amp; v, const AMG3DScalar&amp; scale)
+{
+	// To Do: Derive this
+	AMG3DQuaternion q(0, v.x*scale, v.y*scale, v.z*scale);
+	q *= *this;
+	
+	w += q.w * 0.5f;
+	x += q.x * 0.5f;
+	y += q.y * 0.5f;
+	z += q.z * 0.5f;
+}</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void AMG3DQuaternion::normalize()
+{
+	AMG3DScalar s = magnitude();
+	
+	if(s&gt;0) {
+		w /= s;
+		x /= s;
+		y /= s;
+		z /= s;
+	}
+}</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>AMG3DScalar AMG3DQuaternion::magnitude() const
+{
+	return sqrtf(w*w + x*x + y*y + z*z);
+}
+</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9712&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void AMG3DRigidBody::integrateForces(const AMG3DScalar&amp; dt)
+{
+	if(dt&lt;=0.0f)
+		return; 
+
+	// Just check if the body is dynamic, zero mass body = zero acceleration anyway
+	// Some forces can wake the body (user added forces), some can't (gravity), leave that to the force updater
+//	if(m_sMass&lt;=0.0f)
+//		return;
+
+	// Cannot update forces for kinematic or immovable bodies
+	if(m_eType!=AMG3D_PHYSICS_RIGID_BODY_TYPE_DYNAMIC)
+		return;
+
+	// Body is sleeping, do not integrate forces
+//	if(m_eState==AMG3D_PHYSICS_RIGID_BODY_STATE_SLEEPING)
+//		return;
+
+	m_vAcceleration			= m_vNetForce*m_sInvMass;
+	m_vAngularAcceleration	= m_vNetTorque*m_matInvIWorld;
+
+	m_vVelocity			+= m_vAcceleration*dt;
+	m_vAngularVelocity	+= m_vAngularAcceleration*dt;
+}</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

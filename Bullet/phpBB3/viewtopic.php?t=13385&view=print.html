@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rigidbody from btBvhTriangleMeshShape doesn't collide with Others</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rigidbody from btBvhTriangleMeshShape doesn't collide with Others</h2>
+		<p><a href="viewtopic.php%3Ft=13385.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13385</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rigidbody from btBvhTriangleMeshShape doesn't collide with Others</h3>
+				<div class="date">Posted: <strong>Wed Feb 23, 2022 4:09 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">hi.<br>
+<br>
+What I try to do is simple. make few btBvhTriangleMeshShape, and gather it by btCompoundShape.<br>
+TriangleMeshShape's AABB values seems correct to me, so I think vertices and Indices data for shapes are correct either.<br>
+<br>
+this codes show how I import mesh datas from obj wavefront file, and make it collision shape.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13385&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>std::vector&lt;std::shared_ptr&lt;Mesh&gt;&gt; GameObject::LoadModel(
+	ID3D12Device* device, 
+	ID3D12GraphicsCommandList* cmdList, 
+	const std::wstring&amp; path,
+	const bool&amp; makeRigidbody)
+{
+	std::ifstream in_file{ path, std::ios::binary };
+	assert(in_file.is_open(), L"No such file in path [" + path + L"]");
+
+	std::vector&lt;XMFLOAT3&gt; positions;
+	std::vector&lt;XMFLOAT3&gt; normals;
+	std::vector&lt;XMFLOAT2&gt; texcoords;
+	std::unordered_map&lt;std::string, MatInfo&gt; mats;
+	std::shared_ptr&lt;Mesh&gt; new_mesh;
+
+	std::string info;
+	while (std::getline(in_file, info))
+	{
+		std::stringstream ss(info);
+		std::string type;
+
+		ss &gt;&gt; type;
+
+		if (type == "mtllib")
+		{
+			std::string mtlname;
+			ss &gt;&gt; mtlname;
+
+			std::wstring mtl_path = L"";
+			std::wstring::size_type n = path.find('\\');
+			if (n != std::wstring::npos)
+				mtl_path = path.substr(0, n + 1);
+
+			mtl_path += std::wstring(mtlname.begin(), mtlname.end());
+
+			LoadMaterial(device, cmdList, mats, mtl_path);
+		}
+		else if (type == "v")
+		{
+			XMFLOAT3 pos;
+			ss &gt;&gt; pos.x &gt;&gt; pos.y &gt;&gt; pos.z;
+			pos.z *= -1.0f;
+			positions.push_back(pos);
+		}
+		else if (type == "vt")
+		{
+			XMFLOAT2 tex;
+			ss &gt;&gt; tex.x &gt;&gt; tex.y;
+			//tex.y = 1.0f - tex.y;
+			texcoords.push_back(tex);
+		}
+		else if (type == "vn")
+		{
+			XMFLOAT3 norm;
+			ss &gt;&gt; norm.x &gt;&gt; norm.y &gt;&gt; norm.z;
+			norm.z *= -1.0f;
+			normals.push_back(norm);
+		}
+		else if (type == "usemtl")
+		{
+			std::string mtl_name;
+			ss &gt;&gt; mtl_name;
+
+			new_mesh = std::make_shared&lt;Mesh&gt;(mtl_name);
+			new_mesh-&gt;LoadMesh(
+				device, cmdList, in_file, 
+				positions, normals, texcoords, mats[mtl_name], makeRigidbody);
+			mMeshes.push_back(new_mesh);
+		}
+	}
+
+	const auto&amp; [min_x, max_x] = std::minmax_element(positions.begin(), positions.end(), 
+		[](const XMFLOAT3&amp; a, const XMFLOAT3&amp; b) { return (a.x &lt; b.x); });
+	const auto&amp; [min_y, max_y] = std::minmax_element(positions.begin(), positions.end(),
+		[](const XMFLOAT3&amp; a, const XMFLOAT3&amp; b) {return (a.y &lt; b.y); });
+	const auto&amp; [min_z, max_z] = std::minmax_element(positions.begin(), positions.end(),
+		[](const XMFLOAT3&amp; a, const XMFLOAT3&amp; b) {return (a.z &lt; b.z); });
+
+	mOOBB.Center = { (min_x-&gt;x + max_x-&gt;x) / 2, (min_y-&gt;y + max_y-&gt;y) / 2, (min_z-&gt;z + max_z-&gt;z) / 2 };
+	mOOBB.Extents = { (max_x-&gt;x - min_x-&gt;x) / 2, (max_y-&gt;y - min_y-&gt;y) / 2, (max_z-&gt;z - min_z-&gt;z) / 2 };
+
+	return mMeshes;
+}
+
+
+void Mesh::LoadMesh(
+	ID3D12Device* device, 
+	ID3D12GraphicsCommandList* cmdList,
+	std::ifstream&amp; file,
+	const std::vector&lt;XMFLOAT3&gt;&amp; positions,
+	const std::vector&lt;XMFLOAT3&gt;&amp; normals,
+	const std::vector&lt;XMFLOAT2&gt;&amp; texcoords,
+	const MatInfo&amp; mat,
+	const bool&amp; makeRigidbody)
+{
+	mMaterial = mat;
+
+	struct UINT3
+	{
+		UINT vertIndex;
+		UINT normIndex;
+		UINT texIndex;
+	};
+	std::vector&lt;std::vector&lt;UINT3&gt;&gt; temp_indices;
+
+	int last_pos = 0;
+	std::string info;
+	while (std::getline(file, info))
+	{		
+		std::stringstream ss(info);
+		std::string type;
+
+		ss &gt;&gt; type;
+
+		if (type == "f")
+		{
+			char ignore[2];
+			UINT v, vt, vn;
+
+			temp_indices.push_back({});
+			while (ss &gt;&gt; v &gt;&gt; ignore[0] &gt;&gt; vt &gt;&gt; ignore[1] &gt;&gt; vn)
+			{
+				temp_indices.back().push_back({ v - 1, vn - 1, vt - 1 });
+			}
+			last_pos = (int)file.tellg();
+		}
+		else if (type == "usemtl") 
+		{
+			file.seekg(last_pos);
+			break;
+		}
+	}
+
+	std::vector&lt;Vertex&gt; vertices;
+	std::vector&lt;UINT&gt; indices;
+	UINT k = 0;
+	for (const std::vector&lt;UINT3&gt;&amp; curr_face : temp_indices)
+	{
+		for (int i = 0; i &lt; curr_face.size(); i++)
+		{
+			Vertex v;
+			v.Position = positions[curr_face[i].vertIndex];
+			v.Normal = normals[curr_face[i].normIndex];
+			v.TexCoord = texcoords[curr_face[i].texIndex];
+			v.TexCoord.x /= mat.TexScale.x;
+			v.TexCoord.x += mat.TexOffset.x;
+			v.TexCoord.y /= mat.TexScale.y;
+			v.TexCoord.y += mat.TexOffset.y;
+			v.TexCoord.y = 1.0f - v.TexCoord.y;
+			
+			vertices.push_back(v);
+
+			if (i &gt; 0 &amp;&amp; indices.size() % 3 == 0)
+			{
+				indices.push_back(*(indices.end() - 3));
+				indices.push_back(*(indices.end() - 2));
+			}
+			indices.push_back(k++);
+		}
+	}
+
+	const auto&amp; [min_x, max_x] = std::minmax_element(positions.begin(), positions.end(),
+		[](const XMFLOAT3&amp; a, const XMFLOAT3&amp; b) { return (a.x &lt; b.x); });
+	const auto&amp; [min_y, max_y] = std::minmax_element(positions.begin(), positions.end(),
+		[](const XMFLOAT3&amp; a, const XMFLOAT3&amp; b) {return (a.y &lt; b.y); });
+	const auto&amp; [min_z, max_z] = std::minmax_element(positions.begin(), positions.end(),
+		[](const XMFLOAT3&amp; a, const XMFLOAT3&amp; b) {return (a.z &lt; b.z); });
+
+	mOOBB.Center = { (min_x-&gt;x + max_x-&gt;x) / 2, (min_y-&gt;y + max_y-&gt;y) / 2, (min_z-&gt;z + max_z-&gt;z) / 2 };
+	mOOBB.Extents = { (max_x-&gt;x - min_x-&gt;x) / 2, (max_y-&gt;y - min_y-&gt;y) / 2, (max_z-&gt;z - min_z-&gt;z) / 2 };
+
+	if(makeRigidbody)
+		CreateRigidBody(vertices, indices);
+
+	std::reverse(indices.begin(), indices.end());
+	Mesh::CreateResourceInfo(device, cmdList, sizeof(Vertex), sizeof(UINT),
+		D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+		vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
+}
+
+void Mesh::CreateRigidBody(const std::vector&lt;Vertex&gt;&amp; targetVertices, const std::vector&lt;UINT&gt;&amp; targetIndices)
+{
+	mTriangleVertexArray = new btTriangleIndexVertexArray();
+
+	btIndexedMesh tempMesh;
+	mTriangleVertexArray-&gt;addIndexedMesh(tempMesh, PHY_FLOAT);
+
+	btIndexedMesh&amp; mesh = mTriangleVertexArray-&gt;getIndexedMeshArray()[0];
+
+	const int32_t VERTICES_PER_TRIANGLE = 3;
+	size_t numIndices = targetIndices.size();
+	mesh.m_numTriangles = numIndices / VERTICES_PER_TRIANGLE;
+
+	if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max())
+	{
+		mesh.m_triangleIndexBase = new unsigned char[sizeof(int16_t) * (size_t)numIndices];
+		mesh.m_indexType = PHY_SHORT;
+		mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int16_t);
+	}
+	else
+	{
+		mesh.m_triangleIndexBase = new unsigned char[sizeof(int32_t) * (size_t)numIndices];
+		mesh.m_indexType = PHY_INTEGER;
+		mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int32_t);
+	}
+
+	mesh.m_numVertices = targetVertices.size();
+	mesh.m_vertexBase = new unsigned char[VERTICES_PER_TRIANGLE * sizeof(btScalar) * (size_t)mesh.m_numVertices];
+	mesh.m_vertexStride = VERTICES_PER_TRIANGLE * sizeof(btScalar);
+
+	btScalar* vertexData = static_cast&lt;btScalar*&gt;((void*)(mesh.m_vertexBase));
+	for (int32_t i = 0; i &lt; mesh.m_numVertices; ++i)
+	{
+		int32_t j = i * VERTICES_PER_TRIANGLE;
+		const XMFLOAT3&amp; point = targetVertices[i].Position;
+		vertexData[j] = point.x;
+		vertexData[j + 1] = point.y;
+		vertexData[j + 2] = point.z;
+	}
+
+	if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max())
+	{
+		int16_t* indices = static_cast&lt;int16_t*&gt;((void*)(mesh.m_triangleIndexBase));
+
+		for (int32_t i = 0; i &lt; numIndices; ++i) {
+			indices[i] = (int16_t)targetIndices[i];
+		}
+	}
+	else
+	{
+		int32_t* indices = static_cast&lt;int32_t*&gt;((void*)(mesh.m_triangleIndexBase));
+
+		for (int32_t i = 0; i &lt; numIndices; ++i)
+		{
+			indices[i] = targetIndices[i];
+		}
+	}
+
+	const bool USE_QUANTIZED_AABB_COMPRESSION = true;
+	mMeshShape = std::make_shared&lt;btBvhTriangleMeshShape&gt;(mTriangleVertexArray, USE_QUANTIZED_AABB_COMPRESSION);
+}
+
+
+void PhysicsPlayer::BuildRigidBody(std::shared_ptr&lt;BulletWrapper&gt; physics)
+{
+	auto dynamicsWorld = physics-&gt;GetDynamicsWorld();
+
+	mOOBB.Extents = { 10.0f, 4.0f, 14.0f }; // this value is for wheel
+
+	XMFLOAT3 vehicleExtents = mOOBB.Extents;
+	XMFLOAT3 wheelExtents = mWheel[0]-&gt;GetBoundingBox().Extents;
+
+	btCompoundShape* chassisShape = new btCompoundShape();
+
+	for (int i = 0; i &lt; mMeshes.size(); ++i)
+	{
+		btTransform LocalTransform;
+		LocalTransform.setIdentity();
+		LocalTransform.setOrigin(btVector3(0, 0, 0));
+
+		chassisShape-&gt;addChildShape(LocalTransform, mMeshes[i]-&gt;GetMeshShape().get());
+	}
+
+	btTransform btCarTransform;
+	btCarTransform.setIdentity();
+	btCarTransform.setOrigin(btVector3(mPosition.x, mPosition.y, mPosition.z));
+
+	mBtRigidBody = physics-&gt;CreateRigidBody(1000.0f, btCarTransform, chassisShape);
+	mVehicleRayCaster = std::make_shared&lt;btDefaultVehicleRaycaster&gt;(dynamicsWorld.get());
+	mVehicle = std::make_shared&lt;btRaycastVehicle&gt;(mTuning, mBtRigidBody, mVehicleRayCaster.get());
+
+	mBtRigidBody-&gt;setActivationState(DISABLE_DEACTIVATION);
+	dynamicsWorld-&gt;addVehicle(mVehicle.get());
+
+	mVehicle-&gt;setCoordinateSystem(0, 1, 2);
+
+	btVector3 wheelDirectionCS0(0, -1, 0);
+	btVector3 wheelAxleCS(-1, 0, 0);
+
+	float wheelWidth = wheelExtents.x;
+	float wheelRadius = wheelExtents.z;
+	float wheelFriction = 26.0f;
+	float suspensionStiffness = 20.f;
+	float suspensionDamping = 2.3f;
+	float suspensionCompression = 4.4f;
+	float rollInfluence = 0.01f;  //1.0f;
+
+	bool isFrontWheel = true;
+	float connectionHeight = -0.9f;
+
+	btVector3 connectionPointCS0(vehicleExtents.x - 2.5f, connectionHeight, vehicleExtents.z - 2.8f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	connectionPointCS0 = btVector3(-vehicleExtents.x + 2.5f, connectionHeight, vehicleExtents.z - 2.8f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	isFrontWheel = false;
+
+	connectionPointCS0 = btVector3(vehicleExtents.x - 2.3f, connectionHeight, -vehicleExtents.z + 2.6f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	connectionPointCS0 = btVector3(-vehicleExtents.x + 2.3f, connectionHeight, -vehicleExtents.z + 2.6f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	for (int i = 0; i &lt; mVehicle-&gt;getNumWheels(); i++)
+	{
+		btWheelInfo&amp; wheel = mVehicle-&gt;getWheelInfo(i);
+		wheel.m_suspensionStiffness = suspensionStiffness;
+		wheel.m_wheelsDampingRelaxation = suspensionDamping;
+		wheel.m_wheelsDampingCompression = suspensionCompression;
+		wheel.m_frictionSlip = wheelFriction;
+		wheel.m_rollInfluence = rollInfluence;
+	}
+}
+
+btRigidBody* BulletWrapper::CreateRigidBody(btScalar mass, const btTransform&amp; startTransform, btCollisionShape* shape)
+{
+	btAssert((!shape || shape-&gt;getShapeType() != INVALID_SHAPE_PROXYTYPE));
+
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0, 0, 0);
+
+	if (isDynamic)
+		shape-&gt;calculateLocalInertia(mass, localInertia);
+
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+
+	btRigidBody::btRigidBodyConstructionInfo cInfo(mass, myMotionState, shape, localInertia);
+
+	btRigidBody* body = new btRigidBody(cInfo);
+
+	mBtDynamicsWorld-&gt;addRigidBody(body);
+	AddShape(shape);
+
+	return body;
+}
+</code></pre></div>
+
+and this video shows What happens when I use this RigidBody.<br>
+<br>
+<a href="https://youtu.be/l5oHXfg1a3w" class="postlink">https://youtu.be/l5oHXfg1a3w</a><br>
+<br>
+how can I solve this problem? need help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigidbody from btBvhTriangleMeshShape doesn't collide with Others</h3>
+				<div class="date">Posted: <strong>Wed Feb 23, 2022 1:48 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I believe the <strong class="text-strong">btCompoundShape</strong> is designed to work with convex sub-shapes.  Somewhere in the collision algorithm logic a <strong class="text-strong">shape-&gt;isConvex()</strong> check returns <strong class="text-strong">false</strong> and the result is a non-colliding body.<br>
+<br>
+Edit:<br>
+In fact, <strong class="text-strong">btBvhTriangleMeshShape</strong> is not supported for <strong class="text-strong">dynamic</strong> or <strong class="text-strong">kinematic</strong> objects, only <strong class="text-strong">static</strong>.  That said: I believe <strong class="text-strong">btBvhTriangleMeshShape</strong> sometimes works for kinematic objects if they move slowly.  If you want a concave dynamic object you need to use a <strong class="text-strong">btCompoundShape</strong> with proper convex decomposition.  Alternatively: I hear concave GImpactShapes can be dynamic (but I have never used them myself).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

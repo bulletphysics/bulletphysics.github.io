@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13398" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-03-10T04:13:22+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13398</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-03-10T04:13:22+00:00</updated>
+
+		<published>2022-03-10T04:13:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43926#p43926</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43926#p43926"/>
+		<title type="html"><![CDATA[Re: Can I update btRigidBody without adding/removing it from world?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43926#p43926"><![CDATA[
+<blockquote class="uncited"><div>For the inertia tensor, make sure to remove the object from the world before making the change, and re-insert it afterwards.</div></blockquote>Yes, changing the mass would also change the inertia tensor.  It turns out the only way to change the mass is to make a call that also takes the local inertia diagonal.  Bullet assumes the local-frame interia tensor is diagonal --&gt; it is the application's duty to diagonalize it.<div class="codebox"><p>Code: </p><pre><code>void btRigidBody::setMassProps(btScalar mass, const btVector3&amp; inertia)</code></pre></div>Meanwhile, the world-frame inverse inertia tensor is what is used for the simulation calculations and it is always updated on the fly because it depends on the object's world transform:<div class="codebox"><p>Code: </p><pre><code>void btRigidBody::updateInertiaTensor(){   ·m_invInertiaTensorWorld = m_worldTransform.getBasis().scaled(m_invInertiaLocal) * m_worldTransform.getBasis().transpose();}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu Mar 10, 2022 4:13 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[BruceBanjo]]></name></author>
+		<updated>2022-03-09T21:53:03+00:00</updated>
+
+		<published>2022-03-09T21:53:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43924#p43924</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43924#p43924"/>
+		<title type="html"><![CDATA[Re: Can I update btRigidBody without adding/removing it from world?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43924#p43924"><![CDATA[
+<blockquote class="uncited"><div>Not true: you can dynamically change the mass of a RigidBody without re-adding it to the world. However, if the body is inactive --&gt; you probably want to activate it just in case its changed mass would trigger the collapse of some stacked pile that was in equilibrium.<br><br>I know of a few reasons to "re-add an object to the world": (a) the bounding box of the object is changing and its proxy in the broadphase needs to be updated, (b) you're changing the collision group/mask (these fields live in the broadphase proxy, not the CollisionObject), and (c) you're changing the friction and need to rebuild any persistent contact points to pick up the new value.<br><br>In each of these cases you don't actually need to "re-add the object to the world", but you do need to update some data structures which are automatically updated when you do re-add it. Hence, the re-add trick is a short-cut of sorts: it is short to implement in code but is not necessarily shorter when it comes to CPU cycles.</div></blockquote>Ok thanks for the clarification.<br><br>I was assuming based on the following post (from 2010), where it seems to indirectly state that mass changes require remove/re-add, since inertia tensor must be set at same time as mass.<br><br><a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21396&amp;hilit=updateChildTransform#post_content21396" class="postlink">viewtopic.php?p=21396&amp;hilit=updateChild ... ntent21396</a><blockquote class="uncited"><div>For the inertia tensor, make sure to remove the object from the world before making the change, and re-insert it afterwards.</div></blockquote>Maybe that information is obsolete?<br><br>Anyways, I'm not that worried about performance for now, I just need to ensure things work reliably, so I think I'll just remove/re-add. I don't have sufficient experience with Bullet to know how or when to do tasks (a), (b), and (c).<br><br>I'm a little worried that since remove/re-add will move by teleportation rather than by force/velocity, that I will get strange explosions/impulses when bodies are re-added in a way that causes overlap. I guess I'll just bank on this being an edge case that doesn't come up.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14224">BruceBanjo</a> — Wed Mar 09, 2022 9:53 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-03-09T20:33:54+00:00</updated>
+
+		<published>2022-03-09T20:33:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43923#p43923</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43923#p43923"/>
+		<title type="html"><![CDATA[Re: Can I update btRigidBody without adding/removing it from world?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43923#p43923"><![CDATA[
+<blockquote class="uncited"><div>I read that for something as simple as changing the mass of the btRigidBody, it must be removed and re-added to the world.</div></blockquote>Not true: you can dynamically change the mass of a RigidBody without re-adding it to the world.  However, if the body is inactive --&gt; you probably want to activate it just in case its changed mass would trigger the collapse of some stacked pile that was in equilibrium.<br><br>I know of a few reasons to "re-add an object to the world": <strong class="text-strong">(a)</strong> the bounding box of the object is changing and its proxy in the broadphase needs to be updated, <strong class="text-strong">(b)</strong> you're changing the collision group/mask (these fields live in the broadphase proxy, not the CollisionObject), and  <strong class="text-strong">(c)</strong> you're changing the friction and need to rebuild any persistent contact points to pick up the new value.<br><br>In each of these cases you don't actually need to "re-add  the object to the world", but you do need to update some data structures which are automatically updated when you do re-add it.  Hence, the re-add trick is a short-cut of sorts: it is short to implement in code but is not necessarily shorter when it comes to CPU cycles.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Mar 09, 2022 8:33 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[BruceBanjo]]></name></author>
+		<updated>2022-03-09T20:16:11+00:00</updated>
+
+		<published>2022-03-09T20:16:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43922#p43922</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43922#p43922"/>
+		<title type="html"><![CDATA[Re: Can I update btRigidBody without adding/removing it from world?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43922#p43922"><![CDATA[
+I found this very old post indicating a known issue:<br><a href="https://code.google.com/archive/p/bullet/issues/325" class="postlink">https://code.google.com/archive/p/bullet/issues/325</a><br><br>Is there an update on this?<br><br>I've noticed btRigidBody has the variable m_updateRevision. If I call btRigidBody::setCollisionShape to force an increment, does that eliminate the need for adding/removing the rigidbody from the world, for all things including change of mass?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14224">BruceBanjo</a> — Wed Mar 09, 2022 8:16 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[BruceBanjo]]></name></author>
+		<updated>2022-03-09T19:09:58+00:00</updated>
+
+		<published>2022-03-09T19:09:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43921#p43921</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43921#p43921"/>
+		<title type="html"><![CDATA[Can I update btRigidBody without adding/removing it from world?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43921#p43921"><![CDATA[
+Hi,<br><br>Do I have to remove a btRigidBody from the btDiscreteDynamicsWorld and then re-add it for <em class="text-italics">all</em> changes?<br><br>For example, I think I read somewhere that it's OK to use btCompoundShape::updateChildTransform() without removing the body from the world when dealing with animated rigid bodies.<br><br>On the other hand, I read that for something as simple as changing the mass of the btRigidBody, it must be removed and re-added to the world.<br><br>So is there a general rule or documentation somewhere about what operations require the btRigidBody to be removed and re-added to the world?<br><br>For example, what if I do this to a shape that's being used by a rigid body in the world?<br><div class="codebox"><p>Code: </p><pre><code>shape-&gt;~btBoxShape();new (shape) btBoxShape({ extents.x, extents.y, extents.z });</code></pre></div>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14224">BruceBanjo</a> — Wed Mar 09, 2022 7:09 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; GJK/EPA Question</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>GJK/EPA Question</h2>
+		<p><a href="viewtopic.php%3Ft=9447.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9447</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Fri Sep 27, 2013 10:38 pm</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Hi there everyone,<br>
+<br>
+So usually this is not a problem in my engine, but when one convex object's center penetrates another convex object (say a triangle), the collision normal I'm getting is on the wrong side of the object.  I guess GJK/EPA doesn't care that I'm colliding a long capsule against a triangle.  My question is this: is there any way to tweak GJK/EPA so that it recognizes the triangle's normal and gives you the far-side collision normal instead of the near one?<br>
+<br>
+I got some ideas I'm going to try, but if someone has already solved this problem, help would be appreciated.<br>
+<br>
+Thanks,<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Fri Sep 27, 2013 11:48 pm</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Fixed.  Here is the solution:<br>
+<br>
+In the support mapping function, if it's EPA after you get the support vectors from the two convex objects and you get the Minkowski difference, flip the sign on the Minkowski difference if the direction of the search vector is in the direction of the triangle's normal (dot product is greater than zero).<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Sat Sep 28, 2013 1:50 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">So that didn't turn out to be the solution.  I don't want to mislead anyone, I'm still looking for a solution.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Sat Sep 28, 2013 6:08 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Could you be a bit more explicit with the scenario? Perhaps some screenshots? There's a few too many ambiguities for me to be able to help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Sat Sep 28, 2013 11:26 pm</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Ok so here is a picture:<br>
+<br>
+<img src="http://mikeshafer2009.com/img/capsuletri.png" class="postimage" alt="Image"><br>
+<br>
+The top case works fine as the center of the capsule is not penetrating the triangle.  The bottom case, I want the blue dotted line's distance, but I'm getting the red dotted line from the GJK/EPA algorithm.  Obviously it's too much penetration for GJK, so it's handled in EPA.<br>
+<br>
+In EPA, I have a function called u32 MEHEPACollision::FindClosestTriangle(MEHVector3 &amp;outNorm, scalar &amp;outDist).  I modified this function to return the triangle most along the triangle normal.  Note that this triangle normal I speak of differs from the "Triangle" in FindClosest"Triangle".  FindClosestTriangle is working with the convex polytope  to eventually get you the penetration distance.  The triangle normal I speak of is the triangle in the original Capsule Vs. Triangle pair-wise collision.  Remember GJK/EPA works on a pair of shapes and in this case it's a capsule and a triangle.  But this method is giving me ghost collisions since in a building complex there are walls facing toward you and away from you and the ones facing away from you (say out in the hallway) trigger a severe penetration.<br>
+<br>
+The reason I need it to detect such extreme penetrations is because it's for the camera and if the player turns the corner the camera will take on a severe penetration.  I have it working so far but sadly, I'm only using GJK to test for intersection--I'm not using the collision normal or penetration distance the function is returning.  It would be nice if we could somehow modify GJK/EPA to return the penetration distance when one of your two objects is one-sided.  Let me know if you have any suggestions.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Sun Sep 29, 2013 12:58 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Ah, usually I see this issue fixed with a height map. Adjacency information between triangles can be calculated during runtime and used to correct poor collision detection results.<br>
+<br>
+In the case of modifying EPA, I'd say that's the wrong way to go about it. What you really need is more of a half-space intersection test, instead of running collision detection against two meshes. One way to do this would be to just treat your triangles as thick triangular prisms. From what I can see: no matter what you'll need to do some additional authoring of your collision detection; EPA is giving you "correct" results, but you're trying to do something that breaks EPA's assumptions.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Sun Sep 29, 2013 1:16 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Randy,<br>
+<br>
+Thanks for your thoughtful post.  I think you're right but I'm too lazy to do anything when I got GJK working so well.  In the end I stuck with my alignment modification to EPA--it seems to work fine.  In fact the rag doll limbs that use to go through the floor don't go through the floor anymore.  Until I see something teleport, I'm going to run it this way.  Basically, when you're expanding your polytope, you choose planes that are most along the triangle normal.  Looks good so far and for whatever reason, rag doll didn't break.  I'm happy.  Thanks again Randy.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK/EPA Question</h3>
+				<div class="date">Posted: <strong>Wed Nov 13, 2013 3:19 am</strong></div>
+				<div class="author">by <strong>janzdott</strong></div>
+				<div class="content">Were you able to get the contact point from EPA?  I have implemented EPA.  It works great, and gets the penetration depth and normal, but I cannot figure out how to generate a contact point for the life of me  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

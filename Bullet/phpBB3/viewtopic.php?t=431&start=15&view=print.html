@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Differences between velocity and position contact constraint - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Differences between velocity and position contact constraint</h2>
+		<p><a href="viewtopic.php%3Ft=431.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=431</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 24, 2006 2:22 am</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Brian Mirtich doesn't use constant linear/angular velocity, he uses parabolic motion (including gravity) in his TOI calculations and timestepping. A lot of approaches assume constant linear/angular velocity. Still better then screwing motion, which Stephane Redon used in his analytical TOI calculation, before he switched to Interval Arithmetic based methods.
+</div></blockquote>
+But there is still some assumptions. Right? And that assumptions are for projecting future configuration (this is my word or just position/rotation in simple sense). So basically means a CD is trying to do something that should belong to dynamics. Also, no matter how complicated the assumption is, the projected position is not accurate unless you carry on dynamics. That's why I mentioned a kind of coupling in dynamics and collision.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Adding some small collision tolerance/allowed penetration guarantees progress.
+</div></blockquote>
+Right, in some applications, such small penetration is OK but there are some that really after completely no penetration. I don't say this method is bad, I just want to mention some of their pros and cons and try to evaluate many approaches.<br>
+&lt;advertising hat on&gt;<br>
+That's why we (<a href="http://www.cis.upenn.edu/davinci/" class="postlink">http://www.cis.upenn.edu/davinci/</a> ) want to have a framework that could use all kinds of approaches. From simple penalty method to complicated NCP approach and from oneshot CD to coninuous CD, etc...Then, it could serves many purposes and we can easily compare  them. <br>
+&lt;advertise hat off&gt;<br>
+<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+The CCD/TOI + stepping safely to the next TOI, or using Timewarp, is described in chapter 5.4 and 5.6 in <br>
+<a href="http://www.cs.miami.edu/~harald/papers/hs-thesis.pdf" class="postlink">http://www.cs.miami.edu/~harald/papers/hs-thesis.pdf</a>
+</div></blockquote>
+I will surely read this. Thanks.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+If you include (fast) rotational motion then P4 might cause the penetration. I just wondered if you take that into account. With long thin objects this becomes more important.
+</div></blockquote>
+Right, P4 can still penetrate. That's why the quality of ST depends on how well you select the potential colliding pairs.<br>
+<br>
+<img src="http://www.continuousphysics.com/stvsapqr8.jpg" class="postimage" alt="Image"><br>
+
+<blockquote class="uncited"><div>
+So you also throw the timestep 'deltatime' and the assumed motion into the LCP?<br>
+What kind of motion does your implementation of ST LCP assume/use?
+</div></blockquote>
+Yes, but not complete motion. If you want to consider that motion, I think the only way is using NCP. In LCP version of ST, the constraint only prevent the two points pass through each other in the axis specified by normal direction. So sometimes that's enough. So you could see that what ever the motion is, as long as the projected distance along the contact normal is &gt;= 0 then ST will be satisfied. That's why I said ST do consider translation/rotation in some sense.<br>
+
+<blockquote class="uncited"><div>
+If the loop is like:<br>
+0) calculate feature-pair distances<br>
+1) setup LCP that calculates impulses so the updated position will not be in penetration<br>
+2) apply impulses/update velocities (from LCP results)<br>
+3) update positions<br>
+<br>
+Then the updated position at T1 is at the ' time of impact', effectively loosing time?
+</div></blockquote>
+No, it's the position at T1. There could possibly many impacts during T0-T1, but you will always get a "feasible" solution at time T1. I only mean feasible not right /correct. <br>
+Again, let me show some stuff we had tried to hide under the carpet. In ST, because we don't know the TOI, so we didn't have bounciness. I wish to address this problem in the future. And yes, CCD&amp;TOI along with ST will certainly make bounciness possible.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 24, 2006 9:54 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>sberard wrote:</cite> It is a problem due to the linearization of the  contact constaints.  All vertices are are a witness pair with a half-plane, not a line segment.  This means the vertex may come in contact with a non-existant edge.  Heuristics and tolerance levels are currently used to try and limit the occurences of these linearization issues, but they still happen. </div></blockquote>
+the method seems interesting, i didn't go through each single detail yet,   i apologize in advance if some of the following questions are not appropriate or have already been implicitly answered:<br>
+<br>
+1. given that constraints are linearized, isn't this a big problem for fast rotating objects? <br>
+<br>
+2. if the LCP is solved by an iterative solver, penetration would occur wouldn't it? given that we are adding far more constraints than would be required by a more "traditional" approach. The convergence of such LCP solver would be much slower wouldn't it?<br>
+<br>
+3. taking in account of all possible contacts seem to lead to a quadratic explosion. Each feature of one object may collide with all the features  another object(take 2 objects with same complexity) etc....is that right? do you use any heuristics?<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 24, 2006 11:45 am</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite>
+1. given that constraints are linearized, isn't this a big problem for fast rotating objects? 
+</div></blockquote>
+Right, fast rotating object can caused penetration if we missed the potential colliding pairs. The "fast rotating" makes us hard to predict what are the potential ones. Also, current approach also suffer from linearization. The only way to avoid this "linearization" is using NCP.<br>
+
+<blockquote><div><cite>AntonioMartini wrote:</cite>
+2. if the LCP is solved by an iterative solver, penetration would occur wouldn't it? 
+</div></blockquote>
+It's possible because if the results are approximate then we may have some penetrations. I didn't try with iterative solver yet. Maybe I will make a ST timestepper in ODE to test.<br>
+
+<blockquote><div><cite>AntonioMartini wrote:</cite>
+given that we are adding far more constraints than would be required by a more "traditional" approach.
+</div></blockquote>
+I can say we can view this statement in different ways:<br>
+1. In current approach, only the pairs that already in penetration get constraints. So penetration ALWAYS happen. In ST, we try to avoid penetration as much as possible so we need to constraint "possible collding pairs". <br>
+2. If the geometry is complicated, then yes, the number of constraints in ST would be more than AP. But that's what we expect if we want to prevent penetration, right? Also, we can improve by apply more intelligent heuristic to select those pairs. Currently, there is no good heuristic for that. We're selecting all the pairs that are close enough (distance &lt; some threshold). Apperantly, this is not a good heuristic. So there are room for improvement. Also, see below for comparision between the number of constraint needed.<br>
+
+<blockquote><div><cite>AntonioMartini wrote:</cite>
+ The convergence of such LCP solver would be much slower wouldn't it?
+</div></blockquote>
+I don't know clearly about this. See my last paragraph about the cost of constraint.<br>
+<br>
+
+<blockquote><div><cite>AntonioMartini wrote:</cite>
+3. taking in account of all possible contacts seem to lead to a quadratic explosion. Each feature of one object may collide with all the features  another object(take 2 objects with same complexity) etc....is that right? do you use any heuristics?
+</div></blockquote>
+I don't think we have quadratic explosion here. You can also just use only one closet pair per pair of object. For "simple" scene, it should be enough. Also, let me make it clear. If we missed a colliding pair, then it would penetrate, then the next time step, ST will recover it automatically by the stabilization term. So we would see some sort of bounciness. ST timestep won't die if there are penetrations. I've already mentioned our (naive) heuristic above.<br>
+<br>
+Let me tell you my ideas about the cost of constraint in ST vs AP(or current approach). In ST, the complimentarity condition contains distance at one side. If those distance is positive, i.e they are still separated, then it should be easier for the LCP solver to statisfy that condition. Because the "plausible region" that satisfy the constraint is bigger than when distance is negative ( current approach ). So I think that ST constraint should be less expensive than AP's. That's just my thoughts. No proof/test has been made.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 24, 2006 11:51 pm</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+What kind of motion does your implementation of ST LCP assume/use?<br>
+<br>
+If the loop is like:<br>
+0) calculate feature-pair distances<br>
+1) setup LCP that calculates impulses so the updated position will not be in penetration<br>
+2) apply impulses/update velocities (from LCP results)<br>
+3) update positions<br>
+<br>
+Then the updated position at T1 is at the ' time of impact', effectively loosing time?</div></blockquote>
+Looks like I have been out of the loop a little bit.  I'll try and answer some of these questions.  For now, lets assume the movable body is a particle and the obstacle is a half-plane.  At time T0, I run a collision check, or more accurately a proximity/tolerance query of the particle with all obstacles.  The result of this query is a distance of the particle to the plane, and a normal direction defined as the perpendicular to the plane.  Now I can hopefully answer your questions with this example.<br>
+<br>
+For your first question, I assume you mean what kind of motion during the time step between T0 and T1.  In my example on the website, I used an Euler appriximation for derivatives, so I must assume the contact normal defined at time T0 is constant over the step.  Therefore, the constraint that I am satisfying is that the distance from that point to the half plane along the fixed normal is greater than 0.  I could have used a trapezoidal method to approximate the derivative, which would take into account some motion of the body.  In the limit, I can solve the fully implicit non-linear problem to include all motions over the time step (although, I'm not sure about solution existance or convergence rates with fully implicit methods).<br>
+<br>
+Once this distance function along a normal is determined, it gets added as a constraint to the ST time-stepper.  This constraint is solved simultaneously with the Newton-Euler equations. Using the magic of complementarity, the constaint is automatically determined to be active or inactive.  If active, the time-stepper also computes the impulse required to prevent the penetration over that time step.  Basically, whatever force was required to prevent the penetration is smeared over the step.  This allows ST to handle inelastic collision, no bounce.<br>
+<br>
+I'm not sure what you mean when you say:
+<blockquote class="uncited"><div>Then the updated position at T1 is at the ' time of impact', effectively loosing time?</div></blockquote>
+The updated position at the end of the step is not at the time of impact.  If the constraint is active, all we know is that impact occurred at some time over the time step.<br>
+
+<blockquote><div><cite>AntonioMartini wrote:</cite>
+2. if the LCP is solved by an iterative solver, penetration would occur wouldn't it? given that we are adding far more constraints than would be required by a more "traditional" approach. The convergence of such LCP solver would be much slower wouldn't it?<br>
+<br>
+3. taking in account of all possible contacts seem to lead to a quadratic explosion. Each feature of one object may collide with all the features another object(take 2 objects with same complexity) etc....is that right? do you use any heuristics?
+</div></blockquote>
+Penetration may occur if you early exit the solver.  That is a numerical limiation however, and can be solved by using other methods (pivoting) or allowing the iterative solve to converge.  What do you mean "traditional" approach:  DAE approach (Ed Haug) or impulse based methods (Brian mirtich)?  I suppose the larger the problem, the longer it takes to solve.  But the complexity of the solver shouldn't change because the problem gets bigger.<br>
+<br>
+As nginh stated, In practice we don't include all contacts, because that would become comutationally intractible very quickly.  If computation wasn't a problem, we could though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 12:18 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks a lot for the explanation Stephen. <br>
+It looks like your approximation will result in a very similar result to Bullet's motion prediction (Conservative Advancement). It also maintains the separating normal, and projects the motion onto this, and makes sure it stays non-negative (or becomes non-negative due to Retroactive Detection and Penetration Recovery).<br>
+<br>
+Could you edit this picture, and draw where your approach puts the red sphere at the end of the timestep?<br>
+<br>
+Without the static plane, it would be in the yellow spot.<br>
+In Timewarp methods (Mirtich,CCD/TW), it would end in the green spot, due to bounce (so TW will subdivide the timestep just once, at the time of impact with the plane, where the collision happens).<br>
+<br>
+<img src="http://www.continuousphysics.com/one_timestep.JPG" class="postimage" alt="Image"><br>
+<br>
+Thanks a lot,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 2:40 am</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Could you edit this picture, and draw where your approach puts the red sphere at the end of the timestep?
+</div></blockquote>
+
+Ok.  To simplify the image, I made the sphere's velocity perpendicular to the edge.   I did this so we don't have to worry about friction.<br>
+<img src="http://www.cs.rpi.edu/~sberard/one-step.png" class="postimage" alt="Image"><br>
+The unconstrained simply passes through the half-plane.  Timewarp methods (Mirtich,CCD/TW), end in the green spot due to bounce, and Stewart-Trinkle ends in blue spot due to plastic collision.<br>
+<br>
+You can see this effect if you run my java demo posted earlier at <br>
+<a href="http://www.cs.rpi.edu/~sberard/lcp_applet/" class="postlink">http://www.cs.rpi.edu/~sberard/lcp_applet/</a><br>
+If you drop the spere onto the half plane, it comes to a rest regardless of step size and velocity.<br>
+<br>
+This is a drawback of the ST method, there is no restitution/bounce.  If a bounce is desired, the ST method must find the time of impact through other means (like your collision detection method), since it does not provide this information.  All ST tells us is that an impact occurred some time during the step, and it prevented the interpenetration.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 3:00 am</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Thanks a lot for the explanation Stephen. <br>
+It looks like your approximation will result in a very similar result to Bullet's motion prediction (Conservative Advancement). It also maintains the separating normal, and projects the motion onto this, and makes sure it stays non-negative (or becomes non-negative due to Retroactive Detection and Penetration Recovery).
+</div></blockquote>
+You are right Erwin. The difference is that in ST we don't need to chop down the time step. That's an advantage but also a disavantage because if we don't know TOI, then we cannot apply correct restitution law.<br>
+
+<blockquote class="uncited"><div>
+Could you edit this picture, and draw where your approach puts the red sphere at the end of the timestep?
+</div></blockquote>
+The sphere in ST will be at the perpendicular projected point from Mirtich to static plane.<br>
+<br>
+Actually, there is a way to apply resitution in ST without the aid of collision detection(to find TOI).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 3:23 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Stephen,<br>
+<br>
+I intentionally created that picture, because I'm very curious where the sphere ends. Although there is no bounce, is there ANY motion in the plane?<br>
+<br>
+Can you try it again, without simplification. Just assume zero friction.<br>
+<br>
+<br>
+<img src="http://www.continuousphysics.com/one_timestep.JPG" class="postimage" alt="Image"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 3:57 pm</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Stephen,<br>
+<br>
+I intentionally created that picture, because I'm very curious where the sphere ends. Although there is no bounce, is there ANY motion in the plane?<br>
+<br>
+Can you try it again, without simplification. Just assume zero friction.
+</div></blockquote>
+There will be motion in the plane.  For this simple example, it will be where the edge perpendicular interescts the yellow sphere.<br>
+<img src="http://www.cs.rpi.edu/~sberard/one_timestep.JPG" class="postimage" alt="Image"><br>
+You can think of it as the shortest stabilization path along the normal defined at time T0.  Because I kept the problem linear, there are some hidden demons I don't want to get into, but that is the main idea.<br>
+<br>
+Note, the real power of complementarity comes into light when you add friction.  Now you have to decide if the sphere is rolling or sliding, and if it is sliding the impulse associated with the friction terms.  That impulse is coupled with the value of the normal impulse.  All of this can be automated with a complementarity formulation.  <br>
+<br>
+I should also add, that the yellow sphere would be the location of Anitescu-Potra at time T1, at which point the non-penetration constraint becomes active, and it wouldn't be able to penetrate deeper.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 4:51 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content">i guess the linearization problem with rotational motion could be mitigated by just decreasing the time step if the angular velocity is to high. In other words assuming a maximum value for the angular speed within a single time step such that the linearization can be considered a sufficiently good approximation.<br>
+<br>
+however as far as i have understood when a potential contact is added it is considered as an infinite plane, is that right? So in the case where a sphere is at location A at t0(see below) and then location B at t1 and we have the 3 potential colliding planes, if we add at least one potential contact even if the segment AtoB is not intersecting none of the 3 planes the sphere will stop on the plane would it? <br>
+<br>
+....A   <br>
+                   <br>
+<br>
+_____.....................________________................._______________     <br>
+<br>
+<br>
+...........................B<br>
+<br>
+<br>
+if the LCP solver has no awareness of the planes boundaries, we would need to add a potential contact only if there is an actual intersection. But isn't it a cyclic reasoning? we would need TOI in order to add a potential contact....<br>
+<br>
+I hope i haven't been both  too confusing and confused:)<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 5:03 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite>i guess the linearization problem with rotational motion could be mitigated by just decreasing the time step if the angular velocity is to high. In other words assuming a maximum value for the angular speed within a single time step such that the linearization can be considered a sufficiently good approximation.<br>
+<br>
+however as far as i have understood when a potential contact is added it is considered as an infinite plane, is that right? So in the case where a sphere is at location A at t0(see below) and then location B at t1 and we have the 3 potential colliding planes, if we add at least one potential contact even if the segment AtoB is not intersecting none of the 3 planes the sphere will stop on the plane would it? <br>
+<br>
+....A   <br>
+                   <br>
+<br>
+_____.....................________________................._______________     <br>
+<br>
+<br>
+...........................B<br>
+<br>
+<br>
+if the LCP solver has no awareness of the planes boundaries, we would need to add a potential contact only if there is an actual intersection. But isn't it a cyclic reasoning? we would need TOI in order to add a potential contact....<br>
+<br>
+I hope i haven't been both  too confusing and confused:)<br>
+<br>
+cheers,<br>
+Antonio</div></blockquote>
+
+It will happen exactly as you describe if you use naive LCP-ST. Trapezoidal can help by approximate contact "surface" as a paraboloid. So the curve of parabol can help. But the only way to make sure that the ball will pass through is by using fully implicit ST (require NCP).<br>
+<br>
+As for the case of TOI. Yes, if we can get the right TOI then it's definitely helpful. But there is no way to get the right TOI without doing dynamics. Currently, CCD have to make assumption about the motion of bodies to predict future position. So I can always come up with the case where CCD prediction is wrong.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 5:13 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>Currently, CCD have to make assumption about the motion of bodies to predict future position. So I can always come up with the case where CCD prediction is wrong.</div></blockquote>
+if the assumed motion for a rigid body is the same as the one generated by the formula used for the numerical integration it would be a reasonable assumption as in absence of collisions a body would be numerically integrated to a new configuration by using that formula.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 5:17 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+As for the case of TOI. Yes, if we can get the right TOI then it's definitely helpful. But there is no way to get the right TOI without doing dynamics.
+</div></blockquote>
+Wrong. Calculating the time of impact only involves collision detection and a start and end transform. For common motion (like constant linear/angular) you just can calculate the minimum time of impact, which is what you need. You only need dynamics to actually proceed beyond that TOI, by stepping and dealing properly with the discontinuity of the collision (bounce etc). Ignoring collisions/bounce is much worse then assuming constant linear/angular velocity in my opinion. What in-between motion would you prefer, and is not handled by time of impact calculations?<br>
+
+<blockquote class="uncited"><div>
+ Currently, CCD have to make assumption about the motion of bodies to predict future position. So I can always come up with the case where CCD prediction is wrong.
+</div></blockquote>
+CCD calculations calculate time of impacts, not 'future positions', that is the task of the dynamics/stepping scheme. I can't see what kind of in-between motion, other then constant linear/angular you want? (in-between = motion between each discontinuity or frame (whichever is smallest))<br>
+<br>
+Stephen: thanks a lot for adding the blue sphere. I got some more questions, but SIGGRAPH is taking my time.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 5:36 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Wrong. Calculating the time of impact only involves collision detection and a start and end transform. 
+</div></blockquote>
+Hmm, not likely. You need to know how bodies go from start to end transformation.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+For common motion (like constant linear/angular) you just can calculate the minimum time of impact, which is what you need. You only need dynamics to actually proceed beyond that TOI, by stepping and dealing properly with the discontinuity of the collision (bounce etc). Ignoring collisions/bounce is much worse then assuming constant linear/angular velocity in my opinion. What in-between motion would you prefer, and is not handled by time of impact calculations?<br>
+<br>
+I can't see what kind of in-between motion, other then constant linear/angular you want? (in-between = motion between each discontinuity or frame (whichever is smallest))<br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+Let me give you one example that would break your in-between motion assumption:<br>
+Consider a case when user can interact with bodies. At time T0, we assume, say, velocities are constant in one time step and get projected TOI. But also, right after time T0, user decide to pull a bodies by a very strong force. That would surely break our assumption. There are surely many other cases.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 6:47 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Wrong. Calculating the time of impact only involves collision detection and a start and end transform. 
+</div></blockquote>
+Hmm, not likely. You need to know how bodies go from start to end transformation.
+</div></blockquote>
+Assuming constant linear and angular velocity you can just use the collision detector to calculate the time of impact. Havok, Ageia, Doom3, Stephane Redon and many more use it succesfully. What kind of motion would you like in between discontinuities?<br>
+
+<blockquote><div><cite>ngbinh wrote:</cite>
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+For common motion (like constant linear/angular) you just can calculate the minimum time of impact, which is what you need. You only need dynamics to actually proceed beyond that TOI, by stepping and dealing properly with the discontinuity of the collision (bounce etc). Ignoring collisions/bounce is much worse then assuming constant linear/angular velocity in my opinion. What in-between motion would you prefer, and is not handled by time of impact calculations?<br>
+<br>
+I can't see what kind of in-between motion, other then constant linear/angular you want? (in-between = motion between each discontinuity or frame (whichever is smallest))<br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+Let me give you one example that would break your in-between motion assumption:<br>
+Consider a case when user can interact with bodies. At time T0, we assume, say, velocities are constant in one time step and get projected TOI. But also, right after time T0, user decide to pull a bodies by a very strong force. That would surely break our assumption. There are surely many other cases.
+</div></blockquote>
+Any method has to deal with discontinuities, like collisions or user input. As Mirtich already explained in his Time Warp papers, user input can be dealt with as just another event/discontinuity without problems. Stephane Redon, who applies CCD in their stepping scheme with haptic interfaces, apply the user input at the beginning or end of the frame (need to verify this with Stephane). As long as your frame rate is interactive (15 or 30 FPS) this should be no problem.<br>
+<br>
+I think you should focus on making your method better, rather then talking about the 'problems' of TOI/CCD, because the problems in your method seems to be substantial to the point that it is not usable.<br>
+<br>
+As I explained before, CCD+stepping is used in practice. Has your method proved itself in actual applications?<br>
+<br>
+Thanks,<br>
+Erwin<br>
+<br>
+PS: Also, hybrid solutions, where some objects use low-quality simulation using Retroactive Detection/penetration recovery, and other objects use time of impact trying to prevent penetration, has been succesfully used.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12615" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2019-03-21T21:36:28+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12615</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2019-03-21T21:36:28+00:00</updated>
+
+		<published>2019-03-21T21:36:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41958#p41958</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41958#p41958"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41958#p41958"><![CDATA[
+Actually my implementation of DeepMimic in PyBullet is working fine. We ignore the inertia data from URDF and recompute it based on collision shapes, and that data is identical from the original DM. We can re-use the original policy with stable PD control, so all is fine.<br><br>You can use 1200Hz, but by default I use 120Hz in PyBullet and it still works very fine. Also, I re-use the identical training framework of Jason Peng, so it is multi-threaded.<br><br>The only thing that doesn't work yet is using spherical joints, instead of stable PD controllers.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Mar 21, 2019 9:36 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[MIT]]></name></author>
+		<updated>2019-03-10T18:26:30+00:00</updated>
+
+		<published>2019-03-10T18:26:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41927#p41927</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41927#p41927"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41927#p41927"><![CDATA[
+Doh, in the end it was in fact something stupid on my part.  My reading comprehension is indeed in need of some work, sorry for asking you to debug stuff for me.  To be fair though even in the example you provided disabling the joints is below the reset call, so any easy mistake to make if you're not paying attention (and the comment mentioning disabling was suspiciously absent from the version of the file I was reading <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"> ).  It does beg the question why I don't see the same behavior with setJointMotorControl2(), but honestly that's a question for another time.<br><br>Ok, as I mentioned previously spherical joint motors are fully functional for me.  Thus on the topic of the DeepMimic not working with spherical joint motors, it's very likely something to do with the DeepMimic code vs the spherical joint implementation.  If it were me, a few places I would look are:<br><br>a)  The default inertial moments of 0.1 used in the humandoid.urdf are very large for an actual human.  It might be worth lowering these values, for instance an arm is much more in the 0.008 range.  Edit: I glanced at the DeepMimic URDF and assuming the BodyDef's param's define the inertial moments, 0.1 is more inline with the scale DeepMimic is using.  That said the DM URDF does appear to use values based on the shape of links/joints, not sure how big of a impact this would have vs just using 0.1 for everything where you are essentially using cubes.<br><br>b)  DeepMimic was originally designed to run at a step frequency of 1200 in order for friction to work properly.  Apologies if you are already aware of this, but I thought it might be worth pointing out in case you were running at a lower frequency.<br><br>c)  Again I haven't had the chance to go thru your implementation of DeepMimic so apologies if you already know this, but parallelization definitely matters here.  I believe DeepMimic was originally trained across 16 cores, so I would make sure you have a similar setup.<br><br>Unfortunately I don't have time to dig into your implementation and help out more until mid April, but if it's still not working by then I'll try and get it running on my end.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12441">MIT</a> — Sun Mar 10, 2019 6:26 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2019-03-10T00:19:27+00:00</updated>
+
+		<published>2019-03-10T00:19:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41926#p41926</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41926#p41926"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41926#p41926"><![CDATA[
+You didn't disable the motors, as is done in humanoidMotioncapture.py, add this block:<br><div class="codebox"><p>Code: </p><pre><code>#disable motorsfor     j       in range (p.getNumJoints(model)):        ji = p.getJointInfo(model,j)        targetPosition=[0]        jointType       =       ji[2]        if (jointType   == p.JOINT_SPHERICAL):                targetPosition=[0,0,0,1]                p.setJointMotorControlMultiDof(model,j,p.POSITION_CONTROL,targetPosition, targetVelocity=[0,0,0], positionGain=0,velocityGain=1,force=[0,0,0])        if (jointType==p.JOINT_PRISMATIC or     jointType==p.JOINT_REVOLUTE):                p.setJointMotorControl2(model,j,p.VELOCITY_CONTROL,targetVelocity=0, force=0)</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sun Mar 10, 2019 12:19 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[MIT]]></name></author>
+		<updated>2019-03-09T17:50:59+00:00</updated>
+
+		<published>2019-03-09T17:50:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41925#p41925</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41925#p41925"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41925#p41925"><![CDATA[
+Spherical joints themselves work fine for me, and the file you linked is the example I figured out the API from.  My issue is with the behavior I'm seeing of p.resetJointStateMultiDof().  Did you happen to run the example I provided?  If not, I've attached an even simpler version to this reply.  All it does is load the humanoid model and call resetJointStateMultiDof() on one of the spherical joints.  There are no other calls made to change the joint state.  And yet while the joint does move to the position specified in p.resetJointStateMultiDof(), it immediately moves back to its default position after the call is made.  This is different then the behavior of resetJointState(), which leaves the joint at the position that it is set to in the reset call.  Could you kindly run the example script and point out what I am doing wrong with the call to p.resetJointStateMultiDof vs the call to resetJointState()?<dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1697">humanoid.urdf.txt</a></dt></dl><br /><dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1698">simple.py.txt</a></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12441">MIT</a> — Sat Mar 09, 2019 5:50 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2019-03-09T01:26:11+00:00</updated>
+
+		<published>2019-03-09T01:26:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41920#p41920</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41920#p41920"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41920#p41920"><![CDATA[
+The <a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/humanoidMotionCapture.py" class="postlink"> humanoidMotionCapture.py</a> example shows how to use spherical drives. Also one of the humanoids in that example use resetJointStateMultiDof to set its state. Both modes works just fine with me. Please check it.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Mar 09, 2019 1:26 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[MIT]]></name></author>
+		<updated>2019-03-01T23:48:33+00:00</updated>
+
+		<published>2019-03-01T23:48:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41905#p41905</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41905#p41905"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41905#p41905"><![CDATA[
+Erwin,<br><br>  I'm seeing two different sets of weird behavior with spherical joints that might partly explain why joint motor control with them isn't working for you (or I might just be doing something dumb).<br><br>In order to help demonstrate what's going on, I created the attached example.py.  It loads your humandoid.urdf and allows for testing of joints via sliders.  Note that it converts spherical joints into (yaw, pitch, roll) for manipulating the slider values.  The forum won't let me upload files with urdf/py extensions so I added a .txt extension to the files, just remove it and they should both work.  I'm also attaching the humanoid.urdf for convenience.<br><br>There are two odd things happening that they demonstrate:<br><br>1)  p.resetJointStateMultiDof() seems to reset to the default position after being called.  In order to see this, open up example.py and uncomment line #101:<br><br>        p.resetJointStateMultiDof( model, joint_names_to_id['right_shoulder'], eulerToQuaternion(-math.pi/2, 0, 0) )<br><br>  and comment out line #118:<br><br>        #applyAction( model, ordered_joint_indices, commands )<br><br>  When you run the example, notice how the right arm returns to it's default position immediately after loading.  Now, comment out line #101 and uncomment line #102.<br><br>         p.resetJointState( model, joint_names_to_id['right_elbow'], math.pi/2 )<br><br>  We don't see the same behavior for resetJointState().<br><br>2)  Comment out line #101 and #102, and uncomment line #118 (applyAction).  Now drag around any of the pitch or roll sliders.  Notice that no matter how fast you drag them things are stable.  Now slowly drag a yaw slider, and then drag it around quickly.  Notice that when you drag it quickly the joint rotates off access.<br><br>  My guess for #2 is that the underlying quaternion library bullet is using is switching over to the opposite direction rotation quaternion and this is causing the joint go off axis.  If you add a <br><br>    print( target_position )<br><br>  at line #53 you can see the quaternions that are being passed in to p.setJointMotorControlMultiDof().  The quaternions being passed in appear to be smooth (ie I get the same value if I drag the slider slowly to the far right as if I drag it quickly), but maybe there is something wrong with my usage of the api?<br><br><br>Edited to add:<br><br>  I'm working off trunk as of yesterday afternoon to make sure we're both using the same code.<dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1696">example.py.txt</a></dt></dl><br /><dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1693">humanoid.urdf.txt</a></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12441">MIT</a> — Fri Mar 01, 2019 11:48 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[MIT]]></name></author>
+		<updated>2019-02-28T18:07:43+00:00</updated>
+
+		<published>2019-02-28T18:07:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41902#p41902</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41902#p41902"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41902#p41902"><![CDATA[
+Awesome, giving spherical joint motors a try now (note: I'm not using the DeepMimic code).  I'll let you know if it works to give you another data point to debug with (and likely be joining in the debugging efforts if it doesn't work <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink">.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12441">MIT</a> — Thu Feb 28, 2019 6:07 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2019-02-27T18:06:11+00:00</updated>
+
+		<published>2019-02-27T18:06:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41901#p41901</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41901#p41901"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41901#p41901"><![CDATA[
+This PR exposes the torques: <a href="https://github.com/bulletphysics/bullet3/pull/2130" class="postlink">https://github.com/bulletphysics/bullet3/pull/2130</a><br><br>Thanks for the report!<br><br>By the way, the DeepMimic humanoid can be trained using stable PD control now:<br><a href="https://www.youtube.com/watch?v=aiWxIjtMMFI" class="postlink">https://www.youtube.com/watch?v=aiWxIjtMMFI</a><br><br>When switching to spherical joint motors, the policy doesn't train. See the switch here, _useStablePD:<br><a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/deep_mimic/env/pybullet_deep_mimic_env.py#L274" class="postlink">https://github.com/bulletphysics/bullet ... nv.py#L274</a><br>I haven't looked into why not.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Feb 27, 2019 6:06 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[MIT]]></name></author>
+		<updated>2019-02-26T01:44:35+00:00</updated>
+
+		<published>2019-02-26T01:44:35+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41892#p41892</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41892#p41892"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41892#p41892"><![CDATA[
+Erwin,<br><br>  Thanks for the information and work on the spherical joints.  Using setJointMotorControlMultiDof to model joint friction is very interesting and apologies for presuming it was a mistake.  Looking forward to being able to switch to spherical joints inside my project.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12441">MIT</a> — Tue Feb 26, 2019 1:44 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2019-02-26T00:52:10+00:00</updated>
+
+		<published>2019-02-26T00:52:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41890#p41890</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41890#p41890"/>
+		<title type="html"><![CDATA[Re: Spherical Joints]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41890#p41890"><![CDATA[
+Spherical joints still need a bit more work indeed.<br><br>I'll add the getJointStateMultiDof for spherical joints soon.<br><br>setJointMotorControlMultiDof indeed sets the maxForce. It is not misnamed: if you set a target velocity of 0, the joint motor can model joint friction given the maximum (friction) force. Of course you can also use setJointMotorControlMultiDof to model a joint motor actuator instead.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Feb 26, 2019 12:52 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

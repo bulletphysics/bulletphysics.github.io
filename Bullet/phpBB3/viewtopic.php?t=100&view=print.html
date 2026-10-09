@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Girona game engine in blender</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Girona game engine in blender</h2>
+		<p><a href="viewtopic.php%3Ft=100.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=100</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Girona game engine in blender</h3>
+				<div class="date">Posted: <strong>Sun Aug 28, 2005 11:55 am</strong></div>
+				<div class="author">by <strong>bandoler</strong></div>
+				<div class="content">Hi, i'm making progress with my own game engine inside blender. I'm using bullet for it, and i'm having some issues to solve. The latest info and shots from the tests are in:<br>
+<br>
+<a href="http://www.blender.org/forum/viewtopic.php?p=42558#42558" class="postlink">http://www.blender.org/forum/viewtopic. ... 2558#42558</a><br>
+<br>
+My problem is that i have a dynamic platform that i controll using the keyboard to inclinate it. On this platform there is an object spinning around. When i set the new position of the platform, sometimes it penetrates the object, and makes it jump high, or even fall through.<br>
+<br>
+I'm not sure of the right way to do this, i've implemented myself the following code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=100&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void		CcdPhysicsController::setOrientation(float quatImag0,float quatImag1,float quatImag2,float quatReal)
+{
+	// added by bandoler. don't trust this
+	SimdTransform xform = m_body-&gt;getCenterOfMassTransform();
+	xform.setRotation( SimdQuaternion(quatImag0,quatImag1,quatImag2,quatReal) );
+	this-&gt;m_body-&gt;setCenterOfMassTransform(xform);
+}
+
+
+void		CcdPhysicsController::setPosition(float posX,float posY,float posZ)
+{
+	// added by bandoler. don't trust this
+	SimdTransform xform = m_body-&gt;getCenterOfMassTransform();
+	xform.setOrigin( SimdVector3(posX,posY,posZ) );
+	this-&gt;m_body-&gt;setCenterOfMassTransform(xform);
+}
+</code></pre></div>
+
+Bcause i was using the first version of blender with bullet. maybe it is working better now. I should probably update, but as ie branched some files, it requires some work.<br>
+<br>
+Also, i'm calling the update on the physics engine once per frame, and i suppose this has to be more complex than this... My main loop looks like:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=100&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	while (!lExit)
+	{
+		double lCurrentTime = PIL_check_seconds_timer();
+		double lDeltaTime = lCurrentTime - lLastTime;
+		lLastTime = lCurrentTime;
+
+		// Process events
+		lExit = lEngine-&gt;ProcessEvents();
+		
+		// Process logic pipelines
+		for ( unsigned int i=0;i&lt;lLogicPipelines.size(); i++ )
+			lLogicPipelines[i]-&gt;Run();
+		
+		// Run the physics
+		lEngine-&gt;iPhysicsEnvironment-&gt;beginFrame();
+		lEngine-&gt;iPhysicsEnvironment-&gt;proceedDeltaTime( lCurrentTime, lDeltaTime );
+		lEngine-&gt;iPhysicsEnvironment-&gt;endFrame();
+		
+		// Run the graphics pipeline
+		get_render_pipeline()-&gt;Run();
+		
+	}
+</code></pre></div>
+
+in the logic pipelines i update the position due to user interaction.<br>
+<br>
+(bandoler)</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

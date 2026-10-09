@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; collision detection problem of collision shape controlled by haptic device</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>collision detection problem of collision shape controlled by haptic device</h2>
+		<p><a href="viewtopic.php%3Ft=11944.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11944</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>collision detection problem of collision shape controlled by haptic device</h3>
+				<div class="date">Posted: <strong>Sat Dec 09, 2017 4:08 pm</strong></div>
+				<div class="author">by <strong>zaqwer</strong></div>
+				<div class="content">Hi everyone,<br>
+<br>
+I have a question about the collision detection between a softbody and a rigid body. <br>
+<br>
+Here is what I'm trying to do. The bottom of the softbody is attached to the ground, so it cannot be moved but can be still deformed. The rigid body is controlled by a haptic device, so the user can move it anywhere. The rigid body is a L shape handle that is simplified with two implicit collision shapes--capsule. If the user touches the softbody with a slow motion and gentle force, the collision detection works regularly. However, when the user uses a brutal force and pushes hard against the softbody, it will totally penetrate into the softbody. <br>
+<br>
+So, my question is, is there any collision detection and resolution for collision shape? It seems not to me, when the collision shape pushes the softbody, there is collision detection and resolution for the softbody, so the softbody knows when the collision happened and how to respond after. However, it seems no collision resolution for the collision shape, when the user pushes against the softbody to it's maximum deformation, somehow, there should have a way to adjust the transformation of the collision shape from keeping moving forward and penetrating into the softbody.<br>
+<br>
+Can bullet solve this problem or am I wrong? I found the samething in Nvidia Flex. Also, in all the related papers, most of the papers are talking about collision detections between virtual objects. There are hardly any paper talking about the collision detection and resolution for a rigid collision shape controlled by a haptic device. Hope someone can help me understand this problem.<br>
+<br>
+Also I have some general questions about Bullet?<br>
+1. Does bullet physics use force-based dynamics or position-based dynamics? If it's position-based, I didn't see any particles. In Nvidia Flex simulator, you can visualize all the particles on a softbody or rigid body. Also, are the particles the vertices of the object mesh? In Nvidia, all the particles are sampled all over the body volume, not just on the surface.<br>
+<br>
+2. How to change the camera view in Bullet? Currently, I only know how to zoom in/out by scrolling the mouse wheel. Is there a way to look up/down/left/right? Or change camera position?<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: collision detection problem of collision shape controlled by haptic device</h3>
+				<div class="date">Posted: <strong>Sun Dec 10, 2017 12:18 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Have you played with all the SoftBody demos in the Bullet ExampleBrowser? Various demos show rigid bodies resting on soft bodies, with two-way interaction.<br>
+<br>
+btRigidBody uses impulse-based (velocity-level) dynamics<br>
+btSoftBody uses position based dynamics.<br>
+There is two-way interaction between btSoftBody and btRigidBody/btMultiBody.<br>
+<br>
+Hold the SHIFT/CTRL and/or ALT keys, in combination with the mouse buttons/drag to move the camera.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: collision detection problem of collision shape controlled by haptic device</h3>
+				<div class="date">Posted: <strong>Sun Dec 10, 2017 2:00 am</strong></div>
+				<div class="author">by <strong>zaqwer</strong></div>
+				<div class="content">Hi Erwin, thanks for your reply. I really appreciate it.<br>
+<br>
+Yes, I have tried all the Softbody demos. Like what you said, there are two-way interaction between softbody and rigidbody. However, the collision detection only works robustly when the rigidbody moves by itself and interacts with the softbody. When I use mouse-pick to pick up one rigidbody and drag it through the cloth with brute force or drag it fast, it will penetrate the cloth eventually. But I haven't tried to control the rigidbody with haptic device yet, I think the same thing would happen. With haptic device controlling the rigidbody, it won't allow the rigidbody to react freely. If you push the rigidbody against the softbody hard, it will go through the softbody.<br>
+<br>
+My goal is to build a neonatal intubation simulator based on Bullet. We want to simulate the baby head as a softbody and the laryngoscope as a simplified collision shape. The reason that we are so strict with soft-rigid collision detection and response is because when you insert the laryngoscope into the baby's mouth, you need to apply strong force on the tongue in order to find a good angle to see the tracheal. In this case, I'm worried that the laryngoscope would penetrate the tongue or even the jaw and finally get out of the head. I want to know if there is a way to prevent the rigidbody from going through the softbody. When the rigidbody reaches the maximum deformation of the softbody, is there a way to stop the rigidbody from moving forward into the softbody, but you would still be able to rotate or slide against the surface of the softbody.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: collision detection problem of collision shape controlled by haptic device</h3>
+				<div class="date">Posted: <strong>Wed Dec 13, 2017 4:54 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">A RigidBody will bounce off of a SoftBody, but the question is: what are you using to position the RigidBody onto the surface of the SoftBody?  If you're using a constraint to position it then of course: the constraint is stiff and will defeat any rebound effect from the SoftBody.<br>
+<br>
+Perhaps you want to use a custom Action to push the RigidBody around so you can modulate how "hard" it tries to move?  I posted some example code for how to do this in <a href="viewtopic.php%3Ff=9&amp;t=11950.html" class="postlink">this thread</a>.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

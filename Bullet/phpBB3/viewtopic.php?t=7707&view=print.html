@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Real-time voronoi fracture and shatter for Bullet Physics</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Real-time voronoi fracture and shatter for Bullet Physics</h2>
+		<p><a href="viewtopic.php%3Ft=7707.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7707</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3>Real-time voronoi fracture and shatter for Bullet Physics</h3>
+				<div class="date">Posted: <strong>Sat Dec 17, 2011 6:25 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><em class="text-italics"><strong class="text-strong">YouTube link</strong></em> ==&gt; <strong class="text-strong"><span style="font-size:150%;line-height:116%"><a href="http://www.youtube.com/watch?v=0_qVjLGuT6E" class="postlink">Video demonstration of uses for voronoi fracture and shatter and voronoi cell point placement examples.</a></span></strong><br>
+<br>
+I took a shot at writing a voronoi fracture and shatter function based on the simplest brute force algorithm I could come up with inspired by Bullet Physics.  Being brute force, all voronoi cell points are considered, not just nearest neighbors, therefore we can get well chiseled shards. <br>
+<br>
+Here is my <em class="text-italics"><span style="text-decoration:underline">high level simplified</span></em> algorithm:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7707&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>foreach current_point in voronoi_cell_points
+    planes = collection of source convex object faces represented as plane equations
+    max_distance = (furthest vertex from current_point) * 2
+    foreach other sorted_point by distance from current_point
+        if distance &gt; max_distance
+            break # rest of sorted points too far, we're done with this current point
+        add new plane to planes, normal and distance = -(sorted_point - current_point) / 2
+        collect vertices (3-plane intersections) by planes that fall inside all planes only
+        delete planes that fell outside
+        max_distance = (furthest vertex from current_point) * 2
+    we now have vertices and/by planes for one voronoi 3D shard,
+    process vertices by plane (sort counter-clockwise, etc.) to get faces and edges</code></pre></div>
+For the attached demo I'm supplying an optimized cuboid fracture and shatter function.  The algo only works with source convex polys, but the optimized bounding box shatter function presented here should be universally useable in conjunction with boolean functions for polygon meshes.<br>
+Note that since voronoi cell shards are always convex shapes, you can use highly optimized convex clipping on your polygon meshes instead of generalized boolean intersection.<br>
+<strong class="text-strong"><span style="text-decoration:underline">If you know of a good open source convex clipping routine</span> (intersection between convex hull and polymesh), or have one to contribute, please let us know, thank you.</strong><br>
+<br>
+The code attached here takes advantage of a relatively new Bullet Physics feature: btConvexHullComputer (Ole Kniemeyer).  The voronoi shards brute force math entails some precision errors which normally would be dealt with by vertex merging and other corrections, however with btConvexHullComputer we get solid shards that have reliable counter-clockwise faces and edges every time.<br>
+<br>
+In real-time games you'll be limited primarily by the number of rigid bodies you can simulate; but this code can fracture a cuboid into 32 completed btRigidBody meshed shards in less than 1/60th of a second (I suggest using targeted linear velocity voronoi random point spray). <br>
+When you run the demo, look at the console for performance timing on the voronoi fracture and shatter.  Note that the time displayed is the total time it took to fracture and compute all of the 3D shards, triangulated meshes, volumes, centers of mass and create Bullet Physics rigid bodies.<br>
+Currently this is all running single-threaded as well, and considering the brute force simplicity, the process could be broken down into threads and performance significantly increased.  Also, I'm certain it can be further optimized as it is.<br>
+<br>
+I was hoping to produce a more full featured class and demo months ago, however I didn't get around to it, as these things go.<br>
+The code presented here does the important part and considering its straightforwardness it should be easy to understand and fairly simple to make use of in other projects.<br>
+<br>
+I used Erwin's BasicDemo as a template; you can very quickly compile and test the attached as a drop in replacement for BasicDemo (make a backup copy of the originals)<br>
+The functions at the top of the demo do all of the voronoi fracture and shatter work, specifically voronoiBBShatter() along with getVerticesInsidePlanes(), see source comments.<br>
+<br>
+Notes from the top of the BasicDemo file:<br>
+<strong class="text-strong"></strong><ul><li><strong class="text-strong">Reset scene (press spacebar) to generate new random voronoi shattered cuboids</strong></li>
+<li><strong class="text-strong">Check console for total time required to: compute and mesh all 3D shards, calculate volumes and centers of mass and create rigid bodies</strong></li>
+<li><strong class="text-strong">Modify VORONOIPOINTS define to change number of potential voronoi shards</strong></li>
+<li><strong class="text-strong">Note that demo's visual cracks between voronoi shards are NOT present in the internally generated voronoi mesh! <em class="text-italics">(I double-checked this)</em></strong></li></ul><br>
+<br>
+If you use this algorithm/code, optimize/improve it, would be nice if you let us know, thanks.<br>
+<br>
+<strong class="text-strong"><span style="text-decoration:underline">NOTE</span>: Attachment is demo <em class="text-italics">source code</em> <span style="text-decoration:underline">only</span>, for developers...</strong><br>
+<span style="text-decoration:underline"><strong class="text-strong">UPDATE</strong></span>: Source code updated <em class="text-italics">2011-12-23</em>: higher tolerance for long thin shards (splinters).<br>
+<span style="text-decoration:underline"><strong class="text-strong">Update</strong></span>: Minor update <em class="text-italics">2012-01-07</em> to restore same step order as algorithm<br>
+<span style="text-decoration:underline"><strong class="text-strong">UPDATE</strong></span>: <em class="text-italics">2012-01-10</em> Add voronoiConvexHullShatter() to source code (not demoed) (Thanks Flix for idea). <em class="text-italics">Update 2</em>, same day: replaced <span style="font-size:85%;line-height:116%">getPlaneEquationsFromVertices</span> with <span style="font-size:85%;line-height:116%">convexHullComputer</span><br>
+<br>
+<strong class="text-strong"><span style="text-decoration:underline">UPDATE</span>: new Bullet 2.80 includes VoronoiFractureDemo!</strong> ...see my <a href="viewtopic.php%3Fp=27377.html#p27359" class="postlink">notes about this demo</a>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Mon Dec 19, 2011 3:45 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><strong class="text-strong">Update!</strong>: Video animation of several rendered simple voronoi fracture and shatter tests:<br>
+<strong class="text-strong"><em class="text-italics">YouTube link</em></strong> ==&gt; <span style="font-size:150%;line-height:116%"><a href="http://www.youtube.com/watch?v=FIPu9_OGFgc" class="postlink">Voronoi Fracture and Shatter Lab Tests - Blender &amp; Bullet Physics</a></span></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Tue Dec 20, 2011 6:40 am</strong></div>
+				<div class="author">by <strong>AD-Edge</strong></div>
+				<div class="content">Some impressive demonstrations. <br>
+Looks forward to having a play around with it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Wouldnt mind seeing some tests which really push the simulation as well, in terms of the amount of shatter detail I guess.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Fri Dec 23, 2011 3:52 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Note that the source code was updated 2011-12-23... see first post in this thread.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Wed Dec 28, 2011 12:43 pm</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content">Just to say that I appreciate your demo very much  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> !<br>
+<br>
+P.S. Now I'm downloading the updated version. Anyway, although I don't know much about the Voronoi theory (and how to extract the planes to be able to extend the demo to general convex meshes), I was able to create 'long thin shards' by setting all the points on the bottom of the cuboid (it was funny to play with their position and see the result...).<br>
+B.T.W. The renderer you used in your videos is very attractive for the eyes <img class="smilies" src="images/smilies/icon_exclaim.gif" width="15" height="15" alt=":!:" title="Exclamation"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Wed Dec 28, 2011 7:40 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Thanks.<br>
+BTW if anyone else wants to try chopping/splintering (depends on random ratio) you could simply add a line like this to the demo, right below "<span style="font-size:85%;line-height:116%"><em class="text-italics">btVector3 diff = bbmax - bbmin;</em></span>":<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7707&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>diff.setX(diff.x()*.01);</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Sun Jan 01, 2012 7:55 pm</strong></div>
+				<div class="author">by <strong>kloplop321</strong></div>
+				<div class="content">This is really cool!<br>
+<br>
+I wonder how well this could be implemented in a theoretically complete OpenCL implementation(including Bullet Physics). <br>
+<br>
+Are you still working on this? What are you releasing under?(I see copyright to you, and I see zlib for the bullet part, but not you) <br>
+<br>
+Additionally, how involved is this with HACD? (Hierarchical Approximate Convex Decomposition of 3D Meshes)<br>
+<a href="http://sourceforge.net/projects/hacd/" class="postlink">http://sourceforge.net/projects/hacd/</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Tue Jan 03, 2012 9:28 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">@kloplop321: The brute force math lends itself well to OpenCL.<br>
+Not currently working on it (released this code in response to an e-mail from Erwin).  Released under same license as Bullet Physics…<br>
+This is not related to HACD.  I bring up HACD as a post scriptum to my video primarily to raise awareness of HACD (also presented in juxtaposition to the "<em class="text-italics">assisted voronoi convex decomposition</em>" concept I presented in the video).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Wed Jan 04, 2012 2:44 pm</strong></div>
+				<div class="author">by <strong>blenderdude</strong></div>
+				<div class="content">Hi Phymec,<br>
+<br>
+This is brilliant, do you know if anyone is taking this on as it would be a shame to just let this disappear into oblivion as I think Blender could really do with some proper shattering. I've been looking into creating realistic shattering for a while now, I wish I knew how to implement the code you've provided but I'm very new to the coding side of things. <br>
+<br>
+All the best<br>
+<br>
+Adam</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Thu Jan 05, 2012 7:40 pm</strong></div>
+				<div class="author">by <strong>kloplop321</strong></div>
+				<div class="content">@blenderdude<br>
+The shattering at the moment seems to be manually applied, and it is just pre-splitting stationary objects, which when disturbed, breaks apart.<br>
+It needs a lot of custom tweaking on the frames that involve shattering. <br>
+<br>
+I hope to take this and come up with a means to have shatter-able objects, where weakness could potentially be painted. Along with <em class="text-italics">weak</em> constraints which can make things hang or hold together loosely so it doesn't just fall apart things to gravity alone. I don't know if my anticipated work could be ported back to where it could be used in blender.<br>
+<br>
+But that's at least my idea to eventually implement. I don't know if someone will beat me to it. (I've got a lot of other things on my to-do list)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Thu Jan 05, 2012 7:42 pm</strong></div>
+				<div class="author">by <strong>majestik666</strong></div>
+				<div class="content">In our implementation of bullet for maya we do dynamic fracturing with voronoi.<br>
+Can't tell you much about it, but the idea is to take the contact points from the callback<br>
+check if the collision momentum is strong enough to shatter an object and then spread <br>
+points in space starting from the contact point.<br>
+This works pretty well.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Thu Jan 05, 2012 9:49 pm</strong></div>
+				<div class="author">by <strong>kloplop321</strong></div>
+				<div class="content">@majestik666, are you referring to dynamica? <a href="http://code.google.com/p/dynamica" class="postlink">http://code.google.com/p/dynamica</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Fri Jan 06, 2012 2:39 am</strong></div>
+				<div class="author">by <strong>majestik666</strong></div>
+				<div class="content">no<br>
+<br>
+we wrote our own maya plugin which is a fair bit more evolved<br>
+than dynamica for our fx purposes here.<br>
+<br>
+I haven't looked at dynamica in a quite a while though, so not<br>
+sure what is in there now...<br>
+<br>
+F</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Sat Jan 07, 2012 6:21 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><strong class="text-strong">Note</strong>: minor cosmetic code update this weekend (<em class="text-italics">2012-01-07</em>) to move back (<em class="text-italics">from old tests, sorry</em>) the outside planes delete step to where it belongs, as per the algorithm.<br>
+
+<blockquote><div><cite>kloplop321 wrote:</cite>It needs a lot of custom tweaking on the frames that involve shattering.</div></blockquote>Not sure what you are referring to... keep in mind the videos were illustrative examples of point placement and step by step elaborations of the voronoi fracture and shatter use process (in Blender).<br>
+It's actually fairly simple to do targeted points spray voronoi shatter at collision time in real-time with Bullet Physics, no <em class="text-italics">manual intervention</em> or "<em class="text-italics">custom tweaking</em>" required.<br>
+Your idea of painted weaknesses and using constraints is very interesting, but a lot more involved.<br>
+<br>
+If anyone wants to help with this project, what would be really useful right now is a <em class="text-italics"><strong class="text-strong"><span style="text-decoration:underline">fast</span></strong></em> convex hull to non-convex triangle mesh intersection routine to add to this (instead of using generalized boolean).  Doing the voronoi convex hull clipping step on a triangle mesh should actually be pretty straightforward since the voronoi cells calculation step already provides us with our convex clipping planes.  The challenge is properly filling the outside edges of our clipped mesh with faces to end up every time with solid pieces without holes (minding the uvs would be a good bonus  <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz">).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Sun Jan 08, 2012 8:21 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>RBD wrote:</cite>If anyone wants to help with this project, what would be really useful right now is a fast convex hull to non-convex triangle mesh intersection routine to add to this (instead of using generalized boolean). Doing the voronoi convex hull clipping step on a triangle mesh should actually be pretty straightforward since the voronoi cells calculation step already provides us with our convex clipping planes. The challenge is properly filling the outside edges of our clipped mesh with faces to end up every time with solid pieces without holes (minding the uvs would be a good bonus <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz">).</div></blockquote>As I stated in a post above, I don't know much about the convex-hull theory... <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad">  Just to better understand the question: is such a routine needed for speeding up the algorithm or to extend it to be applied to generic (non-convex, but closed) meshes ? (UV support would be great in either case... <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> ) .<br>
+<br>
+I ask because I've tried to combine your code with the HACD library to decompose concave meshes: it doesn't work, because the HACD decomposed convex meshes overlap (and I guess other convex decomposition libraries behave in the same way...).<br>
+<br>
+Hope somebody can find the routine you're looking for... <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

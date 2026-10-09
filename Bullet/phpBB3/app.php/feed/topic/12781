@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12781" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2019-10-18T02:02:25+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12781</id>
+
+		<entry>
+		<author><name><![CDATA[Decker]]></name></author>
+		<updated>2019-10-18T02:02:25+00:00</updated>
+
+		<published>2019-10-18T02:02:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42426#p42426</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42426#p42426"/>
+		<title type="html"><![CDATA[Re: Simulating an KUKA LBR iwaa]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42426#p42426"><![CDATA[
+Hey there! <br>Sorry for the late reply; I was been busy with this semesters start.<br><br>Today I found time to tinker around with it again and settled for hinge constraints. My goal was to get just one hinge to work.<br>Let's suppose we have the following URDF definition (just an excerpt from bullet's kuka.urdf):<div class="codebox"><p>Code: </p><pre><code>  &lt;link name="calib_kuka_arm_base_link"&gt;    &lt;inertial&gt;      &lt;mass value="0"/&gt;      &lt;!-- static base, disable dynamics for this link --&gt;      &lt;origin rpy="0 0 0" xyz="0 0 0.055"/&gt;      &lt;inertia ixx="0.00381666666667" ixy="0" ixz="0" iyy="0.0036" iyz="0" izz="0.00381666666667"/&gt;    &lt;/inertial&gt;    &lt;visual&gt;      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;      &lt;geometry&gt;        &lt;mesh filename="assets/models/kuka_lwr/arm_base.ply"/&gt;      &lt;/geometry&gt;      &lt;material name="Orange"/&gt;    &lt;/visual&gt;    &lt;collision&gt;      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;      &lt;geometry&gt;        &lt;mesh filename="assets/models/kuka_lwr/arm_base_convex.ply"/&gt;      &lt;/geometry&gt;    &lt;/collision&gt;  &lt;/link&gt;  &lt;joint name="kuka_arm_0_joint" type="revolute"&gt;    &lt;origin rpy="0 0 0" xyz="0 0 0.11"/&gt;    &lt;axis xyz="0 0 1"/&gt;    &lt;limit effort="204" lower="-2.96705972839" upper="2.96705972839" velocity="1.91986217719"/&gt;    &lt;dynamics damping="0.1"/&gt;    &lt;parent link="calib_kuka_arm_base_link"/&gt;    &lt;child link="kuka_arm_1_link"/&gt;  &lt;/joint&gt;  &lt;link name="kuka_arm_1_link"&gt;    &lt;inertial&gt;      &lt;mass value="2.0"/&gt;      &lt;origin rpy="0 0 0" xyz="0 0.04 0.130"/&gt;      &lt;inertia ixx="0.0136666666667" ixy="0" ixz="0" iyy="0.0118666666667" iyz="0" izz="0.003"/&gt;    &lt;/inertial&gt;    &lt;visual&gt;      &lt;origin rpy="0 0 3.14159265359" xyz="0 0 0"/&gt;      &lt;geometry&gt;        &lt;mesh filename="assets/models/kuka_lwr/arm_segment_a.ply"/&gt;      &lt;/geometry&gt;      &lt;material name="Orange"/&gt;    &lt;/visual&gt;    &lt;collision&gt;      &lt;origin rpy="0 0 3.14159265359" xyz="0 0 0"/&gt;      &lt;geometry&gt;        &lt;mesh filename="assets/models/kuka_lwr/arm_segment_a_convex.ply"/&gt;      &lt;/geometry&gt;    &lt;/collision&gt;  &lt;/link&gt;</code></pre></div>The way I understood the URDF specification, the pivot in a would be (0, 0, 0.11), pivot in b would be(0, 0, 0) and the axis in a and b (0, 0, 1).<br>So I assumed, that following code would work:<div class="codebox"><p>Code: </p><pre><code>   for (std::size_t it = 1; it &lt; link_count; ++it) {      const auto&amp; link = _robot-&gt;link(it);      const auto&amp; joint = link.parent_joint();      btVector3   pivot_in_b = joint.origin().getOrigin(); // Specifies the offset off the joint in its local frame; here (0, 0, 0.11)      btVector3   pivot_in_a = { 0, 0, 0 };                        // Is this assumption right?      // TODO: Offset collision shape???      auto hinge = new btHingeConstraint(         *_rigid_bodies[it - 1],         *_rigid_bodies[it],         pivot_in_a,         pivot_in_b,         joint.axis(),         joint.axis()      );      hinge-&gt;enableMotor(true);      hinge-&gt;setMaxMotorImpulse(1000);      auto component = new constraint_component{};      component-&gt;constraint = hinge;      _entities[it].add_component(component);   }</code></pre></div>Is this the right assumption? If not, how would I calculate the pivot points and axis?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13441">Decker</a> — Fri Oct 18, 2019 2:02 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[steven]]></name></author>
+		<updated>2019-10-14T05:24:58+00:00</updated>
+
+		<published>2019-10-14T05:24:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42418#p42418</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42418#p42418"/>
+		<title type="html"><![CDATA[Re: Simulating an KUKA LBR iwaa]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42418#p42418"><![CDATA[
+Could you provide a complete simple test? thanks.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13075">steven</a> — Mon Oct 14, 2019 5:24 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Decker]]></name></author>
+		<updated>2019-10-13T21:48:31+00:00</updated>
+
+		<published>2019-10-13T21:48:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42417#p42417</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42417#p42417"/>
+		<title type="html"><![CDATA[Simulating an KUKA LBR iwaa]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42417#p42417"><![CDATA[
+Hey, there!<br><br>Currently I am attempting to simulate a KUKA LBR iwaa robot using Bullet3, an in-house renderer and C++. <br>I tried two approaches:<ul><li>- btHingeConstraint<br>- btMultibody</li></ul>Both approaches failed. The former approach fails the following way:<br>All links of the robot 'explode' into different directions. At this point, I am not sure what I am doing wrong.<br>Given an URDF description, how could one calculate the proper position of the first joint?<br><br>Using the latter approach, my application crashes on the first simulation step, telling me that one joint is untyped,<br>although, after verifying with the Debugger, every joint created is an revolute-joint.<br><br>Is there something I am doing wrong?<br><br>NOTE: I cannot rely on BulletRobotics, thus I am parsing the URDF description and creating the render objects myself.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13441">Decker</a> — Sun Oct 13, 2019 9:48 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

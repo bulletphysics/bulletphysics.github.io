@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Constraint Solver approaches</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Constraint Solver approaches</h2>
+		<p><a href="viewtopic.php%3Ft=38.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=38</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Constraint Solver approaches</h3>
+				<div class="date">Posted: <strong>Tue Jul 19, 2005 6:05 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Kenny states that creating a higher stack, will eventually create overlap bigger then the envelope.</div></blockquote>
+
+Hmm, yes if you for instance use iterative or some newton damped solver in a complementarity formulation to solve for contact forces. Direct methods tend to be quite accurate so you only suffer from problems of numerical precision (often much smaller in size than a collision envelope).<br>
+<br>
+Or if you are doing pure penalty methods. In an impulse-based approach the high stack will squeze object close together (especially at the bottom). Implying that the separation distance (within collision envelope) is going to zero while the frequency of impluse trains is going to infinity. Result you simulation stagnates and in the end comes to a halt. The higher the stack, the faster your simulator comes to a halt.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 20, 2005 6:28 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Here's what I'm doing in our game (keep in mind this has to run on a PS2):<br>
+<br>
+1. Projected Gauss-Seidel (PGS) with 5 iterations and Baumgarte stabilization.<br>
+2. Two-way anisotropic friction with a constant bound.<br>
+3. 30Hz simulation (can dip to 15Hz)<br>
+4. To prevent tunnelling I use line probes and swept spheres.<br>
+<br>
+This system actually works quite well. Some hand holding is necessary with the game designers to get mass ratios right for PGS.<br>
+<br>
+I have gotten no complaints about penetrations. So it seems to be enough to prevent tunnelling. Designers like the fact that things can be setup a bit sloppy and they will push apart.<br>
+<br>
+In practice, no one wants to make high stacks of boxes, so 5 iterations of PGS is good enough. PGS prefers systems where the heaviest bodies are touching ground and the bodies get lighter as they branch out via joints and/or contacts. We use this as a design constraint.<br>
+<br>
+Shock propagation can solve this but leads to bad artifacts. Stacks become too stable and will arch over into impossible configurations. Also, joint errors in suspension bridges are not well distributed.<br>
+<br>
+About position projection. I tried this, but I still had to scale the position error by a Baumgarte type of parameter to avoid overshoot and loss of contact (leading to jitter). I found it to be more efficient to use a small Baumgarte parameter during integration and just live with errors being resolved over a few steps.<br>
+<br>
+The non-negative least squares problem presented by Stephane is interesting. I'm curious if an iterative method could be developed that does not require usign a J*J' type of matrix. Perhaps friction could be included if constant bounds are used.<br>
+<br>
+Another possibility is to develop a projected conjugate gradient algorithm.  Has anyone tried this yet?<br>
+<br>
+Erin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 20, 2005 7:54 am</strong></div>
+				<div class="author">by <strong>Kenny Erleben</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>In practice, no one wants to make high stacks of boxes, so 5 iterations of PGS is good enough. PGS prefers systems where the heaviest bodies are touching ground and the bodies get lighter as they branch out via joints and/or contacts. We use this as a design constraint.</div></blockquote>
+
+Diagonalization of the system matrix can solve the problem of large mass ratio's (at a peformance cost, of course).<br>
+
+<blockquote><div><cite>Erin Catto wrote:</cite>Shock propagation can solve this but leads to bad artifacts. Stacks become too stable and will arch over into impossible configurations.</div></blockquote>
+
+This is true, Guendelmann et. al refered to this as  a ``weight feeling'' problem. In my preliminary work I tried to solve this by a weighting of a full dynamics update step and one step using shock-propagation. It do solve the problem, but comes with two disadvantages: You get one parameter more to tune and the time-step is a little more expensive to perform (compared to doing PGS with 5 iterations).<br>
+<br>
+There are other benefits one can gain from shock-propagation. It can basically be explained as a perfect way to turn GS into a blocked GS with a perfect ``directional'' preconditioner. By directional I mean that values can only change in one direction (upwards).<br>
+<br>
+In fact shock-propagation partitions the problem into several smaller independent problems eventhough you only have one big contact group. It is thus possible to use direct methods for these small partitions and still get high performance.<br>
+<br>
+From my viewpoint the biggest problem with shock-propagation is the stack-layer analysis that needs to be performed. It requres some book-keeping and a good computational cheap method to determine which contacts that would be violated and in which direction they would be violated. I used a breadt-first traversal on the contact graph to do this analysis. Tt is very fast and deals with most cases in a graceful manner, it is although not perfect. <br>
+
+<blockquote><div><cite>Erin Catto wrote:</cite>About position projection. I tried this, but I still had to scale the position error by a Baumgarte type of parameter to avoid overshoot and loss of contact (leading to jitter). I found it to be more efficient to use a small Baumgarte parameter during integration and just live with errors being resolved over a few steps.
+</div></blockquote>
+
+In my experience stabilization is good to deal with small errors. Projection methods are good to deal with large errors. Large errors seem to make things explode when using stabilization. I never had to scale my projections and I never experienced problems with overshooting.<br>
+
+<blockquote><div><cite>Erin Catto wrote:</cite>Another possibility is to develop a projected conjugate gradient algorithm.  Has anyone tried this yet?
+</div></blockquote>
+
+This is well described in litterature and I think ODE have an implementation of a projected conjugate gradient (PCG). Most people I have talked with have reported that PGS has worse performance than PGS or PSOR. I must admit I have not fully understood why? Theoretically PCG should have quadratic convergence, so it should be better than GS and SOR, which have linear convergence. The cost per iteration should be equivalent.<br>
+<br>
+Personally I believe that Newton methods and interior point methods will be the next kind of solvers that people in academia will try to use for computer graphics. Lacousiere did a comparision study of different types of solvers. The results were published in SIGRAD 2003. As I recall he found that the Keller method ( a direct method) were the best.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 20, 2005 8:17 am</strong></div>
+				<div class="author">by <strong>Stephane Redon</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I'm curious if an iterative method could be developed that does not require usign a J*J' type of matrix.</div></blockquote>
+
+Hello Erin, I did not understand why this is a problem. Do you mean using a J*J' type of matrix is a problem even if you don't compute it, i.e. first multiply by J' and then by J (two very sparse matrices)? I might not know enough about the system you solve with PGS <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">.<br>
+<br>
+
+<blockquote><div><cite>Erin Catto wrote:</cite>Perhaps friction could be included if constant bounds are used.</div></blockquote>
+
+That may be a good idea, yes. I actually implemented friction in a somewhat hacky way but didn't publish it (only in the -French- dissertation <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">). The way I did it was to add constraints on the acceleration in the minimization problem: dynamic acceleration constraints and static acceleration constraints. However this is different from Coulomb friction, which imposes constraints on forces and not accelerations, and might show artifacts. Actually an easy way to handle dynamic friction might be to use the contact point's velocity at the previous timestep.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2005 4:41 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Hi Kenny, there are two aspects to weight feeling. One is to have a seesaw that works properly. I think this is handled well by a dual stage integration with regular dynamics followed by shock propagation.<br>
+<br>
+The second is multilevel stability. Consider a stack of three boxes arranged as:<br>
+<br>
+<a href="http://www.gphysics.com/files/stackofthree.gif" class="postlink">http://www.gphysics.com/files/stackofthree.gif</a><br>
+<br>
+Ignoring the top box, the configuration is stable. Fixing the bottom box, the top two are stable. However, altogether the system is unstable. However, the shock propagation stage will remove the natural instability.<br>
+<br>
+I'm sorry. I might have caused some confusion. When I said "position projection," I was referring to the "first-order world" or Aristotle method. Since this stage is only solved approximately, there is a potential for overshoot. To preclude this I had to use a Baumgarte parameter. I don't understand how you can avoid overshoot for contacts with a Baumgarte parameter of one.<br>
+<br>
+Here's my understanding of the pros and cons of PGS and PCG:<br>
+<br>
+PCG:<br>
+Pros: fast convergence, deals with large mass ratios better, about the same cost as PGS.<br>
+Cons: velocity errors can increase after an iteration (a rougher). Not as well documented.<br>
+<br>
+PGS:<br>
+Pros: velocity errors decrease uniformly (a smoother). Responds well to changing constraint sets.<br>
+Cons: poor convergence, problems with large mass ratios<br>
+<br>
+I have not found a paper that compares PCG and and PGS in a rigorous manner.<br>
+<br>
+Hi Stephane, sorry for the confusion. I'm referring to the LCP matrix A = J*inv(M)*J'. A benefit of the least squares (LS) formulation is to avoid the condition problems of A and to work in a different range space. However, all the iterative methods if have found for the LS problem implicitly use A.<br>
+<br>
+Erin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2005 7:29 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>Hi Kenny, there are two aspects to weight feeling. One is to have a seesaw that works properly. I think this is handled well by a dual stage integration with regular dynamics followed by shock propagation.<br>
+<br>
+The second is multilevel stability. Consider a stack of three boxes arranged as:<br>
+<br>
+<a href="http://www.gphysics.com/files/stackofthree.gif" class="postlink">http://www.gphysics.com/files/stackofthree.gif</a><br>
+<br>
+Ignoring the top box, the configuration is stable. Fixing the bottom box, the top two are stable. However, altogether the system is unstable. However, the shock propagation stage will remove the natural instability.</div></blockquote>
+
+I think both aspects are handled by taking an initial regular dynamics step. Of course there is some simulation quality to be tweaked, depending on the weight of this initial dynamics step.<br>
+<br>
+If you take a look at some of my wall or tower simulations you should be convinced that the second aspect you mention are handled.<br>
+<br>
+<a href="http://www.diku.dk/~kenny/phd.defense.demo.avi" class="postlink">http://www.diku.dk/~kenny/phd.defense.demo.avi</a><br>
+<br>
+I do however agree that a solution without a weight-feeling parameter would be nice.<br>
+<br>
+However, from a game-view point the weight-feeling parameter must be nice to have. It allows you to design game events that dependent on stable stacks (or hard to knock over stacks:-).<br>
+
+<blockquote><div><cite>Erin Catto wrote:</cite>
+I'm sorry. I might have caused some confusion. When I said "position projection," I was referring to the "first-order world" or Aristotle method. Since this stage is only solved approximately, there is a potential for overshoot. To preclude this I had to use a Baumgarte parameter. I don't understand how you can avoid overshoot for contacts with a Baumgarte parameter of one.</div></blockquote>
+
+I was thinking of first-order world projection as well.<br>
+<br>
+If you use an iterative solver, such as PGS, with a fixed iteration limit then you will get a damped minimum norm solution. So the projections are going to be ``damped''. I just have a hard time seeing what you benefit from adding yet another parameter that should be tuned.<br>
+<br>
+I also think an accurate solution will not cause more overshooting than what you get from numerical imprecision, as long as planar contacts are a good representation of your contact areas and there is no undetected contacts.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2005 4:47 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Perhaps there are some differences in our implementations so that we are seeing different results.<br>
+<br>
+In your dissertation, you describe a method for applying velocity constraints to contact points that are not actually touching. Perhaps this would eliminate some of the jitter I was seeing from the overshoot.<br>
+<br>
+Hopefully I'll have time to revisit these matters.<br>
+<br>
+Erin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2005 9:23 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>
+In your dissertation, you describe a method for applying velocity constraints to contact points that are not actually touching. Perhaps this would eliminate some of the jitter I was seeing from the overshoot.<br>
+Erin</div></blockquote>
+
+Wouldn't this result in a visible soft collision ? <br>
+When I tried the approach of applying velocity constraints to non-touching contacts (within an tolerance/envelope) colliding objects slowly 'sank' until they reach zero distance. The effect was small but still visible, and the simulation looked more 'spungy'.<br>
+<br>
+Did any of you spot this effect ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2005 7:57 pm</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite><blockquote><div><cite>Erin Catto wrote:</cite>
+In your dissertation, you describe a method for applying velocity constraints to contact points that are not actually touching. Perhaps this would eliminate some of the jitter I was seeing from the overshoot.<br>
+Erin</div></blockquote>
+
+Wouldn't this result in a visible soft collision ? <br>
+When I tried the approach of applying velocity constraints to non-touching contacts (within an tolerance/envelope) colliding objects slowly 'sank' until they reach zero distance. The effect was small but still visible, and the simulation looked more 'spungy'.<br>
+<br>
+Did any of you spot this effect ?</div></blockquote>
+
+This is just an implicit time-stepping scheme. If you do not include a TOI kind of term on the right-hand side vector you will see objects bounce before they actually hit anything. If time-step size is too big this look very akward.  If you include a TOI term, then objects are essentially allowed to move to the point of the TOI before they bounce. Note that the time-stepping does not actually halt at the time of the TOI. It is a fixed step scheme.<br>
+<br>
+From a mathematical viewpoint constraints are still hard. However, an iterative solver will most likely give you ``weak'' constraint forces due to convergence problems, this is why most people say PGS looks like mass-spring networks, but this problem is common to all time-stepping schemes using something like PGS.<br>
+<br>
+I would guess that you (Erwin) have a TOI term, the sinking effect you see is simply a consequence of TOIs getting more accurate when objects get closer..... However I would need more details on how you setup your complementarity problem and what kind of stepping-scheme you use, to make a more qualified guess.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2005 9:06 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kenny wrote:</cite>
+<br>
+This is just an implicit time-stepping scheme. If you do not include a TOI kind of term on the right-hand side vector you will see objects bounce before they actually hit anything. 
+</div></blockquote>
+
+I wouldn't be so sure about that:<br>
+<br>
+Set the restitution to 0. Let the collision tolerance where you start picking up/breaking contact points to B. Let an object fall on the ground. It will start adding contact points anywhere in the distance range from [0..B] in a non-penetration TOI solution, and [penetration .. B] for a fixed timestep solution that doesn't care about missing collisions and problems of repairing collisions.<br>
+<br>
+Ok, now the objects hits the ground, has no restitution, so no bounce back. It settles down at this possibly positive distance in range (0..B] for every contact point.<br>
+But now, it will slowly sink until it reaches distance 0 for all points. Why ? because no positional correction is applied on positive distances.<br>
+<br>
+That is the effect I'm talking about, so it happens for resting contact, that is put to rest too early, due to the velocity term applied on positive distances.<br>
+<br>
+By the way, a clever TOI solution can guarantee picking up contact points exactly at distance 0, so the problem doesnt occur.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 23, 2005 6:59 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Set the restitution to 0. Let the collision tolerance where you start picking up/breaking contact points to B. Let an object fall on the ground. It will start adding contact points anywhere in the distance range from [0..B] in a non-penetration TOI solution, and [penetration .. B] for a fixed timestep solution that doesn't care about missing collisions and problems of repairing collisions.
+</div></blockquote>
+
+It has nothing to do with how contacts is detected. You could just as easily apply a fake position update, then rewind and use the contacts detected at the future time-step (although you need to re-evaluate them at the old position).<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Ok, now the objects hits the ground, has no restitution, so no bounce back. It settles down at this possibly positive distance in range (0..B] for every contact point.
+</div></blockquote>
+
+Yes, exactly.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+But now, it will slowly sink until it reaches distance 0 for all points. Why ? because no positional correction is applied on positive distances.<br>
+<br>
+That is the effect I'm talking about, so it happens for resting contact, that is put to rest too early, due to the velocity term applied on positive distances.
+</div></blockquote>
+
+As such there is nothing wrong with the implicit scheme.  It is a typical explicit/implict integration effect that is seen here. Explicit methods overshoot, Implicit methods ``under'-' shoot. The classical example is that of integrating a particle moving on a circle. Explicit methods spiral outwards, Implicit wound themselves inward.<br>
+<br>
+In the limit of small time-steps the implicit scheme will converge towards the right behavior. The problem is that we graphics people use insane high time-steps. Try using something like 1e-3 - 1e-5 and the behavior would be much more convincing (of course you can forget about realtime interactive applications).<br>
+<br>
+Doing position correction on separation distances, seems very dangerous to me. How on earth would you know what contacts should be forces into touching contacts? Once this is known it is trivially to actually compute the projection, just use bilataral constraints in the first-order world update on any contacts you want to re-enforce.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+By the way, a clever TOI solution can guarantee picking up contact points exactly at distance 0, so the problem doesnt occur.</div></blockquote>
+
+The behavior we discussed above is most visiable without using TOI-terms on the right-hand side. Using a TOI term increases the order of convergence of the scheme (remember you still got linearization and discretization errors from the laws of physics). Even an exact TOI will not cure the artifacts from the implicit scheme. However, I would imagine that with probably tuned threshold and paramter values an observer would not notice the effect.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 23, 2005 7:27 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kenny wrote:</cite>
+<br>
+In the limit of small time-steps the implicit scheme will converge towards the right behavior. The problem is that we graphics people use insane high time-steps. Try using something like 1e-3 - 1e-5 and the behavior would be much more convincing (of course you can forget about realtime interactive applications).
+</div></blockquote>
+
+taking small timesteps is another way of better estimating the time of impact. something that continuous collision detection does much better in my experience. So the problem discrete systems (with motion that is relatively large compared to the timestep) show is either artifacts due to deep penetration, or (in case of a big collision envelope) artifacts due to contacts between objects are added too early.<br>
+<br>
+If the engine steps from toi to toi, the overal timestep can be very large, and you just add the discontinuities in the timestep where it needs to be: at the times of collisions.<br>
+
+<blockquote><div><cite>kenny wrote:</cite>
+Doing position correction on separation distances, seems very dangerous to me. How on earth would you know what contacts should be forces into touching contacts? Once this is known it is trivially to actually compute the projection, just use bilataral constraints in the first-order world update on any contacts you want to re-enforce.
+</div></blockquote>
+That's what I meant and do. Any way of dealing with the penetration, no matter what order shows the effect. I should have been more careful in my writing.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

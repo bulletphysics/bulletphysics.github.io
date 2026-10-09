@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Restitution dependend on timestep</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Restitution dependend on timestep</h2>
+		<p><a href="viewtopic.php%3Ft=11860.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11860</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Restitution dependend on timestep</h3>
+				<div class="date">Posted: <strong>Fri Sep 01, 2017 10:01 am</strong></div>
+				<div class="author">by <strong>thantalos</strong></div>
+				<div class="content">Hello guys!<br>
+<br>
+I've been experimenting with bullet and came across a problem I can't explain it and I can't find any information on the problem.<br>
+My setup is as simple as possible: a small box and a small ball falling on a fixed large box. Restitution values for all objects are 1. <br>
+<a href="https://ibb.co/h8VoUF" class="postlink"><img src="https://thumb.ibb.co/h8VoUF/rest1.png" class="postimage" alt="Image"></a><br>
+Everything seems fine when I run the simulation slower than 500Hz (stepSize &gt; 0.002). If I go above 500Hz, the ball suddenly doesn't work correctly any longer. It seems to loose energy, while the box is still behaving correctly. <br>
+<a href="https://ibb.co/kb7k9F" class="postlink"><img src="https://thumb.ibb.co/kb7k9F/rest2.png" class="postimage" alt="Image"></a><br>
+Sphere z-Position at 400Hz (<span style="color:#0000FF">blue</span>) and 500Hz (<span style="color:#FF0000">red</span>)<br>
+<a href="https://ibb.co/fqyp3a" class="postlink"><img src="https://thumb.ibb.co/fqyp3a/rest3.png" class="postimage" alt="Image"></a><br>
+<br>
+Deactivating split impulse adds energy to the system as expected, independent of step size.<br>
+Friction parameters have no effect.<br>
+Number of iterations has no effect.<br>
+Changes to any ERP parameters have no effect.<br>
+It seems to be solely dependent on the real step size, using subSteps doesn't change the behavior ("real step size" = fixedStepSize/numSubSteps).<br>
+<br>
+Shouldn't the simulation be more accurate at higher frequencies?<br>
+<br>
+If there is any additional information I can give you please let me know.<br>
+<br>
+Cheers!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution dependend on timestep</h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2017 4:48 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I think someone else noticed this problem a while ago and as I recall: you need enable double precision floats when using very small timesteps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution dependend on timestep</h3>
+				<div class="date">Posted: <strong>Tue Sep 05, 2017 7:36 am</strong></div>
+				<div class="author">by <strong>thantalos</strong></div>
+				<div class="content">Thank you but I am already using double precision. In any case I can't imagine that the values dealt with here get so small that numerical precision errors cause such a big deviation. And why would that only affect the ball and not also the much more unstable (in theory) box?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution dependend on timestep</h3>
+				<div class="date">Posted: <strong>Tue Sep 05, 2017 4:22 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I searched and found the <a href="viewtopic.php%3Ft=10695.html" class="postlink">old thread</a> about this problem:<br>
+<br>
+I misremembered the double precision relevance.  It was mentioned but it was the same case as here: already being used.<br>
+<br>
+It is a real bug with a reliable repro recipe.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution dependend on timestep</h3>
+				<div class="date">Posted: <strong>Sat May 12, 2018 1:11 pm</strong></div>
+				<div class="author">by <strong>kangd</strong></div>
+				<div class="content">Hello, <br>
+<br>
+I've experienced same issue on Bullet recent version (2.88)<br>
+<br>
+Is there any advanced yet?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution dependend on timestep</h3>
+				<div class="date">Posted: <strong>Sat Sep 24, 2022 10:36 am</strong></div>
+				<div class="author">by <strong>bbird5490</strong></div>
+				<div class="content">I tried this with version 3.25 with the same problem. <br>
+<br>
+You can find my example code in this issue I posted on GitHub:<br>
+<a href="https://github.com/bulletphysics/bullet3/issues/4341" class="postlink">https://github.com/bulletphysics/bullet3/issues/4341</a><br>
+<br>
+In my case it works for a btBoxShape but not for the same box implemented as a btConvexHullShape. It also fails for a sphere like in OPs case.<br>
+<br>
+I'm totally not an expert, but the fact that it works for btBoxShape and not for btConvexHullShape makes me think that this should be "solvable"? I went through the code a bit but I don't find anywhere where restitution is handled differently for btBoxShape and btConvexHullShape. Obviously it is different, but I can't find how. Can somebody point me in the right direction? Maybe it's something I can help with.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

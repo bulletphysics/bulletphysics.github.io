@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btGeneric6DofConstraint - Weld/Parent</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btGeneric6DofConstraint - Weld/Parent</h2>
+		<p><a href="viewtopic.php%3Ft=13317.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13317</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btGeneric6DofConstraint - Weld/Parent</h3>
+				<div class="date">Posted: <strong>Fri Nov 19, 2021 4:09 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Trying to create a btGeneric6DofConstraint between two rigid bodies.<br>
+Attempting to restrict movement and rotation of the constraint in all 3 axis.<br>
+I'm able to get the positioning of the rigid bodies correct, however rotations I'm not sure about...
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13317&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>				PrimaryNode-&gt;_RigidBody-&gt;activate();
+				SecondaryNode-&gt;_RigidBody-&gt;activate();
+
+				btTransform PrimaryFrame, SecondaryFrame;
+				PrimaryFrame = PrimaryNode-&gt;_RigidBody-&gt;getWorldTransform();
+				SecondaryFrame = SecondaryNode-&gt;_RigidBody-&gt;getWorldTransform();
+				//	==========	Calculate Frame Positions	==========
+				//
+				//	Get the position of our two nodes
+				btVector3 PrimaryPos = PrimaryFrame.getOrigin();
+				btVector3 SecondaryPos = SecondaryFrame.getOrigin();
+				//
+				//	Get the distance between each node
+				btScalar Dist = btDistance(PrimaryPos, SecondaryPos);
+				//
+				//	Calculate the vector pointing towards each node
+				btVector3 PrimaryDir = (SecondaryPos - PrimaryPos).normalize();
+				btVector3 SecondaryDir = (PrimaryPos - SecondaryPos).normalize();
+				//
+				//	Set the origin for our constraints equal to
+				//	the midpoint position between each node
+				PrimaryFrame.setOrigin(PrimaryDir * (Dist/2));
+				SecondaryFrame.setOrigin(SecondaryDir * (Dist/2));
+				//
+				//	==========	Calculate Frame Rotations	==========
+				//
+				btQuaternion PrimaryRot = PrimaryFrame.getRotation();
+				btQuaternion SecondaryRot = SecondaryFrame.getRotation();
+				//
+				//	not sure what to do :P
+				SecondaryFrame.setRotation(PrimaryRot - SecondaryRot);
+				PrimaryFrame.setRotation(SecondaryRot - PrimaryRot);
+
+				btGeneric6DofConstraint* Constraint = new btGeneric6DofConstraint(
+					*PrimaryNode-&gt;_RigidBody,
+					*SecondaryNode-&gt;_RigidBody,
+					PrimaryFrame,
+					SecondaryFrame,
+					true
+				);
+
+				Constraint-&gt;setAngularLowerLimit(btVector3(0, 0, 0));
+				Constraint-&gt;setAngularUpperLimit(btVector3(0, 0, 0));
+				Constraint-&gt;setLinearLowerLimit(btVector3(0, 0, 0));
+				Constraint-&gt;setLinearUpperLimit(btVector3(0, 0, 0));
+
+				_Physics-&gt;dynamicsWorld-&gt;addConstraint(Constraint, true);
+
+			}</code></pre></div>
+Upon creating the constraint, each rigid body rotation quickly snaps to what feels like a random value causing the constrained pair of bodies to go flying off in a random direction with considerable force.<br>
+<br>
+Not sure what maths needs to be done to adjust rotation of 'PrimaryFrame' and 'SecondaryFrame' so that when the constraint is created, the rigid bodies rotations are unaffected.<br>
+<a href="https://i.imgur.com/cVBW812.mp4" class="postlink">https://i.imgur.com/cVBW812.mp4</a><br>
+Upon selecting the first node, then selecting the second node we apply the constraint. Each node should not move or rotate after the constraint is applied. They should appear to be 'welded/parented' together. Unfortunately each nodes rotation goes crazy, applying a random force, and shooting the pair of nodes off into the distance..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btGeneric6DofConstraint - Weld/Parent</h3>
+				<div class="date">Posted: <strong>Sat Nov 20, 2021 4:12 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Was able to dig through the forums and finally find a helpful post.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13317&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>				//
+				btVector3 parentAxis(1.f, 0.f, 0.f);
+				btVector3 childAxis(0.f, 0.f, 1.f);
+				btVector3 anchor(0.f, 0.f, 0.f);
+				//
+				btVector3 zAxis = parentAxis.normalize();
+				btVector3 yAxis = childAxis.normalize();
+				btVector3 xAxis = yAxis.cross(zAxis);
+				//
+				btTransform frameInW;
+				frameInW.setIdentity();
+				frameInW.getBasis().setValue(
+					xAxis[0], yAxis[0], zAxis[0],
+					xAxis[1], yAxis[1], zAxis[1],
+					xAxis[2], yAxis[2], zAxis[2]
+				);
+				frameInW.setOrigin(anchor);
+				// now get constraint frame in local coordinate systems
+				btTransform frameInA = PrimaryNode-&gt;_RigidBody-&gt;getCenterOfMassTransform().inverse() * frameInW;
+				btTransform frameInB = SecondaryNode-&gt;_RigidBody-&gt;getCenterOfMassTransform().inverse() * frameInW;
+				// now create the constraint
+				btGeneric6DofConstraint* Constraint = new btGeneric6DofConstraint(
+					*PrimaryNode-&gt;_RigidBody,
+					*SecondaryNode-&gt;_RigidBody,
+					frameInA,
+					frameInB,
+					true
+				);
+
+				Constraint-&gt;setAngularLowerLimit(btVector3(0, 0, 0));
+				Constraint-&gt;setAngularUpperLimit(btVector3(0, 0, 0));
+				Constraint-&gt;setLinearLowerLimit(btVector3(0, 0, 0));
+				Constraint-&gt;setLinearUpperLimit(btVector3(0, 0, 0));
+
+				_Physics-&gt;dynamicsWorld-&gt;addConstraint(Constraint, true);</code></pre></div>
+
+Now the only issue is stiffness, a chain of constrained bodies are wobbly. Also, taking a single body and 'freezing it' (setting mass and local inertias to 0) creates a tornado effect..<br>
+<a href="https://i.imgur.com/szvsRRn.mp4" class="postlink">https://i.imgur.com/szvsRRn.mp4</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btGeneric6DofConstraint - Weld/Parent</h3>
+				<div class="date">Posted: <strong>Sat Nov 20, 2021 3:09 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Perhaps I'm going about the 'freeze' incorrectly...Instead of setting mass and inertias to 0, maybe I should apply a constraint to the world with all 6 degrees of freedom locked.<br>
+<br>
+EDIT: Yes that is much better, no more 'tornado'. There is still a wave that propagates through the constrained objects, I believe the constraints aren't stiff enough. This is with 30 solver iterations and a mass of 100 on each rigid body..<br>
+<a href="https://i.imgur.com/mPrMyLv.mp4" class="postlink">https://i.imgur.com/mPrMyLv.mp4</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btGeneric6DofConstraint - Weld/Parent</h3>
+				<div class="date">Posted: <strong>Wed Nov 24, 2021 10:13 am</strong></div>
+				<div class="author">by <strong>StriderH</strong></div>
+				<div class="content">In my experience constraints in Bullet are never fully rigid. Even just a few bodies constrained together will show considerable divergence and wobbliness.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btGeneric6DofConstraint - Weld/Parent</h3>
+				<div class="date">Posted: <strong>Fri Nov 26, 2021 3:14 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Never fully rigid I can deal with, considerable divergence and wobbliness however is unacceptable..<br>
+There must be some values that can be adjusted?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btGeneric6DofConstraint - Weld/Parent</h3>
+				<div class="date">Posted: <strong>Fri Nov 26, 2021 4:28 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">You could try taking smaller substeps. The more times the simulation "solves" a system of constraints the more rigid it will be.<br>
+<br>
+This is fundamentally why a system of constraints gets wobbly: the Bullet constraint solver will only iterate so many times before it concludes "good enough" and moves on to the next substep.  When the constraints contradict each other (solving one tends to violate another) then it requires many iterations to arrive at the "correct" answer and when the iteration exits early you get what appear to be soft (violated) constraints.<br>
+<br>
+There may be some parameters of the constraint solver that can be adjusted to force it to try harder (e.g. iterate longer) per substep, however I can't point them out: you will have to search the documentation or code for the API.<br>
+<br>
+I should mention: when using the MotionState interpolation transform to position your visible shapes you can get apparent softness that is not real in the physics simulation.  To avoid this, or to test to see if it is contributing to your problem, only step the simulation forward with timeSteps that are integer multiple of the substep duration.  This will cause the interpolation from timestep remainder to be zero and you will get the actual body transform.  Alternatively, don't use the transform supplied by the MotionState and instead get it directly from the RigidBody.<br>
+<br>
+Finally, if you insist on making complicated systems of constraints and you aren't using Bullet's multibody (featherstone algorithm) feature, then for some applications it would be possible to implement a custom Verlet solver to augment Bullet's solution.  I was able to get this to work well enough for a jointed "ragdoll" character however it was a very custom setup and consumed a noticeable fraction of CPU: I doubt it would work well for arbitrary collections (e.g. arbitrary sizes of parts and arbitrary numbers of constraints).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btGeneric6DofConstraint - Weld/Parent</h3>
+				<div class="date">Posted: <strong>Mon Nov 29, 2021 12:41 pm</strong></div>
+				<div class="author">by <strong>StriderH</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=43732#p43732"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=10757.html">KKlouzal</a> wrote: <a href="viewtopic.php%3Fp=43732.html#p43732" data-post-id="43732" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Fri Nov 26, 2021 3:14 pm</span></cite>
+There must be some values that can be adjusted?
+</div></blockquote>
+
+I don't think so. Some old posts say to change the ERP or CFM parameters, but in my tests they don't solve the issue. As drleviathan mentions, multibodies are better, they at least don't pull apart so easily, but they have other issues, like their angular constraints don't work if the base isn't fixed in place. From what I can see, Bullet is only useful for simple standalone rigid bodies, none of the constraint systems work reliably enough to be useful.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/3435" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2009-06-06T17:53:06+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/3435</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2009-06-06T17:53:06+00:00</updated>
+
+		<published>2009-06-06T17:53:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13833#p13833</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13833#p13833"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13833#p13833"><![CDATA[
+<blockquote class="uncited"><div>But if the constraints are independent, then they don't really belong to the same optimisation problem, surely?</div></blockquote>Although the current (sequential) Bullet implementation splits independent constraints into islands, it is generally not a good idea when parallelizing the constraint solver. We found that parallel implementations can better ignore islands and process independent constraints in parallel in the same batch.<blockquote class="uncited"><div>Interdependent constraints can be solved simultaneously in a Jacobi scheme because the state of the variables are buffered from the previous iteration.</div></blockquote>Sure, Jacobi can be trivially parallelized, but PGS/SI scheme has better convergence. Given the PGS scheme, you can  re-organize constraints into batches, where constraints in the same batch don't share any moving rigid body (static objects are fine). This typically leads to around 10 sequential batches, but all constraints in the batch can be processed in parallel. So if you have one big pile of 3000 objects, all in one island, you have typically 20000 constraints, leading to around 2000 constraints spread out over 10 parallel batches. Another scenario: 3000 objects that are not touching eachother, and only resting on a ground plane. Sequential version of Bullet would create 3000 simulation islands, with a single constraint, not very good for performance. The parallel version groups them all into a single batch, that can be parallelized. <br><br>Please let me know if you have more questions, after checking Harada's slides and the Bullet Gpu2dDemo implementation I mentioned before.<br><blockquote class="uncited"><div> If for some other reason, the replay runs at a different framerate (even for a single frame) then the number of internal timesteps relative to the number of "stepSimulation"'s executed might differ, and you start to get divergence due to the gravity issue. This sounds very obscure but it certainly caused us problems and took a long while to track down! </div></blockquote>Interesting. Do you have more details or a patch that solves this problem?<br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Jun 06, 2009 5:53 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[RobW]]></name></author>
+		<updated>2009-06-05T20:26:34+00:00</updated>
+
+		<published>2009-06-05T20:26:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13826#p13826</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13826#p13826"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13826#p13826"><![CDATA[
+I'll definitely have a look at that, thanks Erwin.<br><br>But if the constraints are independent, then they don't really belong to the same optimisation problem, surely? Interdependent constraints can be solved simultaneously in a Jacobi scheme because the state of the variables are buffered from the previous iteration. Sorry if I'm completely missing the point before looking at the presentation <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><blockquote class="uncited"><div>One could extend the common iterative methods to solve several sections of a single island simultaneously, making sure not to have two constraints working on the same body at the same time (note: that can be difficult to do efficiently). I don't think anybody in their right mind would suggest breaking up the system constraint-by-constraint, though.</div></blockquote>This was something I thought about, but didn't get around to trying out, sadly. The sychronisation points seemed tricky and slightly undid the effect of random constraint re-ordering.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2249">RobW</a> — Fri Jun 05, 2009 8:26 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2009-06-05T18:16:37+00:00</updated>
+
+		<published>2009-06-05T18:16:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13821#p13821</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13821#p13821"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13821#p13821"><![CDATA[
+<blockquote class="uncited"><div> And I'm talking more about the Sequential Impulses method than direct PGS, even though Erin Catto has proven that they are mathematically equivalent.</div></blockquote>Projected Gauss Seidel is the name of the algorithm, and Erin Catto introduced this PGS scheme in a more intuitive way under the name sequential impulse. AFAIK Erin hasn't provided any proof of equivalence, because they are essentially the same thing <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><blockquote class="uncited"><div>In a Gauss-Seidel scheme each row is dependent on the previous row, so you can't solve rows in parallel. It would be ok for a Jacobi solver but it would require more iterations. </div></blockquote>We showed at GDC 2009 that by re-ordering the constraints and batching independent groups of constraints, PGS can be parallelized. See attached Takahiro Harada's GDC slides, or the precompiled <a href="http://bullet.googlecode.com/files/Bullet-2.74-CUDA-Demos_Win32.zip" class="postlink">2D or 3D Win32 demos using CUDA 2.1</a>.<br>The parallel constraint solver CPU and CUDA source code is available in Bullet 2.75 (beta is available for download), both for 2D and 3D, see <a href="http://code.google.com/p/bullet/source/browse/trunk/Demos/Gpu3dDemo/btGpuDemoDynamicsWorld3D.cpp#198" class="postlink">btCudaDemoDynamicsWorld3D::createBatches in Bullet/Demos/Gpu3dDemo</a>.<br>The OpenCL port will be released soon, and the solver innerloop will be made fully general PGS/SI (including accumulated impulse for clamping and warmstarting).<br><br>All constraints are gathered together (independent of island), and split into independent batches, typically a maximum of 10 large batches. The synchronization between batches removes the  order-dependency, so this way of parallel solving doesn't introduce non-determinism.<br>Hope this helps,<br>Erwin<dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=283">takahiroGDC09s_1.zip</a></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Jun 05, 2009 6:16 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2009-06-05T17:47:24+00:00</updated>
+
+		<published>2009-06-05T17:47:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13820#p13820</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13820#p13820"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13820#p13820"><![CDATA[
+<blockquote class="uncited"><div>That's the way it already works - Bullet already solves one island per thread.  In a Gauss-Seidel scheme each row is dependent on the previous row, so you can't solve rows in parallel. It would be ok for a Jacobi solver but it would require more iterations. Generally, a single constraint is too granular to constitute a job for a cpu thread anyway; but the story might be different on on a GPU.</div></blockquote>I wasn't talking about Bullet specifically.  And I'm talking more about the Sequential Impulses method than direct PGS, even though Erin Catto has proven that they are mathematically equivalent.<br><br>One could extend the common iterative methods to solve several sections of a single island simultaneously, making sure not to have two constraints working on the same body at the same time (note: that can be difficult to do efficiently).  I don't think anybody in their right mind would suggest breaking up the system constraint-by-constraint, though.<br><br>In any case, as I previously noted, this would break determinism unless done very, very carefully.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Fri Jun 05, 2009 5:47 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[RobW]]></name></author>
+		<updated>2009-06-05T15:38:44+00:00</updated>
+
+		<published>2009-06-05T15:38:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13819#p13819</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13819#p13819"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13819#p13819"><![CDATA[
+That's the way it already works - Bullet already solves one island per thread.  In a Gauss-Seidel scheme each row is dependent on the previous row, so you can't solve rows in parallel. It would be ok for a Jacobi solver but it would require more iterations. Generally, a single constraint is too granular to constitute a job for a cpu thread anyway; but the story might be different on on a GPU.  <br><br>The problem with solving an island per thread is that in pathological cases (e.g. tech demos!) many objects would be in the same island so the parallelism is poor. On the flip side, often there are just a couple of objects in an island (imagine an object just rolling/sliding on the ground) so the island is really a little too small constitute a job for a thread. When I was working with Bullet in my last job, I grouped up islands until the total number of bodies reached a threshold, then sent them off to be processed on another CPU. That fixed problem of tiny islands, but not of monolothic ones, though that doesn't really happen in real games.<br><blockquote class="uncited"><div>Bullet is deterministic when using the same machine and and executable, if you reset the simulation properly, disable solver randomization and use a fixed timestep (check the Bullet demos restart function). On different machines, compilers etc, the simulation will obviously be different. If you have problems with determinism, please modify a demo that shows the problem, and report it in the Bullet forum.</div></blockquote>One bug we found with determinism in Bullet is as follows:<br><br>Gravity is only applied when you enter "stepSimulation". If "stepSimulation" runs several internal timesteps and one one of those steps a sleeping object is hit, and activates, then it will not have any gravity if another internal timestep is executed before leaving "stepSimulation". This doesn't induce non-determinism by itself, but imagine that you are doing a "action replay" by recording inputs, resetting the world, and playing the inputs back. If for some other reason, the replay runs at a different framerate (even for a single frame) then the number of internal timesteps relative to the number of "stepSimulation"'s executed might differ, and you start to get divergence due to the gravity issue. This sounds very obscure but it certainly caused us problems and took a long while to track down! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>Other than that, there were a few bugs relating to the order of contact manifolds but I'm pretty sure they have been fixed. After a few days work we got 100% determinism, and we had extensive logging to verify it. Our simulation involved lots of bodies, moving fast and hitting each other, and ending in resting contact. I think it was a pretty brutal test of determinism so I'm confident it can be achieved with Bullet. This included multi-threaded dynamics, collision detection, and constraint solving! (not the SPU version, it was my own modifications to the standard version of Bullet).<br><br>When it comes to determinism over different floating point implementations, that isn't going to be easy to solve without software emulation or fixed point.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2249">RobW</a> — Fri Jun 05, 2009 3:38 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2009-04-21T15:23:53+00:00</updated>
+
+		<published>2009-04-21T15:23:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13409#p13409</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13409#p13409"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13409#p13409"><![CDATA[
+It has occurred to me that there may be another obstacle to deterministic behavior.  Multi-threaded optimizations of an iterative solver can be undeterministic, because you can't predict in what order a particular body might be affected when constraints on it are solved in different threads.  One possible workaround is to group constraints by relation (like an island) and then solve each group in its own thread.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Tue Apr 21, 2009 3:23 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[raigan2]]></name></author>
+		<updated>2009-04-17T13:28:59+00:00</updated>
+
+		<published>2009-04-17T13:28:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13363#p13363</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13363#p13363"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13363#p13363"><![CDATA[
+<blockquote class="uncited"><div>In the end they had to write an entire floating point unit in software using integer operations. It was too late to convert the code to fixed point.</div></blockquote>I might be showing my ignorance, but would the former really take less effort than the latter? That seems crazy!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=748">raigan2</a> — Fri Apr 17, 2009 1:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jorjee]]></name></author>
+		<updated>2009-04-16T16:56:08+00:00</updated>
+
+		<published>2009-04-16T16:56:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13344#p13344</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13344#p13344"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13344#p13344"><![CDATA[
+<blockquote class="uncited"><div>In the end they had to write an entire floating point unit in software using integer operations. It was too late to convert the code to fixed point.</div></blockquote>I wonder what that must have done to the game performance.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=4366">jorjee</a> — Thu Apr 16, 2009 4:56 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2009-04-15T21:22:59+00:00</updated>
+
+		<published>2009-04-15T21:22:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13333#p13333</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13333#p13333"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13333#p13333"><![CDATA[
+<blockquote class="uncited"><div>I wouldn't be surprised that such a study exist somewhere... The problem being searching it</div></blockquote>You will likely find many failures. I've never heard of this being successful. I know of at least one high profile game that intended to make floating point computations deterministic but failed. In the end they had to write an entire floating point unit in software using integer operations. It was too late to convert the code to fixed point.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Wed Apr 15, 2009 9:22 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lazalong]]></name></author>
+		<updated>2009-04-15T10:56:57+00:00</updated>
+
+		<published>2009-04-15T10:56:57+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13328#p13328</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13328#p13328"/>
+		<title type="html"><![CDATA[Re: Limitations of modern realtime physics engines]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=13328#p13328"><![CDATA[
+<blockquote class="uncited"><div>Compiler optimizations for MSVC include three different floating-point modes: strict, precise, and fast.  They affect various things like IEEE conformance, whether intermediate results are stored in 32, 64, or 80 bits, equality tests, etc.  So even with a single compiler on a single machine, you are likely able to achieve at least 3 different results.<br><br>Some FPUs do not support 80-bits at all, others might store up to 128 bits.  Floating-point rounding modes could conceivably have different defaults on different CPUs.  Now throw in the ones on video cards and I'm pretty sure you can get a wide variety of results.</div></blockquote>I see. <br>In other words if we want to make Bullet deterministic we would first need to make "test suites with basic mathematical operations" to identify the compiler parameters we need for each compiler &amp; cpu combinations. <br><br>I wouldn't be surprised that such a study exist somewhere... The problem being searching it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=3715">lazalong</a> — Wed Apr 15, 2009 10:56 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

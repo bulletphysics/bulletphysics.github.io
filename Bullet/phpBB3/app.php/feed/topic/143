@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/143" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-10-16T08:27:09+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/143</id>
+
+		<entry>
+		<author><name><![CDATA[kenny]]></name></author>
+		<updated>2005-10-16T08:27:09+00:00</updated>
+
+		<published>2005-10-16T08:27:09+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=377#p377</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=377#p377"/>
+		<title type="html"><![CDATA[Re: Baraff's Direct Solver]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=377#p377"><![CDATA[
+<blockquote class="uncited"><div>1) Has anybody actually written a code based on the algorithms from Baraff's paper and is it possible to take a look at some parts of it ?</div></blockquote>I think Baraff and Witkin used to have a company, where they among other things made the initial rigid body simulator used in Maya. I think it was called Coriolis... I know from Baraff that Maya is still based on his method. Anyways if you play around with Maya, you'll have to agree it works pretty good, except for two things it scales badly and it can in no-way handle initially penetrating objects.<br><br>A few years ago we did have an implementation of Baraffs method in OpenTissue, but I have no idea of what happen with it. I know of many people who have tried to implement Baraff's 94 paper, but today they have all shifted to velocity-based formulations.<br><br>The major difference between Baraff 94 method and  the typical state-of the art velocity based solution used by many today is:<br><br>  1) The direct method used for the LCP<br>  2) The back-tracking method needed to find TOI<br>  3) Switching to impulse-momentum law<br>  4) The need for the time derivatives of the jacobians<br><br>1) leads to O(n^3) complexity at best and O(n^4) at worst, 2) basically means you have no control over how many steps is needed to complete a single frame computation. You can even get into an infinite loop (this is what happens with initial penetrating objects). A more timely solution may be to replace the bisection method with something like CCD. 4) Is in my opinion really tedious, if you actually derive the equations they get widely, so one often end up with using approximations.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11">kenny</a> — Sun Oct 16, 2005 8:27 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2005-10-07T05:56:27+00:00</updated>
+
+		<published>2005-10-07T05:56:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=362#p362</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=362#p362"/>
+		<title type="html"><![CDATA[Baraff's Direct Solver]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=362#p362"><![CDATA[
+tasora,<br><br>I enjoyed reading your paper. The sparse LDL is interesting. I was surprised you were able to deal with redundancies so easily. Have you tried simulating a Bricard mechanism with this algorithm? It is notorously difficult to simulate due to the constraint redundancy.<br><br><a href="http://www.tu-chemnitz.de/ifm/english/e_ifm_ala4bsp_bricard.htm" class="postlink">http://www.tu-chemnitz.de/ifm/english/e ... ricard.htm</a><br><br>I am curious about your sparse LCP solver. Do you plan to share your algorithm?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Fri Oct 07, 2005 5:56 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[avatar7]]></name></author>
+		<updated>2005-10-06T18:02:40+00:00</updated>
+
+		<published>2005-10-06T18:02:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=361#p361</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=361#p361"/>
+		<title type="html"><![CDATA[Baraff's Direct Solver]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=361#p361"><![CDATA[
+Thanks for the replies!<br><br>After double and tripple checking today, and reading some other papers, I'm absolutely sure the Jacobian I use for my ball-joint is just as it should be, and updating it each frame is done properly too. Also, the 'c' term, as mentioned in a paper about how to make joints in ODE, is zero all the time. If I understood correctly, it's only non-zero when the constraint is non-holonomic or when it's used for correcting drift. So it must be a problem in the algorithms somewhere in Baraff's paper. Actually, I already found a mistake in it, but it was a small one. But perhaps a negative sign or something somewhere else is still causing the problems. Since I don't know much about sparse matrix and solvers theory, I can just follow the paper's pseudo code and hope it's correct when I resemble it in actual c++ code. That's why I was asking if someone has actually written those algorithms already, so they could point out if there are any mistakes in the actual paper. Would be very helpful !<br>I know an iterative solver is much better for games and real-time simulations when there are alot of bodies involved and when accuracy isn't so important, but in what I'm doing there are just a few bodies, but accuracy is of major importance. That's why I believe a direct solver would do much better job. Thanks, Tasora, for the paper, I'll check it out.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=319">avatar7</a> — Thu Oct 06, 2005 6:02 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[tasora]]></name></author>
+		<updated>2005-10-06T11:38:50+00:00</updated>
+
+		<published>2005-10-06T11:38:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=360#p360</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=360#p360"/>
+		<title type="html"><![CDATA[Baraff's Direct Solver]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=360#p360"><![CDATA[
+Hallo, <br> I read the interesting paper of Baraff on the linear-time direct<br>solver (pay attention, however, that the linear-time complexity <br>happens only for acyclic topology - no closed kinematical chains)<br> This motivated the developement of the direct solver of my<br>multibody software CHRONO, which exploits the sparsity of<br>the system. It is a bit different from Baraff'one (still in case of acyclic <br>topology has linear complexity).<br> I use special sparse-matrix methods and an optimized LDLt <br>sparse decomposition (not as fast as Baraff method, but more<br>general, and if topology is not acyclic it becomes more and more<br>similar to a classic full LDLt decomposition. In most cases, however,<br>a fast linear-time behavior is obtained).<br>  You can find it in:<br>"An optimized lagrangian-multiplier approach for interactive multibody simulation in kinematic and dynamical digital prototyping",<br>TASORA A.<br>VIII ISCSB, International Symposium on Computer Simulation in Biomechanics, 4-6 July 2001, Politecnico di Milano, Italy.<br><a href="http://www.deltaknowledge.com/tasora/pubblicazioni/iscsb2001_lagrangian.pdf" class="postlink">http://www.deltaknowledge.com/tasora/pu ... angian.pdf</a>.<br>  Also, I also recently adopted similar 'sparse' methods to obtain a<br>fast simplex solver for the LCP problem, but in general I am more<br>and more convinced that large-scale complementarity problems<br>(ex: with more than 100 bodies) should be attacked via an iterative<br>solver. I am testing a projected-SOR method, which I recently<br>implemented, and it performs very fast. Of course the precision<br>of an iterative solver is lower than the precision of a direct <br>solver... <br>   Best regards<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=239">tasora</a> — Thu Oct 06, 2005 11:38 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2005-10-06T01:21:15+00:00</updated>
+
+		<published>2005-10-06T01:21:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=358#p358</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=358#p358"/>
+		<title type="html"><![CDATA[Baraff's Direct Solver]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=358#p358"><![CDATA[
+The term c arises from the chain rule of differentiation. Suppose you have the scalar _position_ constraint:<br><br>f(x) = x^2 + 2<br><br>The time derivative gives the velocity level constraint:<br><br>df/dt = x * dx/dt<br><br>So here the Jacobian is 'x'.<br><br>Differentiate once more to get the accelaration constraint:<br><br>d^2 f/dt^2 = x * d^2 x/dt^2 + (dx/dt)^2<br><br>The acceleration Jacobian is the same ('x'). The second term is the 'c' term.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Thu Oct 06, 2005 1:21 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[avatar7]]></name></author>
+		<updated>2005-10-05T21:18:31+00:00</updated>
+
+		<published>2005-10-05T21:18:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=357#p357</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=357#p357"/>
+		<title type="html"><![CDATA[Baraff's Direct Solver]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=357#p357"><![CDATA[
+Hi, all,<br><br>This is my first post here, I found this forum yesterday while googling, and was amazed to see so many famous developers and authors around. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>For the last year or so I've been interested in constrained multi-body simulation, with accent over bi-lateral constraints rather than impact/contact. I believe I've gathered most of the free papers that are available, but while most of them use a velocity-based constraint approach and iterative solvers, Baraff's "Linear-Time Dynamics using Lagrange Multipliers (1996)" is aimed at the acceleration-based direct linear method of solving them. <br>I'm neither a mathematician nor a physics engineer, so most of the concepts are a bit complex to me, but most of that Baraff paper is really easy to follow, so in the last months I've been trying to write a small physics engine based on his algorithms and at first look it seemed it was working fine. All the multiplications and summations were correct, with proper-sized matrices etc., I even did them on paper myself, so unless there's a mistake in the paper itself, everything should've been working fine when I actually feed it real body and constraint data. It wasn't to be so though. The two "factor" and "solve" algorithms aside, they seem to be working perfectly, so either I'm not building the constraint Jacobians properly or I'm not using correctly the produced multipliers for getting the constraint forces.<br>My questions:<br><br>1) Has anybody actually written a code based on the algorithms from Baraff's paper and is it possible to take a look at some parts of it ?<br><br>2) Since in all papers I found they use velocity-based constraints, there's no explanation or an example of what exactly is the "c" vector (notion from Baraff's paper) that appears after differentiating a velocity constraint w.r.t. time. For example, in a ball-joint, I first had the impression I could leave the "c" vector at zero, since the constraint is holonomic, but I'm not sure at all if that's true. Atm, I'm just using the Jacobians produced on the velocity level, and I thought they should work for the acceleration level too. But they aren't and I'm not sure if it's something to do with deriving the "c" vector or it could be something wrong with either the algorithms or even something else.<br><br>I could try and make a small movie of my two bodies connected by a ball joint test, as it'd be better to see what's going on. It seems to me the torques are correct, the bodies rotate in a proper way in comparison to each other as if they're connected with the joint, but the linear velocity doesn't seem to follow the constraint at all. I tried manually entering static "c" vector values and it seemed to have an effect, so I believe I have to derive that each frame, but I simply have no idea what it's supposed to be.<br><br>As I said, I'm not much profficient in calculus, so please excuse my rather basic explanation. Thanks in advance for all answers!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=319">avatar7</a> — Wed Oct 05, 2005 9:18 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

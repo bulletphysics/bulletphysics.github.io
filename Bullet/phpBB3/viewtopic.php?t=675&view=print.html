@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Sleeping/Waking callbacks</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Sleeping/Waking callbacks</h2>
+		<p><a href="viewtopic.php%3Ft=675.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=675</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Sleeping/Waking callbacks</h3>
+				<div class="date">Posted: <strong>Thu Nov 09, 2006 7:27 pm</strong></div>
+				<div class="author">by <strong>optime</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I am looking for a way to manually put btRigidBodies manually to sleep but have not found anything in the docs. Did I miss it?<br>
+<br>
+Also I would like to set callbacks to be called when a btRigidBody wakes up and when it is beeing put to sleep by Bullet. I can leverage several optimizations in the graphics engine this way. Is such functionality already implemented?<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sleeping/Waking callbacks</h3>
+				<div class="date">Posted: <strong>Thu Nov 09, 2006 7:32 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You can call 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=675&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body-&gt;setActivationState(ACTIVE_TAG)
+</code></pre></div>
+to activate objects.<br>
+<br>
+You can also prevent certain objects from ever falling asleep/get deactivated by calling:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=675&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body-&gt;setActivationState(DISABLE_DEACTIVATION)
+</code></pre></div>
+
+btMotionState::setWorldTransform gets only called by Bullet for active objects, so your derived version of btMotionState (for example BulletC4MotionState or btDefaultMotionState) can be used to detect active objects.<br>
+<br>
+There is no put-to-sleep callback yet, I'll propose some implementation.<br>
+Thanks,<br>
+Erwin<br>
+
+<blockquote><div><cite>optime wrote:</cite>Hi,<br>
+<br>
+I am looking for a way to manually put btRigidBodies manually to sleep but have not found anything in the docs. Did I miss it?<br>
+<br>
+Also I would like to set callbacks to be called when a btRigidBody wakes up and when it is beeing put to sleep by Bullet. I can leverage several optimizations in the graphics engine this way. Is such functionality already implemented?<br>
+<br>
+Thanks!</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 09, 2006 7:47 pm</strong></div>
+				<div class="author">by <strong>optime</strong></div>
+				<div class="content">Thanks for looking into this. PutToSleep is useful to me because there is a huge load on the simulation when loading a new world in game (stacked objects that are fine visually and need only to be active when they are subject to force other then gravity for example).<br>
+<br>
+What about the onWake/onSleep callbacks?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 09, 2006 8:34 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>optime wrote:</cite>Thanks for looking into this. PutToSleep is useful to me because there is a huge load on the simulation when loading a new world in game (stacked objects that are fine visually and need only to be active when they are subject to force other then gravity for example).<br>
+<br>
+What about the onWake/onSleep callbacks?</div></blockquote>
+
+the btMotionState 'setWorldTransform' is only called for awake objects, isn't that enough for a 'onWake' detection?<br>
+<br>
+I can add virtual deactivation method in btMotionState that you can override to do things for objects that fall asleep (or even disable the sleeping for another frame).<br>
+<br>
+Is that OK?<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 09, 2006 8:46 pm</strong></div>
+				<div class="author">by <strong>optime</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+the btMotionState 'setWorldTransform' is only called for onWake, isn't that enough for a 'onWake' detection?
+</div></blockquote>
+
+It is sufficient. I would like to call functions that reset shadow caches and the like whenever an object is awaking, calling those more often is not that optimal. But you are right, I can track changes of object state in the app myself this way. Thanks once again.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+I can add virtual deactivation method in btMotionState that you can override to do things for objects that fall asleep (or even disable the sleeping for another frame).
+</div></blockquote>
+
+This would be very useful!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; find a certain internal position of the 3D model</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>find a certain internal position of the 3D model</h2>
+		<p><a href="viewtopic.php%3Ft=13024.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13024</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>find a certain internal position of the 3D model</h3>
+				<div class="date">Posted: <strong>Wed Jul 01, 2020 8:20 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">I imported a 3D model of. Obj. I want to place small balls in some positions of the model, but I can't find a certain internal position of the 3D model, as shown in the figure. What should I do? Thank you for your time<br>
+<img src="http://m.qpic.cn/psc?/76b33374-4a0f-4a5d-99b2-b6eef432e262/M4X34P*UDwP*fok89st23wlHUmb9Q9VFTIJ1S0J9QejLI6UeB2d1l0vcsAGIOKCcShTiAQPFiq170raCQXLJNw!!/mnull&amp;bo=SAG4AAAAAAADB9M!&amp;rf=photolist&amp;t=5" class="postimage" alt="Image"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: find a certain internal position of the 3D model</h3>
+				<div class="date">Posted: <strong>Wed Jul 01, 2020 3:13 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">In <a href="viewtopic.php%3Ff=9&amp;t=13023.html" class="postlink">this other thread</a> you mention your Bullet simulation slows or blocks when you "increase the number of small balls".  What you failed to mention in that thread, but what appears to be the case in this one, you are running those small balls inside a concave mesh object.  If that really is your world configuration then I would not be surprised it would run slow.  Many collisions across nearly all triangles of a complex triangular mesh would be expensive to compute.  It becomes even more expensive if you have enabled continuous collision detection (CCD) which will attempt to do sweeps inside the mesh.<br>
+<br>
+If you're trying to simulate a "fluid" of small balls passing through a mesh cavity I suspect Bullet (a real-time rigid body simulation) might not be the right tool for the job.  I don't know exactly what it would be but maybe something like smoothed particle hydrodynamics (SPH).  Read <a href="https://animation.rwth-aachen.de/media/papers/64/2019-EG-SPH_Tutorial.pdf" class="postlink">this article</a> to learn more.<br>
+<br>
+Your question in this thread is not clear.  Are you asking: How to transform between the model's local-frame and the world-frame?  Or are you asking: How to tell if a local-frame position is inside vs outside the model? Or maybe... something else?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: find a certain internal position of the 3D model</h3>
+				<div class="date">Posted: <strong>Thu Jul 02, 2020 12:48 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">Drleviathan, thank you very much for your help. I want to realize the movement of the ball in the imported model (similar to a tube). I want to place the ball in a certain position inside the model, and then fall under the influence of gravity and collide with the inner wall of the model. However, after importing the model, I can't get the position information of each area of the model (the centroid of the model is at (0,0,0), I don't know where to put the ball's initial position.What should I do? thank you  for your time</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: find a certain internal position of the 3D model</h3>
+				<div class="date">Posted: <strong>Thu Jul 02, 2020 3:04 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Here are some ideas that occur to me:<br>
+<br>
+Assuming your tube is closed and a small ball will not fall out once it is placed inside...<br>
+<br>
+<strong class="text-strong">(1)</strong> Place a ball randomly (with some quantization) and let it fall.  If it falls out the bottom of your simulation after a certain amount of time then conclude it was <strong class="text-strong">not</strong> inside and discard the point, else hash the point and store it in a <strong class="text-strong">std::map&lt;hash, btVector3&gt;</strong>.<br>
+<br>
+<strong class="text-strong">(2)</strong> Repeat step <strong class="text-strong">(1)</strong> many many times until the map of unique quantized starting points stops growing.  At this point you have found the full, or nearly full, set of possible starting points inside the tube.<br>
+<br>
+I can imagine a variety of similar but smarter algorithms.  For example, instead of picking a completely random point: pick one of the points on the tube as the "seed" and make a small random step away from that.  Alternatively, pick a random triangle on the mesh, find its center point and move some random (or systematic) distance in the opposite direction of the normal (assuming your mesh triangles are indexed systematically using the right-hand-rule).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: find a certain internal position of the 3D model</h3>
+				<div class="date">Posted: <strong>Thu Jul 02, 2020 3:15 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=43006#p43006"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=43006.html#p43006" data-post-id="43006" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Thu Jul 02, 2020 3:04 am</span></cite>
+Here are some ideas that occur to me:<br>
+<br>
+Assuming your tube is closed and a small ball will not fall out once it is placed inside...<br>
+<br>
+<strong class="text-strong">(1)</strong> Place a ball randomly (with some quantization) and let it fall.  If it falls out the bottom of your simulation after a certain amount of time then conclude it was <strong class="text-strong">not</strong> inside and discard the point, else hash the point and store it in a <strong class="text-strong">std::map&lt;hash, btVector3&gt;</strong>.<br>
+<br>
+<strong class="text-strong">(2)</strong> Repeat step <strong class="text-strong">(1)</strong> many many times until the map of unique quantized starting points stops growing.  At this point you have found the full, or nearly full, set of possible starting points inside the tube.<br>
+<br>
+I can imagine a variety of similar but smarter algorithms.  For example, instead of picking a completely random point: pick one of the points on the tube as the "seed" and make a small random step away from that.  Alternatively, pick a random triangle on the mesh, find its center point and move some random (or systematic) distance in the opposite direction of the normal (assuming your mesh triangles are indexed systematically using the right-hand-rule).
+</div></blockquote>
+
+'Thank you very much</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

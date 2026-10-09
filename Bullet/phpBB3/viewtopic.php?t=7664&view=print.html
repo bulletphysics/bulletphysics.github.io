@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Can't Move rigid body / Apply force</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Can't Move rigid body / Apply force</h2>
+		<p><a href="viewtopic.php%3Ft=7664.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7664</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Can't Move rigid body / Apply force</h3>
+				<div class="date">Posted: <strong>Fri Dec 02, 2011 1:02 am</strong></div>
+				<div class="author">by <strong>Alundra</strong></div>
+				<div class="content">Hi,<br>
+I have bullet correctly initialized and have 200 sphere who collide, all works fine but when i want apply force to a rigid body he doesn't do anything or if i use translate( vec3 ) on a simple sphere on a plane, he moves but don't update his position with gravity.<br>
+<br>
+Do I have forget something ?<br>
+Thanks for help</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Can't Move rigid body / Apply force</h3>
+				<div class="date">Posted: <strong>Sat Dec 03, 2011 4:13 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content"><blockquote><div><cite>Alundra wrote:</cite>Hi,<br>
+I have bullet correctly initialized and have 200 sphere who collide, all works fine but when i want apply force to a rigid body he doesn't do anything or if i use translate( vec3 ) on a simple sphere on a plane, he moves but don't update his position with gravity.<br>
+<br>
+Do I have forget something ?<br>
+Thanks for help</div></blockquote>
+Too little information, either you paste your code here, or describe your problem more clearly.<br>
+<br>
+There may be problem with your initialization of rigid bodies, or the force is not applied correctly.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Can't Move rigid body / Apply force</h3>
+				<div class="date">Posted: <strong>Mon Dec 05, 2011 2:10 pm</strong></div>
+				<div class="author">by <strong>Alundra</strong></div>
+				<div class="content">Here the bullet code I use to create a world, static plane and a ball :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7664&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>broadphase = new btDbvtBroadphase();
+collisionConfiguration = new btDefaultCollisionConfiguration();
+dispatcher = new btCollisionDispatcher(collisionConfiguration);
+solver = new btSequentialImpulseConstraintSolver;
+dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,broadphase,solver,collisionConfiguration);
+dynamicsWorld-&gt;setGravity(btVector3(0.0f,-9.81f,0.0f));
+
+plane_shape = new btStaticPlaneShape( btVector3( 0.0f, 1.0f, 0.0f ), 0.0f );
+plane_body = new btRigidBody( 0.0, new btDefaultMotionState, plane_shape, btVector3( 0.0f, 0.0f, 0.0f ) );
+dynamicsWorld-&gt;addRigidBody( plane_body );
+
+ball_shape = new btSphereShape(1.0);
+ball_body = new btRigidBody( 10.0f, new btDefaultMotionState, ball_shape, btVector3( 5.0f, 5.0f, 5.0f ) );
+ball_body-&gt;translate( btVector3( 0.0f, 10.0f, 0.0f ) );
+dynamicsWorld-&gt;addRigidBody( ball_body );
+</code></pre></div>
+
+Here the code I use to Update the simulation and translate the sphere :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7664&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if( IsKeyDown( Key::F ) )
+  ball_body-&gt;translate( btVector3( 0.0f, 5.0f, 0.0f ) );
+
+dynamicsWorld-&gt;stepSimulation( Elapsed, 10 );
+</code></pre></div>
+
+Problem : The ball translate "Y += 5.0f", but don't update its position with gravity, it stay static.<br>
+Goal : I would manage all movement by bullet : translation, rotation, force ... Is it possible ?<br>
+<br>
+Thanks for the help<br>
+<br>
+EDIT :<br>
+<br>
+The ball update with gravity using :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7664&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>dynamicsWorld-&gt;stepSimulation( 1.0f / 60.0f, 10 );
+</code></pre></div>
+
+But I've got some case when the ball stay static and never update its position again with gravity.<br>
+Is it normal I must use 1/60 to get it to work ?<br>
+<br>
+Using this code the ball doesn't move :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7664&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>ball_body-&gt;applyForce( btVector3( 10.0f, 0.0f, 0.0f ), btVector3( 0.0f, 0.0f, 0.0f ) );
+</code></pre></div>
+
+Maybe i don't set correctly the force ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Can't Move rigid body / Apply force</h3>
+				<div class="date">Posted: <strong>Mon Dec 05, 2011 4:21 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7664&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btDynamicsWorld::stepSimulation( btScalar timeStep,   int maxSubSteps=1,   btScalar fixedTimeStep=btScalar(1.)/btScalar(60.));
+</code></pre></div>
+If you pass a very large timeStep as the first parameter [say, five times the size of the fixed internal time step], then you must increase the number of maxSubSteps to compensate for this, otherwise your simulation is “losing” time.<br>
+<br>
+In your code, the first variable is "elapsed", it should be the root of the problem. You maybe made a mistake in the unit. (seconds/milliseconds)<br>
+<br>
+check out this tutorial article:<br>
+<a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Stepping_the_World" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... _the_World</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

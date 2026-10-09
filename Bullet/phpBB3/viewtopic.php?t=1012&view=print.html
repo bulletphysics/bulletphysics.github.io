@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Confusion about sequential impulses method</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Confusion about sequential impulses method</h2>
+		<p><a href="viewtopic.php%3Ft=1012.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1012</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Confusion about sequential impulses method</h3>
+				<div class="date">Posted: <strong>Mon Mar 05, 2007 2:39 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">I'm currently implementing a 3D sequential impulses constraint system.<br>
+<br>
+This is what I'm doing:<br>
+<br>
+K = J * W * JT<br>
+B = -beta * error - J * v;<br>
+<br>
+lambda = K^-1 * B;<br>
+<br>
+old_lambda = accumulated_lambda<br>
+accumulated_lambda += lambda<br>
+accumulated_lambda.clamp (lo, hi)<br>
+lambda = accumulated_lambda - old_lambda<br>
+<br>
+P = JT * lambda<br>
+<br>
+apply P to bodies.<br>
+<br>
+<br>
+<br>
+In this thread: <a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=763&amp;sid=6f2fc7418d2213ce8bd957ddfe218741" class="postlink">http://www.continuousphysics.com/Bullet ... ddfe218741</a><br>
+<br>
+Dirk says that this is a slower and worse convergence than PGS<br>
+<br>
+but in this thread: <a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=478&amp;sid=34dce171a1717f61ba373befdd9aea48" class="postlink">http://www.continuousphysics.com/Bullet ... efdd9aea48</a><br>
+<br>
+Dirk says that this method is equivalent to a block Gauss seidel solver  and has better convergence than PGS<br>
+<br>
+In the first thread dirk is talking about solving for lambda*dt instead of just<br>
+for lambda.<br>
+<br>
+I'd appreciate some clarification.<br>
+<br>
+Also, I'm wondering if this is equivalent to erin catto's sequential impulses method?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 05, 2007 2:43 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">I've also been wondering how the convergence would be effected by using a solver loop like:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1012&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for i = 0; i &lt; ITERATIONS; i++
+      foreach joint J:
+            P[J] = calculate_impulses (J);
+      foreach joint J:
+            apply impulse P[J] to bodies
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 05, 2007 7:22 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">In the first thread you mention, I speak abut the convergence between normal Gauss-Seidel and Block Gauss-Seidel. The Later has better convergence (about Sqrt(2) ). Think of a spherical constraint, if you satisfy it en block you have the correct solution after the first iteration. But I admit that I didn't mademyself very clear in the first thread. So iterative blockwise Gauss Seidel has superior convergence as I also state in the second thread. <br>
+<br>
+In the first thread I take the equation and transform it a bit:<br>
+<br>
+J*W*JT*lambda = -ERP * C / dt2 - J*( v/dt + w*f_ext ) <br>
+<br>
+Here lambda is a force. Of course you can multiply the whole equation by dt and get<br>
+<br>
+J*W*JT*(lambda*dt) = -ERP * C / dt - J*( v + w*f_ext*dt) <br>
+<br>
+<br>
+Here you can basically see the equivalence between PGS and iterative impulses.<br>
+<br>
+And finally what you describy there is identical to Erin method</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 05, 2007 7:34 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+I've also been wondering how the convergence would be effected by using a solver loop like: 
+</div></blockquote>
+
+This is called Jacobi iteration and has worse convergence the Gauss-Seidel. Look for matrix splitting (e.g. in Kenny Phd). You have basically Jacobi, Gauss-Seidel and SOR.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

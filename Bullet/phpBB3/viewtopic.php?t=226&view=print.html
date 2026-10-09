@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; step after closest point detection??</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>step after closest point detection??</h2>
+		<p><a href="viewtopic.php%3Ft=226.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=226</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>step after closest point detection??</h3>
+				<div class="date">Posted: <strong>Sat Jan 28, 2006 9:21 am</strong></div>
+				<div class="author">by <strong>lolito</strong></div>
+				<div class="content">Hello (sorry for my bad english   <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> )  <br>
+<br>
+I m a beginner who try to make a simple simulator in physic (just with impulsion for the moment)<br>
+<br>
+I ve implemented the algorithm of Vclip, it works fine and returns me the closest feature beetween two Object<br>
+<br>
+With this two features i've got the closest points and the normal .<br>
+<br>
+But the probem is that i ve just one contact point with this method.<br>
+<br>
+So my problem is how to find all the contact point knowing the closest features??<br>
+<br>
+I ve an idea but im not very sure:<br>
+_Compute the 2 convex hull(in 2D) of the point which are on" the separating plane"<br>
+<br>
+_And Compute the intersection of this two convex hull<br>
+<br>
+<br>
+Can you tell me what to do , a paper ,an another way to do this ..<br>
+<br>
+<br>
+Thank you  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jan 28, 2006 5:12 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There are roughly 2 different ways you can tackle the contact manifold generation: incrementally, or at once.<br>
+<br>
+For incrementally:<br>
+Basically you need a couple of things:<br>
+<br>
+every collision step:<br>
+<br>
+1) calculate a new closest point (vclip, or other algo like gjk)<br>
+<br>
+2) check if this point is already in the contact cache. <br>
+2a) If you keep track of feature-id's, you can do this very efficient.y. <br>
+2b) Otherwise use the worldspace distance to check for equality (with a treshold).<br>
+<br>
+3a) if the point exists do nothing<br>
+3b) if it is a new point, add it to the contact cache. preferably in local coordinates of both rigidbodies/shapes.<br>
+<br>
+4) if the contact cache exceed some upper size, reduce.<br>
+4a) keep the point with the deepest penetration<br>
+4b) build some kind of heuristic to choose the points that approximate the 2d convex hull best.<br>
+<br>
+5) after each integration, refresh the contact cache:<br>
+5a) calculate 2 new worldspace coordinates for each contact point, using the local coordinates in body A and body B, and the new transforms of each body.<br>
+<br>
+5b) check if the contact is still valid, similar to using (2b).<br>
+<br>
+You can see the sample implementation here:<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/PersistentManifold_8cpp-source.html" class="postlink">http://www.continuousphysics.com/Bullet ... ource.html</a><br>
+<br>
+There is some extra heuristic for step 4b and 5b in this implementation.<br>
+4b: quick appriximation by using triangle with biggest area<br>
+5b) take the projection onto the normal into account, so even when the distance between the two projections into worldspace exceed the maximum distance treshold, you keep it. This will allow to keep points that cause deeper penetrations. They still break on motion in the contact plane, orthogonal to the normal.<br>
+<br>
+There is also a paper by Adam and Pierre from Novodex with some variations on this theme:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/papers/&amp;file=Fast_Contact_Reduction_for_Dynamics_Simulation012_draft9.doc" class="postlink">http://www.continuousphysics.com/ftp/pu ... draft9.doc</a><br>
+<br>
+For 'at once', which only works if you got feature information like planes, vertices, edges (not for implicit shapes like sphere, cylinders etc).<br>
+I won't explain too much about this case. ODE uses this for box-box for example, but you can generalize this for convex-convex polyhedra.<br>
+You can find the two polygons that share the closest point, and that are most parallel (some heuristic here). Then clip all triangles from one polyhedron on this plane, and on the other polygons edges.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jan 29, 2006 9:43 am</strong></div>
+				<div class="author">by <strong>lolito</strong></div>
+				<div class="content">thank you for your help<br>
+<br>
+I ll try to do what you say<br>
+<br>
+ <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

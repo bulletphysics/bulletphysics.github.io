@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Motor Constraint / Block Solver ang. vel. (turn direction)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Motor Constraint / Block Solver ang. vel. (turn direction)</h2>
+		<p><a href="viewtopic.php%3Ft=8250.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8250</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Motor Constraint / Block Solver ang. vel. (turn direction)</h3>
+				<div class="date">Posted: <strong>Fri Jul 06, 2012 7:57 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Hi there,<br>
+<br>
+I got a lot working and most would ask how the hell I did it doing a lot of recoding and guessing-and-checking.  It wasn't pretty.  What I have now is a Jacobian solver that seems to work.  It's using GJK ONLY for collision (with a ridiculous margin of 0.3 but that's okay because rag doll limbs are better modeled as rounded cubes).  Stacking almost works.  It stacks for a good 4 seconds before an instability occurs.  Instability occurs, but here is the thing, the darn cube turns the wrong direction.  I'm going to post my code from my motor constraint (the one that is responsible for all the impulse-based turning) and hope that someone can tell me why my cubes are turning the wrong direction.  In other words you have a cube on top of a cube, the top cube starts sliding away and instead of falling like you expect, it turns the other way.  You would think you could just negate something, but it turns out it's not that simple.  Please help if you can.  Thanks.  The constraint is based on a block solver from <a href="http://erwincoumans.com/ftp/pub/test/physics/papers/IterativeDynamics.pdf" class="postlink">http://erwincoumans.com/ftp/pub/test/ph ... namics.pdf</a> and in bullet (see btSequentialImpulseConstraintSolver::setupContactConstraint).  Please note that the code is highly unoptimized.  I just want to get it to work correctly first.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8250&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void MEHConstraint::ToMotor(const MEHVector3 &amp;radius1, const MEHVector3 &amp;radius2, const MEHVector3 &amp;normal,
+                           MEHPhysicsRigidBody *bodyA, MEHPhysicsRigidBody *bodyB, scalar penetrationVelocity, 
+                           scalar erp, scalar cfm)
+{
+   m_jacobiVectors[0] = normal;
+      
+   m_jacobiVectors[1] = radius1;
+   m_jacobiVectors[1].ToCrossProductWith(normal);
+   
+   m_jacobiVectors[2] = normal;
+   m_jacobiVectors[2] *= (scalar)-1.0;
+
+   m_jacobiVectors[3] = normal;
+   m_jacobiVectors[3].ToCrossProductWith(radius2);
+      
+   scalar num1 = normal.DotProductWith(bodyA-&gt;GetVelocity()); // + m_jacobiVectors[1].DotProductWith(bodyA-&gt;GetAngularVelocity());
+   scalar num2 = 0.0;
+   
+   if (bodyB)
+      num2 = normal.DotProductWith(bodyB-&gt;GetVelocity()); // + m_jacobiVectors[3].DotProductWith(bodyB-&gt;GetAngularVelocity());
+
+   scalar numerator = (scalar)0.0 - num1 - num2 - penetrationVelocity;
+      
+   MEHVector3 moment1 = normal;
+   moment1.ToCrossProductWith(radius1);
+   moment1 *= bodyA-&gt;GetInverseInertiaTensor();
+   moment1.ToCrossProductWith(normal);
+   
+   scalar denom1 = (scalar)1.0 / bodyA-&gt;GetMass() + moment1.DotProductWith(normal);
+   scalar denom2 = 0.0;
+
+   if (bodyB)
+   {
+      MEHVector3 moment2 = normal;
+      moment2.ToCrossProductWith(radius2);
+      moment2 *= bodyB-&gt;GetInverseInertiaTensor();
+      moment2.ToCrossProductWith(normal);
+      moment2 *= (scalar)-1.0;
+      denom2 = (scalar)1.0 / bodyB-&gt;GetMass() + moment2.DotProductWith(normal);
+   }   
+  
+   scalar denominator = denom1 + denom2;
+   
+   scalar impulse;
+   if (MEHISZERO(denominator))
+      impulse = 0.0;
+   else
+      impulse = numerator / denominator;
+        
+   printf("impulse: %f (numerator = %f, denominator = %f)\r\npenetVel = %f\r\n", impulse, numerator, denominator, penetrationVelocity);
+
+   if (impulse &gt; (scalar)10.0)
+      impulse = (scalar)10.0;
+   else if (impulse &lt; (scalar)-10.0)
+      impulse = (scalar)-10.0;
+      
+   //m_constraint = m_jacobiVectors[0].DotProductWith(bodyA-&gt;GetAngularVelocity()) + impulse;
+   m_constraint = impulse;
+   
+   m_erp = erp;
+   m_cfm = cfm;
+   m_calcDamping = false;
+
+   m_bodyB = bodyB;
+
+   m_lowerBound = 0.0;
+   m_upperBound = (scalar)1e10;
+}
+</code></pre></div>
+
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Motor Constraint / Block Solver ang. vel. (turn directio</h3>
+				<div class="date">Posted: <strong>Fri Jul 06, 2012 10:50 pm</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Well it appears I have fixed it.  It wasn't turning the wrong direction.  It had to do with the friction constraints. Go figure.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

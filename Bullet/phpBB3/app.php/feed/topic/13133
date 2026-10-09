@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13133" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-01-05T08:19:26+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13133</id>
+
+		<entry>
+		<author><name><![CDATA[paokakis]]></name></author>
+		<updated>2021-01-05T08:19:26+00:00</updated>
+
+		<published>2021-01-05T08:19:26+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43239#p43239</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43239#p43239"/>
+		<title type="html"><![CDATA[Re: Best way to rotate a btRigidBody]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43239#p43239"><![CDATA[
+Thanks man, I tested your code and the rotation is object relative as I wanted. Once more thanks!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13868">paokakis</a> — Tue Jan 05, 2021 8:19 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[paokakis]]></name></author>
+		<updated>2021-01-04T20:08:50+00:00</updated>
+
+		<published>2021-01-04T20:08:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43237#p43237</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43237#p43237"/>
+		<title type="html"><![CDATA[Re: Best way to rotate a btRigidBody]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43237#p43237"><![CDATA[
+Hello,<br><br>Thanks for the reply. I'll try to implement your suggestion. In the meantime you can take a look here : <a href="https://youtu.be/dFPNO_yQNZs" class="postlink">https://youtu.be/dFPNO_yQNZs</a>.<br>You can see in the first part I roll to the right and at 90 degrees I pitch down expecting the point of the spaceship to come up but instead it is rotating the left side of the spaceship like you correctly suggested with your code that the up is wrong...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13868">paokakis</a> — Mon Jan 04, 2021 8:08 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-01-04T19:26:08+00:00</updated>
+
+		<published>2021-01-04T19:26:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43236#p43236</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43236#p43236"/>
+		<title type="html"><![CDATA[Re: Best way to rotate a btRigidBody]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43236#p43236"><![CDATA[
+Your description is not clear to me.  A diagram or video would be helpful.<br><br>That said, I think I can offer some advice already.  It would go like this:<br><br>Avoid representing full rotations with Euler angles.  Use pure rotation math when possible.  It is ok to use Euler angles (roll, pitch, yaw) to compute rotations but it is almost always a bad idea to decompose a rotation back into Euler angles.<br><br>I will assume your game is something like the old game called "Descent" where there is no true "up" direction and I will outline how I would do it.  Note when flying an airplane over ground then there would be an implicit "up" then you would want to "steer differently".<br><br>Consider this pseudo-code.  It might not compile and may very well have bugs.  I'm writing this fresh and did not test it:<br><div class="codebox"><p>Code: </p><pre><code>// use mouse position to compute a delta-rotation in spaceship local-framebtScalar yaw = 0.0;btScalar roll = xOffset * sensitivity;btScalar pitch = yOffset * sensitivity;btQuaternion deltaLocalRotation(yaw, pitch, roll);// get old ship rotationbtTransform transform = body-&gt;getWorldTransform();btQuaternion oldBodyRotation = transform.getRotation();// newBodyRotation is a combination of oldBodyRotation and deltaLocalRotation,// but in general: rotations don't commute (their order matters) so...// what is the their order?//// This is how you do it: always imagine the rotations as operating FROM THE LEFT// on hypothetical vectors at the far RIGHT.//// Specifically, if we know the localForward direction// (probably along a cardinal axis like &lt;0,0,-1&gt; or something)// and we wanted to compute that axis in the world-frame we would://// worldForward = bodyRotation * localForward//// Now that we've got that down, let us consider how to apply a deltaLocalRotation// to get newBodyRotation.//// Since deltaLocalRotation is in the local-frame it must operate on a local-frame vector// and therefore must be ordered on the RIGHT side://// newWorldForward = newBodyRotation * localForward// newWorldForward = (oldBodyRotation * deltaLocalRotation) * localForward//// See the order inside the parentheses there?  The local delta must be on the RIGHT// so it can operate on the hypothetical localForward first.//btQuaternion newBodyRotation = oldBodyRotation * deltaLocalRotation;transform.setRotation(newBodyRotation);body-&gt;setTransform(transform);</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Mon Jan 04, 2021 7:26 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[paokakis]]></name></author>
+		<updated>2021-01-04T16:59:34+00:00</updated>
+
+		<published>2021-01-04T16:59:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43235#p43235</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43235#p43235"/>
+		<title type="html"><![CDATA[Best way to rotate a btRigidBody]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43235#p43235"><![CDATA[
+Hello to the group,<br><br>I am creating a 3D space shooter game using OpenGL and Bullet Physics. I have stumbled upon a problem that might be easy for some but is a real challenge for me. So any help is deeply appreciated. <br>    I have a callback function that is passing in the mouse position on the screen as a vector2. I want to take the mouse input and convert it to rotations for the player object (a spaceship). It should rotate to the right when I move the mouse to the right, to the left when I move to the left, up when I move down and down when I move up. All the moves should be relative to the current rotation of the object so if, for example, it is rotated 90 degrees to the right (roll) then when I move the mouse down , the front part of the spaceship should move towards the screen.<br>    I tried to use quaternion rotations to avoid using torques for simplicity and as a first approach with the following code : <div class="codebox"><p>Code: </p><pre><code>void SpaceShip::onHover(const glm::vec2&amp; pos){static float yaw = 0.f;static float roll = 0.f;static float pitch = 0.f;static float xOffset = 0.f;static float yOffset = 0.f;static float move = 0.005f;static float restore = 0.001f;xOffset = (prevPos.x == pos.x) ? 0.f : (prevPos.x &gt; pos.x) ? -move : move;yOffset = (prevPos.y == pos.y) ? 0.f : (prevPos.y &gt; pos.y) ? move : -move;roll += (xOffset * sensitivity);pitch += (yOffset * sensitivity);this-&gt;PhysicsSetRotation(yaw, pitch, roll);prevPos = pos;}</code></pre></div>    The PhysicsSetRotation function is the following :<div class="codebox"><p>Code: </p><pre><code>btTransform transform = body-&gt;getCenterOfMassTransform();btQuaternion rotation;rotation.setEuler(glm::radians(yaw), glm::radians(pitch), glm::radians(roll));transform.setRotation(rotation);body-&gt;setCenterOfMassTransform(transform);</code></pre></div>    The problem that I have with this method is that the rotation is not relative to the spaceship object. For example, when I rotate to the right 90 degrees and then I drag my mouse down the left part of the spaceship is moving to the screen instead of the front. <br>    So I think I should change the yaw also depending on the roll but I don't know what value should I put there. <br>    Another thing that I would like to ask is for some suggestions to do the rotation with torque and how to calculate this. If my description is not clear I can add some video or GIF to show what is happening.<br><br>Thanks in advance.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13868">paokakis</a> — Mon Jan 04, 2021 4:59 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

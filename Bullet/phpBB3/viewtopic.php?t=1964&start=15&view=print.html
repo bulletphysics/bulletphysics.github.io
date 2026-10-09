@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Minkowski Portal Refinement (MPR) for 2D - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Minkowski Portal Refinement (MPR) for 2D</h2>
+		<p><a href="viewtopic.php%3Ft=1964.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1964</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: Minkowski Portal Refinement (MPR) for 2D</h3>
+				<div class="date">Posted: <strong>Wed May 07, 2008 1:16 pm</strong></div>
+				<div class="author">by <strong>pcm2008</strong></div>
+				<div class="content"><blockquote class="uncited"><div> Maybe I can help. What is the actual problem you're seeing?<br>
+<br>
+I'm having trouble interpreting the image you provided. Can you explain how the image demonstrates the problem?
+</div></blockquote>
+
+  Hi,<br>
+  First of all I would like to say that is not the author of this applet; I've found it on this forum. So I don't know how MPR is implemented in this applet, but I've tried to follow the steps from your webpage and it seems like the penetration dir is slightly inaccurate for this case.<br>
+  The red and green polygons are the colliding objects and the blue polygon is their Minkowski difference (MD). The red and green large points are the closest features in the polygones returned by the algorithm, coresponding to the yellow point on the MD.<br>
+  You can see that the distance from the origin to the yellow point on the MD is not the shortest (I've marked it with a red line). The shortest distance from the origin to the MD (that is the penetration dir) is marked with a green line. I've marked the brown point as the correct point, both on the MD and the two polytopes drawing.<br>
+  I'll try to make more captures from the algorithm steps for better understanding.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Minkowski Portal Refinement (MPR) for 2D</h3>
+				<div class="date">Posted: <strong>Thu May 08, 2008 9:26 pm</strong></div>
+				<div class="author">by <strong>Xeno</strong></div>
+				<div class="content">Thanks!  I understand the problem now.<br>
+<br>
+For the purpose of this discussion, let me define two distinct terms:<br>
+<em class="text-italics"><strong class="text-strong">Penetration depth</strong></em>: The distance two bodies must be separated along a given vector until they are no longer penetrating.<br>
+<strong class="text-strong"><em class="text-italics">Minimum penetration depth</em></strong>: The smallest penetration depth needed to separate two bodies.<br>
+<br>
+The MPR2D algorithm that is described on my site (<a href="http://xenocollide.snethen.com/mpr2d.html" class="postlink">http://xenocollide.snethen.com/mpr2d.html</a>) does not attempt to find the penetration depth.  It only detects overlap.<br>
+<br>
+Given that, let's discuss how to detect the contact normal and penetration depth along that normal using MPR on two shapes, A and B.<br>
+<br>
+The easiest approach is to first determine that the origin is within A-B (the Minkowski difference).  You can do this in 2D using the MPR2D algorithm on my website or the 3D equivalent in Game Programming Gems 7 ("XenoCollide: Complex Collision Made Simple").<br>
+<br>
+Once you've identified that the origin is within A-B, you know there's a collision.  You can then continue casting the origin ray to the boundary of A-B.  Once you hit the surface, the normal of the portal is your contact normal.<br>
+<br>
+You now need to find the penetration depth along this contact normal.  To do that, run MPR again, using the contact normal as the direction of your origin ray.  (You can do this by using "origin - contactNormal" as your interior point.)  The distance between the origin and the surface of A-B along the direction of the contact normal is the penetration depth.<br>
+<br>
+A note about minimum penetration depth: The MPR penetration depth I described above converges to the minimum penetration depth as the penetration is resolved.  In the case you presented in your post, the objects are very deeply penetrated.  There's no reason to believe that the direction of minimum penetration is the best choice (or even a good choice) when penetration is that deep.<br>
+<br>
+---Xeno (Gary Snethen)<br>
+<a href="http://xenocollide.com" class="postlink">http://xenocollide.com</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Minkowski Portal Refinement (MPR) for 2D</h3>
+				<div class="date">Posted: <strong>Fri May 09, 2008 8:41 am</strong></div>
+				<div class="author">by <strong>pcm2008</strong></div>
+				<div class="content">Thanks Xeno for your reply.<br>
+
+  <blockquote class="uncited"><div>The easiest approach is to first determine that the origin is within A-B (the Minkowski difference). You can do this in 2D using the MPR2D algorithm on my website or the 3D equivalent in Game Programming Gems 7 ("XenoCollide: Complex Collision Made Simple").</div></blockquote>
+  I've noticed indeed that is very simple to detect the overlap for 2 shapes using MPR, even for 3D case.<br>
+
+  <blockquote class="uncited"><div>You now need to find the penetration depth along this contact normal. To do that, run MPR again, using the contact normal as the direction of your origin ray.</div></blockquote>
+  I think I understood your aproach. I'll try to use it.<br>
+
+  <blockquote class="uncited"><div>There's no reason to believe that the direction of minimum penetration is the best choice (or even a good choice) when penetration is that deep.</div></blockquote>
+  I know that for this case the minimum penetration might not be the best separation at all. In fact that's why I'm trying to use some sort of caching aproach to obtain some temporal coherence, like I've wrote to you in a private message. It's pretty ok, but are there other better methods to use (managing the cache is sometimes tricky)?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

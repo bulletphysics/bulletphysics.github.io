@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15499" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2025-03-14T03:14:16+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15499</id>
+
+		<entry>
+		<author><name><![CDATA[ajshort]]></name></author>
+		<updated>2025-03-14T03:14:16+00:00</updated>
+
+		<published>2025-03-14T03:14:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44516#p44516</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44516#p44516"/>
+		<title type="html"><![CDATA[Re: Incorrect triangle-triangle collision detected in GI]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44516#p44516"><![CDATA[
+Hi Otis,<br><br>We found that if we modify <div class="codebox"><p>Code: </p><pre><code>btPrimitiveTriangle::overlap_test_conservative</code></pre></div> - it currently only checks if all points of one triangle lie one on the positive side of the plane formed by the other (line 82). When we modify this check to also check of the points are all on the negative side of the plane, this functions as expected.<br><br>I.e. change:<br><div class="codebox"><p>Code: </p><pre><code>if (dis0 &gt; 0.0f &amp;&amp; dis1 &gt; 0.0f &amp;&amp; dis2 &gt; 0.0f) return false;</code></pre></div>to<br><div class="codebox"><p>Code: </p><pre><code>if (dis0 &gt; 0.0f &amp;&amp; dis1 &gt; 0.0f &amp;&amp; dis2 &gt; 0.0f) return false;if (dis0 &lt; 0.0f &amp;&amp; dis1 &lt; 0.0f &amp;&amp; dis2 &lt; 0.0f) return false;</code></pre></div>This then seems to function as expected. We haven't been able to rigorously test this yet, and also it wouldn't take margins into account. Another potential fix would be to just check if any of the 3 points are within "margin" distance of the plane formed by the other triangle?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13486">ajshort</a> — Fri Mar 14, 2025 3:14 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[otis]]></name></author>
+		<updated>2025-03-04T09:06:29+00:00</updated>
+
+		<published>2025-03-04T09:06:29+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44511#p44511</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44511#p44511"/>
+		<title type="html"><![CDATA[Re: Incorrect triangle-triangle collision detected in GI]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44511#p44511"><![CDATA[
+Hey ajshort, in your minimal code isolating the false positive collision with those two triangles,<a href="https://retrobowl.college" class="postlink"><span style="color:#FFFFFF"><span style="font-size:1%;line-height:116%">Retro Bowl</span></span></a> have you tried tweaking the margin values or plane equations in `buildTriPlane()` to see if it resolves the SAT method’s over-detection?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14532">otis</a> — Tue Mar 04, 2025 9:06 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ajshort]]></name></author>
+		<updated>2025-01-29T10:17:10+00:00</updated>
+
+		<published>2025-01-29T10:17:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44510#p44510</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44510#p44510"/>
+		<title type="html"><![CDATA[Incorrect triangle-triangle collision detected in GI]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44510#p44510"><![CDATA[
+Hi all! We're using gimpact for mesh-to-mesh collisions and have come across a case where two triangles are detecting a false positive collision. I've managed to isolate this pretty well to the two triangles in the STL file linked and pictured below - as you can see these aren't colliding, but are reported as a collision.<br><br><a href="https://gist.github.com/ajshort/f032837b4f9e56b75db29560d66acffa" class="postlink">https://gist.github.com/ajshort/f032837 ... 60d66acffa</a><br><br>I've made some minimal code inside the btGImpactCollisionAlgorithm class below which reports a collision between these two triangles manually defined. Does anyone have any advice or idea as to the cause? Also if I define "BULLET_TRIANGLE_COLLISION" so the GJK rather than SAT implementation is used, the result is as expected.<br><div class="codebox"><p>Code: </p><pre><code>btPrimitiveTriangle ta;ta.m_vertices[0] = btVector3(4049.92, 12169.6, 2252.3);ta.m_vertices[1] = btVector3(4083.47, 12166.3, 2258.52);ta.m_vertices[2] = btVector3(4050.78, 12191, 2238.16);ta.buildTriPlane();btPrimitiveTriangle tb;tb.m_vertices[0] = btVector3(5189.17, 11358, 500.004);tb.m_vertices[1] = btVector3(3162.31, 11358, 2724.61);tb.m_vertices[2] = btVector3(3162.31, 12642, 2724.61);tb.buildTriPlane();GIM_TRIANGLE_CONTACT gtc;if (ta.overlap_test_conservative(tb) &amp;&amp; ta.find_triangle_collision_clip_method(tb, gtc)) {std::cout &lt;&lt; "A collision has been detected using SAT method" &lt;&lt; std::endl;} else {std::cout &lt;&lt; "No collision detected using SAT method" &lt;&lt; std::endl;}</code></pre></div><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=2008" class="postimage" alt="Screenshot 2025-01-29 211040.png" onclick="viewableArea(this);" /></dt></dl></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13486">ajshort</a> — Wed Jan 29, 2025 10:17 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

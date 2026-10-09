@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Removing a rigid body</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Removing a rigid body</h2>
+		<p><a href="viewtopic.php%3Ft=696.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=696</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Removing a rigid body</h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 6:43 pm</strong></div>
+				<div class="author">by <strong>nomad</strong></div>
+				<div class="content">What is the correct way to remove a rigid body from btDynamicsWorld? Unless I am missing something simple, there is nothing like a btDynamicsWorld::removeRigidBody() function.<br>
+Just deleting the rigid body causes btDynamicsWorld::stepSimulation() to crash.<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Removing a rigid body</h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 6:58 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>nomad wrote:</cite>What is the correct way to remove a rigid body from btDynamicsWorld? Unless I am missing something simple, there is nothing like a btDynamicsWorld::removeRigidBody() function.<br>
+Just deleting the rigid body causes btDynamicsWorld::stepSimulation() to crash.<br>
+Thanks.</div></blockquote>
+
+Pressing 'END' key should remove objects in most Bullet demos. Which version of Bullet are you using? There should be<br>
+virtual void    removeRigidBody(btRigidBody* body);<br>
+<br>
+Please check out the BasicDemo for the right order to remove things:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=696&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void    BasicDemo::exitPhysics()
+{
+
+
+        //cleanup in the reverse order of creation/initialization
+
+        //remove the rigidbodies from the dynamics world and delete them
+        int i;
+        for (i=m_dynamicsWorld-&gt;getNumCollisionObjects()-1; i&gt;=0 ;i--)
+        {
+                btCollisionObject* obj = m_dynamicsWorld-&gt;getCollisionObjectArray()[i];
+                m_dynamicsWorld-&gt;removeCollisionObject( obj );
+                delete obj;
+        }
+
+        //delete collision shapes
+        for (unsigned int j=0;j&lt;m_collisionShapes.size();j++)
+        {
+                btCollisionShape* shape = m_collisionShapes[j];
+                delete shape;
+        }
+
+        //delete dynamics world
+        delete m_dynamicsWorld;
+
+        //delete collision algorithms creation functions
+        delete m_sphereSphereCF;
+
+
+        delete m_sphereBoxCF;
+        delete m_boxSphereCF;
+
+        //delete solver
+        delete m_solver;
+
+        //delete broadphase
+        delete m_overlappingPairCache;
+
+        //delete dispatcher
+        delete m_dispatcher;
+
+}
+</code></pre></div>
+There might be functionaly missing for objects with constraints involved, I have to check that out. Notice that collision shapes can be re-used among several rigidbodies.<br>
+<br>
+This should be really in the Bullet User Manual.<br>
+<br>
+Thanks for the feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 7:29 pm</strong></div>
+				<div class="author">by <strong>nomad</strong></div>
+				<div class="content">Thanks for that ... removeRigidBody() isn't referenced in the docs, and I didn't think to search all the source for removeRigidBody <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Removing a rigid body</h3>
+				<div class="date">Posted: <strong>Sat Nov 18, 2006 4:38 pm</strong></div>
+				<div class="author">by <strong>nomad</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+<br>
+Please check out the BasicDemo for the right order to remove things:<br>
+
+</div></blockquote>
+
+What about the btDefaultMotionState pointer (created in DemoApplication::localCreateRigidBody()  )?<br>
+Shouldn't this also be explicitly deleted? <br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Removing a rigid body</h3>
+				<div class="date">Posted: <strong>Sat Nov 18, 2006 4:53 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>nomad wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>
+<br>
+Please check out the BasicDemo for the right order to remove things:<br>
+
+</div></blockquote>
+
+What about the btDefaultMotionState pointer (created in DemoApplication::localCreateRigidBody()  )?<br>
+Shouldn't this also be explicitly deleted? <br>
+Thanks.</div></blockquote>
+
+Indeed, that needs to be explicitly deleted indeed. If you already have a graphics object, its destructor would be a good place to delete the motionstate. In the simple Bullet demos, there are no graphics 'objects'.<br>
+I'll add some cleanup code in DemoApplication.<br>
+<br>
+Thanks for the feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

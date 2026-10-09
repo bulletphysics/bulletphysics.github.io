@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; force and torque calculation in Runge_kutta</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>force and torque calculation in Runge_kutta</h2>
+		<p><a href="viewtopic.php%3Ft=4399.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4399</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Sat Dec 05, 2009 1:47 pm</strong></div>
+				<div class="author">by <strong>mozi</strong></div>
+				<div class="content">Hi there,<br>
+<br>
+I'd like to write a game engine and preparing myself for it now. <br>
+<br>
+I am reading Baraff's Siggraph tutorials (Rigid body simulation I -- unconstrained rigid body dynamics) now, here is my question:<br>
+<br>
+when performing numeric integration of the motion equation using 4th order Runge-Kutta method, the calculation of k1, k2, k3 and k4 requires me to evaluate the force and torque, i.e.<br>
+<br>
+k1 = h * f(y0, t0)<br>
+k2 = h * f(y0 + k1/2, t0 + h/2)<br>
+k3 = h * f(y0 + k2/2, t0 + h/2)<br>
+k4 = h * f(y0 + k3,    t0 + h)<br>
+<br>
+where, the motion equation is dy/dt = f(y, t) = (v, 0.5wq, force, torque).<br>
+<br>
+My question is how to calculate the forces and torques for the state variables y0+k1/2, y0+k2/2, and yo+k3 ?<br>
+<br>
+many thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Wed Dec 16, 2009 8:56 pm</strong></div>
+				<div class="author">by <strong>dneckels</strong></div>
+				<div class="content">To be strictly correct, the forces and torques would depend on the intermediate object states, so you would have to go all the way back out and calculate the various contacts, collisions, friction, and all other forces/torques in your problem at with the new intermediate states.<br>
+<br>
+Which, practically, doesn't work.  So you could do something like hold your forces and torques constant across all the intermediate computations (use the initial values). <br>
+<br>
+Then you really aren't solving the whole system at fourth order, but at least you will be solving the internal dynamics porition of the equations at fourth order (which will make your gyroscopic stability, for instance, much better).<br>
+<br>
+Its basically a form of operator splitting....</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Fri Dec 25, 2009 8:17 pm</strong></div>
+				<div class="author">by <strong>Enki</strong></div>
+				<div class="content">I disagree dneckels. The forces and torques are not changing, or at least not changing enough to be outside the required approximation limits, they will be effectively constant over the whole t-zero to h period, so it isn't a problem to keep them so over the whole duration in the computation itself. This holds as long as your timestep is appropriate, whether fixed at short enough intervals or chosen adaptively with regards to error propagation. <br>
+<br>
+If you have a contact or force change happen before time h -- that is an external influence and a single RK4 step isn't meant to deal with those.  We need to determine and resolve that externally generated change, find the new forces, and then begin evaluating from that new set of states.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Sun Dec 27, 2009 12:09 am</strong></div>
+				<div class="author">by <strong>dneckels</strong></div>
+				<div class="content">Well, I think we're saying partially the same thing: <em class="text-italics">that its ok to keep the forces and torques constant</em> over the time step.<br>
+For contact/friction/collision forces its probably ok for another reason: these are generally non smooth forces, so higher order integration won't help anyway: it could actually hurt and introduce oscillations.<br>
+<br>
+In my solver I lower the order to verlet once I have contact/collision forces, but keep the RK4 for bodies on a free trajectory.  Found it helped with the gyroscopic stability quite a lot.<br>
+<br>
+cheers</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Mon Dec 28, 2009 2:37 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">If you want gyroscopic stability, the best methods are by Samuel R. Buss:<br>
+<br>
+<a href="http://euclid.ucsd.edu/~sbuss/ResearchWeb/accuraterotation/paper.pdf" class="postlink">http://euclid.ucsd.edu/~sbuss/ResearchW ... /paper.pdf</a><br>
+<br>
+He shows that RK4 is actually only 2nd order accurate for rotating rigid bodies, and presents much more accurate and efficient algorithms for doing so.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Tue Dec 29, 2009 9:47 pm</strong></div>
+				<div class="author">by <strong>dneckels</strong></div>
+				<div class="content">Thanks, will look at the paper.<br>
+Noticed that even RK2 is enough to provide decent gyroscopic stability, so not suprised RK4 is overkill....</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Mon Jan 04, 2010 11:44 pm</strong></div>
+				<div class="author">by <strong>Aperion</strong></div>
+				<div class="content">Lately, I have been dealing with the same question as the OP. What exactly do you mean by keep the forces and torques constant across all intermediate computations? Does this basically mean you'd only be accounting for the change in velocity? This does not sound like it would be more stable than an euler integrator. Am I missing something or is that really the case?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: force and torque calculation in Runge_kutta</h3>
+				<div class="date">Posted: <strong>Wed Jan 13, 2010 3:59 pm</strong></div>
+				<div class="author">by <strong>dneckels</strong></div>
+				<div class="content">Agreed, this method is at most first order if your forces are nonzero and depend on the bodies state.<br>
+But think of the case, for instance, of free fall.  The only force is gravity, which is constant anyway.  So the method would still be 4th order.<br>
+The extra stability comes from integrating the gyroscopic nonlinearity at higher order (Euler blows up if the object is spinning).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

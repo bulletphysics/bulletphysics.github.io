@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1054" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-03-18T21:33:44+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1054</id>
+
+		<entry>
+		<author><name><![CDATA[John McCutchan]]></name></author>
+		<updated>2007-03-18T21:33:44+00:00</updated>
+
+		<published>2007-03-18T21:33:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3939#p3939</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3939#p3939"/>
+		<title type="html"><![CDATA[Barenbrug Hinge]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3939#p3939"><![CDATA[
+Dirk, thanks again -- that was my problem! My hinge joint is working great!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=148">John McCutchan</a> — Sun Mar 18, 2007 9:33 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2007-03-18T18:46:49+00:00</updated>
+
+		<published>2007-03-18T18:46:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3935#p3935</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3935#p3935"/>
+		<title type="html"><![CDATA[Barenbrug Hinge]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3935#p3935"><![CDATA[
+If I understand you correctly you build the orthogonal axes every frame from uB. I do the following:<br><br>uA = bodyA-&gt;get_rotation_matrix() * hinge_axis_local_A<br>uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>vB = bodyB-&gt;get_rotation_matrix() * tanget1_local_B<br>wB = bodyB-&gt;get_rotation_matrix() * tanget2_local_B<br><br>So you need to create the orthogonal space from the global hinge axis when you construct the joint and save it in the local frames as you do for the hinge axis itself. If you want to save memory the wB axes could be constructed per frame like this (though I would verify this for some time using an assertion just to be sure):<br><br>uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>vB = bodyB-&gt;get_rotation_matrix() * tanget1_local_B<br><br>wB = Cross( uB, vB );<br><br>Note that it shouldn't actually make any difference since you don't need uB.<br><br><br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Mar 18, 2007 6:46 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[John McCutchan]]></name></author>
+		<updated>2007-03-18T17:30:45+00:00</updated>
+
+		<published>2007-03-18T17:30:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3933#p3933</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3933#p3933"/>
+		<title type="html"><![CDATA[Barenbrug Hinge]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3933#p3933"><![CDATA[
+Okay, I went with your suggestion. I'm having problems with the simulation blowing up if I include stabilization terms for the angular error. <br><br>Scenario:<br>Box is hinged to a fixed box.<br><br>I drop a box onto the free box as a way of introducing some error into the<br>joint. If C4, and C5 are zero the joint continues to work fine, but if I set C4 and C5 to what I have below, the box starts "randomly" spinning around the hinge joint. Is there something wrong with my derivation below?<br><br>C:<br>uA = bodyA-&gt;get_rotation_matrix() * hinge_axis_local_A<br>uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>vB, wB = uB.orthogonal_basis ()<br>C1-3 = Ball-Socket C<br>C4 = uA * vB <br>C5 = uA * wB<br><br>Jacoabian:<br>J1-3 = Ball-Socket J<br>uA = bodyA-&gt;get_rotation_matrix() * hinge_axis_local_A<br>uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>vB, wB = uB.orthogonal_basis ()<br>T1 = uA.cross(vB)<br>T2 = uA.cross(wB)<br><br><br>J4 = [0 | T1 | 0 | -T1 ]<br>J5 = [0 | T2 | 0 | -T2 ]<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=148">John McCutchan</a> — Sun Mar 18, 2007 5:30 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2007-03-15T10:34:53+00:00</updated>
+
+		<published>2007-03-15T10:34:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3902#p3902</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3902#p3902"/>
+		<title type="html"><![CDATA[Barenbrug Hinge]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3902#p3902"><![CDATA[
+Let u be you hinge axis in world coordinates. This is your free rotation. So find two arbitrary perpendicual axes in the tangent space of u. Let's call these v and w. Using the same notation as before you get:<br><br>C1 = u1 * v2<br>C2 = u1 * w2<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Thu Mar 15, 2007 10:34 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[John McCutchan]]></name></author>
+		<updated>2007-03-15T04:21:28+00:00</updated>
+
+		<published>2007-03-15T04:21:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3898#p3898</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3898#p3898"/>
+		<title type="html"><![CDATA[Barenbrug Hinge]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3898#p3898"><![CDATA[
+Hey all! After having such great success with the fixed orientation joint from Barenbrug's thesis, I decided to implement the hinge constraint from the thesis. I'm going to give a little background for those not familiar with the derivation and give a break down of what the jacobian looks like. My current implemention is wrong and I'm wondering if anyone could check my jacobian for me.<br><br>Instead of a single anchor point plus a line he suggests using 2 anchor points: P1 and P2. <br><br>Let:<br><br>P1A,P2A,P1B,P2B are the current P1 and P2's transformed by the bodies A and B.<br>L = P1A-P2A<br>T1,T2 = orthogonal basis of L.<br>RP1 = P1A - P1B<br>RP2 = P2A - P2B<br><br>C[0] = T1 . RP1<br>C[1] = T2 . RP1<br>C[2] = L . RP1<br>C[3] = T1 . RP2<br>C[4] = T2 . RP2<br><br>dC[0]/dt = T1 . (vA + wA x P1A_local - vB - wB x P1B_local)<br>etc..<br><br>First row of J looks like:<br><br>T1.x<br>T1.y<br>T1.z<br>T1.z * P1A.y - T1.y * P1A.z<br>T1.x * P1A.z - T1.z * P1A.x<br>T1.y * P1A.x - T1.x * P1A.y<br>-T1.x<br>-T1.y<br>-T1.z<br>-T1.z * P1A.y + T1.y * P1A.z<br>-T1.x * P1A.z + T1.z * P1A.x<br>-T1.y * P1A.x + T1.x * P1A.y<br><br>The rest of the rows follow the same pattern.<br><br>Has anyone gone down this road?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=148">John McCutchan</a> — Thu Mar 15, 2007 4:21 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

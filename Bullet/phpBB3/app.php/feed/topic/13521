@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13521" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-01-22T04:42:52+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13521</id>
+
+		<entry>
+		<author><name><![CDATA[H7per]]></name></author>
+		<updated>2023-01-22T04:42:52+00:00</updated>
+
+		<published>2023-01-22T04:42:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44215#p44215</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44215#p44215"/>
+		<title type="html"><![CDATA[Re: extreme bouncing on btHeightfieldTerrainShape with small timesteps]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44215#p44215"><![CDATA[
+<blockquote class="uncited"><div>You see the <strong class="text-strong">#define</strong> of <strong class="text-strong">USE_HEIGHTFIELD_TRIANGLES</strong> is commented out.  That looks like the logic you want to invoke: it replaces the contact normal with one that always points out of the triangle plane.</div></blockquote>I tried uncommenting this before with the .cpp added to my project,  the code is being executed. This however had no effect on the bouncing. I went as far as to force the Normal to be (0, 1, 0) (same as what the adjusted normals would be), which made no difference aswell, however changing it to something like (0, -1, 0) confirms that that too is working (the box predictably phasing through the floor). I had also tried copying the code directly in the callback, but to no avail.<br><br>I doubt the normals are at fault. There seems to be an unexplicable sudden impulse upwards (as seen in cp.m_appliedImpulse, the latter supplied code in the repo prints the impulse if it exceeds a certain amount and its contact vector) at the contact.<br>I suppose it probably still has something to do with edges due to the fact that it doesn't happen on a static plane or a boxshape.<br><br><a href="https://github.com/H7perus/OpenGL-Testing/blob/terrainfixing" class="postlink">https://github.com/H7perus/OpenGL-Testi ... rainfixing</a><br>If anyone wants to have a shot at this, I made my repo public and made a branch which contains pretty much only the necessities(a compund shape box with commented out wheels, rotated (as edge and corner hits appear to cause it primarily) and debug drawing, for easily repeatable results). To me this issue is a blackbox right now. Luckily it appears the wheels are unaffected by this effect, so adding a tail wheel should atleast fix this behavior for the short term, however not allowing belly landings is a bit limiting for what i had in mind.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14505">H7per</a> — Sun Jan 22, 2023 4:42 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-01-21T06:17:41+00:00</updated>
+
+		<published>2023-01-21T06:17:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44214#p44214</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44214#p44214"/>
+		<title type="html"><![CDATA[Re: extreme bouncing on btHeightfieldTerrainShape with small timesteps]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44214#p44214"><![CDATA[
+When I look at the implementation of <strong class="text-strong">btAdjustInternalEdgeContacts()</strong> I see this:<div class="codebox"><p>Code: </p><pre><code>void btAdjustInternalEdgeContacts(btManifoldPoint&amp; cp, const btCollisionObjectWrapper* colObj0Wrap, const btCollisionObjectWrapper* colObj1Wrap, int partId0, int index0, int normalAdjustFlags){    //btAssert(colObj0-&gt;getCollisionShape()-&gt;getShapeType() == TRIANGLE_SHAPE_PROXYTYPE);    if (colObj0Wrap-&gt;getCollisionShape()-&gt;getShapeType() != TRIANGLE_SHAPE_PROXYTYPE)        return;        btTriangleInfoMap* triangleInfoMapPtr = 0;    if (colObj0Wrap-&gt;getCollisionObject()-&gt;getCollisionShape()-&gt;getShapeType() == TERRAIN_SHAPE_PROXYTYPE)    {        btHeightfieldTerrainShape* heightfield = (btHeightfieldTerrainShape*)colObj0Wrap-&gt;getCollisionObject()-&gt;getCollisionShape();        triangleInfoMapPtr = heightfield-&gt;getTriangleInfoMap();//#define USE_HEIGHTFIELD_TRIANGLES#ifdef USE_HEIGHTFIELD_TRIANGLES        btVector3 newNormal = btVector3(0, 0, 1);        const btTriangleShape* tri_shape = static_cast&lt;const btTriangleShape*&gt;(colObj0Wrap-&gt;getCollisionShape());        btVector3 tri_normal;        tri_shape-&gt;calcNormal(tri_normal);        newNormal = tri_normal;        //                  cp.m_distance1 = cp.m_distance1 * newNormal.dot(cp.m_normalWorldOnB);        cp.m_normalWorldOnB = newNormal;        // Reproject collision point along normal. (what about cp.m_distance1?)        cp.m_positionWorldOnB = cp.m_positionWorldOnA - cp.m_normalWorldOnB * cp.m_distance1;        cp.m_localPointB = colObj0Wrap-&gt;getWorldTransform().invXform(cp.m_positionWorldOnB);        return;#endif    }</code></pre></div>You see the <strong class="text-strong">#define</strong> of <strong class="text-strong">USE_HEIGHTFIELD_TRIANGLES</strong> is commented out.  That looks like the logic you want to invoke: it replaces the contact normal with one that always points out of the triangle plane.<br><br>Try this: copy the body function and put it in your<strong class="text-strong"> collisionCallback() </strong>and re-enable the contact normal override.  If that doesn't work, write your own analysis logic there and modify it to override the contact normals in a better way.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Sat Jan 21, 2023 6:17 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[H7per]]></name></author>
+		<updated>2023-01-21T05:21:31+00:00</updated>
+
+		<published>2023-01-21T05:21:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44213#p44213</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44213#p44213"/>
+		<title type="html"><![CDATA[Re: extreme bouncing on btHeightfieldTerrainShape with small timesteps]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44213#p44213"><![CDATA[
+<blockquote class="uncited"><div>I wonder if your problem isn't so much bad normals as it is interpenetration?  This idea because I think the interpenetration resolution code can also introduce non-physical results that might look similar to glitches from bad normals.   However, with such a small substep I doubt this could be the case: the plane would be unlikely to move fast enough within a substep to penetrate into a terrain triangle.</div></blockquote>If "interpenetration" is penetration below the surface of the mesh, it would seem odd to me. The vertical velocity is low and it happens even if the airplane is resting on the terrain and then gets a force acting on it, moving it very slowly.<br><br>As for the other parts, I attempted using only the planes box, with no wheels and fixed blocks, as part of a multi body in the place the wheels should be. If it lands flat(without wheels), it will bounce less, although it does not eliminate it. Landing on an edge or corner of the collision box seems to make it quite a bit worse, with an instant jump on landing.<br><br>I am not attached to having physically simulated wheels, although I don't think that part is the problem, I could not observe any bouncing between the wheels and the ground and as mentioned above, the bouncing is still there, even with no wheels at all.<br>Here is a recording, probably should have provided that earlier: <a href="https://www.youtube.com/watch?v=yLTq2ZUiY9M&amp;feature=youtu.be" class="postlink">https://www.youtube.com/watch?v=yLTq2ZU ... e=youtu.be</a><br><br>Confirming it to be the edges would probably be easier if I had implemented some debug rendering.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14505">H7per</a> — Sat Jan 21, 2023 5:21 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-01-20T23:50:54+00:00</updated>
+
+		<published>2023-01-20T23:50:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44212#p44212</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44212#p44212"/>
+		<title type="html"><![CDATA[Re: extreme bouncing on btHeightfieldTerrainShape with small timesteps]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44212#p44212"><![CDATA[
+I wonder if your problem isn't so much bad normals as it is interpenetration?  This idea because I think the interpenetration resolution code can also introduce non-physical results that might look similar to glitches from bad normals.   However, with such a small substep I doubt this could be the case: the plane would be unlikely to move fast enough within a substep to penetrate into a terrain triangle.<br><br>Have you tried temporarily disabling the wheel-plane constraint system and just using a solid plane + wheels compound shape?  If that makes the glitch go away then maybe the constraints are somehow allowing the plane to penetrate.  If this were the case... maybe the constraints are causing the plane box to rotate enough to interpenetrate (e.g. the penetration is not so much because of linear motion but angular).  Explicitly increasing the collision margin of the box to be much larger than its default 0.04m might help.  Alternatively, try making the Box's angular intertia tensor artificially large... no I take that back, since that would only increase the effective mass/inertia ratio and contribute toward instability.  Hrm...<br><br>For your game mechanics... is it very important the plane's landing system be done in a physically correct way? Maybe a simple game-physics cheat system could be used: either explicit ray-tracing with custom spring/hover effect or use Bullet's vehicle system.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Jan 20, 2023 11:50 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[H7per]]></name></author>
+		<updated>2023-01-20T21:08:38+00:00</updated>
+
+		<published>2023-01-20T21:08:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44210#p44210</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44210#p44210"/>
+		<title type="html"><![CDATA[Re: extreme bouncing on btHeightfieldTerrainShape with small timesteps]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44210#p44210"><![CDATA[
+<blockquote class="uncited"><div>Is it really the edge normals?  The sprung constraints between the fuselage and the wheels complicate matters. A quick way to verify it is caused by edge normals would be to have the box drag on a <strong class="text-strong">btStaticPlaneShape</strong>. If the problem goes away that would support the edge normals theory.</div></blockquote>I used a giant box as the floor before hand, with no issues. This only started showing up with the switch to btHeightfieldTerrainShape. <blockquote class="uncited"><div>Meanwhile, the code snippet you supplied looks odd.  <strong class="text-strong">(1)</strong> I don't see where the <strong class="text-strong">testp</strong> variable comes from.  Meanwhile you initialize the <strong class="text-strong">testheight</strong> array but never use it. <strong class="text-strong">(2)</strong> I don't see where you create the body, add it to the world, or set the <strong class="text-strong">CUSTOM_MATERIAL_CALLBACK</strong> flag.  Are you remembering to do that?</div></blockquote>The testp was a pointer that got the memory address of heightfield assigned to it. Ofcourse this is unnecessary, I changed it in my code and in my post for clarification and good practice.<br>I added those parts (creating and adding the body) to my original post now, for the sake of clarity.<br>Yes, the callback flag is set. As I mentioned, I confirmed that the callback is running via printing to console, I added that to the code embed too now.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14505">H7per</a> — Fri Jan 20, 2023 9:08 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-01-20T19:25:00+00:00</updated>
+
+		<published>2023-01-20T19:25:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44208#p44208</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44208#p44208"/>
+		<title type="html"><![CDATA[Re: extreme bouncing on btHeightfieldTerrainShape with small timesteps]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44208#p44208"><![CDATA[
+Is it really the edge normals?  The sprung constraints between the fuselage and the wheels complicate matters. A quick way to verify it is caused by edge normals would be to have the box drag on a <strong class="text-strong">btStaticPlaneShape</strong>. If the problem goes away that would support the edge normals theory.<br><br>Meanwhile, the code snippet you supplied looks odd.  <strong class="text-strong">(1)</strong> I don't see where the <strong class="text-strong">testp</strong> variable comes from.  Meanwhile you initialize the <strong class="text-strong">testheight</strong> array but never use it. <strong class="text-strong">(2)</strong> I don't see where you create the body, add it to the world, or set the <strong class="text-strong">CUSTOM_MATERIAL_CALLBACK</strong> flag.  Are you remembering to do that?<div class="codebox"><p>Code: </p><pre><code>    //enable custom callback    body-&gt;setCollisionFlags(body-&gt;getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Jan 20, 2023 7:25 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[H7per]]></name></author>
+		<updated>2023-01-20T20:22:58+00:00</updated>
+
+		<published>2023-01-20T04:30:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44206#p44206</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44206#p44206"/>
+		<title type="html"><![CDATA[extreme bouncing on btHeightfieldTerrainShape with small timesteps]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44206#p44206"><![CDATA[
+I am working on a flight simulation as a hobby project. <br><br>I require suspension modelling, for which I need extreme mass ratios(small wheels vs a massive airplane). The way I approached this issue was by lowering the time step size to 1/1000th, however now that I started toying around with terrain, I discovered that my plane, currently consisting of two suspended wheels and a box with the box resting on the ground by one edge, would jump considerably, seemingly at random at said edge it is resting on. This is less pronounced at higher timestep lengths, however that breaks the suspension and does not completly eliminate the bouncing.<br><br>In my search for a solution I came across <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43153&amp;hilit=btAdjustInternalEdgeContacts#p43153" class="postlink"> a thread</a> which seems to be about a related issue. It having to do with edge contacts makes sense to me, as pushing the aircraft in one direction on the plane, results in a regular pattern of bumps, although it does not always jump that high.<br><br>The OP of that thread solved it by implementing a custom callback, however that seems to do nothing for my issue at hand, the behavior seems to exactly identical despite the callback being called(which I could confirm via a console print).<br><br>Here is a shortened version of my implementation. I hope I am not omitting crucial information here. My biggest worry there is that I could have implemented something like the generation of the triangleInfoMap wrong, leading to no effect from the callback.<div class="codebox"><p>Code: </p><pre><code>bool collisionCallback(btManifoldPoint&amp; cp, const btCollisionObjectWrapper* obj1, int id1, int index1, const btCollisionObjectWrapper* obj2, int id2, int index2){btAdjustInternalEdgeContacts(cp, obj2, obj1, id2, index2);return true;}void main(){btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;btDiscreteDynamicsWorld* dynamicsWorld = new  btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);double testheight[100 * 100];for (int i = 0; i &lt; 100 * 100; i++){testheight[i] = 0.0f;}gContactAddedCallback = collisionCallback;btHeightfieldTerrainShape* terrainshape = new btHeightfieldTerrainShape(100, 100, &amp;testheight, btScalar(10), 1, true, true);btTriangleInfoMap* triangleInfoMap = new btTriangleInfoMap();btGenerateInternalEdgeInfo(terrainshape, triangleInfoMap);terrainshape-&gt;setTriangleInfoMap(triangleInfoMap);btCollisionShape* groundShape = terrainshape;btTransform groundTransform;groundTransform.setIdentity();groundTransform.setOrigin(btVector3(0, 3, 0));btScalar mass(0.);btVector3 localInertia(0, 0, 0);if (mass != 0.f)groundShape-&gt;calculateLocalInertia(mass, localInertia);btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, terrainshape, localInertia);btRigidBody* body = new btRigidBody(rbInfo);body-&gt;setCollisionFlags(body-&gt;getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);dynamicsWorld-&gt;addRigidBody(body);while(!glfwWindowShouldClose(window)){dynamicsWorld-&gt;stepSimulation(deltaTime, 100, 0.001);}}</code></pre></div>Thanks in advance for any possible solutions, I've been on this for a considerable amount of time now.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14505">H7per</a> — Fri Jan 20, 2023 4:30 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

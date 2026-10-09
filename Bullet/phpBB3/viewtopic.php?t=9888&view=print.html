@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bug with wrong normals on edges in btBvhTriangleMeshShape</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bug with wrong normals on edges in btBvhTriangleMeshShape</h2>
+		<p><a href="viewtopic.php%3Ft=9888.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9888</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bug with wrong normals on edges in btBvhTriangleMeshShape</h3>
+				<div class="date">Posted: <strong>Mon Apr 14, 2014 2:06 am</strong></div>
+				<div class="author">by <strong>Pacha</strong></div>
+				<div class="content">Video of the bug:<br>
+<a href="https://www.youtube.com/watch?v=VCtwTpABrQo" class="postlink">https://www.youtube.com/watch?v=VCtwTpABrQo</a><br>
+<br>
+I have the following situation, a couple of btCollisionObjects, and a btRigidBody. When the btRigidBody is falling vertically without horizontal speed, the normals are calculated wrongly and it gets through the collision objects on the edges. There are 2 normals in the contact manifold (btManifoldPoint) with inverse normals (0, -1, 0), and it passes through the collision object (see the video for reference). This only happens when falling at a relative high speed and crashes in a place with an edge, and sometimes when jumping at the same spot with edges vertically. It works well when not touching the edges when falling.<br>
+<br>
+You can see in the video, top left, the normals (inverted ones when falling through, normal ones when no bugs). I am using btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK on all my bodies, and this is my gContactAddedCallback function:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9888&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static bool CustomMaterialCombinerCallback(btManifoldPoint&amp; cp,	const btCollisionObjectWrapper* colObj0Wrap,int partId0,int index0,const btCollisionObjectWrapper* colObj1Wrap,int partId1,int index1)
+{
+	
+	btAdjustInternalEdgeContacts(cp,colObj1Wrap,colObj0Wrap, partId1,index1);
+	//if (enable)
+	{
+		//btAdjustInternalEdgeContacts(cp,colObj1,colObj0, partId1,index1, BT_TRIANGLE_CONVEX_BACKFACE_MODE);
+		//btAdjustInternalEdgeContacts(cp,colObj1,colObj0, partId1,index1, BT_TRIANGLE_CONVEX_DOUBLE_SIDED+BT_TRIANGLE_CONCAVE_DOUBLE_SIDED);
+	}
+
+	float friction0 = colObj0Wrap-&gt;getCollisionObject()-&gt;getFriction();
+	float friction1 = colObj1Wrap-&gt;getCollisionObject()-&gt;getFriction();
+	float restitution0 = colObj0Wrap-&gt;getCollisionObject()-&gt;getRestitution();
+	float restitution1 = colObj1Wrap-&gt;getCollisionObject()-&gt;getRestitution();
+
+	if (colObj0Wrap-&gt;getCollisionObject()-&gt;getCollisionFlags() &amp; btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK)
+	{
+		friction0 = 1.0;//partId0,index0
+		restitution0 = 0.f;
+	}
+	if (colObj1Wrap-&gt;getCollisionObject()-&gt;getCollisionFlags() &amp; btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK)
+	{
+		if (index1&amp;1)
+		{
+			friction1 = 1.0f;//partId1,index1
+		} else
+		{
+			friction1 = 0.f;
+		}
+		restitution1 = 0.f;
+	}
+
+	cp.m_combinedFriction = calculateCombinedFriction(friction0,friction1);
+	cp.m_combinedRestitution = calculateCombinedRestitution(restitution0,restitution1);
+	//cp.m_combinedFriction = calculateCombinedFriction(0.0,0.0);
+	//cp.m_combinedRestitution = calculateCombinedRestitution(0.0,0.0);
+
+	//this return value is currently ignored, but to be on the safe side: return false if you don't calculate friction
+	return true;
+}</code></pre></div>
+
+Does somebody know how to solve this before I report a bug? Thanks.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

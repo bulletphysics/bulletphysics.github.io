@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Limit video framerate of STATE_LOGGING_VIDEO_MP4</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Limit video framerate of STATE_LOGGING_VIDEO_MP4</h2>
+		<p><a href="viewtopic.php%3Ft=11976.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11976</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Limit video framerate of STATE_LOGGING_VIDEO_MP4</h3>
+				<div class="date">Posted: <strong>Sat Jan 06, 2018 7:30 pm</strong></div>
+				<div class="author">by <strong>MIT</strong></div>
+				<div class="content">As the title states, is there a way to constrain the framerate of the video created using the command:<br>
+<br>
+p.startStateLogging( p.STATE_LOGGING_VIDEO_MP4, filename )<br>
+<br>
+As of now, the framerate fluctuates based on the cpu load of my computer.  If this is connected to the framerate that the Physics simulator is running at perhaps I'm not setting it correctly?  I'm currently using:<br>
+<br>
+p.setPhysicsEngineParameter( fixedTimeStep=1./60., ... )<br>
+<br>
+But reducing the fixedTimeStep value seems to have no effect on the logging. I've also tried the following on playback and it fails to solve the issue.<br>
+<br>
+p.setRealTimeSimulation( True )<br>
+<br>
+I'm probably mis-understanding how bullet works, but any help would be appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Limit video framerate of STATE_LOGGING_VIDEO_MP4</h3>
+				<div class="date">Posted: <strong>Fri Jan 12, 2018 4:26 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">At the moment, the ffmpeg video stream is generated from the graphics thread, which runs asynchronously from the physics. It cannot be synchronized.<br>
+<br>
+We can add an option to force to synchronize them for this purpose, you could file an issue in <a href="https://github.com/bulletphysics/bullet3/issues" class="postlink">our tracker</a>?<br>
+<br>
+Alternatively, just grab the individual images using 'getCameraImage' and create the video from Python?<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11976&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>p.setRealTimeSimulation(False)
+while (1):
+  p.stepSimulation()
+  img=p.getCameraImage(width, height, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+  #save image to disk or stream img to a ffmpeg pipe
+</code></pre></div>
+See the <a href="https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#" class="postlink">PyBullet Quickstart Guide</a> for details on getCameraImage.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Limit video framerate of STATE_LOGGING_VIDEO_MP4</h3>
+				<div class="date">Posted: <strong>Sun Jan 14, 2018 10:00 pm</strong></div>
+				<div class="author">by <strong>MIT</strong></div>
+				<div class="content">Thanks for following up, that explains the behavior I'm seeing.  I'll file an issue with the tracker as I think it's a worthwhile option.<br>
+<br>
+That said, just grabbing the images and compositing them into a video later is a good solution, so I'll use that as a workaround in the meantime.  Didn't realize this method existed, should have looked harder at the API.  Interestingly this is actually the preferred way to render video in Blender, save images to disk and then create the video as a second step.  That way if your render takes 3 days and fails half way thru you don't have to restart the thing from scratch.  Thanks for the help!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

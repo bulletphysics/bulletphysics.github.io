@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; setJointMotorControl2 won't assign correct force value to certain joints</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>setJointMotorControl2 won't assign correct force value to certain joints</h2>
+		<p><a href="viewtopic.php%3Ft=13028.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13028</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>setJointMotorControl2 won't assign correct force value to certain joints</h3>
+				<div class="date">Posted: <strong>Fri Jul 03, 2020 11:51 pm</strong></div>
+				<div class="author">by <strong>sakura_hana</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I am loading a quadruped model into the simulation environment using a URDF file. The model loads in correctly, however, when applying POSITION_CONTROL via setJointMotorControl2 to the robots lower leg joints, the joints are unable to maintain their position under the weight of the robot. <br>
+<br>
+When applying POSITION_CONTROL to the upper leg and shoulder joints of the robot, they maintain their set position without issue. Its only the lower legs that can't maintain, even though I am applying a higher force to them then any other joint. <br>
+<br>
+When reducing the simulation gravity to around -2 instead of -9.81, they lower leg joints are able to somewhat maintain the set position.<br>
+<br>
+I am relitively new to pybullet, and this problem baffles me, so I would appreciate some help.<br>
+<br>
+<strong class="text-strong">Here is my main code:</strong><br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13028&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import pybullet_data
+
+physicsClient = p.connect(p.GUI) # or p.DIRECT for non graphical version
+p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+#p.setTimeStep(1.0)
+planeID = p.loadURDF("plane.urdf")
+
+p.resetDebugVisualizerCamera( cameraDistance=0.5, cameraYaw=75, cameraPitch=-20, cameraTargetPosition=[0.0, 0.0, 0.25])
+
+baseStartPos = [0,0,0.5]
+baseStartOrientation = p.getQuaternionFromEuler([1,0,0])
+quadrupedID = p.loadURDF("MQ_SIM_ASEM/urdf/MQ_SIM_ASEM.urdf",baseStartPos, baseStartOrientation)
+
+#p.changeDynamics(sphereUid,-1,spinningFriction=0.001, rollingFriction=0.001,linearDamping=0.0)
+# Set Joints to home position
+for joint in range (p.getNumJoints(quadrupedID)):
+	p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=0.0,force=10,maxVelocity=5)
+	
+# Set Shoulder Joints	
+joint = 0	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.125,force=5,maxVelocity=5)
+
+joint = 3	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=0.125,force=5,maxVelocity=5)
+
+joint = 6	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.125,force=5,maxVelocity=5)
+
+joint = 9	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=0.125,force=5,maxVelocity=5)	
+
+# Set Upper Joints	
+joint = 1	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.75,force=5,maxVelocity=5)
+
+joint = 4	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.75,force=5,maxVelocity=5)
+
+joint = 7	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.75,force=5,maxVelocity=5)
+
+joint = 10	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.75,force=5,maxVelocity=5)
+
+# Set Lower Joints	
+joint = 2	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.2,force=1000,maxVelocity=5)
+
+joint = 5	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.2,force=1000,maxVelocity=5)
+
+joint = 8	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.2,force=1000,maxVelocity=5)
+
+joint = 11	
+p.setJointMotorControl2(quadrupedID,joint,p.POSITION_CONTROL,targetPosition=-0.2,force=1000,maxVelocity=5)
+
+#Set Link Dynamics
+joint = 2
+p.changeDynamics(quadrupedID,joint,lateralFriction=0.1,spinningFriction=0.001, rollingFriction=0.001)
+
+joint = 5
+p.changeDynamics(quadrupedID,joint,lateralFriction=0.1,spinningFriction=0.001, rollingFriction=0.001)
+
+joint = 8
+p.changeDynamics(quadrupedID,joint,lateralFriction=0.1,spinningFriction=0.001, rollingFriction=0.001)
+
+joint = 11
+p.changeDynamics(quadrupedID,joint,lateralFriction=0.1,spinningFriction=0.001, rollingFriction=0.001)
+
+p.getNumJoints(quadrupedID)
+for i in range (p.getNumJoints(quadrupedID)):
+	print(p.getJointInfo(quadrupedID,i))
+	
+p.setGravity(0,0,-9.81)
+p.setRealTimeSimulation(1)
+
+while (1):
+	keys = p.getKeyboardEvents()
+	#print(keys)
+	basePos, baseOrn = p.getBasePositionAndOrientation(quadrupedID) # Get model position
+	p.resetDebugVisualizerCamera( cameraDistance=0.35, cameraYaw=75, cameraPitch=-20, cameraTargetPosition=basePos) # fix camera onto model
+	time.sleep(0.01)
+
+basePos, baseOrn = p.getBasePositionAndOrientation(quadrupedID)
+print(basePos, baseOrn)
+p.disconnect()
+</code></pre></div>
+
+<strong class="text-strong">and my urdf code:</strong><br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13028&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;robot
+  name="MQ_SIM_ASEM"&gt;
+  &lt;link
+    name="Chassis"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="-2.2751E-16 -0.0045599 -0.0045435"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.21254" /&gt;
+      &lt;inertia
+        ixx="0.00050987"
+        ixy="-1.19E-11"
+        ixz="-1.8228E-18"
+        iyy="0.00078799"
+        iyz="1.2389E-06"
+        izz="0.00031486" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/Chassis.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.79216 0.81961 0.93333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/Chassis.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;link
+    name="FL_S"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="-0.012475 -0.0045599 -0.059993"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.21254" /&gt;
+      &lt;inertia
+        ixx="0.00050987"
+        ixy="-1.19E-11"
+        ixz="-1.8228E-18"
+        iyy="0.00078799"
+        iyz="1.2389E-06"
+        izz="0.00031486" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FL_S.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.79216 0.81961 0.93333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FL_S.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="FL_S"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="0.012475 0 0.05545"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="Chassis" /&gt;
+    &lt;child
+      link="FL_S" /&gt;
+    &lt;axis
+      xyz="0 0 1" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="FL_U"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="-0.048925 -0.00455991469585068 -0.0661434522412885"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.212537478238056" /&gt;
+      &lt;inertia
+        ixx="0.000509871545281873"
+        ixy="-1.18995042286199E-11"
+        ixz="-1.82281490249125E-18"
+        iyy="0.00078798977975645"
+        iyz="1.23887315159603E-06"
+        izz="0.000314862007654797" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FL_U.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FL_U.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="FL_U"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="0.03645 0 0.00615"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="FL_S" /&gt;
+    &lt;child
+      link="FL_U" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="FL_L"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="0 -0.0132084566072264 -0.000261600947614194"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.0010736396629226" /&gt;
+      &lt;inertia
+        ixx="0.0001"
+        ixy="0"
+        ixz="0"
+        iyy="0.0001"
+        iyz="0"
+        izz="0.0001" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FL_L.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="1 1 1 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FL_L.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="FL_L"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="0.00185 0 -0.055"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="FL_U" /&gt;
+    &lt;child
+      link="FL_L" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="1000"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="FR_S"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="0.0124749999999998 -0.00455991469584891 -0.0599934522412885"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.212537478238056" /&gt;
+      &lt;inertia
+        ixx="0.000509871545281873"
+        ixy="-1.18995042286199E-11"
+        ixz="-1.83636742964732E-18"
+        iyy="0.00078798977975645"
+        iyz="1.23887315159603E-06"
+        izz="0.000314862007654797" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FR_S.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FR_S.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="FR_S"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="-0.012475 0 0.05545"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="Chassis" /&gt;
+    &lt;child
+      link="FR_S" /&gt;
+    &lt;axis
+      xyz="0 0 1" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="FR_U"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="0.0489249999999996 -0.00455991469584817 -0.0661434522412884"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.212537478238056" /&gt;
+      &lt;inertia
+        ixx="0.000509871545281873"
+        ixy="-1.18995042286199E-11"
+        ixz="-1.82281490249125E-18"
+        iyy="0.00078798977975645"
+        iyz="1.23887315159603E-06"
+        izz="0.000314862007654797" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FR_U.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FR_U.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="FR_U"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="-0.03645 0 0.00615"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="FR_S" /&gt;
+    &lt;child
+      link="FR_U" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="FR_L"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="6.93889390390723E-18 -0.0132084566072264 -0.000261600947614193"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.0010736396629226" /&gt;
+      &lt;inertia
+        ixx="0.0001"
+        ixy="0"
+        ixz="0"
+        iyy="0.0001"
+        iyz="0"
+        izz="0.0001" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FR_L.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="1 1 1 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/FR_L.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="FR_L"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="-0.00185 0 -0.055"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="FR_U" /&gt;
+    &lt;child
+      link="FR_L" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="1000"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="BL_S"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="-0.0124749999999998 -0.00455991469584891 0.0509065477587115"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.212537478238056" /&gt;
+      &lt;inertia
+        ixx="0.000509871545281873"
+        ixy="-1.18995042294669E-11"
+        ixz="-1.82959116606929E-18"
+        iyy="0.00078798977975645"
+        iyz="1.23887315159603E-06"
+        izz="0.000314862007654797" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BL_S.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BL_S.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="BL_S"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="0.012475 0 -0.05545"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="Chassis" /&gt;
+    &lt;child
+      link="BL_S" /&gt;
+    &lt;axis
+      xyz="0 0 1" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="BL_U"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="-0.0489249999999992 -0.00455991469584733 0.0570565477587112"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.212537478238056" /&gt;
+      &lt;inertia
+        ixx="0.000509871545281873"
+        ixy="-1.18995036212972E-11"
+        ixz="-1.82281490249125E-18"
+        iyy="0.00078798977975645"
+        iyz="1.2388731515953E-06"
+        izz="0.000314862007654797" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BL_U.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BL_U.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="BL_U"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="0.03645 0 -0.00615"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="BL_S" /&gt;
+    &lt;child
+      link="BL_U" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="BL_L"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="0 -0.0132084566072264 -0.00026160094761421"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.0010736396629226" /&gt;
+      &lt;inertia
+        ixx="0.0001"
+        ixy="0"
+        ixz="0"
+        iyy="0.0001"
+        iyz="0"
+        izz="0.0001" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BL_L.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="1 1 1 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BL_L.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="BL_L"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="0.00185 0 -0.055"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="BL_U" /&gt;
+    &lt;child
+      link="BL_L" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="1000"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="BR_S"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="0.0124750000000002 -0.00455991469584895 0.0509065477587112"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.212537478238056" /&gt;
+      &lt;inertia
+        ixx="0.000509871545281873"
+        ixy="-1.18995036212972E-11"
+        ixz="-1.82281490249125E-18"
+        iyy="0.00078798977975645"
+        iyz="1.2388731515953E-06"
+        izz="0.000314862007654797" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BR_S.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BR_S.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="BR_S"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="-0.012475 0 -0.05545"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="Chassis" /&gt;
+    &lt;child
+      link="BR_S" /&gt;
+    &lt;axis
+      xyz="0 0 1" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="BR_U"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="0.0489250000000004 -0.00455991469584955 0.0570565477587115"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.212537478238056" /&gt;
+      &lt;inertia
+        ixx="0.000509871545281873"
+        ixy="-1.18995042226906E-11"
+        ixz="-1.81603863891322E-18"
+        iyy="0.00078798977975645"
+        iyz="1.23887315159459E-06"
+        izz="0.000314862007654797" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BR_U.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BR_U.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="BR_U"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="-0.03645 0 -0.00615"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="BR_S" /&gt;
+    &lt;child
+      link="BR_U" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="10"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+  &lt;link
+    name="BR_L"&gt;
+    &lt;inertial&gt;
+      &lt;origin
+        xyz="6.93889390390723E-18 -0.0132084566072264 -0.00026160094761421"
+        rpy="0 0 0" /&gt;
+      &lt;mass
+        value="0.0010736396629226" /&gt;
+      &lt;inertia
+        ixx="0.0001"
+        ixy="0"
+        ixz="0"
+        iyy="0.0001"
+        iyz="0"
+        izz="0.0001" /&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BR_L.STL" /&gt;
+      &lt;/geometry&gt;
+      &lt;material
+        name=""&gt;
+        &lt;color
+          rgba="1 1 1 1" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin
+        xyz="0 0 0"
+        rpy="0 0 0" /&gt;
+      &lt;geometry&gt;
+        &lt;mesh
+          filename="package://MQ_SIM_ASEM/meshes/BR_L.STL" /&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint
+    name="BR_L"
+    type="revolute"&gt;
+    &lt;origin
+      xyz="-0.00185 0 -0.055"
+      rpy="0 0 0" /&gt;
+    &lt;parent
+      link="BR_U" /&gt;
+    &lt;child
+      link="BR_L" /&gt;
+    &lt;axis
+      xyz="1 0 0" /&gt;
+    &lt;limit
+      effort="1000"
+      velocity="5" /&gt;
+    &lt;dynamics
+      damping="0"
+      friction="0" /&gt;
+  &lt;/joint&gt;
+&lt;/robot&gt;
+</code></pre></div>
+
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: setJointMotorControl2 won't assign correct force value to certain joints</h3>
+				<div class="date">Posted: <strong>Sun Jul 05, 2020 3:18 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">Can't reproduce your issue? Could you provide all the files? thanks.<br>
+ <br>
+cannot find 'MQ_SIM_ASEM/meshes/Chassis.STL' in any directory in urdf path</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: setJointMotorControl2 won't assign correct force value to certain joints</h3>
+				<div class="date">Posted: <strong>Sun Jul 05, 2020 4:10 am</strong></div>
+				<div class="author">by <strong>sakura_hana</strong></div>
+				<div class="content">Here is a zip for the files.<br>
+<br>
+Run on Python 3.6.8<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: setJointMotorControl2 won't assign correct force value to certain joints</h3>
+				<div class="date">Posted: <strong>Sun Jul 05, 2020 7:07 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">thanks for you reply.<br>
+this issue is caused by that the mass of the lower legs are too small, so far i don't know how to fix this. i just increase the mass to workaound this.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: setJointMotorControl2 won't assign correct force value to certain joints</h3>
+				<div class="date">Posted: <strong>Sun Jul 05, 2020 7:59 am</strong></div>
+				<div class="author">by <strong>sakura_hana</strong></div>
+				<div class="content">I see. <br>
+<br>
+Thanks for the help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: setJointMotorControl2 won't assign correct force value to certain joints</h3>
+				<div class="date">Posted: <strong>Wed Jul 08, 2020 12:05 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Don't enable 'realtime' simulation, but stepSimulation instead, when applying forces like this.<br>
+Also, best to keep using a small time step (1./240. is default), not 1 second.<br>
+Watch the various examples/gym environments, for example<br>
+<a href="https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/examples" class="postlink">https://github.com/bulletphysics/bullet ... t/examples</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

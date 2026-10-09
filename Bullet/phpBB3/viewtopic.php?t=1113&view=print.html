@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; collision notification callbacks</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>collision notification callbacks</h2>
+		<p><a href="viewtopic.php%3Ft=1113.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1113</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>collision notification callbacks</h3>
+				<div class="date">Posted: <strong>Wed Apr 25, 2007 6:02 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content">In my simple collision detection library, I want to notify the objects that collided with a callback, so they can act upon the collision.<br>
+<br>
+The problem:<br>
+<br>
+When I process a new simulation test, I create a list of collision pairs, each pair has a pointer to two objects that have collided.<br>
+<br>
+Then, I iterate the list, solving each collision, AND calling the "OnCollision" of each object.<br>
+<br>
+Now, what if, in response of a collision, I delete the object that collided?<br>
+<br>
+the worst case scenario is that, the deleted object was also colliding with<br>
+another object, and when the next collision pair of the list is computed, it would cast a protection fault on an non existing object!<br>
+<br>
+So, how physics engines solve the problem of calling back a user function, while taking care the user does not mess the whole system?<br>
+<br>
+thanks in advance</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: collision notification callbacks</h3>
+				<div class="date">Posted: <strong>Wed Apr 25, 2007 6:59 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>vicviper wrote:</cite>
+So, how physics engines solve the problem of calling back a user function, while taking care the user does not mess the whole system?<br>
+<br>
+thanks in advance</div></blockquote>
+
+Most physics engines don't allow deletion, adding or moving of rigid bodies during a collision callback. Addition, removal or moving of objects is deferred until the end of the simulation step. You can implement this by storing actions (added/removed/moved objects) in a separate array, and process this array after the simulation step finished.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Apr 25, 2007 9:40 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Erwin, I'm guessing that solution only works with reference counting. Do you think reference counting is the way to go?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Apr 30, 2007 6:09 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Why does that require reference counting? <br>
+<br>
+I would prefer not to make a distiguishment between move, add and remove, and let the SDK just assert when the user tries to perform such action during a collision callback. So can't we leave the bookkeeping up to the user to move, add, remove objects outside of the collision callback?<br>
+<br>
+Wouldn't it be a trivial solution for the user to postpone the removal by storing the pointers of to-be-deleted objects in their own separate array, and let them iterate over this array (and remove the object from the SDK, and then delete the object) once the simulation step is finished?<br>
+<br>
+Thanks,<br>
+Erwin<br>
+<br>
+On a side-note, reference counting can be useful, especially when sharing collision shapes among several rigid bodies. However, the user can also do this bookkeeping their own way. My experience is that providing reference counting to the user can open a can of worms. Distributing the ownership using reference counting can make it more complicated to keep control over object lifetime/memory usage.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Apr 30, 2007 5:18 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Well if a user deletes a body inside a collision callback and the engine tries to defer deletion, the engine will have an orphaned pointer.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1113&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>world-&gt;Remove(body);
+delete body;
+</code></pre></div>
+
+On the other hand, with reference counting, the user would not call delete.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1113&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>world-&gt;Remove(body);
+body-&gt;DecrementReferenceCount();
+</code></pre></div>
+
+My current approach is to cache all the collision results during the physics step and then send out the messages after the step. However, there may still be situations where a user needs to modify a collision response. In that context they should not modify the physics world.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Apr 30, 2007 8:37 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>Well if a user deletes a body inside a collision callback and the engine tries to defer deletion</div></blockquote>
+
+No, the engine just asserts if the user makes such attempt. And the manual tells the user not to move, add or remove rigidbodies during a callback.<br>
+<br>
+Simple and effective <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

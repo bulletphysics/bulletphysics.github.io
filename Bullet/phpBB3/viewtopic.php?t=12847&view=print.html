@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Isometric friction for planar pushing</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Isometric friction for planar pushing</h2>
+		<p><a href="viewtopic.php%3Ft=12847.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12847</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Isometric friction for planar pushing</h3>
+				<div class="date">Posted: <strong>Sat Jan 18, 2020 6:18 pm</strong></div>
+				<div class="author">by <strong>zhsh</strong></div>
+				<div class="content"><strong class="text-strong">Update</strong>: see next post for minimum reproducable for a simplified experiment!<br>
+<br>
+I'm trying to do quasi-static planar pushing by position controlling the pusher (brown) with p.createConstraint.<br>
+The issue I'm having is that the dynamics seem to be different with different yaw of the pusher-block system (keeping their relative positions the same). I'm investigating this by telling the pusher to push perpendicular to the adjacent face for a fixed position for different yaws of the whole system.<br>
+Control of the pusher is done by <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>p.changeConstraint(self.pusherConstraint, newPos, maxForce=200)</code></pre></div> then waiting for velocities to die down for quasi-staticness. I've also tried manually interpolating to the goal position by controlling to intermediate waypoints in case the previous method causes the block to leave contact (it doesn't).<br>
+The configuration of the system:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>block 
+dimensions: 0.15 x 0.15 x 0.05
+mass: 6
+lateral_friction 1.0
+spinning_friction: 0.1
+
+pusher 
+dimensions: 0.15 x 0.02
+mass: 10
+lateral_friction: 1.0
+spinning_friction: 0.1
+</code></pre></div>
+
+The test I'm doing is to push 0.02 into the block, for 11 different system yaws from 0 to 3.1 (radians). I then look at the change in body frame (block x, block y, block yaw, pusher position along block). I summarize the trials with the standard deviation along each dimension relative to the absolute value of that dimension's mean. For example I get
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>tensor([0.0285, 0.2691, 0.2714, 0.2669])
+</code></pre></div>
+For trials that result in block frame differences of:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>tensor([[ 0.0184, -0.0022, -0.0309, -0.0007],
+        [ 0.0181, -0.0028, -0.0378, -0.0008],
+        [ 0.0172, -0.0039, -0.0531, -0.0011],
+        [ 0.0183, -0.0023, -0.0307, -0.0006],
+        [ 0.0187, -0.0019, -0.0260, -0.0005],
+        [ 0.0184, -0.0023, -0.0304, -0.0006],
+        [ 0.0176, -0.0033, -0.0455, -0.0010],
+        [ 0.0176, -0.0034, -0.0462, -0.0010],
+        [ 0.0187, -0.0018, -0.0247, -0.0005],
+        [ 0.0184, -0.0022, -0.0301, -0.0006]])
+</code></pre></div>
+These should be the same if friction is isometric right? I've tried making the block bigger, but it doesn't really help.
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1776" class="postimage" alt="Screen Shot 2020-01-18 at 12.54.54 PM.png" onclick="viewableArea(this);" /></dt>
+						<dd>Screen Shot 2020-01-18 at 12.54.54 PM.png (50.49 KiB) Viewed 10194 times</dd>
+		</dl>
+		
+		
+			</div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Isometric friction for planar pushing</h3>
+				<div class="date">Posted: <strong>Mon Jan 20, 2020 6:42 pm</strong></div>
+				<div class="author">by <strong>zhsh</strong></div>
+				<div class="content">Update with a simpler example and minimum reproducing code (depends on numpy and matplotlib).<br>
+This time I'm pushing the block directly in block frame by applying an external force without any pusher.<br>
+However we still see that the dynamics is strongly correlated with yaw:
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1777" class="postimage" alt="dyaw_wrt_yaw_2.png" onclick="viewableArea(this);" /></dt>
+						<dd>dyaw_wrt_yaw_2.png (18.83 KiB) Viewed 10157 times</dd>
+		</dl>
+		
+		
+			</div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import logging
+import math
+import pybullet as p
+import time
+
+import numpy as np
+import pybullet_data
+from matplotlib import pyplot as plt
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)s %(asctime)s %(pathname)s:%(lineno)d] %(message)s',
+                    datefmt='%m-%d %H:%M:%S')
+logging.getLogger('matplotlib.font_manager').disabled = True
+
+
+def rotate_wrt_origin(xy, theta):
+    return (xy[0] * math.cos(theta) - xy[1] * math.sin(theta),
+            xy[0] * math.sin(theta) + xy[1] * math.cos(theta))
+
+
+def angular_diff(a, b):
+    """Angle difference from b to a (a - b)"""
+    d = a - b
+    if d &gt; math.pi:
+        d -= 2 * math.pi
+    elif d &lt; -math.pi:
+        d += 2 * math.pi
+    return d
+
+
+def get_dx(px, cx):
+    dpos = cx[:2] - px[:2]
+    dyaw = angular_diff(cx[2], px[2])
+    dx = np.r_[dpos, dyaw]
+    return dx
+
+
+def dx_to_dz(px, dx):
+    dz = np.zeros_like(dx)
+    # dyaw is the same
+    dz[2] = dx[2]
+    dz[:2] = rotate_wrt_origin(dx[:2], px[2])
+    return dz
+
+
+init_block_pos = [0.0, 0.0]
+init_block_yaw = -0.
+
+physics_client = p.connect(p.GUI)
+p.setTimeStep(1. / 240.)
+p.setRealTimeSimulation(False)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+blockId = p.loadURDF("./block_big.urdf", tuple(init_block_pos) + (-0.02,),
+                     p.getQuaternionFromEuler([0, 0, init_block_yaw]))
+planeId = p.loadURDF("plane.urdf", [0, 0, -0.05], useFixedBase=True)
+p.resetDebugVisualizerCamera(cameraDistance=0.5, cameraYaw=0, cameraPitch=-85,
+                             cameraTargetPosition=[0, 0, 1])
+
+STATIC_VELOCITY_THRESHOLD = 1e-6
+
+
+def _observe_block(blockId):
+    blockPose = p.getBasePositionAndOrientation(blockId)
+    xb = blockPose[0][0]
+    yb = blockPose[0][1]
+    roll, pitch, yaw = p.getEulerFromQuaternion(blockPose[1])
+    return np.array((xb, yb, yaw))
+
+
+def _static_environment():
+    v, va = p.getBaseVelocity(blockId)
+    if (np.linalg.norm(v) &gt; STATIC_VELOCITY_THRESHOLD) or (
+            np.linalg.norm(va) &gt; STATIC_VELOCITY_THRESHOLD):
+        return False
+    return True
+
+
+p.setGravity(0, 0, -10)
+# p.changeDynamics(blockId, -1, lateralFriction=0.1)
+p.changeDynamics(planeId, -1, lateralFriction=0.5, spinningFriction=0.3, rollingFriction=0.1)
+F = 200
+MAX_ALONG = 0.075 + 0.2
+
+for _ in range(100):
+    p.stepSimulation()
+
+N = 100
+yaws = np.zeros(N)
+z_os = np.zeros((N, 3))
+for simTime in range(N):
+    # observe difference from pushing
+    px = _observe_block(blockId)
+    yaws[simTime] = px[2]
+    p.applyExternalForce(blockId, -1, [F, F, 0], [-MAX_ALONG, MAX_ALONG, 0.025], p.LINK_FRAME)
+    p.stepSimulation()
+    while not _static_environment():
+        for _ in range(100):
+            p.stepSimulation()
+    cx = _observe_block(blockId)
+    # difference in world frame
+    dx = get_dx(px, cx)
+    dz = dx_to_dz(px, dx)
+    z_os[simTime] = dz
+    logger.info("dx %s dz %s", dx, dz)
+    time.sleep(0.1)
+logger.info(z_os.std(0) / np.abs(np.mean(z_os, 0)))
+plt.scatter(yaws, z_os[:, 2])
+plt.xlabel('yaw')
+plt.ylabel('dyaw')
+plt.show()
+</code></pre></div>
+
+You'll need to place this urdf file in the same directory (save as block_big.urdf):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12847&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;robot name="block_big" xmlns:xacro="http://www.ros.org/wiki/xacro"&gt;
+  &lt;link name="base_link"&gt;
+    &lt;contact&gt;
+      &lt;lateral_friction value="0.9"/&gt;
+      &lt;spinning_friction value=".1"/&gt;
+      &lt;rolling_friction value=".1"/&gt;
+    &lt;/contact&gt;
+    &lt;inertial&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;mass value="6.0"/&gt;
+      &lt;inertia ixx="0.1525" ixy="0" ixz="0" iyy="0.1525" iyz="0" izz="0.3025"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;geometry&gt;
+        &lt;box size="0.55 0.55 0.05"/&gt;
+      &lt;/geometry&gt;
+      &lt;material name="blockmat"&gt;
+        &lt;color rgba="0.1 0.7 0.1 0.8"/&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;geometry&gt;
+        &lt;box size="0.55 0.55 0.05"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+&lt;/robot&gt;
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

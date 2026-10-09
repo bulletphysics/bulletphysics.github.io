@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11901" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-06-23T19:48:01+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11901</id>
+
+		<entry>
+		<author><name><![CDATA[sogartar]]></name></author>
+		<updated>2021-06-23T19:48:01+00:00</updated>
+
+		<published>2021-06-23T19:48:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43457#p43457</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43457#p43457"/>
+		<title type="html"><![CDATA[Re: Multiple, concurrent simulations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43457#p43457"><![CDATA[
+<a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_utils/examples/multipleScenes.py" class="postlink">https://github.com/bulletphysics/bullet ... eScenes.py</a> has an example how to have multiple simulation contexts in pybullet.<br><br>The source code of the above example at the time of posting is<div class="codebox"><p>Code: </p><pre><code>from pybullet_utils import bullet_client as bcimport pybulletimport pybullet_datap0 = bc.BulletClient(connection_mode=pybullet.DIRECT)p0.setAdditionalSearchPath(pybullet_data.getDataPath())p1 = bc.BulletClient(connection_mode=pybullet.DIRECT)p1.setAdditionalSearchPath(pybullet_data.getDataPath())#can also connect using different modes, GUI, SHARED_MEMORY, TCP, UDP, SHARED_MEMORY_SERVER, GUI_SERVER#pgui = bc.BulletClient(connection_mode=pybullet.GUI)p0.loadURDF("r2d2.urdf")p1.loadSDF("stadium.sdf")print(p0._client)print(p1._client)print("p0.getNumBodies()=", p0.getNumBodies())print("p1.getNumBodies()=", p1.getNumBodies())</code></pre></div>I don't know how useful is this for running simulations in parallel if you don't run in real-time mode and step the simulation yourself. I think the global interpret lock should make it practically serial. Multiple processes is probably a better approach.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14012">sogartar</a> — Wed Jun 23, 2021 7:48 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Basroil]]></name></author>
+		<updated>2017-11-30T04:43:44+00:00</updated>
+
+		<published>2017-11-30T04:43:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40180#p40180</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40180#p40180"/>
+		<title type="html"><![CDATA[Re: Multiple, concurrent simulations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40180#p40180"><![CDATA[
+<blockquote class="uncited"><div>Hey,<br><br>This is fantastic news! It sounds like you're doing something very similar to what I desire to do. Would you be able to share an example of a previous project? Or of the basic code to achieve these kind of concurrent graphic-less simulations?<br><br>I have begun implementing parallelisation of simulation with the use of separate processes, but this is tedious and your method is superior - I would like to begin changing to this, knowing that it is possible.<br><br>I'm quite new to bullet and would appreciate any help you can offer.<br><br>Cheers,<br>Wade</div></blockquote>Unfortunately I can't share the implementation right now, but basically you just need a few items:<br>1) A simple job system with a job pool and as many worker threads as you have CPU cores (sometimes more, don't get greedy though since scaling is a tricky thing, and watch out for HT vs real core issues)<br>2) A way to reset the simulation environment to default starting condition (check the GUI examples to see how it's done, per worker thread it should be called before the next job starts on that worker)<br>3) A way to plug in the changes you want to make (what gene information actually is doing)<br>4) A definition for your fitness function that does not require the entire simulation state trace (i.e. don't expect to record body positions for 2000 specimens for 10min at 2000Hz, the memory use and computation increase is huge for little to no benefit)<br>5) A way to save results from a few simulations you want to see later<br>6) A reasonably fast computer (don't expect to run a million simulations a day on one raspberry pi)<br><br>In general, just look through the GUI examples to find out how bullet works, then just base off of the core code without the GUI classes and you'll have something up and running in no time<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9711">Basroil</a> — Thu Nov 30, 2017 4:43 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[w-de]]></name></author>
+		<updated>2017-11-28T09:37:25+00:00</updated>
+
+		<published>2017-11-28T09:37:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40176#p40176</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40176#p40176"/>
+		<title type="html"><![CDATA[Re: Multiple, concurrent simulations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40176#p40176"><![CDATA[
+<blockquote class="uncited"><div>I had plenty of success doing just that for some research projects I had. Now that Bullet is more multithread compatible (btDantzig had a memory share bug a while ago that I used to have to manually patch all the time until about 2.82/2.83), it's a piece of cake.<br><br>Don't bother using the GUI setups and it's easier, faster, and much more accurate. <br><br>After that, just build a world pool (one per CPU core), create your own initialization (and reinitialization) method, and then a quick job dispatcher. You should be able to run about 1 simulation minute per real second (or more) at the industry standard 2kHz (most servo control loops are that speed, though some are 200 and others 20000) simulation rate with a newish high end desktop processor. <br><br>Just watch out for data storage, managing what data is important and what is not will save you headaches when trying to record how the evolution is progressing.</div></blockquote><br>Hey,<br><br>This is fantastic news! It sounds like you're doing something very similar to what I desire to do. Would you be able to share an example of a previous project? Or of the basic code to achieve these kind of concurrent graphic-less simulations?<br><br>I have begun implementing parallelisation of simulation with the use of separate processes, but this is tedious and your method is superior - I would like to begin changing to this, knowing that it is possible.<br><br>I'm quite new to bullet and would appreciate any help you can offer.<br><br>Cheers,<br>Wade<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12408">w-de</a> — Tue Nov 28, 2017 9:37 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Basroil]]></name></author>
+		<updated>2017-11-20T00:41:35+00:00</updated>
+
+		<published>2017-11-20T00:41:35+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40168#p40168</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40168#p40168"/>
+		<title type="html"><![CDATA[Re: Multiple, concurrent simulations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40168#p40168"><![CDATA[
+I had plenty of success doing just that for some research projects I had. Now that Bullet is more multithread compatible (btDantzig had a memory share bug a while ago that I used to have to manually patch all the time until about 2.82/2.83), it's a piece of cake.<br><br>Don't bother using the GUI setups and it's easier, faster, and much more accurate. <br><br>After that, just build a world pool (one per CPU core), create your own initialization (and reinitialization) method, and then a quick job dispatcher. You should be able to run about 1 simulation minute per real second (or more) at the industry standard 2kHz (most servo control loops are that speed, though some are 200 and others 20000) simulation rate with a newish high end desktop processor. <br><br>Just watch out for data storage, managing what data is important and what is not will save you headaches when trying to record how the evolution is progressing.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9711">Basroil</a> — Mon Nov 20, 2017 12:41 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2017-10-19T20:52:18+00:00</updated>
+
+		<published>2017-10-19T20:52:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40070#p40070</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40070#p40070"/>
+		<title type="html"><![CDATA[Re: Multiple, concurrent simulations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40070#p40070"><![CDATA[
+I can think of several ways to do this.<br><br>(1) If you need 15 or fewer simulations then it would be possible to run them all at the same location in one World instance but give each its own collision group configured to only collide with other things in its same group: 15 simultaneous simulations, 1 World.<br><br>(2) If you need more than 15 then it would be possible to separate the simulations spatially such that each was in its own "simulation island" not near any of the others.  That is, you could create an NxNxN grid of simulations spaced far enough out that none of them touched the others.  N^3 simultaneous simulations, 1 World.<br><br>(3) You could combine (1) and (2): 15 * N^3 simultaneous simulations, one World.<br><br>(4) Given M CPU's you could multi-thread (3): 15 * N^3 simultaneous simulations per World, M Worlds.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu Oct 19, 2017 8:52 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[w-de]]></name></author>
+		<updated>2017-10-18T03:06:34+00:00</updated>
+
+		<published>2017-10-18T03:06:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40064#p40064</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40064#p40064"/>
+		<title type="html"><![CDATA[Multiple, concurrent simulations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40064#p40064"><![CDATA[
+Hi,<br><br>I would like to <strong class="text-strong"><span style="text-decoration:underline">run multiple concurrent simulations and then analyse their results after they have run</span></strong>, before running another set of simulations and repeating the process.<br><br>Essentially I'm implementing a genetic algorithm and would like to parallelise the simulation of each population member -- however I am unsure of how to implement multiple parallel simulations.<br><br>Currently I am calling glutmain(...) to initialise my simulation, and then controlling it with a state-machine implemented into the update() function. The process currently runs indefinitely (executing a genetic algorithm optimisation in a wholly serial manner).<br><br>Any examples or help are greatly appreciated!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12408">w-de</a> — Wed Oct 18, 2017 3:06 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

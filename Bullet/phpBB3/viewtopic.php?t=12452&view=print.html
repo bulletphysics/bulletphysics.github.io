@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Moving from Bullet 2 to Pybullet</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Moving from Bullet 2 to Pybullet</h2>
+		<p><a href="viewtopic.php%3Ft=12452.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12452</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Moving from Bullet 2 to Pybullet</h3>
+				<div class="date">Posted: <strong>Thu Oct 04, 2018 10:18 pm</strong></div>
+				<div class="author">by <strong>maiklof</strong></div>
+				<div class="content">Hi everyone!<br>
+First of all, I want to thank you for the great job you are doing with the Bullet Physics library!<br>
+I have been using Bullet 2 for many years now, but mostly in python, thanks to a wrapper I found on the internet and I have been maintaining and developing further. Now I am considering moving to PyBullet but I have some questions. I think it is important to say that I just need a physics engine for my project, without the GUI, VR, AI and the new advanced extra features, so I am interested in using the DIRECT mode. The visualization will be done using a 3D engine. I will use the GUI mode just for debugging. I will need to create different kind of single and multi-body objects, using meshes, constraints and create robots and mechanisms. So, as far as I can see in the documentation, there is plenty of useful methods to make all this very easily... But I miss some stuff from Bullet 2, at least looking to the documentation:<br>
+<br>
+1. Have bodyes MotionStates in pyBullet? Or is there any way to get notifications of the objects that are moving? I can have many dynamic objects in a system and need to know which are moving to get the transform and render them.<br>
+2. I see that collision filter masks are implemented for shapes, but what happens with ray tests in pybullet? (Batch Tests are a great feature btw.!)<br>
+3. I have been using collision callbacks to modify collision points to simulate Conveyor belt-like behavior in some shapes, among other things. I use the CF_CUSTOM_MATERIAL_CALLBACK and the user-data pointer of the shapes that I am interested to provide some "material" information, and then change the behavior of the surface in the callback function. I think that being able to handle material information of the surfaces to modify the manifolds (like friction, damping, contact motion, etc...) brings many possibilities. I do not know if could implement this as a plugin or there is another way to do this kind of things in pybullet...<br>
+<br>
+I think I will need to check pybullet in more detail to get a better idea of the limitations compared to the C++ library. But because I am interested in using it in python I would be happy to help if there is anything I can contribute and bring these features if they can be implemented.<br>
+<br>
+Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Moving from Bullet 2 to Pybullet</h3>
+				<div class="date">Posted: <strong>Fri Oct 05, 2018 12:56 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Yes, the GUI mode is primarily as debug visualizer.<br>
+<br>
+PyBullet has a plugin system (loadPlugin) to customize things. <br>
+<br>
+&gt;&gt; 1. Have bodies MotionStates in pyBullet? <br>
+<br>
+No motion states, but you can write a plugin that gets all notifications of changes, we have some internal plugin for this to notify an external renderer through GRPC. You/we could expose changes to Python, but Python may be not the best choice (a bit slow). I'll see if we can write a default plugin that allows Python to query for the changes since last Python call. The plugin needs to implement a "processNotifications" function, see also the b3PluginManager.cpp for details.<br>
+<br>
+<br>
+&gt;&gt;  ray tests in pybullet?<br>
+This is also supposed to happen in a plugin. At the moment, the collisionFilterPlugin only implement a callback if a collision should happen. I need to check if rayTests apply the same filter, we can improve it if not.<br>
+<br>
+&gt;&gt;3. I have been using collision callbacks<br>
+<br>
+This is also a good candidate to write in a C plugin.<br>
+<br>
+Just give PyBullet a try, and dig in the code.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Moving from Bullet 2 to Pybullet</h3>
+				<div class="date">Posted: <strong>Sat Oct 06, 2018 7:23 pm</strong></div>
+				<div class="author">by <strong>maiklof</strong></div>
+				<div class="content">Thanks for your answer Erwin! <br>
+I will definitely give pybullet a try and see if I can learn how to program a plugin. Do you have any documentation or should I check the source code and figure it out? <br>
+As I wrote, I will be happy to contribute or help if possible. I leave the link to my old project (I am working on a new platform) so you know which kind of simulation I do: <a href="http://www.simumatik.com" class="postlink">www.simumatik.com</a>.<br>
+Thanks, you are great!<br>
+Mikel</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Moving from Bullet 2 to Pybullet</h3>
+				<div class="date">Posted: <strong>Thu Mar 07, 2019 8:49 am</strong></div>
+				<div class="author">by <strong>maiklof</strong></div>
+				<div class="content">Hi Erwin!<br>
+I have been using pybullet for some days now and I would like to start implementing the plugins we discussed above:<br>
+- Motion states.<br>
+- Collision filters for ray tests.<br>
+- Using Custom materials.<br>
+Can you help me to get started? Any document that explains how to introduce new plugins?<br>
+Thanks in advance!<br>
+<br>
+Mikel</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Moving from Bullet 2 to Pybullet</h3>
+				<div class="date">Posted: <strong>Sat Mar 09, 2019 1:18 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">&gt;&gt; The visualization will be done using a 3D engine.<br>
+&gt;&gt; - Motion states.<br>
+<br>
+Is your 3d engine also Python or C++?<br>
+How do you want to synchronize the graphics transforms? Through C++ / shared memory, or using Python?<br>
+<br>
+If it happens in Python, we could add a method that receives only the updated objects. Then no plugin is needed.<br>
+<br>
+For the ray cast, we can add a flag to also apply collision filters. It has to be implemented in PhysicsServerCommandProcessor.<br>
+Same for custom materials. PyBullet allows custom properties, that could be useful.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Moving from Bullet 2 to Pybullet</h3>
+				<div class="date">Posted: <strong>Sat Mar 09, 2019 12:42 pm</strong></div>
+				<div class="author">by <strong>maiklof</strong></div>
+				<div class="content">Hi Erwin,<br>
+Right now I would prefer to use Python to interface the physics engine. If we see any performance issue we could move to C++. I think it is great to have the option to run the physics server in another computer, so I guess shared memory/C++ is not an option...  <br>
+<br>
+- Motion States: A method that we could call after the simulation step to receive the updated objects and their transform (pos, quat) would be great. Right now we are crawling all the objects after some steps instead (60 fps).<br>
+<br>
+- Custom materials: Before I had my own python wrapper that I could share with you if you want. This is what I was doing:<br>
+1. Add in the constructor of btDiscreteDynamicsWorld(): <br>
+gContactAddedCallback = CustomMaterialCombinerCallback; <br>
+<br>
+2. To simulate conveyor like surfaces, I linked a custom material to some user pointers:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12452&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class  btCustomMaterial{
+	// Custom material class. If attached as userpointer to a CollisionObject (body), it makes possible to modify the contact point behaviour
+public:
+
+	btVector3 	m_lateralFrictionDir1; //Lateral friction 1
+	btScalar	m_contactMotion1;  //Motion speed for lateral friction 1
+	int	m_useCounter1; //For debuging
+	int	m_useCounter2; //For debuging
+
+	btCustomMaterial()
+	{
+		m_lateralFrictionDir1.setValue(0.f,0.f,0.f);
+		m_contactMotion1 = 0.f;
+		m_useCounter1 = 0; 
+		m_useCounter2 = 0;
+	}
+
+	void setMotionSpeed (btScalar speed)
+	{
+		m_contactMotion1 = speed;
+	}
+
+	void setMotion (btVector3&amp; direction, btScalar speed)
+	{
+		m_lateralFrictionDir1 = direction;
+		m_contactMotion1 = speed;
+	}
+	
+	int getUse1()
+	{
+		return m_useCounter1;
+	}
+	
+	int getUse2()
+	{
+		return m_useCounter2;
+	}
+
+};
+</code></pre></div>
+
+3. Finally, this was the implementation of the callback<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12452&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static bool CustomMaterialCombinerCallback(btManifoldPoint&amp; cp,	const btCollisionObjectWrapper* colObj0Wrap,int partId0,int index0,const btCollisionObjectWrapper* colObj1Wrap,int partId1,int index1)
+{
+	// Find material to modify cp
+	btCustomMaterial* material = NULL;
+	// object with custom material
+	const btCollisionObject* obj;
+
+	// Check if Object 0 has custom material (Usually this is executed)
+	obj = colObj0Wrap-&gt;getCollisionObject();
+	material = (btCustomMaterial*) obj-&gt;getUserPointer();
+	if (material != NULL)
+	{
+		// Motion Friction Speed
+		cp.m_lateralFrictionInitialized = true;
+		// Motion Friction Direction
+		cp.m_lateralFrictionDir1 = quatRotate(obj-&gt;getWorldTransform().getRotation(), material-&gt;m_lateralFrictionDir1);
+		cp.m_contactMotion1 = - material-&gt;m_contactMotion1;
+		cp.m_lateralFrictionDir2 = cp.m_lateralFrictionDir1.cross(cp.m_normalWorldOnB);
+		material-&gt;m_useCounter1 ++;
+		return true;
+	}
+	
+	// If not, has Object 1 custom material?
+	obj = colObj1Wrap-&gt;getCollisionObject();
+	material = (btCustomMaterial*) obj-&gt;getUserPointer();
+	if (material != NULL)
+	{
+		cp.m_lateralFrictionInitialized = true;
+		// Motion Friction Direction
+		cp.m_lateralFrictionDir1 = quatRotate(obj-&gt;getWorldTransform().getRotation(), material-&gt;m_lateralFrictionDir1);
+		cp.m_contactMotion1 = material-&gt;m_contactMotion1;
+		cp.m_lateralFrictionDir2 = cp.m_lateralFrictionDir1.cross(cp.m_normalWorldOnB); //is it ok?
+		material-&gt;m_useCounter2 ++;
+		return true;
+	}
+    return false;
+}
+</code></pre></div>
+
+- RayTests: If both the simple and batch could have the collision flag for each test would be great. In addition, I had some extra RayTest methods to get not just if a collision happens but even distance (simulates a laser sensor) or collided object index, useful to simulate for example an RFID antenna and then get user data (RFID data) from the collided object.<br>
+<br>
+Some more code that shows that:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12452&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static bool btRayTestHit(btCollisionWorld* world, const btVector3&amp; rayFrom, const btVector3&amp; rayTo, short int collisionmask, short int collideswithmask)
+{
+	// Start and End are vectors
+	btCollisionWorld::ClosestRayResultCallback RayCallback(rayFrom, rayTo);
+	// Perform raycast
+	world-&gt;rayTest(rayFrom, rayTo, RayCallback);
+	// Test results
+	if (RayCallback.hasHit())
+	{
+		// Check collision filter
+		return (RayCallback.m_collisionObject-&gt;getBroadphaseHandle()-&gt;m_collisionFilterGroup &amp; collideswithmask) &amp;&amp; (collisionmask &amp; RayCallback.m_collisionObject-&gt;getBroadphaseHandle()-&gt;m_collisionFilterMask);
+	}
+	// None hit
+	return false;
+}
+
+static float btRayTestDist(btCollisionWorld* world, const btVector3&amp; rayFrom, const btVector3&amp; rayTo, short int collisionmask, short int collideswithmask)
+{
+	// Start and End are vectors
+	btCollisionWorld::ClosestRayResultCallback RayCallback(rayFrom, rayTo);
+	// Perform raycast
+	world-&gt;rayTest(rayFrom, rayTo, RayCallback);
+	// Test results
+	if (RayCallback.hasHit())
+	{
+		// Check collision filter
+		if ((RayCallback.m_collisionObject-&gt;getBroadphaseHandle()-&gt;m_collisionFilterGroup &amp; collideswithmask) &amp;&amp; (collisionmask &amp; RayCallback.m_collisionObject-&gt;getBroadphaseHandle()-&gt;m_collisionFilterMask))
+		{
+			return rayFrom.distance(RayCallback.m_hitPointWorld);
+		}
+	}
+	// None hit
+	return -1.f;
+}
+
+static int btRayTestObjIndex(btCollisionWorld* world, const btVector3&amp; rayFrom, const btVector3&amp; rayTo, short int collisionmask, short int collideswithmask)
+{
+	// Start and End are vectors
+	btCollisionWorld::ClosestRayResultCallback RayCallback(rayFrom, rayTo);
+	// Perform raycast
+	world-&gt;rayTest(rayFrom, rayTo, RayCallback);
+	// Test results
+	if (RayCallback.hasHit())
+	{
+		// Check collision filter
+		if ((RayCallback.m_collisionObject-&gt;getBroadphaseHandle()-&gt;m_collisionFilterGroup &amp; collideswithmask) &amp;&amp; (collisionmask &amp; RayCallback.m_collisionObject-&gt;getBroadphaseHandle()-&gt;m_collisionFilterMask))
+		{
+			return RayCallback.m_collisionObject-&gt;getUserIndex();
+		}
+	}
+	// None hit
+	return -1;
+}
+</code></pre></div>
+
+Thank you very much for your time. Let me know how I can help you to get all this inside pybullet. Would be great to use it in the new emulation platform we are developing now.<br>
+If you want more details you can send me a private or contact by email.<br>
+<br>
+//Mikel</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Moving from Bullet 2 to Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jan 28, 2020 1:09 pm</strong></div>
+				<div class="author">by <strong>J1810Z</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I am currently also trying to simulate conveyors in PyBulllet. <br>
+Has there been any update on this? How, can I implement the CustomMaterialCombinerCallback, when using PyBullet?<br>
+<br>
+Thanks and best</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

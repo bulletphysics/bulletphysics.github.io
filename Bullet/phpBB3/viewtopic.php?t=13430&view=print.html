@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Jitter when a btBoxShape moves against a btConvexHullShape.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Jitter when a btBoxShape moves against a btConvexHullShape.</h2>
+		<p><a href="viewtopic.php%3Ft=13430.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13430</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Jitter when a btBoxShape moves against a btConvexHullShape.</h3>
+				<div class="date">Posted: <strong>Thu May 05, 2022 12:05 am</strong></div>
+				<div class="author">by <strong>Bernard</strong></div>
+				<div class="content">I've been running into an issue with the motion of btBoxShapes sliding against btConvexHullShapes[1], in this case using a custom friction callback[2] to simulate a box on a conveyor belt.<br>
+<br>
+I've attached an example adapted from the BasicExample project that demonstrates the problem, the box on the left running on a btBoxShape and the box on the right running on  btConvexHullShape. The box on running on the btBoxShape moves as I would expect -- in a straight line, no rotation, no jitter. The box on the btConvexHullShape judders and jitters as it travels, rotating.<br>
+<br>
+The box appears to be penetrating the btConvexHullShape and being repeatedly forced out. Changing the margin changes the failure state (the box starts to roll along with larger margins, and lower margins do nothing). It may be that there is a sweet spot margin that causes the shape to act like the conveyor made of a btBoxShape, but if there is I do not know how to compute it.<br>
+<br>
+I've seen reports that using more substeps or a higher fixed timestep can fix or allieviate the issue, and indeed changing CommonRigidBodyBase::stepSimulation's stepSimulation call to stepSimulation(deltaTime, 12, 1.0 / 240.0) makes the motion appear smoother, but it still spins about.<br>
+<br>
+My question is if this is a bug or (more likely) from a misunderstanding or misuse of Bullet on my part? If the latter, can anyone point out my mistake?<br>
+<br>
+As it stands, I ended up using btBoxShapes to model conveyor belts and it seems to work okay, but approximating curves and cut-offs (conveyors that start or end with an edge at an angle) with boxes is less than ideal, and would like to be able to model the more complex surfaces with different shapes.<br>
+<br>
+Cheers!<br>
+<br>
+[1]: In the example I've used a btConvexHullShape, but the problem occurs with a btBvhTriangleMeshShape and a btCompoundShape made up of btTriangleShapes.<br>
+<br>
+[2]: I considered the alternative of setting the velocity of a static object causing dynamic objects that collide with that static object to move, but that behaviour seems to have regressed (or been intentionally removed) at some point: <a href="viewtopic.php%3Ft=10121.html" class="postlink">viewtopic.php?t=10121</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jitter when a btBoxShape moves against a btConvexHullShape.</h3>
+				<div class="date">Posted: <strong>Thu May 05, 2022 2:59 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Make the conveyor <strong class="text-strong">kinematic</strong> instead of <strong class="text-strong">static</strong>, give it a non-zero velocity but don't change its position.  Then <strong class="text-strong">dynamic</strong> objects that touch it will pick up the non-zero velocity from the collision and will move along.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jitter when a btBoxShape moves against a btConvexHullShape.</h3>
+				<div class="date">Posted: <strong>Sun May 08, 2022 9:52 pm</strong></div>
+				<div class="author">by <strong>Bernard</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=44004#p44004"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=44004.html#p44004" data-post-id="44004" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Thu May 05, 2022 2:59 pm</span></cite>
+Make the conveyor <strong class="text-strong">kinematic</strong> instead of <strong class="text-strong">static</strong>, give it a non-zero velocity but don't change its position.  Then <strong class="text-strong">dynamic</strong> objects that touch it will pick up the non-zero velocity from the collision and will move along.
+</div></blockquote>
+
+Thanks! As you said, using the CF_KINEMATIC_OBJECT flag and setting a linear velocity does work. Good to know.<br>
+<br>
+I'm not shocked to see that the motion characteristics are unchanged; the box on the btConvexHull still judders and rotates. But at least I can eliminate incorrectly setting up the btManifoldPoint struct as a cause.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

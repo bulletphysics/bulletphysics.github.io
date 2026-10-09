@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; readblend bug</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>readblend bug</h2>
+		<p><a href="viewtopic.php%3Ft=3646.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=3646</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>readblend bug</h3>
+				<div class="date">Posted: <strong>Sat May 30, 2009 7:59 pm</strong></div>
+				<div class="author">by <strong>tecan</strong></div>
+				<div class="content">/bullet-SVN/Extras/readblend   it has issues with reading a 64 bit .blend file i cannot make it work for the life of me.<br>
+<br>
+<a href="http://tecan.ath.cx/test.blend" class="postlink">http://tecan.ath.cx/test.blend</a>  &lt;&lt; simple cube example to try.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: readblend bug</h3>
+				<div class="date">Posted: <strong>Sat May 30, 2009 9:19 pm</strong></div>
+				<div class="author">by <strong>tecan</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3646&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  /* Read the STRC table */
+
+  fprintf(stderr, "reading the STRC table\n");
+
+  MY_SEEK(file, strc_offs);
+
+  {
+
+    int i,j;
+
+    for (i=0; i&lt;strc_ents; ++i) {
+
+      unsigned short struc_type_index, num_fields;
+
+      struc_type_index = read_ushort(file);
+
+      num_fields = read_ushort(file);
+
+      bf-&gt;types[struc_type_index].is_struct = 1;
+
+      EXPANDO(bf-&gt;strc_indices, struc_type_index);
+
+      /*dprintf(stderr, "\n%s: ", bf-&gt;types[struc_type_index].name); */
+
+      for (j=0; j&lt;num_fields; ++j) {
+
+	unsigned short ftype = read_ushort(file);
+
+	unsigned short fname = read_ushort(file);
+
+	EXPANDO(bf-&gt;types[struc_type_index].fieldtypes, ftype);
+
+	EXPANDO(bf-&gt;types[struc_type_index].fieldnames, fname);
+
+	/*dprintf(stderr, "%s %s ,  ", bf-&gt;types[ftype].name, bf-&gt;names[fname]); */
+
+      }
+
+    }
+
+  }</code></pre></div>
+it seems to work good up to GPdata...<br>
+after i comment out the dprintf i get<br>
+bGPdata: ListBase layers ,  int flag ,  short sbuffer_size ,  short sbuffer_sflag ,  void *sbuffer ,  Segmentation fault</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: readblend bug</h3>
+				<div class="date">Posted: <strong>Sat May 30, 2009 11:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">.blend files generated on 64bit and/or big-endian  machines are not supported.<br>
+<br>
+As a work-around, you can load/save the .blend file using Blender on a 32bit (or little-endian) machine, and you are good to go.<br>
+<br>
+If you add support for this, we welcome patches!<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: readblend bug</h3>
+				<div class="date">Posted: <strong>Sun May 31, 2009 5:36 am</strong></div>
+				<div class="author">by <strong>tecan</strong></div>
+				<div class="content">I would not even know where to start and i accidently converted 400 quake 2 levels to blender on 64 bit... now im kinda stuck.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: readblend bug</h3>
+				<div class="date">Posted: <strong>Mon Jun 01, 2009 4:47 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>tecan wrote:</cite>I would not even know where to start and i accidently converted 400 quake 2 levels to blender on 64 bit... now im kinda stuck.</div></blockquote>
+Just open the .blend files on a 32bit little-endian Blender version, and save it again.<br>
+<br>
+Can you share a few of those quake levels with packed textures? I'll convert one or two if we can include them in the <a href="http://gamekit.googlecode.com" class="postlink">gamekit</a> as example.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: readblend bug</h3>
+				<div class="date">Posted: <strong>Mon Jun 01, 2009 12:17 pm</strong></div>
+				<div class="author">by <strong>tecan</strong></div>
+				<div class="content">all meshes joined to one. 64 bit<br>
+<a href="http://www.xup.in/dl,94211581/huge-Action.blend.7z" class="postlink">http://www.xup.in/dl,94211581/huge-Action.blend.7z</a><br>
+<br>
+i would covert all of them but not for a while its easier for me to export to other formats atm.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: readblend bug</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2009 9:27 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Attached is the 32bit little-endian .blend<br>
+<br>
+Indexed 8-bit TGA textures are not supported by Irrlicht, so textures are not visible.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

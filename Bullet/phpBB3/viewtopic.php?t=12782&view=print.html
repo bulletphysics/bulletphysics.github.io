@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Segment-wise collision detection</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Segment-wise collision detection</h2>
+		<p><a href="viewtopic.php%3Ft=12782.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12782</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Segment-wise collision detection</h3>
+				<div class="date">Posted: <strong>Tue Oct 15, 2019 7:58 am</strong></div>
+				<div class="author">by <strong>tomjur</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I am working on a problem that requires collision tests for (small) linear motions between two arbitrary joint configurations, from configuration c_1 to configuration c_2.<br>
+This method should return not only if the motion is collision free, but also if c_1 is free.<br>
+I also want this method to be consistent -- whenever the method is called I want it to have the same result regardless of the queries that came before. To achieve that, the robot should start the motion without any velocities or accelerations, and if possible also end the motion with no velocity or acceleration.<br>
+<br>
+My current implementation is divided into two parts (1) starting at c_1 and (2) trying to move towards c_2:<br>
+[1] Starting at c_1:<br>
+Using resetJointState on every joint j to set the robot to c_1[j], and use the parameter targetVelocity=0.0 to make set it in a resting position.<br>
+Then I use stepSimulation and setJointMotorControlArray with c_1 as target repeatedly until the result of getJointStates  is close enough to c_1 or getContactPoints indicates a collision.<br>
+After collision or X steps of not reaching close enough to c_1 the method returns that the start is not valid and the segment is in collision, otherwise, I check the motion towards c_2<br>
+<br>
+[2] Moving towards c_2:<br>
+Repeating the logic in steps 2 and 3 above with 2 differences (1) the motion is towards c_2 instead of c_1 and (2) instead of allowing X number of steps I limit the distance in configuration space of the current configuration to c_1 to be at most 1.5 the distance between c_1 and c_2.<br>
+If the robot reaches close enough to c_2 without collision the segment is considered valid (I do not check for no velocity or acceleration since I don’t know how to do that).<br>
+<br>
+This implementation is very slow, and I would like to improve it. <br>
+<br>
+I understand that that there is no one function to test a segment as free as pybullet is step-based by design. However, I have the following questions:<br>
+1. Is there a better way to check the validity of c_1 and change the robot state to c_1 at rest?<br>
+2. What is the best practice to check if the path to c_2 is collision free, given I am close enough to c_1?<br>
+<br>
+Thanks for the help!<br>
+Tom</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Segment-wise collision detection</h3>
+				<div class="date">Posted: <strong>Thu Oct 24, 2019 1:55 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You could use getClosestPoints to get a better conservative answer how far you can safely move, and then use bigger steps along your trajectory.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Does btParallelConstraintSolver give any speedup?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Does btParallelConstraintSolver give any speedup?</h2>
+		<p><a href="viewtopic.php%3Ft=8661.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8661</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Does btParallelConstraintSolver give any speedup?</h3>
+				<div class="date">Posted: <strong>Mon Dec 10, 2012 10:55 pm</strong></div>
+				<div class="author">by <strong>alexey.rodriguez</strong></div>
+				<div class="content">Hi there,<br>
+<br>
+We have posted a message earlier [1] that talks about parallelization experiments we have performed on a modified version of a Bullet benchmark. The benchmark is AppBenchmarks, specifically the 1000 stacks example which we modified to increase the number of islands.<br>
+<br>
+AppBenchmarks can be compiled to use two parallel algorithms from the Bullet Physics distribution. The first is a parallel constraint solver (btParallelConstraintSolver) and the second is a parallel implementation of the collision dispatcher (SpuGatheringCollision). In our tests we didn't get any benefit from the parallel constraint solver. In fact, we have observed that the parallel constraint solver is often slower than the sequential one. For the parallel collision dispatcher we did observe speed ups from using multiple cores.<br>
+<br>
+Is it known whether btParallelConstraintSolver gives any speedup? Under what workloads does that happen?<br>
+<br>
+Thank you!<br>
+<br>
+Cheers,<br>
+<br>
+Kristian Kolev and Alexey Rodriguez<br>
+<br>
+[1] <a href="viewtopic.php%3Ft=8660.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... f=6&amp;t=8660</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Does btParallelConstraintSolver give any speedup?</h3>
+				<div class="date">Posted: <strong>Wed Dec 12, 2012 11:45 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+ In our tests we didn't get any benefit from the parallel constraint solver. In fact, we have observed that the parallel constraint solver is often slower than the sequential one. 
+</div></blockquote>
+Indeed, the btParallelConstraintSolver usually doesn't give speedup: it lacks several of the optimizations that the regular btSequentialImpulseConstraintSolver has.<br>
+<br>
+Multithreading the btSequentialImpulseConstraintSolver using constraint splitting (see CustomSplitConstraints in btParallelConstraintSolver.cpp) will likely give good speedup,<br>
+both for single large islands and multiple islands. <br>
+<br>
+If you have a patch to run separate simulation islands multithreaded, please share it and I'll look if we can apply your patch.
+<blockquote class="uncited"><div>
+For the parallel collision dispatcher we did observe speed ups from using multiple cores.
+</div></blockquote>
+The SpuGatheringCollisionDispatcher can improve the narrowphase collision detection performance, but it doesn't support all features/collision shape types.<br>
+<br>
+The latest version of the regular btCollisionDispatcher should be much easier to parallelize, with full features. The only shared resource is the (de) allocation of contact manifolds in the methods btCollisionDispatcher::getNewManifold and btCollisionDispatcher::releaseManifold. Once those two functions are made thread-safe (for example using an atomic compare and swap) the narrowphase becomes embarrasingly parallel.<br>
+<br>
+Thanks and please keep us updated!<br>
+Erwin<br>
+<br>
+By the way, most effort in Bullet went into the regular (sequential) physics pipeline, the PlayStation 3 SPU version and nowadays the OpenCL parallel version.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

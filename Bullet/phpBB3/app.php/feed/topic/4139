@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/4139" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2009-10-18T01:40:47+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/4139</id>
+
+		<entry>
+		<author><name><![CDATA[ibkanat]]></name></author>
+		<updated>2009-10-18T01:40:47+00:00</updated>
+
+		<published>2009-10-18T01:40:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15643#p15643</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15643#p15643"/>
+		<title type="html"><![CDATA[Re: Readblend and ListBase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15643#p15643"><![CDATA[
+I was wondering if there is a plan or way to <a href="http://code.google.com/p/gamekit/issues/detail?id=10" class="postlink">build this on Linux 64 bit</a>.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=5737">ibkanat</a> — Sun Oct 18, 2009 1:40 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2009-10-06T07:12:43+00:00</updated>
+
+		<published>2009-10-06T07:12:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15505#p15505</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15505#p15505"/>
+		<title type="html"><![CDATA[Re: Readblend and ListBase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15505#p15505"><![CDATA[
+ListBase pointers have to be extracted in a special way indeed. <br><br>Check out the latest revision of GameKit, I just added some example code how to iterate over a ListBase, object-&gt;ipo-&gt;curve:<br><a href="http://code.google.com/p/gamekit/source/browse/trunk/bullet/Extras/readblend/readblend.c?spec=svn40&amp;r=40#1802" class="postlink">http://code.google.com/p/gamekit/source ... &amp;r=40#1802</a><br><br>The ListBase.first pointer can be extracted manually using<div class="codebox"><p>Code: </p><pre><code>void** ptrptr = &amp;block-&gt;array_entries-&gt;field_bytes[block-&gt;array_entries-&gt;field_offsets[obj2.field_index]]; BlendBlockPointer ptrlast;BlendBlockPointer firstptr = *ptrptr;ptrptr++;ptrlast= *ptrptr;if (firstptr){BlendBlockPointer curveblockptr = blend_block_from_blendpointer(bf, firstptr);BlendObject curve;BlendBlock* block3;BlendBlock* block2;BlendObject newObj,nextOb;BlendBlockPointer nextPtr;curve = blend_block_get_object(bf, curveblockptr, 0);do {        extract_curve_bezier_triples(bf, &amp;curve);        //blend_acquire_obj_from_obj(bf,&amp;obj,&amp;tmpObj,0);        if (!(blend_object_structure_getfield(bf, &amp;nextOb, curve,"next") &amp;&amp;     blend_object_getdata(bf, &amp;nextPtr, nextOb)))         {                printf("error: no next?\n");        } else        {                ///this 'next' object would let you iterate over the linked list until next == 0                if (nextPtr)                {                        BlendBlock* block3;                        nextOb = blend_block_get_object(bf, nextPtr, 0);                        block3 = (BlendBlock*)nextOb.block;                        curve = nextOb;                }        }} while (nextPtr);}</code></pre></div>Then iterate as long as you get a valid next pointer, check the above code snippet for IpoCurve bez<br><br>Here is some more background on .blend files<br><a href="http://atmind.nl/blender/mystery_ot_blend.html" class="postlink">http://atmind.nl/blender/mystery_ot_blend.html</a><br><a href="http://www.atmind.nl/blender/blender-sdna-249.html" class="postlink">http://www.atmind.nl/blender/blender-sdna-249.html</a><br><br>Extracting ListBase linked lists in Armature objects should be possible in a similar way.<br><br>If you manage to get it up and running, do you mind sharing your code?<br>Thanks,<br>Erwin<br><br>by the way, Blender 2.50 will change several data structures, so we will update readblend once Blender 2.50 is released. Also note that readblend only supports 32bit, little-endian .blend files.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Oct 06, 2009 7:12 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Sorlaize]]></name></author>
+		<updated>2009-09-27T03:38:46+00:00</updated>
+
+		<published>2009-09-27T03:38:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15387#p15387</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15387#p15387"/>
+		<title type="html"><![CDATA[Readblend and ListBase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=15387#p15387"><![CDATA[
+Hi, I can't seem to load a ListBase struct from a .blend, I am importing an armature which has worked, going by the makesDNA headers and <a href="http://wiki.blender.org/index.php/Dev:Source/Blender/Architecture/Double_Linked_List" class="postlink">this blender page</a>, but I don't really know what I'm doing <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"> <br><br>Here is the problem code:<br><div class="codebox"><p>Code: </p><pre><code>voidblend_acquire_armature_from_obj(BlendFile *bf, BlendObject *meobj, bArmature *arm){{BlendObject obj, bListBaseObj, bFirstBoneObj;BlendBlockPointer vblock, fblock, cblock, ttblock,mtblock,dblock, matlink, bFirstBonePtr;int i;int32_t ldata = 123456;float fdata1, fdata2, fdata3;blend_init_armature(arm);if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,"flag") &amp;&amp;blend_object_getdata(bf, &amp;ldata, obj))) {printf("invalid armature 0x1\n");meobj-&gt;type = BOBJ_TYPE_INVALID_ARMATURE;return;}arm-&gt;flag = ldata;if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,"drawtype") &amp;&amp;blend_object_getdata(bf, &amp;ldata, obj))) {printf("invalid armature 0x2\n");meobj-&gt;type = BOBJ_TYPE_INVALID_ARMATURE;return;}arm-&gt;drawtype = ldata;if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,"bonebase") &amp;&amp;blend_object_structure_getfield(bf, &amp;bListBaseObj, obj,"first") &amp;&amp;//blend_object_structure_getfield(bf, &amp;bFirstBoneObj, bListBaseObj,//"weight") &amp;&amp;blend_object_getdata(bf, &amp;bFirstBonePtr, bListBaseObj))) {abort();}</code></pre></div>This is the part where I'm trying to get some data from the bones. When I step through the second blend_object_structure_getfield() I can see "ListBase" as the type, so it looked as though I was close.<div class="codebox"><p>Code: </p><pre><code>if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,"bonebase") &amp;&amp;blend_object_structure_getfield(bf, &amp;bListBaseObj, obj,"first") &amp;&amp;//blend_object_structure_getfield(bf, &amp;bFirstBoneObj, bListBaseObj,//"weight") &amp;&amp;blend_object_getdata(bf, &amp;bFirstBonePtr, bListBaseObj))) {abort();}</code></pre></div>That code doesn't "abort" but bFirstBonePtr is set to 0 here:<div class="codebox"><p>Code: </p><pre><code>*(BlendBlockPointer*)dest =blend_block_from_blendpointer(blend_file,BGETLEUINT32(data));</code></pre></div>So I can't get the data that way, it seems! Any thoughts?<br><br>Thanks.<dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=334">gk-src-changes.zip</a></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=4448">Sorlaize</a> — Sun Sep 27, 2009 3:38 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

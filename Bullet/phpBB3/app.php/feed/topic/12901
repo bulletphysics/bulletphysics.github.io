@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12901" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-11-06T09:10:11+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12901</id>
+
+		<entry>
+		<author><name><![CDATA[fillipyang7]]></name></author>
+		<updated>2023-11-06T09:10:11+00:00</updated>
+
+		<published>2023-11-06T09:10:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44464#p44464</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44464#p44464"/>
+		<title type="html"><![CDATA[Re: Intrinsic and Extrinsic Camera Properties]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44464#p44464"><![CDATA[
+<blockquote class="uncited"><div>I searched extensively to find a compact answer to constructing the view and projection matrices using calibrated K and ROS TF extrinsic poses but to my amusement, I found no easy already coded solutions.<br><br>I wrote and tested the following two functions which computes the matrices required for simulating real cameras in pybullet. Hopefully it will be useful:<br>    <div class="codebox"><p>Code: </p><pre><code>from pyquaternion import Quaternion    import numpy as np            def cvK2BulletP(K, w, h, near, far):        """        cvKtoPulletP converst the K interinsic matrix as calibrated using Opencv        and ROS to the projection matrix used in openGL and Pybullet.            :param K:  OpenCV 3x3 camera intrinsic matrix        :param w:  Image width        :param h:  Image height        :near:     The nearest objects to be included in the render        :far:      The furthest objects to be included in the render        :return:   4x4 projection matrix as used in openGL and pybullet        """         f_x = K[0,0]        f_y = K[1,1]        c_x = K[0,2]        c_y = K[1,2]        A = (near + far)/(near - far)        B = 2 * near * far / (near - far)            projection_matrix = [                            [2/w * f_x,  0,          (w - 2*c_x)/w,  0],                            [0,          2/h * f_y,  (2*c_y - h)/h,  0],                            [0,          0,          A,              B],                            [0,          0,          -1,             0]]        #The transpose is needed for respecting the array structure of the OpenGL        return np.array(projection_matrix).T.reshape(16).tolist()            def cvPose2BulletView(q, t):        """        cvPose2BulletView gets orientation and position as used         in ROS-TF and opencv and coverts it to the view matrix used         in openGL and pyBullet.                :param q: ROS orientation expressed as quaternion [qx, qy, qz, qw]         :param t: ROS postion expressed as [tx, ty, tz]        :return:  4x4 view matrix as used in pybullet and openGL                """        q = Quaternion([q[3], q[0], q[1], q[2]])        R = q.rotation_matrix            T = np.vstack([np.hstack([R, np.array(t).reshape(3,1)]),                                  np.array([0, 0, 0, 1])])        # Convert opencv convention to python convention        # By a 180 degrees rotation along X        Tc = np.array([[1,   0,    0,  0],                       [0,  -1,    0,  0],                       [0,   0,   -1,  0],                       [0,   0,    0,  1]]).reshape(4,4)                # pybullet pse is the inverse of the pose from the ROS-TF        T=Tc@np.linalg.inv(T)        # The transpose is needed for respecting the array structure of the OpenGL        viewMatrix = T.T.reshape(16)        return viewMatrix</code></pre></div>The above two functions give you the required matrices to get images from the pybullet environment like this:<br>    <div class="codebox"><p>Code: </p><pre><code>projectionMatrix = cvK2BulletP(K, w, h, near, far)    viewMatrix = cvPose2BulletView(q, t)    _, _, rgb, depth, segmentation = b.getCameraImage(W, H, viewMatrix, projectionMatrix, shadow = True)    plt.imshow(rgb)</code></pre></div>Above returns images without distortion. Hopefully it will be useful.</div></blockquote>Thanks a lot for help! Thanks to your solution, I found a mistake, now everything is clear.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14348">fillipyang7</a> — Mon Nov 06, 2023 9:10 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Rooholla]]></name></author>
+		<updated>2023-02-05T19:23:43+00:00</updated>
+
+		<published>2023-02-05T19:23:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44229#p44229</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44229#p44229"/>
+		<title type="html"><![CDATA[Re: Intrinsic and Extrinsic Camera Properties]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44229#p44229"><![CDATA[
+I searched extensively to find a compact answer to constructing the view and projection matrices using calibrated K and ROS TF extrinsic poses but to my amusement, I found no easy already coded solutions.<br><br>I wrote and tested the following two functions which computes the matrices required for simulating real cameras in pybullet. Hopefully it will be useful:<br>    <div class="codebox"><p>Code: </p><pre><code>from pyquaternion import Quaternion    import numpy as np            def cvK2BulletP(K, w, h, near, far):        """        cvKtoPulletP converst the K interinsic matrix as calibrated using Opencv        and ROS to the projection matrix used in openGL and Pybullet.            :param K:  OpenCV 3x3 camera intrinsic matrix        :param w:  Image width        :param h:  Image height        :near:     The nearest objects to be included in the render        :far:      The furthest objects to be included in the render        :return:   4x4 projection matrix as used in openGL and pybullet        """         f_x = K[0,0]        f_y = K[1,1]        c_x = K[0,2]        c_y = K[1,2]        A = (near + far)/(near - far)        B = 2 * near * far / (near - far)            projection_matrix = [                            [2/w * f_x,  0,          (w - 2*c_x)/w,  0],                            [0,          2/h * f_y,  (2*c_y - h)/h,  0],                            [0,          0,          A,              B],                            [0,          0,          -1,             0]]        #The transpose is needed for respecting the array structure of the OpenGL        return np.array(projection_matrix).T.reshape(16).tolist()            def cvPose2BulletView(q, t):        """        cvPose2BulletView gets orientation and position as used         in ROS-TF and opencv and coverts it to the view matrix used         in openGL and pyBullet.                :param q: ROS orientation expressed as quaternion [qx, qy, qz, qw]         :param t: ROS postion expressed as [tx, ty, tz]        :return:  4x4 view matrix as used in pybullet and openGL                """        q = Quaternion([q[3], q[0], q[1], q[2]])        R = q.rotation_matrix            T = np.vstack([np.hstack([R, np.array(t).reshape(3,1)]),                                  np.array([0, 0, 0, 1])])        # Convert opencv convention to python convention        # By a 180 degrees rotation along X        Tc = np.array([[1,   0,    0,  0],                       [0,  -1,    0,  0],                       [0,   0,   -1,  0],                       [0,   0,    0,  1]]).reshape(4,4)                # pybullet pse is the inverse of the pose from the ROS-TF        T=Tc@np.linalg.inv(T)        # The transpose is needed for respecting the array structure of the OpenGL        viewMatrix = T.T.reshape(16)        return viewMatrix</code></pre></div>The above two functions give you the required matrices to get images from the pybullet environment like this:<br>    <div class="codebox"><p>Code: </p><pre><code>projectionMatrix = cvK2BulletP(K, w, h, near, far)    viewMatrix = cvPose2BulletView(q, t)    _, _, rgb, depth, segmentation = b.getCameraImage(W, H, viewMatrix, projectionMatrix, shadow = True)    plt.imshow(rgb)</code></pre></div>Above returns images without distortion. Hopefully it will be useful.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14522">Rooholla</a> — Sun Feb 05, 2023 7:23 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Emkey]]></name></author>
+		<updated>2022-02-10T10:25:42+00:00</updated>
+
+		<published>2022-02-10T10:25:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43849#p43849</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43849#p43849"/>
+		<title type="html"><![CDATA[Re: Intrinsic and Extrinsic Camera Properties]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43849#p43849"><![CDATA[
+I stumbled across your post and hoped it would work. I will share my results with you now. Basically I got an RGBD image I managed to get finally, and from how I set the camera, the pinhole prime default settings makes the camera be in a different position (you will be able to see it in the blank void spaces of the images). The depth of the pointcloud and the following depth plot are correct in the sense that depth is shown. So it means that the RGBD image is also in a correct format and properly processed (??) The first image is the pointcloud of a table, a robotic arm and a rectangular object on top. The second image is the same pointcloud, but turning it with my mouse, as it is in 3D. The third image is the depth plot. As you can see, there are some blanks that are where the real camera should be pointing. <br><div class="codebox"><p>Code: </p><pre><code>    pcd = o3d.geometry.PointCloud.create_from_rgbd_image(    rgbd_image,    o3d.camera.PinholeCameraIntrinsic(        o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault))    # Flip it, otherwise the pointcloud will be upside down.    pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])    o3d.visualization.draw_geometries([pcd])</code></pre></div><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1914" class="postimage" alt="depth_shown.png" onclick="viewableArea(this);" /></dt></dl></div>But when changing it to your calculations made + the post I had already checked and rechecked to try and get my head around something, I got this. Taking into account I know fov.<div class="codebox"><p>Code: </p><pre><code>    q = fov    Fx = 1/(math.tan(q/2))    Fy = Fx    Cx = IMG_SIZE/2    Cy = Cx    cam = o3d.camera.PinholeCameraIntrinsic(IMG_SIZE, IMG_SIZE, Fx, Fy, Cx, Cy)        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(        rgbd_image,cam)</code></pre></div>As you can see in the following images, the camera now is in the perfect position, so the calculations seem right. But for some reason, <strong class="text-strong">the depth is not getting displayed</strong>. The Pointlcoud and the same pointcloud turning it a bit with the mouse, and the depth plot, are completely flat. <div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1915" class="postimage" alt="depth_not_shown.png" onclick="viewableArea(this);" /></dt></dl></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14245">Emkey</a> — Thu Feb 10, 2022 10:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[zachjiang]]></name></author>
+		<updated>2021-12-03T08:25:30+00:00</updated>
+
+		<published>2021-12-03T08:25:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43748#p43748</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43748#p43748"/>
+		<title type="html"><![CDATA[Re: Intrinsic and Extrinsic Camera Properties]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43748#p43748"><![CDATA[
+Check out this post in stackoverflow:<br><a href="https://stackoverflow.com/questions/60430958/understanding-the-view-and-projection-matrix-from-pybullet/60450420#60450420" class="postlink">https://stackoverflow.com/questions/604 ... 0#60450420</a><br><br>The skew is 0<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14010">zachjiang</a> — Fri Dec 03, 2021 8:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goktug]]></name></author>
+		<updated>2020-03-21T22:03:07+00:00</updated>
+
+		<published>2020-03-21T22:03:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42721#p42721</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42721#p42721"/>
+		<title type="html"><![CDATA[Intrinsic and Extrinsic Camera Properties]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42721#p42721"><![CDATA[
+I need to use calibration matrices of pybullet camera (intrinsic and extrinsic camera matrices) in my project. However, I could not find them. As far as I know, pybullet only provides view matrix and projection matrix of the camera. According to my research, pybullet benefits from OpenGL.<br><br>I have checked and examined OpenGL documentation to construct intrinsic and extrinsic matrices from projection and view matrix. However, I could not find a clear conversion. What I have found up to now is two of three components in intrinsic matrix in pybullet by making extensive amount of calculation and research:<br><br>Intrinsic Components:<br>------------------------------<br>* Focal length values (fx, fy)<br>* Two principal point values (cx, cy)<br>* Pixel Skew (s)<br><br>What I found:<br>------------------<br>* Focal Length: Since there is only one camera eye, there is only one focal length, which is equal to 1 / tan(q/2) in which q refers to the angle "field of view" in computeProjectionMatrixFOV function. <br><br>* Principal Values: The principal points are indices of middle pixel in the image, which is 250 for 500x500 image. <br><br><strong class="text-strong"> However, In spite of my 2 days research, I could not find pixel skew value. Is there anyone who can provide pixel skew and extrinsic matrix of pybullet camera image ? I think that we need these matrices for many computer vision purposes.</strong><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13447">goktug</a> — Sat Mar 21, 2020 10:03 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

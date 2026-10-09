@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Vehicle applyEngineForce doesn't works</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Vehicle applyEngineForce doesn't works</h2>
+		<p><a href="viewtopic.php%3Ft=13391.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13391</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Vehicle applyEngineForce doesn't works</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2022 2:59 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">hi.<br>
+<br>
+When I make a second vehicle and try to use it, the vehicle won't move.<br>
+<br>
+We have confirmed that the applyEngineForce is properly called, and the steering also moves properly, but the vehicle operates as if the EngineForce is zero.<br>
+<br>
+The strangest thing is that there is no problem when I first make the vehicle I want to operate, but only when I make another vehicle after the first time.<br>
+<br>
+The following is the code for making and control a vehicle.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13391&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+XMFLOAT3 pos = { 500.0f, 30.0f, 500.0f };
+BuildCarObjects(pos, 4, false, cmdList, physics, 1, true);
+pos.z += 40.0f;
+BuildCarObjects(pos, 4, true, cmdList, physics, 0);
+	
+	
+void InGameScene::BuildCarObjects(
+	XMFLOAT3&amp; position,
+	char color,
+	bool isPlayer,
+	ID3D12GraphicsCommandList* cmdList, 
+	const std::shared_ptr&lt;BulletWrapper&gt;&amp; physics,
+	UINT netID, bool latencyTest)
+{
+	auto carObj = make_shared&lt;PhysicsPlayer&gt;(netID);
+	carObj-&gt;SetPosition(position);
+
+	if (mMeshList[MeshType::Car].empty())
+		mMeshList[MeshType::Car] = carObj-&gt;LoadModel(mDevice.Get(), cmdList, L"Models\\Car_Body.obj");
+	else
+		carObj-&gt;SetMeshes(mMeshList[MeshType::Car]);
+
+	carObj-&gt;SetDiffuse("Car_Texture", mColorMap[(int)color]);
+	for (int i = 0; i &lt; 4; ++i)
+	{
+		auto wheelObj = make_shared&lt;WheelObject&gt;();
+
+		if (i % 2 == 0)
+		{
+			if (mMeshList[MeshType::Wheel_L].empty())
+				mMeshList[MeshType::Wheel_L] = wheelObj-&gt;LoadModel(mDevice.Get(), cmdList, L"Models\\Car_Wheel_L.obj");
+			else
+				wheelObj-&gt;SetMeshes(mMeshList[MeshType::Wheel_L]);
+		}
+		else
+		{
+			if (mMeshList[MeshType::Wheel_R].empty())
+				mMeshList[MeshType::Wheel_R] = wheelObj-&gt;LoadModel(mDevice.Get(), cmdList, L"Models\\Car_Wheel_R.obj");
+			else
+				wheelObj-&gt;SetMeshes(mMeshList[MeshType::Wheel_R]);
+		}
+
+		carObj-&gt;SetWheel(wheelObj.get(), i);
+		mPipelines[Layer::Color]-&gt;AppendObject(wheelObj);
+	}
+	carObj-&gt;BuildRigidBody(physics); //Actually make Vehicle Object
+	carObj-&gt;BuildDsvRtvView(mDevice.Get());
+	if (isPlayer) mPlayer = carObj.get();
+	if (latencyTest) mFakePlayer = carObj.get();
+	mPipelines[Layer::Color]-&gt;AppendObject(carObj);
+	mPlayerObjects[netID] = std::move(carObj);
+}
+
+void PhysicsPlayer::BuildRigidBody(std::shared_ptr&lt;BulletWrapper&gt; physics)
+{
+	auto dynamicsWorld = physics-&gt;GetDynamicsWorld();
+
+	mOOBB.Extents = { 10.0f, 4.0f, 14.0f };
+
+	XMFLOAT3 vehicleExtents = mOOBB.Extents;
+	XMFLOAT3 wheelExtents = mWheel[0]-&gt;GetBoundingBox().Extents;
+
+	btCollisionShape* chassisShape = new btBoxShape(btVector3(vehicleExtents.x, vehicleExtents.y, vehicleExtents.z));
+
+	btTransform btCarTransform;
+	btCarTransform.setIdentity();
+	btCarTransform.setOrigin(btVector3(mPosition.x, mPosition.y, mPosition.z));
+
+	mBtRigidBody = physics-&gt;CreateRigidBody(1000.0f, btCarTransform, chassisShape);
+
+	mVehicleRayCaster = std::make_shared&lt;btDefaultVehicleRaycaster&gt;(dynamicsWorld.get());
+	mVehicle = std::make_shared&lt;btRaycastVehicle&gt;(mTuning, mBtRigidBody, mVehicleRayCaster.get());
+
+	mBtRigidBody-&gt;setActivationState(DISABLE_DEACTIVATION);
+	dynamicsWorld-&gt;addAction(mVehicle.get());
+
+	mVehicle-&gt;setCoordinateSystem(0, 1, 2);
+
+	btVector3 wheelDirectionCS0(0, -1, 0);
+	btVector3 wheelAxleCS(-1, 0, 0);
+
+	float wheelWidth = wheelExtents.x;
+	float wheelRadius = wheelExtents.z;
+	float wheelFriction = 26.0f;
+	float suspensionStiffness = 20.f;
+	float suspensionDamping = 2.3f;
+	float suspensionCompression = 4.4f;
+	float rollInfluence = 0.01f;  //1.0f;
+
+	bool isFrontWheel = true;
+	float connectionHeight = -0.9f;
+
+	btVector3 connectionPointCS0(vehicleExtents.x - 2.5f, connectionHeight, vehicleExtents.z - 2.8f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	connectionPointCS0 = btVector3(-vehicleExtents.x + 2.5f, connectionHeight, vehicleExtents.z - 2.8f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	isFrontWheel = false;
+
+	connectionPointCS0 = btVector3(vehicleExtents.x - 2.3f, connectionHeight, -vehicleExtents.z + 2.6f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	connectionPointCS0 = btVector3(-vehicleExtents.x + 2.3f, connectionHeight, -vehicleExtents.z + 2.6f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6, wheelRadius, mTuning, isFrontWheel);
+
+	for (int i = 0; i &lt; mVehicle-&gt;getNumWheels(); i++)
+	{
+		btWheelInfo&amp; wheel = mVehicle-&gt;getWheelInfo(i);
+		wheel.m_suspensionStiffness = suspensionStiffness;
+		wheel.m_wheelsDampingRelaxation = suspensionDamping;
+		wheel.m_wheelsDampingCompression = suspensionCompression;
+		wheel.m_frictionSlip = wheelFriction;
+		wheel.m_rollInfluence = rollInfluence;
+	}
+}
+
+//control vehicle
+
+
+void PhysicsPlayer::OnPreciseKeyInput(float Elapsed)
+{
+	mCurrentSpeed = mVehicle-&gt;getCurrentSpeedKmHour();
+	
+	mEngineForce = 0.0f;
+	if (mBoosterLeft &gt; 0.0f)
+	{
+		mMaxSpeed = 1500.0f;
+		mBoosterLeft -= Elapsed;
+	}
+	
+	if(mBoosterLeft &lt; 0.0f)
+	{
+		mMaxSpeed = 1000.0f;
+		mBoosterLeft = 0.0f;
+	}
+
+	if (mVehicleSteering &gt; 0)
+	{
+		mVehicleSteering -= mSteeringIncrement * Elapsed;
+		if (mVehicleSteering &lt; 0)
+		{
+			mVehicleSteering = 0;
+		}
+	}
+
+	else if (mVehicleSteering &lt; 0)
+	{
+		mVehicleSteering += mSteeringIncrement * Elapsed;
+		if (mVehicleSteering &gt; 0)
+		{
+			mVehicleSteering = 0;
+		}
+	}
+
+	if (GetAsyncKeyState(VK_LEFT) &amp; 0x8000)
+	{
+		mVehicleSteering -= mSteeringIncrement * 2 * Elapsed;
+		if (mVehicleSteering &lt; -mSteeringClamp)
+			mVehicleSteering = -mSteeringClamp;
+	}
+	if (GetAsyncKeyState(VK_RIGHT) &amp; 0x8000)
+	{
+		mVehicleSteering += mSteeringIncrement * 2 * Elapsed;
+		if (mVehicleSteering &gt; mSteeringClamp)
+			mVehicleSteering = mSteeringClamp;
+	}
+	if (GetAsyncKeyState(VK_UP) &amp; 0x8000)
+	{
+		if (mCurrentSpeed &lt; 0.0f)
+			mEngineForce = mMaxEngineForce * 1.5f;
+		else if (mMaxSpeed &gt; mCurrentSpeed)
+			mEngineForce = mMaxEngineForce;
+		else
+			mEngineForce = 0.0f;
+	}
+	if (GetAsyncKeyState(VK_DOWN) &amp; 0x8000)
+	{
+		if (mCurrentSpeed &gt; 0.0f)
+			mEngineForce = -mMaxEngineForce * 1.5f;
+		else if (-mMaxSpeed &lt; mCurrentSpeed)
+			mEngineForce = -mMaxEngineForce;
+		else
+			mEngineForce = 0.0f;
+	}
+	if (GetAsyncKeyState('Z') &amp; 0x8000)
+	{
+		if (mBoosterLeft == 0.0f)
+			mBoosterLeft = mBoosterTime;
+	}
+	if (GetAsyncKeyState(VK_SHIFT) &amp; 0x8000)
+	{
+		for (int i = 2; i &lt; 4; ++i)
+		{
+			mVehicle-&gt;getWheelInfo(i).m_frictionSlip = 4.0f;
+		}
+	}
+	else
+	{
+		for (int i = 0; i &lt; 4; ++i)
+		{
+			mVehicle-&gt;getWheelInfo(i).m_frictionSlip = 25.0f;
+		}
+	}
+	
+	if (mBoosterLeft &amp;&amp; mMaxSpeed &lt; mCurrentSpeed)
+		mEngineForce = mBoosterEngineForce;
+
+	OutputDebugStringA("Update engineforce\n");
+	for (int i = 0; i &lt; 2; ++i)
+	{
+		mVehicle-&gt;applyEngineForce(mEngineForce, i);
+	}
+	
+	int wheelIndex = 0;
+	mVehicle-&gt;setSteeringValue(mVehicleSteering, wheelIndex);
+	wheelIndex = 1;
+	mVehicle-&gt;setSteeringValue(mVehicleSteering, wheelIndex);
+}
+
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

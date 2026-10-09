@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; name cartpole not defined</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>name cartpole not defined</h2>
+		<p><a href="viewtopic.php%3Ft=13032.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13032</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>name cartpole not defined</h3>
+				<div class="date">Posted: <strong>Sun Jul 12, 2020 10:16 am</strong></div>
+				<div class="author">by <strong>amisha</strong></div>
+				<div class="content"><strong class="text-strong"><em class="text-italics">This is the code for modbus drive for motor and i need to have the same running in the simulation environment in pybullet. I'm new to pybullet. and have certainly made mistakes which i can't debug. <br>
+i'm trying to build alternates of modbus drive functions with pybullet setJointMotorControl2. please,help me out. All the suggestons are most welcome <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> </em></strong><br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13032&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import time,os
+
+testOffline = os.getenv("TEST_OFFLINE", True)
+import pybullet as p
+import pybullet_data 
+
+if testOffline ==True:
+   import pybullet as p
+   import pybullet_data 
+else:
+   import minimalmodbus as modbus
+
+#cartpole1 = p.loadURDF("cartpole.urdf")
+if testOffline ==True:
+
+    print("pybullet model loaded")
+else:
+    drive = ""
+    slave = ""
+    
+    print("Module flyby-modbus loaded.")
+
+##############################################################################
+###                    CONTROL the Motor Drive                             ###
+# All CONTROL functions return { True | False } based on success/fail result.#
+##############################################################################
+if testOffline ==True:
+    def connectp():
+        p.connect(p.GUI)
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+        global cartpole1
+        cartpole1 = p.loadURDF("cartpole.urdf")
+        try:
+            reset()
+            
+            print("connected")
+            
+            return cartpole1
+        except Exception as e:
+            print(e)
+            return False
+else:        
+    def connect(connectionPort='/dev/cu.SLAB_USBtoUART', slaveID=7, mode='ascii', baudRate=9600, byteSize=8):
+        global drive, slave
+        slave = slaveID
+        try:
+            drive = modbus.Instrument(connectionPort, int(slaveID))
+            drive.mode = mode
+            drive.serial.baudrate = baudRate
+            drive.serial.bytesize = byteSize
+            reset()
+            print(drive)
+            return True
+        except Exception as e:
+            print(e)
+            return False
+
+
+if testOffline ==True:
+    def startp(controlMode='DIGITAL', direction='CW'):
+        if controlMode=='DIGITAL':
+            if direction=='CW':
+                 p.setJointMotorControl2(cartpole1,1,
+                                         targetVelocity=6)
+            elif direction=='CCW':
+                p.setJointMotorControl2(cartpole1,1,
+                                         targetVelocity=-6)
+        elif controlMode=='POSITION':
+            p.setJointMotorControl2(cartpole1,1,
+                                         p.POSITION_CONTROL)
+        try:
+            if not drive:
+                connectp()
+            else:
+          
+                return True
+        except Exception as e:
+            print(e)
+            return False
+        
+else:
+    def start(controlMode='DIGITAL', direction='CW'):
+        if controlMode=='DIGITAL':
+            if direction=='CW':
+                registerValue = 257
+            elif direction=='CCW':
+                registerValue = 265
+        elif controlMode=='POSITION':
+            registerValue = 513
+    
+        try:
+            if not drive:
+                connect()
+            else:
+                result = drive.write_register(2, registerValue, functioncode=6)
+                return True
+        except Exception as e:
+            print(e)
+            return False
+
+
+if testOffline ==True:
+    def disconnect():
+        p.disconnect(p.GUI)
+      
+        try:
+            if not drive:
+                connectp()
+            else:
+                return True
+        except Exception as e:
+            print(e)
+            return False
+        
+else:
+    def stop(controlMode='DIGITAL', direction='CW'):
+        if controlMode=='DIGITAL':
+            if direction=='CW':
+                registerValue = 256
+            elif direction=='CCW':
+                registerValue = 264
+        elif controlMode=='POSITION':
+            registerValue = 512
+    
+        try:
+            if not drive:
+                connect()
+            else:
+                result = drive.write_register(2, registerValue, functioncode=6)
+                return True
+        except Exception as e:
+            print(e)
+            return False
+
+
+if testOffline ==True:
+    def brakep(controlMode='DIGITAL', direction='CW'):
+        if controlMode=='DIGITAL':
+            if direction=='CW':
+                 p.setJointMotorControl2(cartpole1,1,
+                                         targetVelocity=6)
+            elif direction=='CCW':
+                p.setJointMotorControl2(cartpole1,1,
+                                         targetVelocity=-6)   
+            try:
+                if not drive:
+                    connectp()
+                else:
+                    return True
+            except Exception as e:
+                print(e)
+                return False
+else:        
+    def brake(direction='CW'):
+        if direction=='CW':
+            registerValue = 260
+        elif direction=='CCW':
+            registerValue = 268
+        try:
+            if not drive:
+                connect()
+            else:
+                result = drive.write_register(2, registerValue, functioncode=6)
+                return True
+        except Exception as e:
+            print(e)
+            return False
+
+
+def reset():
+    try:
+        if not drive:
+            connect()
+        else:
+            drive.write_register(2, 0, functioncode=6)
+            drive.write_register(3, 0, functioncode=6)
+            drive.write_register(4, 32, functioncode=6)
+            drive.write_register(6, 16, functioncode=6)
+            drive.write_register(8, 32, functioncode=6)
+            drive.write_register(10, 334, functioncode=6)
+            drive.write_register(12, 20000, functioncode=6)
+            drive.write_register(14, 2048, functioncode=6)
+            drive.write_register(16, 0, functioncode=6)
+            drive.write_register(18, 0, functioncode=6)
+            drive.write_register(20, 0, functioncode=6)
+            return True
+    except Exception as e:
+        print(e)
+        return False
+
+
+##############################################################################
+###                      READ from Modbus Registers                       ####
+# All READ functions return { &lt;value&gt;|"ERROR" } based on success/fail result.#
+##############################################################################
+
+if testOffline ==True:
+    def speed(cartpole1):
+        
+        while(1):
+             p.setGravity(0, 0, -10)
+             js = p.getJointState(cartpole1, 1) 
+            # print("position=", js[0], "velocity=", js[1])
+             return js[1]
+             time.sleep(0.01)
+else:
+    
+    def readRegister(registerNumber, readNextCount=0):
+        try:
+            if not drive:
+                connect()
+            else:
+                result = drive.read_register(registerNumber, readNextCount, functioncode=3)
+                return str(result)
+        except Exception as e:
+            print(e)
+            return "ERROR"
+    
+    def getSlaveID():
+        return readRegister(registerNumber=1, readNextCount=0)
+    
+    def getControlMode():
+        return readRegister(registerNumber=2, readNextCount=0) + "|" + readRegister(registerNumber=3, readNextCount=0)
+    
+    def getProportionalGain():
+        return readRegister(registerNumber=4, readNextCount=0)
+    
+    def getIntegralGain():
+        return readRegister(registerNumber=6, readNextCount=0)
+    
+    def getFeedForwardGain():
+        return readRegister(registerNumber=8, readNextCount=0)
+    
+    def getLinesPerRotation():
+        return readRegister(registerNumber=10, readNextCount=0)
+    
+    def getAcceleration():
+        return readRegister(registerNumber=12, readNextCount=0)
+    
+    def getSpeed():
+        return readRegister(registerNumber=14, readNextCount=0)
+    
+    def getSpeedFeedback():
+        # speed is a positive number between 0 (0x0000) and 65535 (0xFFFF)
+        # 0 to 18000 is the range of speed this motor supports, however, setting a speed of 18000 should be avoided in the first place
+        minRange = 0
+        maxRange = 65535
+    
+        spdFdbk = readRegister(registerNumber=24, readNextCount=0)
+    
+        # if the spdFdbk is less than 32767, that means motor is in CW direction -- it must be returned absolute
+        if int(spdFdbk) &lt; 32767:
+            pass
+        # if the spdFdbk is more than 32767, that means motor is in CCW direction -- it must be adjusted accordingly
+        elif int(spdFdbk) &gt; 32767:
+            spdFdbk = maxRange - int(spdFdbk)
+    
+        return spdFdbk
+    
+    
+    def getPositionFeedback():
+        # position is a positive number between 0 to 4294967285
+        lsb = readRegister(registerNumber=20, readNextCount=0)
+        msb = readRegister(registerNumber=22, readNextCount=0)
+    
+        # convert position feedback to hexadecimal with MSB and LSB joining to make 32-bits
+        lsbInHex = hex(int(lsb))[2:].zfill(4)
+        msbInHex = hex(int(msb))[2:].zfill(4)
+        pos = int("0x" + msbInHex + lsbInHex, 0)
+        return pos
+
+
+###########################################################################
+###                      WRITE to Modbus Registers                      ###
+# All READ functions return { True | False } based on success/fail result.#
+###########################################################################
+if testOffline ==True: 
+    global cartpole1
+    p.setJointMotorControl2(cartpole1,
+                        1,
+                        p.POSITION_CONTROL,
+                        targetPosition=1000,
+                        targetVelocity=6,
+                        force=5,
+                        positionGain=1.9,
+                        velocityGain=0.25,
+                        maxVelocity=10)
+    #return a[2]
+else:
+  
+    def writeRegister(registerNumber, registerValue):
+        try:
+            if not drive:
+                connect()
+            else:
+                result = drive.write_register(registerNumber, registerValue, functioncode=6)
+                return True
+        except Exception as e:
+            print(e)
+            return False
+    
+    def setProportionalGain(proportionalGain=32):
+        return writeRegister(registerNumber=4, registerValue=int(proportionalGain))
+    
+    def setIntegralGain(integralGain=16):
+        return writeRegister(registerNumber=6, registerValue=int(integralGain))
+    
+    def setFeedForwardGain(feedForwardGain=32):
+        return writeRegister(registerNumber=8, registerValue=int(feedForwardGain))
+    
+    def setLinesPerRotation(linesPerRotation=334):
+        return writeRegister(registerNumber=10, registerValue=int(linesPerRotation))
+    
+    def setAcceleration(acceleration=20000):
+        return writeRegister(registerNumber=12, registerValue=int(acceleration))
+    
+    def setSpeed(speed=2048):
+        # speed is a positive number between 0 (0x0000) and 65535 (0xFFFF)
+        # 0 to 18000 is the range of speed this motor supports, however, setting a speed of 18000 should be avoided in the first place
+        minRange = 0
+        maxRange = 65535
+    
+        if minRange &lt;= speed &lt;= maxRange:
+            writeRegister(registerNumber=14, registerValue=int(speed))
+    
+        return
+    
+    
+    # gotoPosition() instructs the motor drive to execute "immediately" by rotating it CW or CCW based on desired position requested.
+    def gotoPosition(position=0):
+        # position is a positive number between 0 (0x00000000) and 4294967285 (0xFFFFFFFF)
+        minRange = 0
+        maxRange = 4294967295
+    
+        if minRange &lt;= position &lt;= maxRange:
+            # convert position to hexadecimal with 32-bits, before extracting msb &amp; lsb
+            posInHex = hex(position)[2:].zfill(8)
+            msb = "0x" + posInHex[0:4]
+            lsb = "0x" + posInHex[4:8]
+            writeRegister(registerNumber=16, registerValue=int(lsb, 0))
+            writeRegister(registerNumber=18, registerValue=int(msb, 0))
+    
+            #############################
+            #####  Start the motor! #####
+            start(controlMode='POSITION')
+    
+        # Keep waiting until the motor has reached the desired position
+        while getPositionFeedback()!=position:
+            pass
+    
+        return
+
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

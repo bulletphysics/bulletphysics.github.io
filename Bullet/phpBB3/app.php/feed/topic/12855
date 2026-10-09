@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12855" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-01-29T15:54:31+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12855</id>
+
+		<entry>
+		<author><name><![CDATA[abef]]></name></author>
+		<updated>2020-01-29T15:54:31+00:00</updated>
+
+		<published>2020-01-29T15:54:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42601#p42601</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42601#p42601"/>
+		<title type="html"><![CDATA[Re: Reset an environment to an arbitrary state]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42601#p42601"><![CDATA[
+Ok, so it turns out Erwin's response that I linked above is sufficient, I just actually had to try it out  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br>Instead of deleting this thread, I'll go ahead and post my solution in case others find it useful.<br>Here is a basic way to extract and reset the state of a pybullet environment without using the saveState and restoreState APIs<br>(at least for the locomotion envs).<br><div class="codebox"><p>Code: </p><pre><code>import gymimport pybullet_envsimport numpy as npenv1 = gym.make("HopperBulletEnv-v0")env2 = gym.make("HopperBulletEnv-v0")env1.reset()env2.reset()# get the pybullet connectionsp1 = env1.env._pp2 = env2.env._p# step the envs randomly for a bitfor _ in range(5):    env1.step(np.random.uniform(low=-1,high=1,size=3))    env2.step(np.random.uniform(low=-1,high=1,size=3))    # get the state of env1base_po = [] # position and orientation of base for each bodybase_v = [] # velocity of base for each bodyjoint_states = [] # joint states for each bodyfor i in range(p1.getNumBodies()):    base_po.append(p1.getBasePositionAndOrientation(i))    base_v.append(p1.getBaseVelocity(i))    joint_states.append([p1.getJointState(i,j) for j in range(p1.getNumJoints(i))])# reset env2 to the current state of env1for i in range(p2.getNumBodies()):    p2.resetBasePositionAndOrientation(i,*base_po[i])    p2.resetBaseVelocity(i,*base_v[i])    for j in range(p2.getNumJoints(i)):        p2.resetJointState(i,j,*joint_states[i][j][:2])# check that they now follow the same trajectoryfor _ in range(5):    act = np.random.uniform(low=-1,high=1,size=3)    out1 = env1.step(act)    out2 = env2.step(act)    print(np.allclose(out1[0],out2[0]))</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13522">abef</a> — Wed Jan 29, 2020 3:54 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[abef]]></name></author>
+		<updated>2020-01-29T02:57:07+00:00</updated>
+
+		<published>2020-01-29T02:57:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42599#p42599</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42599#p42599"/>
+		<title type="html"><![CDATA[Re: Reset an environment to an arbitrary state]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42599#p42599"><![CDATA[
+Ah, so this question has indeed been asked before here: <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12460" class="postlink">viewtopic.php?t=12460</a><br>The response was<blockquote class="uncited"><div>You will have to manually reset the state for all objects. See resetJointState and resetBasePositionAndOrientation, resetBaseVelocity in the <a href="https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.2ye70wns7io3" class="postlink">PyBullet Quickstart Guide</a>.</div></blockquote>Could I get a bit more detail here? Does this mean the state is fully defined by the joint states, base position and orientation, and base velocity?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13522">abef</a> — Wed Jan 29, 2020 2:57 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[abef]]></name></author>
+		<updated>2020-01-29T02:48:44+00:00</updated>
+
+		<published>2020-01-29T02:48:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42598#p42598</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42598#p42598"/>
+		<title type="html"><![CDATA[Reset an environment to an arbitrary state]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42598#p42598"><![CDATA[
+Pardon if this question has been answered before -- I searched an could not find what I'm looking for.<br><br>I would like to be able to reset a pybullet environment to a given state. <br>As a concrete example, suppose I have two instances of the same environment (e.g. HopperBulletEnv), call them env1 and env2.<br>I want to be able to reset env2 to the same state that env1 is in.<br>Just using saveState and restoreState won't work (as far as I can tell), since that limits me to only those states that the environment instance has already traversed.<br><br>In principle, this seems possible using saveBullet, which should allow me to dump the state of env1 to disk, and then restore that state from disk to env2. However, I'd like to avoid disk IO operations as this would be too slow.<br><br>Is there a way to return the state of env1 as a python dict, and then pass that dict to env2 and just reset all the values? What are the values that I need to pass in order to fully recreate the state? (From what I gather, I need at least the joint angles and velocities, but possibly much else besides).<br><br>Thanks,<br>Abe<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13522">abef</a> — Wed Jan 29, 2020 2:48 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

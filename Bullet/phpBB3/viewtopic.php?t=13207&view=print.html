@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Manual collision response for kinematic objects</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Manual collision response for kinematic objects</h2>
+		<p><a href="viewtopic.php%3Ft=13207.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13207</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Manual collision response for kinematic objects</h3>
+				<div class="date">Posted: <strong>Wed May 12, 2021 12:58 pm</strong></div>
+				<div class="author">by <strong>Karoon2</strong></div>
+				<div class="content">Hey guys, I just started using bullet (BulletSharp for C#) and I really like it! The automatic collisions response is awesome. But now, I want to add some custom character behaviour and need your help:<br>
+<br>
+I have a kinematic character object (box shape) that gets created with the following settings:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13207&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// ...
+_rigidBody.ActivationState = ActivationState.ActiveTag | ActivationState.DisableDeactivation;
+_rigidBody.CollisionFlags = CollisionFlags.CharacterObject | CollisionFlags.KinematicObject;
+
+// create ghost object for it:
+_ghostObject = new GhostObject();
+_ghostObject.CollisionShape = _rigidBody.CollisionShape;
+_ghostObject.WorldTransform = _rigidBody.WorldTransform;
+</code></pre></div>
+I then add both the _rigidBody and the _ghostObject to my current world.<br>
+<br>
+I move my object around with this method:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13207&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>public void MoveKinematic(float x, float y, float z)
+{
+	BulletSharp.Math.Matrix newTransform = _rigidBody.MotionState.WorldTransform;
+	newTransform.Origin += new BulletSharp.Math.Vector3(x, y, z);
+	_rigidBody.MotionState.WorldTransform = newTransform;
+
+	// update the ghost's position as well:
+	if (HasGhostObject)
+		_ghostObject.WorldTransform = newTransform;
+}
+</code></pre></div>
+
+<strong class="text-strong">My problem now is this:</strong><br>
+I use the ghost object to detect collisions with other objects:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13207&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// the ghost always collides with the kinematic object
+//(since they share the same shape and world transform).
+// thus, count must be &gt; 1 whenever the ghost collides with an object other than the player object:
+if (_ghostObject.OverlappingPairs.Count &gt; 1)
+{
+	AlignedCollisionObjectArray collisions = GetGhostObject().OverlappingPairs;
+	foreach(CollisionObject b in collisions)
+	{
+		b.Activate(true);
+		
+		// TODO: Undo the collision by moving the player object back by a bit
+	}
+}
+</code></pre></div>
+
+This kind of works but my kinematic object does not stop when it hits a different object. It kind of moves slightly into it (before the colliding object responds to my kinematic player object).<br>
+What I would like my kinematic player object to behave like is:
+<ul><li>Check for collisions (ok, works)</li></ul>
+<ul><li>Check by how much it is "inside" another object (minimum translation vector in order to undo the collision)</li></ul>
+<ul><li>Move itself out of the colliding object</li></ul>
+
+<em class="text-italics">Is that possible and is my approach even viable?</em> Any help would be hugely appreciated! Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual collision response for kinematic objects</h3>
+				<div class="date">Posted: <strong>Thu May 13, 2021 3:48 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The way to do this is to "sweep" the kinematic object from <strong class="text-strong">oldTransform</strong> to <strong class="text-strong">newTransform</strong> and to stop at first hit, else teleport to <strong class="text-strong">newTransform</strong>.  This is how the <strong class="text-strong">btKinematicCharacterController</strong> works, as I recall, although it does a series of sweeps each frame so that it can walk up and down slopes and small steps.  Perhaps you could fork <strong class="text-strong">btKinematicCharacterController</strong> to make <strong class="text-strong">MyKinematicCharacterController</strong> and then tweak its behavior to suit your needs.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual collision response for kinematic objects</h3>
+				<div class="date">Posted: <strong>Fri May 14, 2021 5:14 pm</strong></div>
+				<div class="author">by <strong>Karoon2</strong></div>
+				<div class="content">Thank you very much for your quick reply! I will try that class. I thought using this controller was discouraged (at least I read something like that in several threads). <br>
+Maybe this will do. Thanks again!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual collision response for kinematic objects</h3>
+				<div class="date">Posted: <strong>Sat May 15, 2021 3:41 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yeah... as I recall the <strong class="text-strong">btKinematicCharacterController</strong> has some bugs or shortcomings, but maybe it will work for your case and if not it could provide a good starting point or example.  In particular it demonstrates how to sweep forward to find first touch.<br>
+<br>
+Some things to worry about, depending on the game content: can the controller get "stuck" in a tight spot (e.g. when floor and roof squeeze together)?  Does it "fall" correctly when walking off an edge? etc.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

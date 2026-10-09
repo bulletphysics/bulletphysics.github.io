@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Creating multiple rigibody instances from serialized data?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Creating multiple rigibody instances from serialized data?</h2>
+		<p><a href="viewtopic.php%3Ft=5652.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5652</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Creating multiple rigibody instances from serialized data?</h3>
+				<div class="date">Posted: <strong>Wed Sep 15, 2010 7:45 pm</strong></div>
+				<div class="author">by <strong>Kanttori</strong></div>
+				<div class="content">I'm working on some gamecode and I need a way to load serialized bullet-data and then spawn multiple instances of it. The assumption I'm going with is that you only need to have the rigidbodies and constraints as single user and the rest (like shapes etc) can be used by many.<br>
+<br>
+I started coding a class that will extend the btBulletWorldImporter (inherited as private) and use it to store the multiuser data whilst the single user rigidbodies and constraints are copied as data into my class and "instanced" from there. The actual BulletFile will be deleted after it's been used to initialize the shapes etc. and had it's rigidbody etc. data  copied for later use.<br>
+<br>
+Is this even doable or is there some caveat I'm not seeing? Input would be appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Creating multiple rigibody instances from serialized dat</h3>
+				<div class="date">Posted: <strong>Mon Feb 07, 2011 6:52 pm</strong></div>
+				<div class="author">by <strong>Kanttori</strong></div>
+				<div class="content">Well, the code has been done for a while but I haven't had time to test it until now... seemed to work with a couple of ragdoll "bots" I spawned from it. Heavily based on btBulletWorldImporter as in the same code (hacked) for the most part so I retained the naming conventions (btBulletFileSpawn.h and .cpp) but please note that it's in no way official code. The main difference with world importer is that object and constraint data get "stolen" from the bulletfile to be spawned later and bvhMaps and collisionShapes get handled and stored only once when the bulletfile is originally loaded.<br>
+<br>
+You need to manually add the spawn-results to your dynamic world which would go something like this (this code is just a concept, can't copy-paste my code since it's spread around and depends on other things):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=5652&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btBulletFileSpawn* bfs = new btBulletFileSpawn();
+
+if(!bfs-&gt;loadBulletFile(filename))
+{
+  //Error
+}
+
+// Not using a testFnc to test whether or not to spawn an obj so params 0,0.
+btSpawnResult* sr = bfs-&gt;spawn(0,0);
+
+// This is how you'd add them to your dynamic world
+for(unsigned int c = 0; c &lt; sr-&gt;m_allocatedRigidBodies.size(); ++c)
+{
+  dynworld-&gt;addRigidBody((btRigidBody*)sr-&gt;m_allocatedRigidBodies[c]);
+}
+
+for(unsigned int c = 0; c &lt; sr-&gt;m_allocatedConstraints.size(); ++c)
+{
+  dynworld-&gt;addConstraint(sr-&gt;m_allocatedConstraints[c],
+      sr-&gt;m_disableCollisionsBetweenLinkedBodies[c]);
+}
+</code></pre></div>
+
+You could use the testFnc to skip spawning stuff you don't need, but beware that the constraint spawning in that case may cause problems though it should skip things that don't make sense.
+<div class="inline-attachment">
+			
+		
+		
+				<dl class="file">
+			<dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="download/file.php%3Fid=646">bulletfilespawn.zip</a></dt>
+						<dd>(5.2 KiB) Downloaded 937 times</dd>
+		</dl>
+		
+			</div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

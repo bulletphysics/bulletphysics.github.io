@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; What is btCManifoldPoint? (Geometrically)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>What is btCManifoldPoint? (Geometrically)</h2>
+		<p><a href="viewtopic.php%3Ft=13256.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13256</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>What is btCManifoldPoint? (Geometrically)</h3>
+				<div class="date">Posted: <strong>Sat Aug 14, 2021 5:58 am</strong></div>
+				<div class="author">by <strong>stonek89</strong></div>
+				<div class="content">Hello, <br>
+I'm working on a game using LibGDX, which uses bullet as 3d physics engine.<br>
+<br>
+I have a little experience with bullet. Recently, I started working on contact detection. I'm interested in what btManifoldPoint class represents, like geometrically. It has fields like localPointA, localPointB, positionWorldOnA, positionWorldOnB - but none of them make any sense for me. Why? That might be because I don't have that much experience with contact detection itself. BUT, for me a contact "point" between two bodies is not a mathematical point. It's an area where these objects overlap. And because I'm missing some knowledge in this area, it's why btManifoldPoint just doesn't make sense for me. I was trying to find a geometrical explanation of what those fields of btManifoldPoint are, but I didn't find anything useful. Bullet source code docs also don't describe what those fields are. Would you be so kind and explain (perhaps with images) what is btManifoldPoint? Or maybe there is some physics-for-dummies tutorial somewhere on the web that I fail to find... Any help would be appreciated.<br>
+<br>
+As to why I need that information: I'm working on a multiplayer racing game with fixed tick rate. I want to be able to interpolate the exact (or as accurately as possible) moment in time when car "touched" the checkpoint to get accurate lap times. Please note that this information is just for context - first I really want to understand btManifoldPoint.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is btCManifoldPoint? (Geometrically)</h3>
+				<div class="date">Posted: <strong>Sun Aug 15, 2021 2:47 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I looked around: there are a lot of tutorials and even several youtube videos explaining collision manifolds.  I doubt I could supply a better explanation here so I will defer to others.<br>
+<br>
+Meanwhile as to what you really want to do... it occurs to me you could get rather accurate time measures of the vehicle finish using forward raycasts from the vehicle.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is btCManifoldPoint? (Geometrically)</h3>
+				<div class="date">Posted: <strong>Mon Aug 16, 2021 6:44 am</strong></div>
+				<div class="author">by <strong>stonek89</strong></div>
+				<div class="content">It's challenging to find something both useful and easy to digest. Most of the videos I found on contact manifolds were really math-heavy, and what I needed was a simple explanation, just to get the idea. Anyway, I did put few things together and I think I know a bit more. However I still can't find anything on btManifoldPoint. I mean - let's say we have two spheres colliding. If I understood correctly, they will have one contact point represented by btManifoldPoint. Now to the tricky part:<br>
+<br>
+I think I understand what are localPointA, localPointB - they represent contact point position in both objects local... uh... coordinates systems? (Is that the english name for it?) I mean contact point coordinates as if object A (and B respectively) was positioned at 0,0,0. Is that correct?<br>
+<br>
+Now... for positionWorldOnA and positionWorldOnB. It sounds (a little) like those two represent contact point position in some kind of world/global coordinates. But if there is one contact point, then... there would be only one representation in global coordinates, right? I struggle to understand what is the relation between positionWorldOnA, positionWorldOnB, and bodies A and B. Perhaps you can give me some hint on that?<br>
+<br>
+And by the way, thank you for the raycast idea... I'm getting the feeling that in the end, it's going to be the simplest <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is btCManifoldPoint? (Geometrically)</h3>
+				<div class="date">Posted: <strong>Mon Aug 16, 2021 7:52 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yes that is correct: <strong class="text-strong">localPointA</strong> and <strong class="text-strong">localPointB</strong> are in the object local frames (where their center of mass is at the origin &lt;0,0,0&gt;).<br>
+<br>
+When the two objects are just barely touching the two localPoints are indeed at the same location in the world-frame, however that is not true in general.  Typically the objects overlap by a little bit and the localPoints on each object transform to two distinct world-frame points: for overlaps they are each embedded inside the other object.  Also, some manifold points are kept around for a while even when there are no overlap, so the two points represent the "closest approach" and the <strong class="text-strong">btManifoldPoint::m_distance1</strong> will be negative.<br>
+<br>
+As per the comments in the code, there is some redundancy in the data members.  <strong class="text-strong">worldPointOnA</strong> can be computed from other values.  Here is a cleaned up snippet from the implementation:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13256&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const btVector3&amp; getPositionWorldOnA() const {
+    return m_positionWorldOnA;
+    //return m_positionWorldOnB + m_normalWorldOnB * m_distance1; 
+}</code></pre></div>
+Sometimes it is possible to trade a larger memory footprint for faster speed which is probably what is happening here.  It is faster to compute both world-frame positions once and cache them for later than it is to recompute them every time they are needed.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is btCManifoldPoint? (Geometrically)</h3>
+				<div class="date">Posted: <strong>Wed Aug 18, 2021 4:21 pm</strong></div>
+				<div class="author">by <strong>stonek89</strong></div>
+				<div class="content">That is a great explanation. Thank you for clearing this up <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

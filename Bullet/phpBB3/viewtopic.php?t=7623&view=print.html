@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Corotated SPH for deformable solids</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Corotated SPH for deformable solids</h2>
+		<p><a href="viewtopic.php%3Ft=7623.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7623</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Corotated SPH for deformable solids</h3>
+				<div class="date">Posted: <strong>Fri Nov 18, 2011 3:11 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi all,<br>
+   I am currently trying to implement this paper titled <a href="http://cg.informatik.uni-freiburg.de/publications/corotatedSPH_NP09.pdf" class="postlink">Corotated SPH for deformable solids</a>. Currently I am having problem understanding section 5.1. The authors extract the rotation matrix from the point neighborhood. Now in this calculation first the polar decomposition is discussed to extract R matrix similar to how meshless shapematching does. This requires calculating the COM(center of mass) of initial and deformed config. Pseudocode follows,<br>
+<br>
+p_i = x_i  - x_com<br>
+q_i =x0_i - x0_com<br>
+A = sum_i(m_i p_i q_i^T) sum_i(m_i q_i q_i^T) = A_(pq) A_(qq)<br>
+<br>
+Since A_(qq) is symmetric it is ignored and A_(pq) is polar decomposed to get the symmetric part S=sqrt(A_(pq)^T A_(pq)) and rotational part R = A_(pq)S^(-1). All of this makes sense infact this is plane old meshless shape matching. This translates to this if i understood correctly,
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7623&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//Calculate center of mass (COM)
+glm::vec3 Xcom, X0com;	
+for(int i=0;i&lt;total_points;i++) {
+   X0com += Xi[i];
+   Xcom  += X[i]; 
+}
+Xcom = Xcom/float(total_points);
+X0com = X0com/float(total_points);
+
+A = glm::mat3(0);
+for(int i=0;i&lt;total_points;i++) {
+   glm::vec3 pi = X[i]-Xcom;
+   glm::vec3 qi = Xi[i]-X0com;
+   A += M[i]* glm::outerProduct(pi, qi);
+}
+Apq[i] =A;
+</code></pre></div>
+
+Now the interesting bit comes in the second paragraph section 5.1 where they compute individual orientation Ri for each particle using the SPH formulation as follows,<br>
+A_(pq)_i = sum_j {m_j W(x0_(ij),h) ((x_j-x_i)(x0_j-x0_i)^T)} <br>
+This translates to the following code
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7623&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>glm::mat3 A = glm::mat3(0);	 		
+vector&lt;neighbor&gt;&amp; pNeighbor = neighbors[index];
+for(size_t i=0;i&lt;pNeighbor.size();i++)
+{										
+   A += M[i]*pNeighbor[i].w * glm::outerProduct(pNeighbor[i].rdist, pNeighbor[i].rdist);
+}
+Apq[index] = A;	
+</code></pre></div>
+Now the values of Apq are completely different by both methods. Would they be so?<br>
+Anyone who has any idea what may be the reason for this. Perhaps I am doing something wrong. <br>
+I am free for a discussion on this. Any ideas?<br>
+<br>
+Regards,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Corotated SPH for deformable solids</h3>
+				<div class="date">Posted: <strong>Fri Nov 18, 2011 7:07 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">OK another thing I like to discuss. In the paper it seems that the authors exmphasize the requirement of calc. inverse in moving least square's formulation as problematic ( while this is generally true; inverses are always bad) but their formulation also requires two inverses one for the symmetric matrix S in Eq. 13 and one for the deformation calc. u_ji in Eq. 15 which clearly contradicts to what they are emphasizing in the paper?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Corotated SPH for deformable solids</h3>
+				<div class="date">Posted: <strong>Sat Nov 19, 2011 10:01 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">OK guys,<br>
+   I think I have some progress. I have managed to get it working for a basic SPH using their formulation. The problem was the kernel function which the authors have not given in the paper. I  think they are borrowing from the paper SSP07 (A Unified Particle Model for Fluid-Solid Interactions by B. Solenthaler, J. Schläfli and R. Pajarola) which defines the kernel function as,<br>
+<img src="http://www3.ntu.edu.sg/home2007/mova0002/test/eq.png" class="postimage" alt="Image"><br>
+Changing the default kernel to the above kernel stabilizes the soft body deformation and now I can see the bar deforming nicely. See the snapshot. <br>
+<img src="http://www3.ntu.edu.sg/home2007/mova0002/test/f.png" class="postimage" alt="Image"><br>
+Now i need to sort out the corotation stuff and it should be easy.<br>
+<br>
+OK I have done it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Corotated SPH for deformable solids</h3>
+				<div class="date">Posted: <strong>Mon Mar 18, 2013 12:39 pm</strong></div>
+				<div class="author">by <strong>64185008aaa</strong></div>
+				<div class="content">Hey, mobeen<br>
+<br>
+I'm also implementing this paper but i'm having some problems. My simulation scenario is a falling cuboid, but every time when the cuboid contacts with ground, it gradually explodes.I checked up my program detailedly and found no errors with it. Did you experience the same situation when you were implementing this paper? p.s. I'm using the kernel function from the paper SSP07.<br>
+<br>
+Cheers</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

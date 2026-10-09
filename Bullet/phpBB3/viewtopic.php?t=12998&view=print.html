@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [SOLVED in pybullet 2.8.2] Simple two-link URDF applyExternalForce unexpected response</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[SOLVED in pybullet 2.8.2] Simple two-link URDF applyExternalForce unexpected response</h2>
+		<p><a href="viewtopic.php%3Ft=12998.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12998</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[SOLVED in pybullet 2.8.2] Simple two-link URDF applyExternalForce unexpected response</h3>
+				<div class="date">Posted: <strong>Thu Jun 18, 2020 5:50 pm</strong></div>
+				<div class="author">by <strong>avikde</strong></div>
+				<div class="content">I have created the smallest MWE I could that shows this behavior. There are just two revolute links and the second joint deflects in an unexpected direction under applyExternalForce. In the MWE, the slider applies a force in the direction of the applied red line to the most distal link in the chain. <br>
+<br>
+<a href="https://gist.github.com/avikde/89a85fccb0643e66e1cba4563b1a824c" class="postlink">https://gist.github.com/avikde/89a85fcc ... 563b1a824c</a><br>
+<br>
+This may be an error in my URDF or my usage of pybullet; any help would be appreciated!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simple two-link URDF applyExternalForce unexpected response</h3>
+				<div class="date">Posted: <strong>Fri Jun 19, 2020 3:48 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks Avik,<br>
+<br>
+I had a look and found a few issues. One of them is in the applyExternalForce imlpementation, I fixed this now.<br>
+<a href="https://github.com/bulletphysics/bullet3/pull/2870/commits/ebef331bbffb4631259648f5858a3a396dd3718a" class="postlink">https://github.com/bulletphysics/bullet ... 396dd3718a</a><br>
+<br>
+(it was a copy/paste bug, we never used applyExternalForce, since we always actuate our robots using actuators/motors)<br>
+<br>
+In your code:<br>
+1) disable position/velocity motors before applying an external torque/force<br>
+2) use a reasonably timestep, 1 is not OK. Use 1./240 or at largest 1./60.<br>
+3) always provide collision shapes in the URDF, since PyBullet derives the inertia tensor from mass and collision volume by default<br>
+<br>
+It is also easier to debug when the force is applied around the link world center-of-mass location.<br>
+See attached zip file for my updates.<br>
+Thanks for the report!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simple two-link URDF applyExternalForce unexpected response</h3>
+				<div class="date">Posted: <strong>Fri Jun 19, 2020 2:12 pm</strong></div>
+				<div class="author">by <strong>avikde</strong></div>
+				<div class="content">Thank you Erwin! I can confirm that the behavior is different in pybullet 2.8.2. <br>
+<br>
+I do have a few follow-up clarifications:<br>
+<br>
+1) Trying to understand "disable position/velocity motors before applying an external torque/force": In the avik.py in your attachment, p.setJointMotorControlArray is called on joint 1, and in the main loop we call applyExternalForce on link 2 (joint 1 connects link 1 to link 2). Basically I wanted a passively springy joint and to apply a force to it. It seems to work as expected, so I just wanted to confirm that that's correct. Or do we have to "release" the joints by setting velocity control or torque control with 0 before applying the external force on link 2?<br>
+<br>
+2) For simulating some micro-scale systems I use a mm,mg,ms system of units since I find more numerical issues (and just inconvenience) with m,kg,s. Obviously I set gravity as 10e-3, inertias, lengths etc. in the mm,mg units. Obviously still 1ms may be too large a timestep compared to the timescale of the dynamics (depending on the accelerations and inertias), but I just wanted to clarify that there shouldn't be any issue with this kind of unit scaling.<br>
+<br>
+3) I also learned from your attachment that the inertial property also must have its origin set in the URDF (I had assumed that the inertial property is always assumed to be about the centroid). For a box primitive is it generally correct that the inertial property's origin should match the visual property's origin (assuming the inertias I am specifying are in the axis-aligned body COM frame of the link?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simple two-link URDF applyExternalForce unexpected response</h3>
+				<div class="date">Posted: <strong>Fri Jun 19, 2020 4:09 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Ah, I disabled the velocity/position motors by setting the force to zero. You can certainly leave the motors enabled, with a force of your choice to model joint friction or other effects such as springyness.<br>
+<br>
+I was assuming metric units (meter, seconds etc). If you are using different units, you need to indeed change the time step.<br>
+<br>
+It is best to keep the inertial, visual and collision elements consistent, they are all expressed in the same (link) frame in the URDF. So for a box, the local center of mass location is in the center, so it uses the same offset as visual/collision frame.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simple two-link URDF applyExternalForce unexpected response</h3>
+				<div class="date">Posted: <strong>Fri Jun 19, 2020 5:21 pm</strong></div>
+				<div class="author">by <strong>avikde</strong></div>
+				<div class="content">Thanks! I can confirm that pybullet 2.8.2 solved the original problem I had.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

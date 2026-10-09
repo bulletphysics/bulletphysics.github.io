@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; calculateMassMatrix inconsistent with RBDL</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>calculateMassMatrix inconsistent with RBDL</h2>
+		<p><a href="viewtopic.php%3Ft=12936.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12936</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>calculateMassMatrix inconsistent with RBDL</h3>
+				<div class="date">Posted: <strong>Tue Apr 21, 2020 1:19 am</strong></div>
+				<div class="author">by <strong>rohun</strong></div>
+				<div class="content">Hi Erwin, <br>
+<br>
+I use pybullet for operational space control on 7-dof manipulators. I've noticed some inconsistencies with the mass matrix calculated by pybullet compared to other simulation environments. I've written two small scripts that demonstrate this issue by comparing pybullet and RBDL.<br>
+<br>
+To help recreate the error, I've used the panda.urdf found in bullet3 (commit f40a200) at the following filepath:<br>
+bullet3/examples/pybullet/gym/pybullet_data/franka_panda<br>
+<br>
+I use pybullet 2.7.1 in a python3.5 virtual environment. I'd appreciate any help you can offer for this issue.<br>
+<br>
+Pybullet
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12936&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as pb
+import numpy as np
+
+physics_id = pb.connect(pb.DIRECT)
+
+arm_id = pb.loadURDF(
+    fileName='/home/rohunk-local/bullet3/examples/pybullet/gym/pybullet_data/franka_panda/panda.urdf',
+    basePosition=[0,0,0],
+    baseOrientation=[0,0,0,1],
+    useFixedBase=True,
+    physicsClientId=physics_id)
+
+pb.setGravity(0, 0, -9.8, physicsClientId=physics_id)
+
+neutral_joint_angles= [0., -0.3135, 0., -2.515, 0., 2.226, 0.87]
+
+for index, angle in enumerate(neutral_joint_angles):
+    pb.resetJointState(
+        bodyUniqueId=arm_id, 
+        jointIndex=index, 
+        targetValue=angle, 
+        physicsClientId=physics_id)
+
+pb.stepSimulation(physics_id)
+
+joint_positions = []
+for joint_index in range(7):
+    joint_positions.append(pb.getJointState(
+        arm_id, 
+        joint_index, 
+        physics_id)[0])
+
+print("joint positions")
+print(joint_positions)
+
+mass_matrix = pb.calculateMassMatrix(
+            bodyUniqueId=arm_id,
+            objPositions=joint_positions,
+            physicsClientId=physics_id)
+
+print("Mass Matrix")
+print(mass_matrix)
+</code></pre></div>
+
+RBDL
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12936&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#!/usr/bin/python
+# 
+# rbdl mass matrix
+import rbdl
+import numpy as np
+import csv
+
+mdl = rbdl.loadModel(b'/home/rohunk-local/bullet3/examples/pybullet/gym/pybullet_data/franka_panda/panda.urdf')
+mass_matrix = np.zeros((9, 9 ), dtype=np.double)
+neutral_joint_angles= [0., -0.3135, 0., -2.515, 0., 2.226, 0.87]
+
+rbdl.CompositeRigidBodyAlgorithm(mdl, 
+		np.asarray(neutral_joint_angles, dtype=np.double),
+		mass_matrix) </code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: calculateMassMatrix inconsistent with RBDL</h3>
+				<div class="date">Posted: <strong>Wed Apr 29, 2020 1:54 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">Do you have any progress? Could you tell me why did you compare the MassMatrix between them? thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: calculateMassMatrix inconsistent with RBDL</h3>
+				<div class="date">Posted: <strong>Tue May 05, 2020 5:59 pm</strong></div>
+				<div class="author">by <strong>rohun</strong></div>
+				<div class="content">Hi Steven, <br>
+<br>
+No updates at the moment. We're trying to use the python wrapper for RBDL directly as a short term solution. <br>
+<br>
+For our research we'd like to use similar controllers for both similar robots and real robots for experimentation. We've used an internal physics simulator (that uses RBDL) for real robot control and wanted to verify that pybullet produces the same mass matrix for the same robot state. <br>
+<br>
+I'd appreciate it if anyone else can try running the scripts I've attached to verify the issue.<br>
+<br>
+-Rohun</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: calculateMassMatrix inconsistent with RBDL</h3>
+				<div class="date">Posted: <strong>Thu May 07, 2020 1:59 pm</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">thanks for your reply,  i have found the orignal paper for bullet and i will check it and try to find the cause.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: calculateMassMatrix inconsistent with RBDL</h3>
+				<div class="date">Posted: <strong>Fri May 08, 2020 11:10 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">adding this 'flags=pb.URDF_USE_INERTIA_FROM_FILE' when loading the urdf can fix this.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: calculateMassMatrix inconsistent with RBDL</h3>
+				<div class="date">Posted: <strong>Fri May 08, 2020 6:32 pm</strong></div>
+				<div class="author">by <strong>rohun</strong></div>
+				<div class="content">Thanks Steven! <br>
+<br>
+I've confirmed this works. You've helped us simplify our infrastructure significantly. If you don't mind, could you please link the original paper for bullet as well? <br>
+<br>
+-rohun</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: calculateMassMatrix inconsistent with RBDL</h3>
+				<div class="date">Posted: <strong>Sat May 09, 2020 1:26 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content"><a href="http://www.doc88.com/p-9833547094235.html" class="postlink">http://www.doc88.com/p-9833547094235.html</a><br>
+not sure if you can access this link, also wanted to attach the pdf for your reference but it is too large about 32M for this web. i can email to you if you need.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

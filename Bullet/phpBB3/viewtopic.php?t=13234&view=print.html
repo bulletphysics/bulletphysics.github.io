@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [HELP] move a mesh from rigidBody position</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[HELP] move a mesh from rigidBody position</h2>
+		<p><a href="viewtopic.php%3Ft=13234.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13234</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[HELP] move a mesh from rigidBody position</h3>
+				<div class="date">Posted: <strong>Wed Jul 07, 2021 9:46 pm</strong></div>
+				<div class="author">by <strong>none06</strong></div>
+				<div class="content">Hello ! <br>
+<br>
+I am having trouble moving my mesh from my rigidbody's position.<br>
+<br>
+It looks like there is an offset and i can't find how to calculate it.<br>
+<br>
+For exemple:<br>
+My mesh is at (3.0, 2.0, 4.0) <br>
+But the rigidbody's transform is(9.0, 8.5, 12.0)<br>
+(My mesh size is 5)<br>
+<br>
+Here is how i create my ridigBody:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13234&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const std::vector&lt;glm::vec3&gt; dataSize = getBiggestHitBox();
+    this-&gt;size = dataSize[0] * glm::vec3(0.5);
+    this-&gt;center = dataSize[1];
+	
+
+    boxCollisionShape = new btBoxShape(btVector3(size.x, size.y, size.z));
+    transform.setIdentity();
+    transform.setOrigin(btVector3(center.x, center.y, center.z));
+    motionState = new btDefaultMotionState(transform);
+    rigidBody = new btRigidBody(btRigidBody::btRigidBodyConstructionInfo(
+        weight,
+        motionState,
+        boxCollisionShape,
+        btVector3(0, 0, 0)
+    ));
+</code></pre></div>
+
+and this is how i calculate the center and size of my mesh:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13234&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>GLfloat max_x, max_y, max_z;
+    GLfloat min_x = max_x = vertices[0].Position.x;
+    GLfloat min_y = max_y = vertices[0].Position.y;
+    GLfloat min_z = max_z = vertices[0].Position.z;
+    for (int i = 0; i &lt; vertices.size(); i++) {
+        if (vertices[i].Position.x &lt; min_x) min_x = vertices[i].Position.x;
+        if (vertices[i].Position.x &gt; max_x) max_x = vertices[i].Position.x;
+        if (vertices[i].Position.y &lt; min_y) min_y = vertices[i].Position.y;
+        if (vertices[i].Position.y &gt; max_y) max_y = vertices[i].Position.y;
+        if (vertices[i].Position.z &lt; min_z) min_z = vertices[i].Position.z;
+        if (vertices[i].Position.z &gt; max_z) max_z = vertices[i].Position.z;
+    }
+    glm::vec3 size = glm::vec3(max_x - min_x, max_y - min_y, max_z - min_z);
+    glm::vec3 center = glm::vec3((min_x + max_x) / 2, (min_y + max_y) / 2, (min_z + max_z) / 2);
+
+    center += position * glm::vec3(2.0f);
+
+    std::vector&lt;glm::vec3&gt; ret;
+    ret.emplace_back(size);
+    ret.emplace_back(center);
+    return ret;
+</code></pre></div>
+
+My goal is to set my mesh position to the rigidBody position</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [HELP] move a mesh from rigidBody position</h3>
+				<div class="date">Posted: <strong>Thu Jul 08, 2021 3:42 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">After you compute the center and bounds of your mesh... I don't understand this line:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13234&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>center += position * glm::vec3(2.0f);</code></pre></div>
+The value of <strong class="text-strong">position</strong> is not specified in your code snippet.  I assume <strong class="text-strong">glm::vec3</strong> is doing a component-wise multiply between the two vectors so what you're really doing is adding <strong class="text-strong">2.0 * position</strong>, but I don't understand it.<br>
+<br>
+Also, you said you're trying to <blockquote class="uncited"><div>moving my mesh from my rigidbody's position</div></blockquote> (perhaps you meant you want to move the mesh to where the rigidbody is?) however what your code appears to be trying to do is moving the rigidbody to where the mesh is.  I don't understand.<br>
+<br>
+Usually the way things are supposed to work is: you have a physical body and you have a renderable mesh and you want the two to be in the same spot.  When the body is dynamic its transform is updated by the physics simulation and when the body is kinematic its position is updated by logic external to the physics simulation.  The MotionState API is designed to act as a "bridge" between the two things: relaying transforms to/from the physics simulation and the external game logic.  Rather than use <strong class="text-strong">btDefaultMotionState</strong> what you're supposed to do is implement your own <strong class="text-strong">MyMotionState</strong> which derives from the base interface class and overrides the two pure virtual methods therein, like so:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13234&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// getWorldTransform() relays incoming position/rotation to the RigidBody
+// and is called on active Kinematic objects at each substep and also          
+// once when the btRigidBody is initialized with a btRigidBodyConstructionInfo.
+// If you don't want the body's transform to be set by the MotionState at                  
+// construction time then give it a null MotionState and then subsequently                                                     
+// explicitly call body-&gt;setMotionState(motionState)
+void MyMotionState::getWorldTransform(btTransform&amp; worldTrans) const {
+    m_body-&gt;setWorldTransform(worldTrans);
+}    
+
+// setWorldTransform() relays outgoing position/rotation to the Renderable
+// and is called on active Dynamic objects at each substep
+void MyMotionState::setWorldTransform(const btTransform&amp; worldTrans) {        
+    m_renderable-&gt;setTransform(worldTrans);
+}</code></pre></div>
+
+Finally, a nitpick: when you compute the center and bounds of the mesh you initialize the maxes and mins to <strong class="text-strong">vertices[0].Position</strong> but then in your <strong class="text-strong">for</strong> loop you start at <strong class="text-strong">i=0</strong> so the very first iteration over the loop is a waste.  You should start looping at <strong class="text-strong">i=1</strong>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [HELP] move a mesh from rigidBody position</h3>
+				<div class="date">Posted: <strong>Sun Jul 11, 2021 1:37 pm</strong></div>
+				<div class="author">by <strong>none06</strong></div>
+				<div class="content">Thank you for your responce.<br>
+<br>
+For the position, it's the start position of my Mesh, so lets say that i want to draw my mesh at (5, 12, 5), I need to multiply the vertices to get my mesh translated. After that, i need to multiply the center by 2, otherwise the boudingbox will not be centered in the middle of my mesh.<br>
+<br>
+this is my boundingbox with center * 2:<br>
+<a href="http://www.noelshack.com/2021-27-7-1626012085-capture2.png" class="postlink"><img src="http://image.noelshack.com/minis/2021/27/7/1626012085-capture2.png" class="postimage" alt="Image"></a><br>
+<br>
+this is my boundingbox without center * 2:<br>
+<a href="http://www.noelshack.com/2021-27-7-1626012085-capture3.png" class="postlink"><img src="http://image.noelshack.com/minis/2021/27/7/1626012085-capture3.png" class="postimage" alt="Image"></a><br>
+<br>
+<br>
+"moving my mesh from my rigidbody's position"-&gt; yes sorry i got a little bit confused, I want to move the mesh to where the rigidbody is.<br>
+<br>
+Now i have my own MyMotionState, and thank you for the tip.<br>
+<br>
+<br>
+My problem is that when I translate my mesh like this: <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13234&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> btTransform trans;
+ rigidBody-&gt;getMotionState()-&gt;getWorldTransform(trans);
+ glm::vec3 position = glm::vec3(trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ());
+ 
+ modelMatrix = glm::translate(glm::mat4(1.0f), position);
+</code></pre></div>
+
+My mesh is not at the correct position:<br>
+<a href="http://www.noelshack.com/2021-27-7-1626010637-capture.png" class="postlink"><img src="http://image.noelshack.com/minis/2021/27/7/1626010637-capture.png" class="postimage" alt="Image"></a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [HELP] move a mesh from rigidBody position</h3>
+				<div class="date">Posted: <strong>Mon Jul 12, 2021 4:07 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Hrm... there is a transform offset between your mesh and your rigidbody, and this transform includes a scale.  The math for applying the offset is tricky: the components of the offset transform have to be applied in a particular order. <br>
+<br>
+The way I like to solve this problem is to store the offset as a data member of MyMotionState and to do the math inside the setWorldTransform() method.<br>
+However, in the previous code example I showed I assumed that no math was necessary.  Also, I now realize I got the getWorldTransform() implementation <strong class="text-strong">totally wrong</strong>: it should not set the transform of the body, it should only compute the transform the body should have (Bullet will apply the transform to the body).  So please allow me to resubmit a more correct MyMotionState example.<br>
+<br>
+This is what I think it would look like in pseudo-code.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13234&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class MyMotionState : public btMotionState { 
+    // Note: we assume no rotational transform between the mesh and the body
+    // and only consider translation and scale.
+    btVectore m_scaledMeshOffsetToBody;
+    btVector3 m_scaleMeshToBody;
+    btRigidBody* m_body;
+    Renderable* m_renderable;
+ 
+public:
+    MyMotionState(btRigidBody* body, Mesh* mesh) : m_body(body), m_renderable(mesh) {
+        // Note the negative sign here: we're computing the offset required to go from mesh-frame to body-frame
+        btVector3 mesh_center = m_renderable-&gt;getMeshCenter();
+ 
+        btVector3 mesh_scale = m_renderable-&gt;getMeshBoundsDiagonal();
+ 
+        btTransform identity;
+        btVector3 aabb_min, aabb_max;
+        btAabb local_aabb = m_body-&gt;getShape()-&gt;getAabb(identity, aabb_min, aabb_max);
+        btVector3 body_scale = aabb_max - aabb_min;
+ 
+        // Note: btVector3 divided by btVector3 is a component-wise inversion
+        // ideally you would guard against division by zero here
+        // but that is left as an exercise for the reader
+        m_scaleMeshToBody = body_scale / mesh_scale;
+ 
+        // Note the negative sign here: it is the offset that must be applied to the mesh
+        // to put it where the body is, post scale;
+        m_scaledMeshOffsetToBody = - mesh_center * m_scaleMeshToBody;
+    }
+ 
+    // getWorldTransform() relays incoming position/rotation to the RigidBody
+    // and is called on active Kinematic objects at each substep and also          
+    // once when the btRigidBody is initialized with a btRigidBodyConstructionInfo.
+    // If you don't want the body's transform to be set by the MotionState at                  
+    // construction time then give it a null MotionState and then subsequently                                                     
+    // explicitly call body-&gt;setMotionState(motionState)
+    //
+    void MyMotionState::getWorldTransform(btTransform&amp; worldTrans) const {
+        // Note: worldTrans is passed by reference
+        // it is the duty of MyMotionState to update worldTrans with the correct value the body should have
+        // and the Bullet API will apply the transform it gets from this method to the body
+ 
+        // compute worldTrans here, as per scripted motion or some other authority
+        worldTrans = ...
+    }    
+ 
+    // setWorldTransform() relays outgoing position/rotation to the Renderable
+    // and is called on active Dynamic objects at each substep
+    //
+    void MyMotionState::setWorldTransform(const btTransform&amp; worldTrans) {                                                                                          
+        // it is the duty of MyMotionState to use worldTrans to update the renderable                                                                               
+        // so that it follows the body
+        btVector3 p = worldTrans.getOrigin() + m_scaledMeshOffsetToBody;
+        glm::vec3 position(p.getX(), p.getY(), p.getZ());
+
+        // converting btQuaternion to glm::quat is left as an exercise for the reader
+        glm::quat rotation = ...
+
+        m_renderable-&gt;setTransform(position, rotation);
+    }
+};
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [HELP] move a mesh from rigidBody position</h3>
+				<div class="date">Posted: <strong>Wed Jul 21, 2021 7:14 pm</strong></div>
+				<div class="author">by <strong>none06</strong></div>
+				<div class="content">Thank you for your help. <br>
+<br>
+But I think that my problem does not come from that. I just figured out that, when i move my mesh, the bounding box and the mesh does not get "separated", but as soon as I move the camera, the offset appear.<br>
+<br>
+Even if I move just a little the cam, the mesh position and the bounding box position are different.<br>
+For testing purposes, in the render loop I set the mesh position to my camera position, but the mesh move way faster than my camera.<br>
+<br>
+I think its probably an openGL error ?<br>
+Maybe this is a common mistake from openGL noobies like me ?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

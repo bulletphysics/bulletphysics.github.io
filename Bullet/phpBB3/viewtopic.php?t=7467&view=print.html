@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Meshless FEM [SOLVED]</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Meshless FEM [SOLVED]</h2>
+		<p><a href="viewtopic.php%3Ft=7467.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7467</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Meshless FEM [SOLVED]</h3>
+				<div class="date">Posted: <strong>Sun Sep 25, 2011 6:02 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi all,<br>
+   I am trying to implement the following paper "Point Based Animation of Elastic, Plastic and Melting Objects" available:<a href="http://www.matthiasmueller.info/publications/sca04.pdf" class="postlink">http://www.matthiasmueller.info/publications/sca04.pdf</a> however, currently the output I am getting is wrong my points just simply fall down due to gravity and then explode. This is how I have done it so far if someone here has any idea of where I might be wrong please help.<br>
+<br>
+From what I have understood, basically, there are four steps in the algorithm:<br>
+1) Estimation of the moment matrix for each point (sum (Xj-Xi)(Xj-Xi)^T Wij) and then inverting it.<br>
+2) Calculate external forces (gravity/collision/wind etc.)<br>
+3) Calculate the internal forces due to stresses between the current point and neighbour.<br>
+4) Integration of the velocities and then obtaining new positions from them.<br>
+<br>
+For 1) this is how I am calculating it.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7467&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for( k=0;k&lt;numZ;k++) {	
+   for( j=0;j&lt;numY;j++) {		 
+      for( i=0;i&lt;numX;i++) {
+         int current_index =(((k*numY)+j)*numX)+i;
+         glm::mat3 sumM=glm::mat3(1);
+	
+         for(int m=0;m&lt;18;m++) {
+	glm::vec3 n = getNextNeighbour(m); 
+	int ix = int(n.x+i);
+	int iy = int(n.y+j);
+	int iz = int(n.z+k);
+	int index = (((iz*numY)+iy)*numX)+ix;
+	if (index &lt; 0)
+   	   index =0;
+	if (index &gt;=total_points)
+	   index = total_points-1;
+				
+	glm::vec3 Xij = X[index]-X[current_index];
+	float r = glm::length(Xij);
+	float h = 1;					
+	float k = kernel(r,h);
+	rho_i[current_index] += k*mass;
+
+	glm::mat3 tmp = glm::mat3(1);
+	tmp[0][0] = Xij.x*Xij.x;	tmp[0][1] = Xij.x*Xij.y;	tmp[0][2] = Xij.x*Xij.z;
+	tmp[1][0] = Xij.y*Xij.x;	tmp[1][1] = Xij.y*Xij.y;	tmp[1][2] = Xij.y*Xij.z;
+	tmp[2][0] = Xij.z*Xij.x;	tmp[2][1] = Xij.z*Xij.y;	tmp[2][2] = Xij.z*Xij.z;
+						
+	sumM += k*tmp;
+            }		
+        Vol[current_index] = mass/rho_i[current_index];
+        Minv[current_index] = glm::inverse(sumM);
+        }
+    }
+}
+</code></pre></div>
+2) is obvious <br>
+3) is more involved and this is how i calculate the internal forces. D is a vec3 containing the three coefficients of the elasiticity matrix.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7467&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//Compute internal forces
+int j,k;
+float d15 = Y / (1.0f + nu) / (1.0f - 2 * nu);
+float d16 = (1.0f - nu) * d15;
+float d17 = nu * d15;
+float d18 = Y / 2 / (1.0f + nu);
+
+glm::vec3 D(d16, d17, d18); //Isotropic elasticity matrix D
+
+//Calculate displacement
+for(i=0;i&lt;total_points;i++) {
+   U[i] = X[i]-Xi[i]; 
+}
+
+glm::mat3 delU = glm::mat3(1);  
+glm::mat3 e = glm::mat3(1);             //strain
+glm::mat3 s = glm::mat3(1);	//stress
+glm::mat3 B = glm::mat3(1);
+
+//Calculate derivatives
+for( k=0;k&lt;numZ;k++) {	
+   for( j=0;j&lt;numY;j++) {		 
+      for( i=0;i&lt;numX;i++) { 
+         int current_index =(((k*numY)+j)*numX)+i;
+         glm::vec3 sumMx = glm::vec3(0);
+         glm::vec3 sumMy = glm::vec3(0);
+         glm::vec3 sumMz = glm::vec3(0);
+         for(int m=0;m&lt;18;m++) {
+	glm::vec3 n = getNextNeighbour(m); 
+	int ix = int(n.x+i);
+	int iy = int(n.y+j);
+	int iz = int(n.z+k);
+	int index = (((iz*numY)+iy)*numX)+ix;
+	if (index &lt; 0)
+	   index =0;
+	if (index &gt;=total_points)
+	   index = total_points-1;
+					
+	glm::vec3 Xij = X[index]-X[current_index];
+	float r = glm::length(Xij);
+	float h = 3*r;
+	glm::vec3 Uij = U[index]-U[current_index];
+	sumMx += Uij.x*Xij*kernel(r,h);
+	sumMy += Uij.y*Xij*kernel(r,h);
+	sumMz += Uij.z*Xij*kernel(r,h);
+            }		
+            glm::vec3 delUx = Minv[current_index]*sumMx;
+            glm::vec3 delUy = Minv[current_index]*sumMy;
+            glm::vec3 delUz = Minv[current_index]*sumMz;
+            delU = glm::mat3(delUx, delUy, delUz);
+            glm::mat3 delUT = glm::transpose(delU);
+            e = 0.5*( delU + delUT + delUT*delU);
+            s[0][0] = D.x*e[0][0]+D.y*e[1][1]+D.y*e[2][2];
+            s[1][1] = D.y*e[0][0]+D.x*e[1][1]+D.y*e[2][2];
+            s[2][2] = D.y*e[0][0]+D.y*e[1][1]+D.x*e[2][2];
+        
+            s[0][1] = D.z*e[0][1];
+            s[1][2] = D.z*e[1][2];
+            s[2][0] = D.z*e[2][0];
+
+            s[0][2] = s[2][0];
+            s[1][0] = s[0][1];
+            s[2][1] = s[1][2];
+
+            B = - 2*Vol[current_index]*(delU + I)*s*Minv[current_index];
+            for(int m=0;m&lt;18;m++) {
+	  gm::vec3 n = getNextNeighbour(m); 
+	  int ix = int(n.x+i);
+	  int iy = int(n.y+j);
+	  int iz = int(n.z+k);
+	  int index = (((iz*numY)+iy)*numX)+ix;
+                if (index &lt; 0)
+	     index =0;
+	  if (index &gt;=total_points)
+	     index = total_points-1;
+
+                glm::vec3 Xij = X[index]-X[current_index];
+	  float r = glm::length(Xij);
+	  float h = 3;
+    	  F[index] += B*Xij*kernel(r,h);
+	  F[current_index] -= B*Xij*kernel(r,h);
+            }
+        }
+    }
+}</code></pre></div>
+
+4) Currently I am using explicit Euler integration from an existing code so this is fine.<br>
+<br>
+Thanks,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Meshless FEM</h3>
+				<div class="date">Posted: <strong>Tue Oct 04, 2011 9:17 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi all,<br>
+   Finally, I got it working. Thanks to Marco Fratarcangeli for sharing his implementation with me.<br>
+The only problem was that for the final step, you need to use the LeapFrog integration rather than explicit integration. I added it in and the result is this,</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Meshless FEM [SOLVED]</h3>
+				<div class="date">Posted: <strong>Tue Oct 04, 2011 7:36 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Nice! Did you add this to your open cloth project?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Meshless FEM [SOLVED]</h3>
+				<div class="date">Posted: <strong>Wed Oct 05, 2011 11:31 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi Dirk.
+   <blockquote class="uncited"><div>Nice! Did you add this to your open cloth project?</div></blockquote>
+   Not yet but I will be doing it as soon as I get some time.<br>
+<br>
+Regards,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Meshless FEM [SOLVED]</h3>
+				<div class="date">Posted: <strong>Sat Oct 08, 2011 8:46 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi all,<br>
+   I have just updated the OpenCloth repository(<a href="http://code.google.com/p/opencloth/" class="postlink">http://code.google.com/p/opencloth/</a>) to include my meshless FEM code.<br>
+<br>
+As always comments and critics welcome.<br>
+<br>
+Regards,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Meshless FEM [SOLVED]</h3>
+				<div class="date">Posted: <strong>Sat Oct 08, 2011 9:48 am</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">That's great, I will add it up to my collection. =)<br>
+<br>
+But I am doing character simulation, if I use it in the future, I will let you know how it goes. Cheers Man !</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Meshless FEM [SOLVED]</h3>
+				<div class="date">Posted: <strong>Sat Oct 08, 2011 3:55 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content"><blockquote><div><cite>Dr.Shepherd wrote:</cite>That's great, I will add it up to my collection. =)<br>
+<br>
+But I am doing character simulation, if I use it in the future, I will let you know how it goes. Cheers Man !</div></blockquote>
+Sure Dr. Shepherd, <br>
+   Do let me know about how it helps you. All the best for your work.<br>
+<br>
+Regards,<br>
+Mobeen</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

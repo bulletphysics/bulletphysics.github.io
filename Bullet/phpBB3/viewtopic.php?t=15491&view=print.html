@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; SDF link collisions change robot behavior, despite no interaction with robot</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>SDF link collisions change robot behavior, despite no interaction with robot</h2>
+		<p><a href="viewtopic.php%3Ft=15491.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=15491</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>SDF link collisions change robot behavior, despite no interaction with robot</h3>
+				<div class="date">Posted: <strong>Fri Jan 05, 2024 7:17 pm</strong></div>
+				<div class="author">by <strong>joro4o</strong></div>
+				<div class="content">I created a robot that sends motor values to joints at each step of the simulation. I also generate a grid of SDF links. For some reason, the behavior changes when if I drag the SDF links in GUI mode, despite no interaction between them and the robot. Why could this be? I've included relevant code:<br>
+<br>
+generate.py:<br>
+--------------------------------------------<br>
+import pyrosim.pyrosim as pyrosim<br>
+def Create_World():<br>
+    pyrosim.Start_SDF("world.sdf")<br>
+<br>
+    for i in range(10):<br>
+        for j in range(10):<br>
+            pyrosim.Send_Cube(name=f"Box{i}", pos=[-10+i*1.5,10+j*1.5,.51] , size=[1,1,1])<br>
+    pyrosim.End()<br>
+<br>
+<br>
+def Create_Robot():<br>
+    pyrosim.Start_URDF("body.urdf")<br>
+    pyrosim.Send_Cube(name="Torso", pos=[0,0,1.5] , size=[1,1,1])<br>
+    pyrosim.Send_Joint( name = "Torso_FrontLeg" , parent= "Torso" , child = "FrontLeg" , type = "revolute", position = [0.5,0,1])<br>
+    pyrosim.Send_Cube(name="FrontLeg", pos=[0.5,0,-0.5] , size=[1,1,1])<br>
+<br>
+    pyrosim.Send_Joint( name = "Torso_BackLeg" , parent= "Torso" , child = "BackLeg" , type = "revolute", position = [-0.5,0,1])<br>
+    pyrosim.Send_Cube(name="BackLeg", pos=[-0.5,0,-0.5] , size=[1,1,1])<br>
+<br>
+    pyrosim.End()<br>
+<br>
+Create_World()<br>
+Create_Robot()<br>
+<br>
+simulate.py:<br>
+----------------------------------<br>
+import pybullet_data<br>
+import pybullet as p<br>
+import time<br>
+import pyrosim.pyrosim as pyrosim<br>
+import numpy as np<br>
+import random<br>
+<br>
+physicsClient = p.connect(p.GUI)<br>
+p.setAdditionalSearchPath(pybullet_data.getDataPath())<br>
+<br>
+<br>
+p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)    <br>
+<br>
+p.setGravity(0,0,-9.<img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"><br>
+<br>
+planeId = p.loadURDF("plane.urdf")<br>
+p.loadSDF("world.sdf")<br>
+robotId = p.loadURDF("body.urdf")                   <br>
+<br>
+pyrosim.Prepare_To_Simulate(robotId)             <br>
+<br>
+backLegSensorValues = np.zeros(1000)<br>
+frontTargetAngles = np.zeros(1000)<br>
+backTargetAngles = np.zeros(1000)<br>
+<br>
+frontAmplitude = np.pi/4<br>
+frontFrequency = 10<br>
+frontPhaseOffset = 0<br>
+<br>
+backAmplitude =  np.pi/4<br>
+backFrequency = 10<br>
+backPhaseOffset =  np.pi/3<br>
+<br>
+stateOfLinkZero = p.getBasePositionAndOrientation(robotId)                               <br>
+positionOfLinkZero = stateOfLinkZero[0]<br>
+xCoord = positionOfLinkZero[0]<br>
+print('Initial X Coordinate= ', xCoord)<br>
+<br>
+for i in range(1000):<br>
+<br>
+    p.stepSimulation()<br>
+    frontTargetAngles<em class="text-italics"> = frontAmplitude * np.sin(frontFrequency * i + frontPhaseOffset)<br>
+    backTargetAngles<em class="text-italics"> = backAmplitude * np.sin(backFrequency * i + backPhaseOffset)<br>
+<br>
+<br>
+    pyrosim.Set_Motor_For_Joint(<br>
+    bodyIndex = robotId,<br>
+    jointName = "Torso_FrontLeg",<br>
+    controlMode = p.POSITION_CONTROL,<br>
+    targetPosition = frontTargetAngles<em class="text-italics">,<br>
+    maxForce = 500)<br>
+<br>
+    pyrosim.Set_Motor_For_Joint(<br>
+    bodyIndex = robotId,<br>
+    jointName = "Torso_BackLeg",<br>
+    controlMode = p.POSITION_CONTROL,<br>
+    targetPosition = backTargetAngles<em class="text-italics">,<br>
+    maxForce = 500)<br>
+<br>
+    time.sleep(1/4000)<br>
+<br>
+<br>
+    if i%100 == 0 or i == 999:<br>
+        stateOfLinkZero = p.getBasePositionAndOrientation(robotId)                              <br>
+        positionOfLinkZero = stateOfLinkZero[0]<br>
+        xCoord = positionOfLinkZero[0]<br>
+        print('X Coordinate= ', xCoord)<br>
+<br>
+p.disconnect()</em></em></em></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SDF link collisions change robot behavior, despite no interaction with robot</h3>
+				<div class="date">Posted: <strong>Wed Mar 05, 2025 1:52 am</strong></div>
+				<div class="author">by <strong>lorde</strong></div>
+				<div class="content">Is PyBullet recalculating physics differently when objects are moved manually in GUI mode?<br>
+<a href="https://geometrydashlitepc.io/" class="postlink"><span style="color:#FFFFFF"><span style="font-size:1%;line-height:116%">Geometry Dash</span></span></a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

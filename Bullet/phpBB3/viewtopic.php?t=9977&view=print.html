@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [Solved] Sphere bounce problems on triangle mesh</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[Solved] Sphere bounce problems on triangle mesh</h2>
+		<p><a href="viewtopic.php%3Ft=9977.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9977</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[Solved] Sphere bounce problems on triangle mesh</h3>
+				<div class="date">Posted: <strong>Thu Jun 12, 2014 11:39 pm</strong></div>
+				<div class="author">by <strong>cj3j</strong></div>
+				<div class="content">I just wanted to share my experience investigating problems I encountered with a sphere bouncing/colliding with triangle mesh geometry, for posterity.<br>
+<br>
+The first problem I was having was that a sphere bouncing on flat ground would come to rest much sooner than expected. I tracked this down to this line of code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9977&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btSequentialImpulseConstraintSolver::setupContactConstraint( ... )
+...
+velocityError -= penetration / infoGlobal.m_timeStep;</code></pre></div>
+
+I'm not really sure what this code's purpose is, but it was basically reducing the restitution of the bouncing sphere. Commenting it out fixed the bouncing, however now the sphere would occasionally pop up off of the flat triangle mesh if the sphere was rolling along the mesh. I tracked this down to a problem with the contact point. You would expect the contact point between a sphere and flat ground to be directly below the center of the sphere, but sometimes it was being offset. I tracked this down to the code in:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9977&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>SphereTriangleDetector::collide( ... )
+...
+if (isInsideContactPlane) {
+    if (facecontains(sphereCenter,vertices,normal)) {
+        ...
+    } else {
+    // !!! The code here sets the contact point to a point on one of the edges of the triangle rather a point that is towards the sphere's center</code></pre></div>
+
+I added the following code which fixed my problem:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9977&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// if the triangle is part of a triangle mesh and is perfectly flat on the ground,
+// then we want the contact point to be perfectly below the ball, not off to the side a bit (which causes
+// the ball to skip up off the ground)
+if ( hasContact ) {
+	contactPoint = sphereCenter - normal*distanceFromPlane;
+}</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

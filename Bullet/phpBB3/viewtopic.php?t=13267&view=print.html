@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Test_LinearMath</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Test_LinearMath</h2>
+		<p><a href="viewtopic.php%3Ft=13267.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13267</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Test_LinearMath</h3>
+				<div class="date">Posted: <strong>Wed Sep 01, 2021 6:14 pm</strong></div>
+				<div class="author">by <strong>kmanuele</strong></div>
+				<div class="content">I have successfully built Bullet3 in VS2019, the Test_* files seem to run ok in x64 Release mode<br>
+Except for Test_LinearMath, where I get a "no SIMD enabled ..." message.<br>
+If I set BT_USE_SSE_IN_API in the preprocessor directives, I get a long list of errors.<br>
+<br>
+Any help on what is going on, how to get this test to run, use of SIMD in Bullet3, etc. ??<br>
+<br>
+thanks <br>
+<br>
+Kevin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Test_LinearMath</h3>
+				<div class="date">Posted: <strong>Wed Dec 08, 2021 10:25 am</strong></div>
+				<div class="author">by <strong>paulweustink</strong></div>
+				<div class="content">You probably need to steer this with the setting <strong class="text-strong">BT_USE_DOUBLE_PRECISION</strong><br>
+This is from btScalar.h in the LinearMath folder:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13267&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>            //Do not turn SSE on for ARM (may want to turn on BT_USE_NEON however)
+#elif (defined (_WIN32) &amp;&amp; (_MSC_VER) &amp;&amp; _MSC_VER &gt;= 1400) &amp;&amp; (!defined (BT_USE_DOUBLE_PRECISION))
+			#if _MSC_VER&gt;1400
+				#define BT_USE_SIMD_VECTOR3
+			#endif
+
+			#define BT_USE_SSE
+			#ifdef BT_USE_SSE
+
+#if (_MSC_FULL_VER &gt;= 170050727)//Visual Studio 2012 can compile SSE4/FMA3 (but SSE4/FMA3 is not enabled by default)
+			#define BT_ALLOW_SSE4
+#endif //(_MSC_FULL_VER &gt;= 160040219)
+
+			//BT_USE_SSE_IN_API is disabled under Windows by default, because 
+			//it makes it harder to integrate Bullet into your application under Windows 
+			//(structured embedding Bullet structs/classes need to be 16-byte aligned)
+			//with relatively little performance gain
+			//If you are not embedded Bullet data in your classes, or make sure that you align those classes on 16-byte boundaries
+			//you can manually enable this line or set it in the build system for a bit of performance gain (a few percent, dependent on usage)
+			//#define BT_USE_SSE_IN_API
+			#endif //BT_USE_SSE
+			#include &lt;emmintrin.h&gt;
+#endif</code></pre></div>
+
+So if I read this correctly the use of DOUBLES (8 byte floats) switches off the SIMD and SSE optimizations, that are meant for 4 byte floats?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

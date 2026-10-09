@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Backward Integration Cloth Simulation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Backward Integration Cloth Simulation</h2>
+		<p><a href="viewtopic.php%3Ft=401.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=401</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Backward Integration Cloth Simulation</h3>
+				<div class="date">Posted: <strong>Wed Jul 05, 2006 4:50 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">Because Dennis from Meqon (now ageia) had asked me my 2c on different cloth simulations, I ended up spending a couple weekends implementing a backward integrator.  Its just easier to show something than to try and explain something.  Actually all the demo framework, asset creation, and writeup took more time than the core implementation, but, well, that's what you need to do in order to show something.<br>
+<br>
+The URL for the demo, writeup, and source is at:<br>
+  www dot melax dot com slash cloth<br>
+<br>
+I assume you can decode the above line (all lower case).   I dont want the search engines to pick this up yet since I want to do some more polishing and provide more detailed explanations of the math for those who might be intimidated.   I certainly welcome anyone here from the Bullet community to have a look at this time.  <br>
+<br>
+Any feedback is welcome.   <br>
+<br>
+The posted .cpp files are not quite current, but close enough.<br>
+<br>
+There are lots of details that dont seem to end up in the published research papers out there.  For example, Im curious if anybody ever tried to modify the "filter" between sucessive conjugate gradient iterations to adapt to whether a point will actually collide or not.  Or is symmetric constraints the only option.  <br>
+<br>
+If anybody has a strong opinion on template metaprogramming (one way or the other), then check out the expression optimization system that I used.  I think its a reasonable compromise that has the best of both worlds - sweet looking high level code without the performance penalty and without relying on overly complicated recursive compiler tricks.<br>
+<br>
+<br>
+Note, I realize that there are different approaches to simulating cloth.  I'm not saying that one is right and one is wrong.  Only that I believe backward integration might be the right choice in some circumstances.  Certainly each approach has its own set of advantages and disadvantages.  <br>
+<br>
+<br>
+As I mentioned any discussion is most welcome.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 05, 2006 6:18 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Thanks for the demo Stan. Fun stuff!<br>
+<br>
+I have a few random comments on the subject of cloth.<br>
+<br>
+- What everyone calls "Verlet" is just sequential position projection (SPP) along with a certain choice of integrator (the Verlet integrator). One could also do SPP with any other integrator.<br>
+<br>
+- SPP constraints do not affect momentum, so SPP cannot be used to simulate an oscillating pendulum. This is one reason why SPP looks unnatural in some cases.<br>
+<br>
+- Sequential impulses (SI) can be used to simulate cloth. SI can be used to simulate oscillating pendulums.<br>
+<br>
+- SI can model constraint softness, giving the appearance of stretchiness without stability issues. See this handy tip from Russell Smith: <a href="http://www.ode.org/ode-latest-userguide.html#sec_3_8_2" class="postlink">http://www.ode.org/ode-latest-userguide.html#sec_3_8_2</a><br>
+<br>
+- If one uses SI for cloth and rigid body simulation, the two systems may be coupled with bilateral response. Stability will be an issue for large mass ratios.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 05, 2006 7:29 am</strong></div>
+				<div class="author">by <strong>John Schultz</strong></div>
+				<div class="content">Hi Stan- looks good, fast and stable.<br>
+<br>
+Comments:<br>
+<br>
+Dean Macri @ Intel released an implicit cloth demo; I could not find the page/source on Intel's site (was not as fast/stable as your example).<br>
+<br>
+While searching for Dean's paper/demo, I found this link, with source:<br>
+<br>
+<a href="http://www.people.fas.harvard.edu/~hchong/cs276r/index.html" class="postlink">http://www.people.fas.harvard.edu/~hcho ... index.html</a><br>
+<br>
+Re: Verlet Integration- it has been called semi-implicit; not aware of anyone calling it implicit. More info on the so-called Verlet (Newton-Stormer-Verlet) integrator here (recommeded by Erin): <a href="http://www.amazon.com/gp/product/3540430032/ref=sr_11_1/104-9914748-2181563?ie=UTF8" class="postlink">http://www.amazon.com/gp/product/354043 ... 63?ie=UTF8</a><br>
+<br>
+Re: Jacobsen-style Verlet cloth- a demo that shows the difference between "Verlet cloth" and implicit cloth would be useful. With both versions highly optimized, I would estimate that "Verlet cloth" would run faster and look more realistic (any KE error is easy to fix up). I have also successfully blended springs with projected updates to give a slightly springy feel to otherwise non-springy Verlet cloth. Stability is guaranteed via clamping. For stiff cloth-like structures, I would agree that implicit cloth should dominate.<br>
+<br>
+If it's possible to make an implicit cloth integrator run faster and look as realistic as Verlet cloth, that would be very cool indeed. It would also be cool to see a good solution for kinetic energy correction (I believe Baraff+Witkin and others worked on a few different methods).<br>
+<br>
+Perhaps a 3-way demo with Verlet cloth, implicit cloth, and Erin's suggested sequential impulse cloth would be a worthwhile exploration?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 05, 2006 5:52 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">moved my reply here, because general cloth discussion will reach more people:<br>
+<br>
+<a href="http://continuousphysics.com/Bullet/phpBB2/viewtopic.php?p=1280" class="postlink">http://continuousphysics.com/Bullet/php ... php?p=1280</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Cloth Mechanical model</h3>
+				<div class="date">Posted: <strong>Thu Jul 06, 2006 12:01 am</strong></div>
+				<div class="author">by <strong>deberle</strong></div>
+				<div class="content">Hey,<br>
+<br>
+     So I saw that you are experimenting with the model from Ko's paper and had some questions for you. Are you using it on irregular meshes or grids? He later published a paper about irregular meshes, but I believe I found an error. First the function should be based on the distance perpendicular to the edge shared by the triangles. If you use the actual distance, the amount of force pushing apart the vertices varies, even though the mass of the particles (if area based) does not.<br>
+<br>
+      I have also run into a problem when not applying any force if there is tension for bend and doing the same for compression under stretch and shear. Putting in an if statement based on this leads to a discontinuous response and I've have noticed artifacts which I believe result from this. Have you encountered this and if so have you come up with a solution?<br>
+<br>
+      I am favoring models based on the dihedral angle, though they lead to a less well conditioned system. In Ko's model if you constrain the two endpoints and let it sag under gravity, no amount of stiffness will bring the four vertices back to a plane.<br>
+<br>
+      While speed is important to me, it is not of the utmost importance. Where I seem to get thrashed is not in the number of CG iterations, but the time for a single sparse matrix multiply. It appears it is not the flops, but the traversal of the vector that might be thrashing the cache. Does anyone have a good suggestion for improving this? My system is naturally blocked and I reorder the vertices to reduce the bandwith. Any suggestions are appreciated. Thanks.<br>
+<br>
+Dave</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 07, 2006 7:18 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Looks very interessting - thanks for sharing this. A nice implementation of the Baraff paper can also be found here:<br>
+<br>
+<a href="http://davidpritchard.org/freecloth/" class="postlink">http://davidpritchard.org/freecloth/</a><br>
+<br>
+And I also like his bibliographie of papers here:<br>
+<br>
+<a href="http://davidpritchard.org/graphics/clothref.html" class="postlink">http://davidpritchard.org/graphics/clothref.html</a><br>
+<br>
+Besides the papers you suggested I recommend also looking into the work of Boxerman here:<br>
+<br>
+<a href="http://www.cs.ubc.ca/~eddybox/" class="postlink">http://www.cs.ubc.ca/~eddybox/</a><br>
+<br>
+Also look for his master thesis. If you cannot find it drop me a mail and I send you a copy. Some other ideas w.r.t. Baraff can be found in the work of Kang:<br>
+<br>
+<a href="http://www.informatik.uni-trier.de/~ley/db/indices/a-tree/k/Kang:Young=Min.html" class="postlink">http://www.informatik.uni-trier.de/~ley ... g=Min.html</a><br>
+<br>
+Again if you cannot find anything I should have it. <br>
+<br>
+The final thing to look into is the work of R. Bridson here:<br>
+<br>
+<a href="http://graphics.stanford.edu/~fedkiw/papers/stanford2003-06.pdf" class="postlink">http://graphics.stanford.edu/~fedkiw/pa ... 003-06.pdf</a><br>
+<a href="http://graphics.stanford.edu/~fedkiw/papers/stanford2002-01.pdf" class="postlink">http://graphics.stanford.edu/~fedkiw/pa ... 002-01.pdf</a><br>
+<br>
+PhD:<br>
+<br>
+<a href="http://www.cs.ubc.ca/~rbridson/docs/rbridson_phd.pdf" class="postlink">http://www.cs.ubc.ca/~rbridson/docs/rbridson_phd.pdf</a><br>
+<br>
+If you look into this papers you will find some parallels to the rigid body time-stepping method in the Guendelman paper - so quite interessting to read...<br>
+<br>
+HTH,<br>
+<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Backward Integration Cloth Simulation</h3>
+				<div class="date">Posted: <strong>Wed Nov 29, 2006 10:32 pm</strong></div>
+				<div class="author">by <strong>Frankyboy</strong></div>
+				<div class="content"><blockquote><div><cite>melax wrote:</cite>The URL for the demo, writeup, and source is at:<br>
+  www dot melax dot com slash cloth
+</div></blockquote>
+
+This link no longer works! Is the code still available?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Backward Integration Cloth Simulation</h3>
+				<div class="date">Posted: <strong>Wed Nov 29, 2006 10:46 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Frankyboy wrote:</cite><blockquote><div><cite>melax wrote:</cite>The URL for the demo, writeup, and source is at:<br>
+  www dot melax dot com slash cloth
+</div></blockquote>
+
+This link no longer works! Is the code still available?</div></blockquote>
+
+Yes, the cached version is here:<br>
+source:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=cloth.cpp" class="postlink">http://www.continuousphysics.com/ftp/pu ... =cloth.cpp</a><br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=cloth_extern.h" class="postlink">http://www.continuousphysics.com/ftp/pu ... h_extern.h</a><br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=conjgrad.cpp" class="postlink">http://www.continuousphysics.com/ftp/pu ... njgrad.cpp</a><br>
+and<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=Optimized%20Expressions.html" class="postlink">http://www.continuousphysics.com/ftp/pu ... sions.html</a><br>
+or follow Optimized Expressions <a href="http://www.melax.com/gamedev.html" class="postlink">http://www.melax.com/gamedev.html</a><br>
+binary demo:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/demos/&amp;file=MELAX3DE_cloth.zip" class="postlink">http://www.continuousphysics.com/ftp/pu ... _cloth.zip</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 29, 2006 11:11 pm</strong></div>
+				<div class="author">by <strong>Frankyboy</strong></div>
+				<div class="content">Many thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Dec 03, 2006 8:22 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">unless i'm misunderstanding something (i've only just glanced through the code), a source file is missing: the function ConjGradientFiltered isn't defined anywhere..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>License</h3>
+				<div class="date">Posted: <strong>Mon Dec 04, 2006 8:38 am</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+The links Erwin posted are NOT the links to the files from melax/Stan.<br>
+<br>
+These files which you get when you follow the links are modified by me and a friend and therefore under the license of GPL.<br>
+<br>
+I posted Erwin the original files from melax/Stan and I think he will put them online pretty fast.<br>
+<br>
+Greetings so far!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Dec 04, 2006 1:01 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks to Genscher, Stan's original posted code is here:<br>
+<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=StanMelaxCloth2006.cpp" class="postlink">http://www.continuousphysics.com/ftp/pu ... th2006.cpp</a><br>
+<br>
+The ConjGradientFiltered snippet extracted:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=401&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int  ConjGradientFiltered(float3N &amp;X, const float3Nx3N &amp;A, const float3N &amp;B,const float3Nx3N &amp;S)
+{
+       // Solves for unknown X in equation AX=B
+       conjgrad_loopcount=0;
+       int n=B.count;
+       float3N q(n),d(n),tmp(n),r(n);
+       r = B - Mul(tmp,A,X);    // just use B if X known to be zero
+       filter(r,S);
+       d = r;
+       float s = dot(r,r);
+       float starget = s * sqr(conjgrad_epsilon);
+       while( s&gt;starget &amp;&amp; conjgrad_loopcount++ &lt; conjgrad_looplimit)
+       {
+               Mul(q,A,d); // q = A*d;
+               filter(q,S);
+               float a = s/dot(d,q);
+               X = X + d*a;
+               if(conjgrad_loopcount%50==0)
+               {
+                       r = B - Mul(tmp,A,X);
+                       filter(r,S);
+               }
+               else
+               {
+                       r = r - q*a;
+               }
+               float s_prev = s;
+               s = dot(r,r);
+               d = r+d*(s/s_prev);
+               filter(d,S);
+       }
+       conjgrad_lasterror = s;
+       return conjgrad_loopcount&lt;conjgrad_looplimit;  // true means we reached desired accuracy in given time - ie stable
+}
+</code></pre></div>
+
+The links in my previous posting on this thread might contain some modifications, but no additional license headers were removed/added.<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Dec 04, 2006 1:30 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Some stuff can still be found here. Note that Stan only released snippets:<br>
+<br>
+<a href="http://www.melax.com/dspring" class="postlink">http://www.melax.com/dspring</a><br>
+<a href="http://www.melax.com/optex" class="postlink">http://www.melax.com/optex</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Dec 04, 2006 1:41 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Your links can be found on the same melax site I posted before in this thread: <a href="http://www.melax.com/gamedev.html" class="postlink">http://www.melax.com/gamedev.html</a> <br>
+<br>
+I think Genscher managed to compile and run those Stan's snippets with a bit of effort:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=StanMelaxCloth2006.cpp" class="postlink">http://www.continuousphysics.com/ftp/pu ... th2006.cpp</a><br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>Some stuff can still be found here. Note that Stan only released snippets:<br>
+<br>
+<a href="http://www.melax.com/dspring" class="postlink">http://www.melax.com/dspring</a><br>
+<a href="http://www.melax.com/optex" class="postlink">http://www.melax.com/optex</a></div></blockquote></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

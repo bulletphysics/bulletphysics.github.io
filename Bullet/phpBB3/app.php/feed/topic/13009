@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13009" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-07-09T23:52:32+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13009</id>
+
+		<entry>
+		<author><name><![CDATA[jak]]></name></author>
+		<updated>2021-07-09T23:52:32+00:00</updated>
+
+		<published>2021-07-09T23:52:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43486#p43486</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43486#p43486"/>
+		<title type="html"><![CDATA[Re: Damping in XPBD]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43486#p43486"><![CDATA[
+Your code certainly looks correct on first glance, though I didn't try to run it, so who knows. I would expect it has more to do with getting everything else set up perfectly to make Rayleigh damping "happy". I was thinking of doing a post on what I've got so far in a little bit, and I was planning to link the source, but I'm not quite ready yet. In the meantime, you can check out the implementation of the generalized XPBD constraint I've been using:<br><div class="codebox"><p>Code: </p><pre><code>template&lt;typename Dvec, typename Vec, uint32_t Nodes&gt;inline void XpbdConstrain(Dvec* X, Dvec* O, float* w, const uint32_t(&amp;is)[Nodes], float C, Vec(&amp;g)[Nodes], float dt, float compliance, float damping, Vec(*dX)[Nodes] = 0) {float alpha = compliance / (dt * dt);float beta = damping * (dt * dt);float gamma = alpha * beta / dt;float ldiv = 0.0f;float damp = 0.0f;for (uint32_t i = 0; i &lt; Nodes; i++) {ldiv += w[is[i]] * dot(g[i], g[i]);damp += dot(Vec(X[is[i]] - O[is[i]]), g[i]);}ldiv = ldiv * (1.0f + gamma) + alpha;float lambda = (-C - gamma * damp) / ldiv;Vec dXBuffer[Nodes];if (!dX) { dX = &amp;dXBuffer; }for (uint32_t i = 0; i &lt; Nodes; i++) {(*dX)[i] = w[is[i]] * lambda * g[i];X[is[i]] += Dvec((*dX)[i]);}}</code></pre></div>Again, I kind of think you won't see a difference, but you can try if you want to.<br><br>Adding to my previous list of gotchas, another thing to keep in mind is that Rayleigh damping intentionally avoids damping rigid body motion, unlike a basic viscous "V *= (1.0f - damping);". Depending on how you're testing damping, this can cause certain kinds of motion to persist far longer than you might expect. You can see this in action in Matthias Müller's <a href="https://matthias-research.github.io/pages/challenges/pendulum.html" class="postlink">Pendulum Challenge</a> by playing with the "edge" and "global" damping coefficients. (Make sure you set compliance to &gt; 0 for all the links first!)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14001">jak</a> — Fri Jul 09, 2021 11:52 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[korzen303]]></name></author>
+		<updated>2021-07-07T16:21:25+00:00</updated>
+
+		<published>2021-07-07T16:21:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43476#p43476</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43476#p43476"/>
+		<title type="html"><![CDATA[Re: Damping in XPBD]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43476#p43476"><![CDATA[
+Hi jak,<br><br>thanks for your reply. I still have not solved this matter. Would you mind posting some code snippets?<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10616">korzen303</a> — Wed Jul 07, 2021 4:21 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jak]]></name></author>
+		<updated>2021-07-06T23:37:02+00:00</updated>
+
+		<published>2021-07-06T23:37:02+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43475#p43475</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43475#p43475"/>
+		<title type="html"><![CDATA[Re: Damping in XPBD]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43475#p43475"><![CDATA[
+I realize this question is over a year old (so I hope OP was able to figure something out!), but it still comes up on google and it got me doubting the suggested Rayleigh damping from the XPBD paper for use with incompressible FEM. However, after quite a few pitfalls along the way, I finally got it working pretty well for me. I'll describe the places where I had trouble, in case that helps anyone else.<br><br>The biggest step forward was getting a single constraint that covered all degrees of freedom for the nodes of the mesh. I actually got okay-ish damping results from a pure mass-spring cube model fully covered with diagonal springs, but that wasn't very performant or robust. When I moved to separate constraints for hydrostatic and pressure terms, Rayleigh damping became more confusing. First, it's important to note that it doesn't do anything on constraints with no compliance, which was originally true of my pressure term, so that got me for a while. And then, even adding a little bit of compliance to the pressure term, I never found a good algorithm to get that to balance with the hydrostatic term. I actually gave up on Rayleigh damping and switched to good old dependable PBD damping until I also switched my constraint to strain energy, as suggested in <a href="http://interactive-graphics.de/index.php/research/37-position-based-simulation-of-continuous-materials" class="postlink">Position-Based Simulation of Continuous Materials</a>.<br><br>Even with a single constraint over all degrees of freedom, the sim would still behave very strangely around "locked" verts (verts that had been attached with a length-zero distance constraint to a fixed point in space). Setting the inverse mass of the locked verts to 0 fixed that issue, and finally got Rayleigh damping looking generally better than plain PBD damping. Actually, the same applies to verts locked to bones or other moving objects with only one-way coupling. Rayleigh damped verts do seem quite temperamental, and you have to really think about the physics from their perspective to get them working correctly.<br><br>At this point, I still have a PDB damping pathway available to sanity check the Rayleigh dissipation, in case I screw some other subtle little thing up, but I'm here to say that it does seem to work pretty well, once you get all your ducks in a row.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14001">jak</a> — Tue Jul 06, 2021 11:37 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[korzen303]]></name></author>
+		<updated>2020-06-24T10:35:21+00:00</updated>
+
+		<published>2020-06-24T10:35:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42958#p42958</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42958#p42958"/>
+		<title type="html"><![CDATA[Damping in XPBD]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42958#p42958"><![CDATA[
+Hello, I am working on a surgical simulator using XPBD. I am trying to implement a better damping as currently with simple viscous damping the virtual anatomy is either unresponsive or oscillates too much. I have adapted the solveDistVel() method from this repo <a href="https://github.com/matthias-research/pages/blob/master/challenges/pendulum.html" class="postlink">https://github.com/matthias-research/pa ... dulum.html</a> which corrects the velocities after the position projections but it does not make any noticeable difference for volumetric meshes or cloths (it works fine however for things like pendulums or hanging chains ).<br><br>So I came up with the following implementation embedded directly in distance constraints projection (<a href="https://matthias-research.github.io/pages/publications/XPBD.pdf" class="postlink">https://matthias-research.github.io/pag ... s/XPBD.pdf</a>, equation 26) but there is something not quite right in its behavior. Would you be so kind to have a quick look. Maybe you would spot an error in code.<br><div class="codebox"><p>Code: </p><pre><code>float dtSq = dt * dt;float alphaHat = compliance / dtSq;float betaHat = damping * dtSq;float gamma = (alphaHat * betaHat) / dt;for (int i = 0; i &lt; cnstrsCount; i++){DistanceConstraint cnstr = cnstrs[i];//positions at start of the substepfloat4 posA = positions[cnstr.idA];float4 posB = positions[cnstr.idB];float4 predPosA = predictedPositions[cnstr.idA];float4 predPosB = predictedPositions[cnstr.idB];float wA = massesInv[cnstr.idA];float wB = massesInv[cnstr.idB];float wSum = wA + wB;if (cnstr.restLength == 0 || wSum == 0)    continue;float4 N= predPosB - predPosA;float len = math.length(N);if (len &lt;= float.Epsilon)    continue;float C = len - cnstr.restLength;N = N/ len;float4 gradA = -N;float4 gradB = N;float4 velA = predPosA - posA;float4 velB = predPosB - posB;float numA = C + (alphaHat * lambdasA[i]) + (gamma * (math.dot(gradA, velA)));float denA = ((1.0f + gamma) * wSum) + alphaHat;float lambdaA = -numA / denA;float numB = C + (alphaHat * lambdasB[i]) + (gamma * (math.dot(gradB, velB)));float denB = ((1.0f + gamma) * wSum) + alphaHat;float lambdaB = -numB / denB;//these lambda arrays are zeroed at start of each substeplambdasA[i] += lambdaA;lambdasB[i] += lambdaB;predictedPositions[cnstr.idA] +=  lambdaA * gradA * wA;predictedPositions[cnstr.idB] +=  lambdaB * gradB * wB;}</code></pre></div>Thanks for your help!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10616">korzen303</a> — Wed Jun 24, 2020 10:35 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

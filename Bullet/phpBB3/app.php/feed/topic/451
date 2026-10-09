@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/451" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-08-12T21:56:16+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/451</id>
+
+		<entry>
+		<author><name><![CDATA[Eltharyon]]></name></author>
+		<updated>2006-08-12T21:56:16+00:00</updated>
+
+		<published>2006-08-12T21:56:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1505#p1505</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1505#p1505"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1505#p1505"><![CDATA[
+<blockquote class="uncited"><div>Currently Bullet has a multi-layer API, mid-level C++ API, and low-level C++ API. Once things are in place, I intend to add a high-level C-API tha t makes it all very easy. Once you want more control, you go C++. </div></blockquote>The longer this project exists and the more it develops the more I like it! Can't wait to test the new version! Keep it up.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=575">Eltharyon</a> — Sat Aug 12, 2006 9:56 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vicviper]]></name></author>
+		<updated>2006-08-11T21:35:51+00:00</updated>
+
+		<published>2006-08-11T21:35:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1496#p1496</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1496#p1496"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1496#p1496"><![CDATA[
+<blockquote class="uncited"><div>It's a good idea to provide a user-friendly high-level 'MultimaterialTriangleMeshShape' class that manages all the complexity. Can you help with such class, or do you want me to provide an example?</div></blockquote>Yeah, I would like to help you with that, this would allow me to integrate it easier. Just give me some guidelines on where to catch the thread and I'll look something. The idea would be to do something in the lines of the sample in my first post. <br><blockquote class="uncited"><div>Bullet is a general purpose physics engine, so it leaves the decision up to the developer. He can share graphics or duplicate. Notice that Bullet can directly re-use many small vertex/index buffers, each indicated by partId/triangleId. Internally there is a lock/unock mechanism that can be overridden to call the graphics API's unlock to get data back to main memory.</div></blockquote>Well, from my experience on graphics engines, specially DirectX, locking/unlocking a buffer is a very big No-No. once a buffer is filled and locked, nobody garantees you that the graphics API does not do "things" to the buffer, like, compressing with some weird algo, or simply delete it after uploading it to graphics card VRAM.<br><br>When you do a "lock" into a vertex/index buffer to read from it, what happens is not only that the API gives you a pointer to the raw data, it can also take its time decompressing the buffer to a "readable" mode, or worse, downloading it from graphics vram. The worst case scenario is that if you lock a buffer that the graphics card is currently using for rendering, the whole system will stall, waiting for the current primitive batch to finish rendering, before returning a valid pointer (and before downloading from vram, or decompressing, etc)<br><br>I'm not sure about OpenGL, but DirectX specifically requests that, at render time, Lock/Unlock operations over a vertex/index for reading data should be kept to a bare minimum, but, given that this is a driver issue, I bet OpenGL also suffers from this.<br><br>As of today, when you create a vertex/index buffer in Managed Mode (aka, safe mode) in DirectX, DirectX keeps a copy of the buffer in system Ram, and then uploads it to graphics VRAM, only when there's more buffers than VRAM availiable, the driver uploads the buffer to VRAM and deletes old buffers on demand (and at that time, the buffers should be in unlocked mode), but generally, the buffers are lockable quite fast, because it will just give you the pointer to the copy of the buffer in RAM, but only because this is the behavior of today APIs and Drivers. This has lead a lot of people to think that the buffers are there to lock and read data easily.<br><br>But, Nobody guarantees you that in the next version of DirectX, OpenGL, or on your next driver update, the location and performance of buffer lock/unlock changes dramatically.<br><br>Another really big reason not to use vertex/index buffers for reading data is that, for all next generation systems, it is expected to do projects using multithreading, that means, running the graphics engine in one thread, and the physics/AI in another thread. The problem here will be that, if the physics engine locks a buffer to read data and perform some collision detection, the graphics engine will stall, waiting for the buffer to be unlocked. Or, if the graphics engine is rendering using that buffer, and the physics engine needs its data, the physics engine will stall, waiting to be able to lock the buffer.<br><br>In other words: a good design should lock/unlock buffers at load time, the only lockable buffers at render time should be Dynamic, Write_Only buffers (particles, morphs, animatables, etc)<br><blockquote class="uncited"><div><blockquote class="uncited"><div>The only type of geometry that would be bad to store in the physics engine would be a terrain heightmap. For heightmaps, game engines usually provide an interface from which the graphics engine "sucks" triangles on demand, a Physics engine should provide something like that, so the large terrain heightmap can be shared with the graphics engine and the physics engine.<br><br>maybe a "TerrainShape" ?</div></blockquote>Bullet allows for creating triangles "on demand", given an axis aligned bounding box. Someone already made some heightfield tutorial.<br><br><a href="http://www.continuousphysics.com/mediawiki-1.5.8/index.php?title=Height_Field" class="postlink">http://www.continuousphysics.com/mediaw ... ight_Field</a><br><br>Thanks for the feedback,<br>Erwin</div></blockquote>Good to know, I'll take a look<br><br>Thanks in advance<br><br>Vic<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=559">vicviper</a> — Fri Aug 11, 2006 9:35 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-08-11T15:27:22+00:00</updated>
+
+		<published>2006-08-11T15:27:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1490#p1490</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1490#p1490"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1490#p1490"><![CDATA[
+It's a good idea to provide a user-friendly high-level 'MultimaterialTriangleMeshShape' class that manages all the complexity. Can you help with such class, or do you want me to provide an example?<br><br>Currently Bullet has a multi-layer API, mid-level C++ API, and low-level C++ API. Once things are in place, I intend to add a high-level C-API tha t makes it all very easy. Once you want more control, you go C++.<br>This requires documentation too, which requires time on my side, which is a sparce resource <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br><br>Bullet is a general purpose physics engine, so it leaves the decision up to the developer. He can share graphics or duplicate. Notice that Bullet can directly re-use many small vertex/index buffers, each indicated by partId/triangleId. Internally there is a lock/unock mechanism that can be overridden to call the graphics API's unlock to get data back to main memory.<br><blockquote class="uncited"><div>The only type of geometry that would be bad to store in the physics engine would be a terrain heightmap. For heightmaps, game engines usually provide an interface from which the graphics engine "sucks" triangles on demand, a Physics engine should provide something like that, so the large terrain heightmap can be shared with the graphics engine and the physics engine.<br><br>maybe a "TerrainShape" ?</div></blockquote>Bullet allows for creating triangles "on demand", given an axis aligned bounding box. Someone already made some heightfield tutorial.<br><br><a href="http://www.continuousphysics.com/mediawiki-1.5.8/index.php?title=Height_Field" class="postlink">http://www.continuousphysics.com/mediaw ... ight_Field</a><br><br>Thanks for the feedback,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Aug 11, 2006 3:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vicviper]]></name></author>
+		<updated>2006-08-11T12:24:13+00:00</updated>
+
+		<published>2006-08-11T12:24:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1489#p1489</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1489#p1489"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1489#p1489"><![CDATA[
+Hi, I've been reading the triangle mesh interface code, I had no time yet to test something with it, but I'm beginning to find it quite complex to follow.<br><br>I would like to propose an alternative method to load a triangle mesh into Bullet, to see what people thinks:<br><br>bvhTriangleShape* myShape = new bvhTriangleShape;<br><br>TriangleGeometry* myGeom = myShape-&gt;LockGeometry();<br><br>   myGeom-&gt;AddMaterial("Sand",restitution,friction);<br>   myGeom-&gt;AddMaterial("Rock",restitution,friction);<br>   myGeom-&gt;AddMaterial("Wood",restitution,friction);<br>   myGeom-&gt;AddMaterial("HotLava",restitution,friction);<br>   .<br>   .<br><br>   myGeom-&gt;AddVertex(x,y,z);<br>   myGeom-&gt;AddVertex(x,y,z);<br>   .<br>   .<br><br>   myGeom-&gt;AddTriangle(v1,v2,v3,"Sand");<br>   myGeom-&gt;AddTriangle(v1,v2,v3,"Sand");<br>   myGeom-&gt;AddTriangle(v1,v2,v3,"HotLava");<br>   .<br>   .<br>   .<br><br>myShape-&gt;UnlockGeometry(myGeom);<br><br>Basically "TriangleGeometry" class would store a raw list of materials, vertices and triangles. When you do the "Lock", any hierarchy previously stored in myShape is deleted, and when we call "Unlock", the hierarchy for the given geometry is computed and optimized (this mechanism also gives the hability to modify the given geometry if needed, by just locking/modifying/unlocking again)<br><br><br>Of course, this method means that the geometry would be stored internally by Bullet, and it would not share the renderable vertex and index buffers of the graphics interface.<br><br>About the External, shared geometry vs internally stored geometry, I know a good amount of people arround here preffer shared geometry, because it saves memory, but I would like you to consider this:<br><br>In a real application, where we have a game level with 20.000 triangles and 300 different materials, it is more than possible than different vertex formats are required. Also, for lightning calculations, it is common to split the levels per rooms, or even less, so, a level is actually comprised by a lot of tiny vertex/index buffers, not a large one. Just this makes impossible to share the geometry with a physics engine.<br><br>Also, the "saving memory" argument may not be true either: Any modern rendering engine uses index/vertex buffers to store geometry, once they're unlocked after being filled, they can't be shared anymore by any API other than the graphics system itself. Actually, we cannot be sure if the buffer still exists in memory, but in the graphics card VRAM.<br><br>The only time when we can use a vertex/index buffer is at load time, when we're filling it, but after we unlock it, it will become invalid for us to continue using it.<br><br>The only type of geometry that would be bad to store in the physics engine would be a terrain heightmap. For heightmaps, game engines usually provide an interface from which the graphics engine "sucks" triangles on demand, a Physics engine should provide something like that, so the large terrain heightmap can be shared with the graphics engine and the physics engine.<br><br>maybe a "TerrainShape" ?<br><br>Please discuss!<br><br>Vic<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=559">vicviper</a> — Fri Aug 11, 2006 12:24 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-08-10T08:42:03+00:00</updated>
+
+		<published>2006-08-10T08:42:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1484#p1484</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1484#p1484"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1484#p1484"><![CDATA[
+Bullet now supports per-trangle materials.<br><br>Per-triangle friction/restitution requires a ContactAddedCallback implementation. This callback can calculate and overwrite the friction and/or restitution in the contact point.<br>Each CollisionObject that needs this material-callback has to set the collisionFlag to ccdObjectCi.m_collisionFlags = CollisionObject::customMaterialCallback;<br>See ConcaveDemo for an example, in particular CustomMaterialCombinerCallback.<br><br><a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=bullet-1.8d.zip" class="postlink">Download 1.8d source zip</a><br><br>This needs testing.<br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Aug 10, 2006 8:42 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-08-07T19:50:45+00:00</updated>
+
+		<published>2006-08-07T19:50:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1469#p1469</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1469#p1469"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1469#p1469"><![CDATA[
+There is already some preparations inside the BVH that identifies the triangle (by index/part number). This will be used for your request.<br><br>It has been added to the new google code repository, see Issues in <br><a href="http://code.google.com/p/bullet/" class="postlink">http://code.google.com/p/bullet/</a><br><br>Either 'soon' or 'when its done' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Aug 07, 2006 7:50 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Eltharyon]]></name></author>
+		<updated>2006-08-07T09:58:37+00:00</updated>
+
+		<published>2006-08-07T09:58:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1464#p1464</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1464#p1464"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1464#p1464"><![CDATA[
+materials per triangle are a requested feature and can be found on the TODO list here: <a href="http://www.continuousphysics.com/mediawiki-1.5.8/index.php?title=BulletTodo" class="postlink">http://www.continuousphysics.com/mediaw ... BulletTodo</a><br><br>no word as to when these will be done as far as I'm aware of, but they should  be done eventually <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=575">Eltharyon</a> — Mon Aug 07, 2006 9:58 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vicviper]]></name></author>
+		<updated>2006-08-11T11:57:55+00:00</updated>
+
+		<published>2006-08-06T07:55:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1463#p1463</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1463#p1463"/>
+		<title type="html"><![CDATA[trimeshes and materials]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1463#p1463"><![CDATA[
+In  the last project I did (a golf simulation game), I used a custom collision detection library I made specifically for that game, the field was stored as a BVH triangle mesh, but also, for every triangle, I included a reference to a physical properties table. That was important because in a golf game, different surfaces matter a lot in the game, like the green area versus a sand bunker area.<br><br>I noticed that right now bullet only support a single physical properties set for the whole trimesh. I don't need that feature right now, but, I was wondering what you would propose in case someone would need it.<br><br>Thanks in advance<br><br>Vic<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=559">vicviper</a> — Sun Aug 06, 2006 7:55 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

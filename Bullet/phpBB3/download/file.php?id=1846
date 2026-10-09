@@ -1,0 +1,204 @@
+/*
+Bullet Continuous Collision Detection and Physics Library
+Copyright (c) 2015 Google Inc. http://bulletphysics.org
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it freely,
+subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+*/
+
+#include "BasicExample.h"
+
+#include "BulletCollision/CollisionDispatch/btGhostObject.h"
+
+#include "btBulletDynamicsCommon.h"
+#define ARRAY_SIZE_Y 1
+#define ARRAY_SIZE_X 3
+#define ARRAY_SIZE_Z 3
+#define PI 3.14159265358979323846
+
+#include "LinearMath/btVector3.h"
+#include "LinearMath/btAlignedObjectArray.h"
+
+#include "../CommonInterfaces/CommonRigidBodyBase.h"
+#include <BulletCollision\Gimpact\btGImpactCollisionAlgorithm.h>
+#include <BulletInverseDynamics\details\MultiBodyTreeImpl.hpp>
+#include "LinearMath/btConvexHullComputer.h"
+
+struct BasicExample : public CommonRigidBodyBase
+{
+	BasicExample(struct GUIHelperInterface* helper)
+	: CommonRigidBodyBase(helper)
+	{
+	}
+	virtual ~BasicExample() {}
+	virtual void initPhysics();
+	virtual void renderScene();
+	virtual void stepSimulation(float deltaTime);
+	virtual bool keyboardCallback(int key, int state);
+	void resetCamera()
+	{
+		float dist = 7.66;
+		float pitch = -41.2;
+		float yaw = 150;
+		float targetPos[3] = { 1, 1, 1 };
+		m_guiHelper->resetCamera(dist, yaw, pitch, targetPos[0], targetPos[1], targetPos[2]);
+	}
+};
+
+static BasicExample* basicExample = NULL;
+
+btDiscreteDynamicsWorld* world;
+btRigidBody* blockRigid;
+
+void BasicExample::initPhysics()
+{
+	createEmptyDynamicsWorld();
+	world = m_dynamicsWorld;
+
+	m_dynamicsWorld->getSolverInfo().m_solverMode =
+		//SOLVER_RANDMIZE_ORDER | 
+		//SOLVER_FRICTION_SEPARATE | 
+		SOLVER_USE_WARMSTARTING |
+		SOLVER_USE_2_FRICTION_DIRECTIONS |
+		SOLVER_ENABLE_FRICTION_DIRECTION_CACHING |
+		//SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION | 
+		SOLVER_CACHE_FRIENDLY |
+		SOLVER_SIMD |
+		SOLVER_INTERLEAVE_CONTACT_AND_FRICTION_CONSTRAINTS;
+	m_collisionConfiguration->setConvexConvexMultipointIterations(5, 5);
+	m_collisionConfiguration->setPlaneConvexMultipointIterations(5, 5);
+	
+	printf("m_splitImpulse = %d, m_friction = %f, m_splitImpulsePenetrationThreshold = %f\n",
+		m_dynamicsWorld->getSolverInfo().m_splitImpulse, m_dynamicsWorld->getSolverInfo().m_friction,
+		m_dynamicsWorld->getSolverInfo().m_splitImpulsePenetrationThreshold);
+
+	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
+
+	if (m_dynamicsWorld->getDebugDrawer())
+		m_dynamicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawWireframe + btIDebugDraw::DBG_DrawContactPoints);
+
+	{
+		m_dynamicsWorld->setGravity(btVector3(0, 0, 0));
+
+		btTransform transform;
+		transform.setIdentity();
+		transform.setOrigin(btVector3(0, 2.0f, 0));
+		
+		btBoxShape* sensorShape = createBoxShape(btVector3(0.05 / 2, 0.1 / 2, 0.1 / 2));
+		sensorShape->setMargin(0.025);
+		m_collisionShapes.push_back(sensorShape);
+		btPairCachingGhostObject* sensorGhost = new btPairCachingGhostObject();
+		sensorGhost->setCollisionFlags(sensorGhost->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
+		sensorGhost->setCollisionShape(sensorShape);
+		sensorGhost->setUserPointer(NULL);
+		sensorGhost->setWorldTransform(transform);
+		m_dynamicsWorld->addCollisionObject(sensorGhost);
+		//m_dynamicsWorld->addCollisionObject(sensorGhost, btBroadphaseProxy::SensorTrigger, btBroadphaseProxy::AllFilter & ~btBroadphaseProxy::SensorTrigger);
+		m_dynamicsWorld->getBroadphase()->getOverlappingPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
+		//m_dynamicsWorld->getPairCache()->setOverlapFilterCallback();
+		
+
+		transform.setOrigin(btVector3(-0.1f, 2.0f, 0));
+
+		btBoxShape* blockShape = createBoxShape(btVector3(0.01 / 2, 0.05 / 2, 1.0 / 2));
+		blockShape->setMargin(0.005);
+		m_collisionShapes.push_back(blockShape);
+		blockRigid = createRigidBody(1, transform, blockShape);
+		blockRigid->setUserPointer(NULL);
+		blockRigid->setFriction(0.5);
+		blockRigid->setCollisionFlags(blockRigid->getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
+		blockRigid->setAnisotropicFriction(btVector3(1, 1, 1), btCollisionObject::CF_ANISOTROPIC_FRICTION);
+		blockRigid->setRestitution(0);
+		blockRigid->setContactProcessingThreshold(0.005f);
+		blockRigid->setSleepingThresholds(0.01f, 0.01f);
+	}
+
+	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
+}
+
+bool BasicExample::keyboardCallback(int key, int state)
+{
+	bool handle = false;
+	if (state)
+	{
+		switch (key)
+		{
+		case B3G_F2: {
+						 handle = true;
+						 int num = m_dynamicsWorld->getDispatcher()->getNumManifolds();
+						 if (num == 0)
+						 {
+							 printf("getNumManifolds : 0\n");
+						 }
+						 for (int i = 0; i < num; i++)
+						 {
+							 btPersistentManifold* contactManifold = m_dynamicsWorld->getDispatcher()->getManifoldByIndexInternal(i);
+
+							 int numContacts = contactManifold->getNumContacts();
+							 printf("numContacts: %d getNumManifolds: %d \n", numContacts, num);
+							 //contactManifold->getContactPoint();
+							 for (int j = 0; j < numContacts; j++)
+							 {
+								 btManifoldPoint cp = contactManifold->getContactPoint(j);
+								 btVector3 wb = cp.getPositionWorldOnB();
+								 btVector3 nb = cp.m_normalWorldOnB;
+								 btScalar dist = cp.m_distance1;
+								 printf("%d PositionWorldOnB:(%f, %f, %f) NormalWorldOnB:(%f, %f, %f) PenetrationDistance:%f\n", j, wb.getX(), wb.getY(), wb.getZ(), nb.getX(), nb.getY(), nb.getZ(), dist);
+								 //m_dynamicsWorld->getDebugDrawer()->drawContactPoint(cp.m_positionWorldOnB, cp.m_normalWorldOnB, cp.m_distance1, cp.m_lifeTime, btVector3(1, 1, 1));
+							 }
+						 }
+						 printf("----------------------------\n");
+						 break;
+		}
+		case B3G_F3: {
+						 btMotionState* state = blockRigid->getMotionState();
+						 btTransform s;
+						 state->getWorldTransform(s);
+						 s.setOrigin(s.getOrigin() + btVector3(0.005, 0, 0));
+						 state->setWorldTransform(s);
+						 //blockRigid->setCenterOfMassTransform(s);
+						 blockRigid->proceedToTransform(s); //使用该方法来使刚体瞬移
+						 //blockRigid->saveKinematicState(deltaTime);
+						 break;
+		}
+		case B3G_F4: {
+						 btMotionState* state = blockRigid->getMotionState();
+						 btTransform s;
+						 state->getWorldTransform(s);
+						 s.setOrigin(s.getOrigin() + btVector3(-0.005, 0, 0));
+						 state->setWorldTransform(s);
+						 blockRigid->proceedToTransform(s); //使用该方法来使刚体瞬移
+						 break;
+		}
+		default:
+			break;
+		}
+	}
+	return handle;
+}
+
+void BasicExample::renderScene()
+{
+	CommonRigidBodyBase::renderScene();
+}
+
+float totalTime = 0;
+void BasicExample::stepSimulation(float deltaTime)
+{
+	CommonRigidBodyBase::stepSimulation(deltaTime);
+}
+
+CommonExampleInterface* BasicExampleCreateFunc(CommonExampleOptions& options)
+{
+	basicExample = new BasicExample(options.m_guiHelper);
+	return basicExample;
+}
+
+B3_STANDALONE_EXAMPLE(BasicExampleCreateFunc)

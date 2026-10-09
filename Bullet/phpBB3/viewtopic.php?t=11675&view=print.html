@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Non-linear Gauss-Seidel solver</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Non-linear Gauss-Seidel solver</h2>
+		<p><a href="viewtopic.php%3Ft=11675.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11675</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Sat Apr 29, 2017 11:33 am</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Hi,<br>
+One more question from me regarding 2D physics <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Following the evolution of Box2D, I see that different approaches were tried in terms of position stabilization. I understand Baumgarte stabilization (feeding a fraction of the position error back into the velocity solver) and can see some potential issues with that (since the velocities are adjusted, momentum can be artificially affected). I see that the other method Box2D uses is NGS (non-linear Gauss-Seidel), but haven't found a good description of the idea behind this or how it works (I haven't seen any papers or presentations on it). I thought it might be helpful to ask about this before trying to puzzle over the code to work out how it works.<br>
+Any insight into this would be appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Mon May 01, 2017 5:13 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Box2D has a separate projection step for the position constraints. As you pointed out already in another thread velocity constraints are linear, but position constraints are not. So you need to solve a *non-linear* system equations. Conceptually you can think of an outer loop for the Newton solver and then an inner loop for the Gauss-Seidel loop. If you merge both loops you get the NGS. <br>
+<br>
+An easier way to think about it is since you are now changing positions you cannot pre-compute effective mass and Jacobians as they depend on the position themselves. So for every constraint you project you need to re-build everything that depends on the involved bodies. This makes this solver pretty expensive. <br>
+<br>
+Conceptually this is identical to position based dynamics, but for rigid bodies. There are a bunch of papers on this. In the end this all goes back to Shake and Rattle solvers from the 70s. E.g. see here<br>
+<a href="http://www.unige.ch/~hairer/poly-sde-mani.pdf" class="postlink">http://www.unige.ch/~hairer/poly-sde-mani.pdf</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Wed May 03, 2017 12:23 pm</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Thanks Dirk. I suppose I'm still not clear on it... from Erin Catto's "Modeling and solving constraints" presentation, for the velocity constraints, we use:<br>
+<br>
+Newton's law -&gt; v2 = v1 + M^-1 * p<br>
+Virtual work -&gt; p = J^T * lambda<br>
+Velocity constraint -&gt; J * v2 = 0<br>
+<br>
+and we form the linear equation<br>
+<br>
+J * M^-1 * J^T * lambda = -J*v<br>
+<br>
+which we solve for lambda. But what's the equivalent system that we're solving for the position constraints?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Wed May 03, 2017 3:00 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Short answer:<br>
+J * M^-1 * J^T * lambda = -C<br>
+<br>
+This is the <strong class="text-strong">inner</strong> linear system in a Newton solver. The lambdas are now 'pushes' and get transformed into translations dx and rotations dq similar to impulses. After you applied the pushes the Jacobian and mass matrix (inertia) changes, so you need to rebuild J * M^-1 * J^T.<br>
+<br>
+When you solve on the velocity level the solution will drift away from the constraint manifold. E.g. For a  pendulum the mass will not swing on a cicular arc, but slowly drift away. The above approach then performs an orthogonal projection back onto the constraint manifold. For the pendulum this simply means that after you integrated the velocities and found the new position you find the closest point on the circle and put it there. <br>
+<br>
+This is the easiest form of so called projection methods. Check out the paper by Hairer I linked above. Or for a simpler introduction you can look at the Jacobsen cloth paper or Mueller's Position Based Dynamics.<br>
+<br>
+This is a more practical explanation. If you want a more mathematical derivation let me know and I give it a try <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Thu May 04, 2017 2:04 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Wasn't post projection (NGS) sort of hacky? As in J was stolen from the velocity derivation and plugged in to form a psuedo position formula? Description of this by Cline in his nice paper: <a href="https://pdfs.semanticscholar.org/476d/fce4be549655938c499663af246702cbc781.pdf" class="postlink">https://pdfs.semanticscholar.org/476d/f ... cbc781.pdf</a>. In there it seems J is taken from the velocity derivation and used as G for position projection. Seems a bit like math hackery, but since this is all non-physical anyway I suppose it makes quite a bit of practical sense. Thoughts?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Thu May 04, 2017 3:52 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">No, there is nothing hacky about orthogonal projection. It is simply an alternativ to Baumgart'ish stabilization to keep your solution on the constraint manifold. The linked Hairer paper discusses projection methods in general and in the context of multibody simulation.<br>
+<br>
+The J is not stolen, it comes from here:<br>
+<br>
+C( x + dx ) ~= C( x ) + J * dx</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Thu May 04, 2017 11:47 am</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Hi Dirk, thanks again for your reply.<br>
+The Hairer paper is a bit beyond me at this stage but I remember reading the Jacobsen paper a while back and it seemed to make sense, the thrust of it being to resolve constraints on the position level directly by projecting bodies out of penetration.<br>
+I understand your description, for the most part, though I'm not clear on the concept of the inner and outer loops, or how you arrive at the equation mentioned. I would definitely be interested in seeing a derivation if you have time <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Thu May 04, 2017 5:02 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Ok, I give it a try.  <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> <br>
+<br>
+We integrate the forces and velocities to find a new position <strong class="text-strong">p</strong> using some unstabilized method of choice. Given the new <strong class="text-strong">p</strong> we now want to find a correction <strong class="text-strong">dp</strong> such that <strong class="text-strong">C(p + dp) = 0</strong>. We can approximate this as shown above by <br>
+<br>
+<strong class="text-strong">C(p + dp) ~= C(p) + J * dp = 0</strong><br>
+<br>
+We also want to restrict the correction to be orthogonal to the constraint manifold and scale the corrections relative to the masses such that<br>
+<br>
+<strong class="text-strong">dp = M^-1 * J^T * lambda</strong><br>
+<br>
+Combining the two equations yields<br>
+<br>
+<strong class="text-strong">J * M^-1 * J^T * lambda = -C(p)</strong><br>
+<strong class="text-strong">dp = M^-1 * J^T * lambda</strong><br>
+<br>
+This is a single Newton-Raphson step for an iterative solution to a non-linear system of constraints. So we essentially get <br>
+<br>
+<strong class="text-strong">for ( n Newton iterations )<br>
+{<br>
+    J * M^-1 * J^T * lambda = -C(p)<br>
+    dp = M^-1 * J^T * lambda<br>
+    p += dp<br>
+}</strong><br>
+<br>
+This builds the outer iterative loop. We could now also solve the inner linear system <strong class="text-strong">J * M^-1 * J^T lambda = -C(p)</strong> using an iterative Gauss-Seidel solver. This is what I referred to as the inner loop earlier. NGS simply merges the two loops solving a single constraint at a time constantly updating the mass, Jacobians and constraint error to account for the non-linearity of the problem. The key observation is simply that both the inertia and Jacobian are functions of the position and need to be updated when iterating on the position level.<br>
+<br>
+Of course you can make the argument now that for small errors you can keep <strong class="text-strong">M </strong>and <strong class="text-strong">J</strong> constant and only iterate on the constraint error. You might even want to reuse the Jacobian and mass from the velocity phase. This is essentially what split impulse does. My experience is identical to Erin's in Box2d that this works relatively good for contacts, but not so much for joints.<br>
+<br>
+I am not a mathematician and I have more of a practical engineering view on the problem, but hopefully this still makes sense!<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Mon May 08, 2017 4:29 am</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Thanks Dirk, I think I mostly understand it now.<br>
+Just to clarify, are you saying that this
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11675&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>For n iterations
+  Update J, M and C using p
+  Solve J * M^-1 * J^T * lambda = -C
+  Update dp
+  Update p
+</code></pre></div>
+(Assuming p, dp, C and lambda are vectors and J and M are matrices, ie we're solving all constraints simultaneously each iteration)<br>
+<br>
+Is equivalent to this
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11675&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>For n iterations
+  For m constraints
+    Update J, M and C using p
+    Solve lambda = -C / (J * M * J^ T)
+    Update dp 
+    Update p
+</code></pre></div>
+(Assuming J is a vector and M and C are scalar, ie we're solving a single constraint per inner loop iteration)? I guess this is similar to the similarity between the matrix algorithm used in the "iterative dynamics with temporal coherence" paper vs box2d's sequential impulse?<br>
+<br>
+Also from my limited understanding of Newton raphson, it doesn't always converge to a solution, how are we sure here that this won't be an issue?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Mon May 08, 2017 4:45 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I would add one step for clarity:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11675&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>For n Newton iterations
+  Update J, M and C using p
+  For m Gauss-Seidel iterations
+    For k constraints
+      Solve lambda = -C / (J * M * J^ T)
+      Update dp 
+      Update p
+</code></pre></div>
+
+And then you merge it like you show. I would not say it is equivalent, but it can converge against the same solution if you iterate enough.<br>
+<br>
+Yes, in the final implementation we usually solve a single scalar constraint. You can also solve several constraints together. This is called blocked solving. You have no guarantee for convergence, but things work usually fine in practice.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Tue May 09, 2017 1:38 am</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Thanks Dirk. Really appreciate all your replies.<br>
+After about 9 years of studying this stuff in my spare time I almost feel ready to code a simulator <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Non-linear Gauss-Seidel solver</h3>
+				<div class="date">Posted: <strong>Tue May 09, 2017 2:52 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Sure thing! I am glad I could help. <br>
+<br>
+One thing I found over the years is that the theory can be quite involved, but the final result is relatively simple. On the downside there are quite some problems in the detail and implementation. But you will figure those out along the way and there is often no general solution. E.g. a game developer can solve many problems in content, while a middleware provider has to solve most problems in code.<br>
+<br>
+I think you should give it a try. The way you asked questions and how you presented them I think you will be fine. I always recommend to use Box2D Lite as an initial guideline and then iterate from there. The magic ingredient for physics engines is to try to always keep a workable solution and solve one problem at a time. Physics and collisions get really hard if you try to solve too much at a time and need to figure out what is broken. Baby steps are a good way to learn to walk. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

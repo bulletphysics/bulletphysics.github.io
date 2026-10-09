@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13554" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-03-29T03:39:18+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13554</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-03-29T03:39:18+00:00</updated>
+
+		<published>2023-03-29T03:39:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44306#p44306</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44306#p44306"/>
+		<title type="html"><![CDATA[Re: Setting the center of mass does nothing except translate the model]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44306#p44306"><![CDATA[
+Alas, physics simulations require approximation and abstraction in order to run in real-time on real-life hardware.  The discrepancy between how you think it should work, and how it actually works, is a manifestation of that truth.<br><br>The fact of the matter is: it is possible to get the effect you want, but you have to do it the right way.  For maximum flexibility for how the physics library can be used I believe shape-manager and COM-shifter utilities really do belong outside the domain of the physics engine itself.  Not everyone needs either one of them, and those who do will want full control.<br><br>Somewhat unrelated to your particular frustration: I do find this question interesting:<br><blockquote class="uncited"><div>What is the purpose of Bullet's "setCenterOfMassTransform()" function?</div></blockquote><strong class="text-strong">btRigidBody::getCenterOfMassTransform()</strong> is identical to the <strong class="text-strong">btCollisionBody::getWorldTransform()</strong> of the base class, which is odd.  So I went and examined the implementations of the setters to see if they were also identical.  No, they are different!  Each one sets <strong class="text-strong">btCollisionObject::m_worldTransform</strong>, however they have distinct side effects and the <strong class="text-strong">btRigidBody</strong> method doesn't call the the other on <strong class="text-strong">btCollisionObject</strong> and therefore it lacks that one's side effect.  Meanwhile, I have always used <strong class="text-strong">setWorldTransform()</strong>, which means I wasn't getting the side effects of <strong class="text-strong">setCenterOfMassTransform()</strong>.  Should I have been calling both?  My spidey sense tells me there is a bug here, but it AFAIK it has never bitten me and it doesn't look serious so I didn't bother to track it down.  If I were to write a fresh game engine today using Bullet I would probably take the time to understand it better.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Mar 29, 2023 3:39 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Andrei Despinoiu]]></name></author>
+		<updated>2023-03-26T12:59:46+00:00</updated>
+
+		<published>2023-03-26T12:59:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44299#p44299</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44299#p44299"/>
+		<title type="html"><![CDATA[Re: Setting the center of mass does nothing except translate the model]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44299#p44299"><![CDATA[
+<blockquote class="uncited"><div>Then, you could write a custom utility to "shift the world-frame COM transform while keeping the collision geometry's world-frame transform invariant" that could operate on such an object.</div></blockquote>I'm sorry but what is the purpose of Bullet's "setCenterOfMassTransform()" function if I need to write such a custom utility?<br><br>This is so weird... What I was hoping to add was a small red sphere, for debug purposes, to see where its center of mass was and how it behaved if I changed its position, how it can tip over, or not. Instead, I get this "always in the middle", simply because that's where the model's origin (or "pivot" point) is.<br><br>Let's say I have one of those adjustable fitness weights (example <a href="https://www.google.com/search?q=adjustable+weight+lift+bar&amp;tbm=isch" class="postlink">here</a>). I unscrew one of the sides, so all that's left is the bar that was holding them, and the opposite side. The center of mass is no longer in the center, but according to Bullet, it is. Doesn't mater how heavy the opposite side is, it can be 800 kg, the bar 1 kg, and Bullet is like "yeah, center".<br><br>I guess you could treat them as separate models... and have the one with all the weights "attached" be positioned so that its pivot is in the middle, while the one with only one weight attached has the pivot where you would think the center of mass would be. Same with an axe or a hammer, for example. Or an (opened) umbrella.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14576">Andrei Despinoiu</a> — Sun Mar 26, 2023 12:59 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-03-24T15:03:33+00:00</updated>
+
+		<published>2023-03-24T15:03:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44295#p44295</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44295#p44295"/>
+		<title type="html"><![CDATA[Re: Setting the center of mass does nothing except translate the model]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44295#p44295"><![CDATA[
+Yes, the center of mass (COM) defines the local-frame origin which means: in order to shift the COM relative to the geometry you must shift the geometry instead.  For this reason:<strong class="text-strong"> btRigidBody::setCenterOfMassTransform()</strong> can only be understood to mean "set the COM transform in the world-frame".<br><br>The way to give a vehicle a COM outside of its own geometry is to use the aforementioned <strong class="text-strong">btCompoundShape</strong> trick.<br><br>That youtube video talks about how they move the COM back into the bounds of the vehicle when it dies, to allow it to tumble more realistically.  It is is possible to do this in Bullet.  You would first have to make sure every potentially shifted object is already using a <strong class="text-strong">btCompoundShape</strong>.  This because implicit shapes (<strong class="text-strong">btSphereShape</strong>, <strong class="text-strong">btBoxShape</strong>, etc) don't have a COM-relative transform feature and thus cannot be shifted in this way.  Then, you could write a custom utility to "shift the world-frame COM transform while keeping the collision geometry's world-frame transform invariant" that could operate on such an object.<br><br>Hard core game devs will often employ "shape sharing" where they use one shape instance to provide the collision info for multiple bodies.  This is an optimization because it reduces memory footprint and hence improves CPU cache performance.  In such a paradigm shifting the COM of a shape would affect ALL of the bodies, so COM-shfting a single body would require giving it a different shape... iff it was sharing.  This is why general-purpose COM-shift technology cannot be part of the default Bullet tool set: it could only be implemented as a feature of a sufficiently intelligent "shape management" system.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Mar 24, 2023 3:03 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Andrei Despinoiu]]></name></author>
+		<updated>2023-03-24T11:54:38+00:00</updated>
+
+		<published>2023-03-24T11:54:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44294#p44294</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44294#p44294"/>
+		<title type="html"><![CDATA[Re: Setting the center of mass does nothing except translate the model]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44294#p44294"><![CDATA[
+I do have compound shapes working. It was a bit of a pain to set up, but they are working...<br><br>But you should be able to shift the vertices of a collision up or down, for example a capsule surrounding a character that has its origin at its feet, so it's not only covering the upper part of its body. This is like... basic stuff. And it's completely missing from Bullet. FOR YEARS! Why do you have to translate the geometry down? I think all animations will also have to be edited to be translated down, to match it.<br><br>So the center of mass is in world space. That is... unbelievable. It should be in local space (local to the collision). It's absurd to have it in world space for something that moves around the scene. It means you have to set it every frame, and currently, if you set it every frame it shoots up if the center of mass btVector3 is "0, 0.15, 0", because it just directly sets the world transform.<br><br>WORST OF ALL, setting the center of mass doesn't do what you think it does!<br><br>For example, how do I do this in Bullet (at 5:11)?<br><a href="https://youtu.be/LG1CtlFRmpU?t=311" class="postlink">https://youtu.be/LG1CtlFRmpU?t=311</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14576">Andrei Despinoiu</a> — Fri Mar 24, 2023 11:54 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-03-23T23:14:58+00:00</updated>
+
+		<published>2023-03-23T23:14:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44293#p44293</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44293#p44293"/>
+		<title type="html"><![CDATA[Re: Setting the center of mass does nothing except translate the model]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44293#p44293"><![CDATA[
+Yeah  you don't want to use<strong class="text-strong"> btRigidBody::setCenterOfMassTransform()</strong>.  That sets the world_transform of the object's center of mass and doesn't change the center of mass in the object's local-frame.<br><br>The center of mass in the object's local-frame is, by definition, the origin of the shape geometry.<br><br>Consider a unit mesh cube with eight corners.  The mesh vertices would be with the origin at their center would be:<br><strong class="text-strong"><br>&lt;  0.5,  0.5,  0.5 &gt;<br>&lt;  0.5,  0.5, -0.5 &gt;<br>&lt;  0.5, -0.5,  0.5 &gt;<br>&lt;  0.5, -0.5, -0.5 &gt;<br>&lt; -0.5,  0.5,  0.5 &gt;<br>&lt; -0.5,  0.5, -0.5 &gt;<br>&lt; -0.5, -0.5,  0.5 &gt;<br>&lt; -0.5, -0.5, -0.5 &gt;</strong><br><br>By symmetry the center of mass is at the origin: <strong class="text-strong">&lt;  0.0,  0.0,  0.0 &gt;</strong><br><br>In order to move the center of mass you must move the point.  For example, if we add <strong class="text-strong">&lt; 0.5,  0.5,  0.5 &gt;</strong> to all the points we would produce a cube with the  origin (and hence its center-of-mass) is at one corner:<br><strong class="text-strong"><br>&lt;  1.0,  1.0,  1.0 &gt;<br>&lt;  1.0,  1.0,  0.0 &gt;<br>&lt;  1.0,  0.0,  1.0 &gt;<br>&lt;  1.0,  0.0,  0.0 &gt;<br>&lt;  0.0,  1.0,  1.0 &gt;<br>&lt;  0.0,  1.0,  0.0 &gt;<br>&lt;  0.0,  0.0,  1.0 &gt;<br>&lt;  0.0,  0.0,  0.0 &gt;</strong><br><br>That works fine for mesh shapes and convex hulls...but what about for implicit shapes like <strong class="text-strong">btSphereShape</strong> and <strong class="text-strong">btBoxShape</strong>?  For those you must wrap them in a btCompoundShape and supply the offset transform.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu Mar 23, 2023 11:14 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Andrei Despinoiu]]></name></author>
+		<updated>2023-03-23T21:49:18+00:00</updated>
+
+		<published>2023-03-23T21:49:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44292#p44292</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44292#p44292"/>
+		<title type="html"><![CDATA[Setting the center of mass does nothing except translate the model]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44292#p44292"><![CDATA[
+The way I understand it, the center of mass is the point where you can balance the thing.<br><br>I imagine it can be used with a vehicle, for example, set somewhere underneath the visual representation (geometry), so that it never flips upside-down, or at least greatly reduces the chances of it happening.<br>Or if it's set somewhere above a chair, for example, it should easily tip over, right?<br><br>I set it to -10000 on the .y axis (in OpenGL +Y is up), thinking the thing will always stay upright, like a buoy (device floating on water), but nope. It just teleported it. What am I missing? It just seems to translate my entire entity downwards, or in whatever direction I set the center of mass. Capsule collider, very thin box collider, doesn't matter, even if I drop it from any height, it just rolls on the floor... Of if I set it to +/- 10000 on the X axis, I would expect the capsule to prefer rolling on that side only, but it just doesn't work.<br><br>I set it like this:<br><div class="codebox"><p>Code: </p><pre><code>rigidbody.rb-&gt;activate(); // Wake it up in case it's sleepingbtTransform transf = rigidbody.rb-&gt;getCenterOfMassTransform(); // Same thing as "getWorldTransform()"const btVector3 pos = transf * rigidbody.centerOfMass; // Rotate this point so it's local to it and not in world-space somewhere near the center of the scenetransf.setOrigin(pos);rigidbody.rb-&gt;setCenterOfMassTransform(transf);</code></pre></div>"rigidbody" is an instance of a struct called "RigidbodyComponent".<br>"rigidbody.rb" is the "btRigidBody*" pointer.<br>"rigidbody.centerOfMass" is a btVector3 that I change the values to in the editor GUI (default is 0,0,0).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14576">Andrei Despinoiu</a> — Thu Mar 23, 2023 9:49 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

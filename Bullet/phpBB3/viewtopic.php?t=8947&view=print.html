@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Six legged robot</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Six legged robot</h2>
+		<p><a href="viewtopic.php%3Ft=8947.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8947</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Six legged robot</h3>
+				<div class="date">Posted: <strong>Tue Mar 19, 2013 3:03 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">added some features<br>
+<a href="http://www.youtube.com/watch?v=vOmrSV31ZNw" class="postlink">http://www.youtube.com/watch?v=vOmrSV31ZNw</a><br>
+and renewed old video:<br>
+<a href="http://www.youtube.com/watch?v=L9BhyYopbYg" class="postlink">http://www.youtube.com/watch?v=L9BhyYopbYg</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Tue Mar 19, 2013 9:44 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content"><blockquote><div><cite>lukasdurica wrote:</cite>added some features<br>
+<a href="http://www.youtube.com/watch?v=vOmrSV31ZNw" class="postlink">http://www.youtube.com/watch?v=vOmrSV31ZNw</a><br>
+and renewed old video:<br>
+<a href="http://www.youtube.com/watch?v=L9BhyYopbYg" class="postlink">http://www.youtube.com/watch?v=L9BhyYopbYg</a></div></blockquote>
+Hi Lukas,<br>
+<br>
+The demos are wonderful, have you got a web page for your project?<br>
+<br>
+Cheers.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Wed Mar 20, 2013 7:01 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Thank you for the response. I dont have any website. Just this youtube channel. If you are interested in this project, i can share some informations here.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Wed Mar 20, 2013 11:37 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content"><blockquote><div><cite>lukasdurica wrote:</cite>Hi,<br>
+<br>
+Thank you for the response. I dont have any website. Just this youtube channel. If you are interested in this project, i can share some informations here.</div></blockquote>
+Thanks. I would like to know whether you are using the standard Bullet Hinge constraint and torque function to drive the joint ? Such as: enableAngularMoto()/setMaxMotorImpulse etc in the library.<br>
+<br>
+Cheers.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Thu Mar 21, 2013 3:52 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">Hi again.<br>
+<br>
+       I see. The answer is no, I dont use Hinge. I use btGeneric6DofConstraint instead, but with little modifications. <br>
+I dont use default inner motor, but I use its <span style="color:#FF0000">Limits </span>to set the desired angle. Here is why:<br>
+<br>
+1. inner motor is influenced by gravity and is weak, even when I set maxMotorForce to crazy numbers (max double), i didnt see any changes.<br>
+2. so i used hiLimit and loLimit to control the angle as well as Hinge does. it was also influenced by gravity, but it seemed to be more "stronger" than inner motor and I was lazy to switch it back<br>
+3. i use my own Limits to limit this kind of control<br>
+here is how it works as method:<br>
+<br>
+void RotationalMotor::SetTargetLimitsPosition(double targetAngle, double lowerLimit, double upperLimit)<br>
+    {   <br>
+	if (targetAngle &gt; 180) //if is desired angle &gt; 180 this part of code will fit it into &lt;-180,180&gt;<br>
+	    {<br>
+	    int res = static_cast&lt;int&gt;(targetAngle);<br>
+	    int numOfRot = res / 180;<br>
+	    numOfRot = numOfRot + 1;<br>
+	    targetAngle = targetAngle - numOfRot * 180;<br>
+	    }<br>
+<br>
+	else if (targetAngle &lt; -180)<br>
+	    {<br>
+	    int res = static_cast&lt;int&gt;(targetAngle);<br>
+	    int numOfRot = res / 180;<br>
+	    numOfRot = numOfRot - 1;<br>
+	    targetAngle = targetAngle - numOfRot * 180;<br>
+	    }<br>
+<br>
+		<br>
+	if (lowerLimit &lt; upperLimit) // here I use my own limits<br>
+	    {<br>
+	    if (targetAngle &lt; lowerLimit)<br>
+		{<br>
+		targetAngle = lowerLimit;<br>
+		}<br>
+	    else if (targetAngle &gt; upperLimit)<br>
+		{<br>
+		targetAngle = upperLimit;<br>
+		}<br>
+	    }<br>
+<br>
+<br>
+targetAngle= targetAngle* (Constants::DegreesToRadians); //just  recalculation degrees to radians - radians = (degrees* pi) /180<br>
+<br>
+	6DofJoint.getRotationalLimitMotor(_axis)-&gt;m_loLimit = targetAngle; <br>
+	6DofJoint.getRotationalLimitMotor(_axis)-&gt;m_hiLimit = targetAngle;<br>
+	<br>
+    }<br>
+Here you just set the desired angle, so if you want to control it smoothly , you should create your own regulator.<br>
+<br>
+But this is just the beginning how to use angle control. Here is list of bullet variables, that will improve quality of simulation (my values):<br>
+<br>
+fixedTimeStep = 1000 in stepSimulation(..) method<br>
+subSteps = 10<br>
+number of constraint solvers = 60 <br>
+ERP of constraint = 0.3<br>
+m_limitSoftness =0.0<br>
+linearDamping and angularDamping set to more than 0.8<br>
+but this are maybe too high values, good for my complicated simulation<br>
+<br>
+<br>
+Sorry for my terrible English. Hope this helps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Thu Mar 21, 2013 4:04 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">And yes, I almost forget - if you have 64bit processor use  BT_USE_DOUBLE_PRECISION macro. It definitely improves quality of simulation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Thu Mar 21, 2013 11:05 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content"><blockquote><div><cite>lukasdurica wrote:</cite>And yes, I almost forget - if you have 64bit processor use  BT_USE_DOUBLE_PRECISION macro. It definitely improves quality of simulation.</div></blockquote>
+
+Hi Lukas,<br>
+<br>
+You explained quite clearly! This part of your code
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8947&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int res = static_cast&lt;int&gt;(targetAngle);
+int numOfRot = res / 180;
+numOfRot = numOfRot + 1;
+targetAngle = targetAngle - numOfRot * 180;
+</code></pre></div>
+Maybe could be simplified into
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8947&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>targetAngle = static_cast&lt;int&gt;(targetAngle)%180;   //if numOfRot is not used afterwards
+</code></pre></div>
+
+So you are basically setting the high and low limits both to your target angle and it works? Sounds like a simple hack but produces good result! I thought you would need to compute the torque for each joint etc.<br>
+<br>
+Also, could you explain a bit more on how to turn this macro on? Suppose it should be something like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8947&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#ifndef BT_USE_DOUBLE_PRECISION
+#define BT_USE_DOUBLE_PRECISION TRUE
+#endif
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Fri Mar 22, 2013 11:22 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">Hi, <br>
+Thank you for the simplification, sometimes I mix drinking and programming and this is how it looks like  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+Well, it depends on waht is your IDE and your OS.<br>
+If you use Windows, try to reinstall BulletPhysics library using cmake to start the new project from scratch.<br>
+Here, follow this manual:<br>
+<a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Creating_a_project_from_scratch" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... om_scratch</a><br>
+Look at the fourth image (the red one) and there you can find BT_USE_DOUBLE_PRECISION (8. argument from bottom) and check it.<br>
+Then just continue in manual.<br>
+If you use Linux, (recipes here: <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Installation" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... stallation</a>), just run ccmake before cmake then switch to advanced (key T or something similar, I dont remember it correctly), and find BT_USE_DOUBLE_PRECISION and turn it to ON.<br>
+<br>
+The second thing you have to do set this macro to your project (at least to projects where you use BulletPhysics)<br>
+I dont know your IDE, but it should be similar. Here is image where I added this macro in Eclipse.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Fri Mar 22, 2013 11:23 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">Hope this helps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Sat Mar 23, 2013 11:41 am</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content"><blockquote><div><cite>lukasdurica wrote:</cite>Hope this helps.</div></blockquote>
+Hi Lukas,<br>
+<br>
+It helps a lot. After reading your post and looking into the manual, I found that you can also enable the double precision in compiling libraries by editing the CMakeList.txt:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8947&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>OPTION(USE_DOUBLE_PRECISION "Use double precision"      ON)
+</code></pre></div>
+
+And enable double precision in your project by adding
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8947&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#define BT_USE_DOUBLE_PRECISION
+</code></pre></div>
+at the top of the file Bullet/src/LinearMath/btScalar.h</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Sat Mar 23, 2013 12:29 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">There are more possibilities. I just wanted to show you the easiest one  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> .</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Sat Mar 23, 2013 4:44 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">Hi Lucas,<br>
+<br>
+One more thing, I have switched to Double-precision, and there is no problem with compiling and running, which assumes I have done correctly. <br>
+<br>
+But since I only got two objects in the space, the speed doesn't slow down too much. Is there any way that could prove the double-precision mode is running slower than single-float mode? Not sure which number I should look into.<br>
+<br>
+Cheers.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Sat Mar 23, 2013 7:19 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">Hi Shepherd,<br>
+<br>
+What do you mean with "the speed doesn't slow down too much"?<br>
+Speed of what?<br>
+What do you expect to see? And what do you really see?<br>
+<br>
+The way, I have realized double precision has affect to quality of simulation, that my Hexapod was shaking/jittering after I have reinstalled BulletPhysics, with the same simulation values as before, and I knew that simulation was more stable last time. I forgot to turn on double precision. So I did it. Quality of simulation was back.<br>
+So try to build some chain of constraints, fix it in the space, set some of my values (above) and you should see different type of behavior.<br>
+<br>
+God, I have to do something with my english.<br>
+Hope this helps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Sat Mar 23, 2013 9:32 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content"><blockquote><div><cite>lukasdurica wrote:</cite>Hi Shepherd,<br>
+<br>
+What do you mean with "the speed doesn't slow down too much"?<br>
+Speed of what?<br>
+What do you expect to see? And what do you really see?<br>
+<br>
+The way, I have realized double precision has affect to quality of simulation, that my Hexapod was shaking/jittering after I have reinstalled BulletPhysics, with the same simulation values as before, and I knew that simulation was more stable last time. I forgot to turn on double precision. So I did it. Quality of simulation was back.<br>
+So try to build some chain of constraints, fix it in the space, set some of my values (above) and you should see different type of behavior.<br>
+<br>
+God, I have to do something with my english.<br>
+Hope this helps.</div></blockquote>
+
+Don't worry too much about your English, you have expressed yourself perfectly well.<br>
+<br>
+Then you discovered this by practice. What I mean is that by using double precision, the speed is expected to be about 2x slower than single float mode. So there should be something, like simulation steps, CPU usage etc to see this difference. <br>
+<br>
+Cheers.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Six legged robot</h3>
+				<div class="date">Posted: <strong>Sat Mar 23, 2013 11:32 pm</strong></div>
+				<div class="author">by <strong>lukasdurica</strong></div>
+				<div class="content">Well, no, there is not such a thing. I´ll try to explain how it works.<br>
+There are 32-bit processors and 64-bit processors in ..hm.. modern computers.<br>
+32-bit processors can work with 32-bit-long word and 64 -bit processors can work with 64-bit-long word (so it means that 64 -bit processors can technically work with two 32-bit-long words, but this is not a point).<br>
+Example (just principle):<br>
+32-bit processor: 8,2456<br>
+64-bit processor: 8,24567859<br>
+So double precision means double precision, and if you have got 64bit processor - you can enjoy this advantage.<br>
+But if you think, that 64-bit processor can work with 2 32-bit-long words and when you swtich it to 64-bit,and you are expecting it will be 2*slower, that is not correct. Speed of simulation is not affected by 64-bit precision in this way.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

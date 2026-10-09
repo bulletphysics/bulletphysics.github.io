@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Impulse-based dynamic simulation library (IBDS) - Page 4</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Impulse-based dynamic simulation library (IBDS)</h2>
+		<p><a href="viewtopic.php%3Ft=1279.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1279</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>4</strong> of <strong>7</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 24, 2007 7:33 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">The problem is not the integration of the velocities, positions and rotation. The parabolic integrator is very good for our work (in a system without springs) since we never have a continuous constraint force or impulse in the equation of motion. This is the thing I wanted to tell you. The velocity is modified by impulses before the integration starts. During the integration neither the velocity nor the acceleration is modified. In fact we just need to simulate a ballistic motion (no constraints). The constraints are satisfied due to the changed velocities in the beginning of the step. In fact we determine impulses, so that they change the velocities in the beginning of the step. The impulses are computed so that the constraints are satisfied after a pure ballistic time step.<br>
+<br>
+Of course the parabolic integrator can't be used for rotation integration. I use a Runge-Kutta of fourth order for this. By the way how does the rotation integration work using a symplectic Euler? I want to implement the symplectic Euler for IBDS. Anyway it is possible in my library to exchange the integrator at any time. So why not implementing another one. <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 24, 2007 7:56 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Rotations are also integrated using symplectic Euler, but we ignore the coriolis term for stability</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 24, 2007 8:16 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Rotations are also integrated using symplectic Euler, but we ignore the coriolis term for stability</div></blockquote>
+
+So you solve the equations: <br>
+<br>
+angVel' = J^-1 * torque<br>
+q' = 0.5 * angVel * q<br>
+<br>
+in this way <br>
+<br>
+angVel(t+dt) = J^-1(t) * torque(t) * dt<br>
+q(t+dt) = 0.5 * angVel (t+dt) * q(t) <br>
+<br>
+Right?<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 24, 2007 12:40 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Nearly, for integrating the angular velocity we use the exponential map. See this discussion here and follow Antonio's link or look at the implementation in Bullet.<br>
+<br>
+<a href="http://continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=1124&amp;highlight=exponential+map" class="postlink">http://continuousphysics.com/Bullet/php ... ential+map</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 24, 2007 5:32 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Jan: I'm confused. You say the impulses have no effect on the accuracy of the solution, but the paper you referred me to analyzes the effect of the impulses on the accuracy of the solution.<br>
+<br>
+I think I understand your method, but you haven't convinced me that the parabolic integrator is more accurate than symplectic Euler when you have constraints.<br>
+<br>
+Dirk: I didn't find a big advantage to using the exponential map, so I used the cheaper method. What improvement did you see?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 24, 2007 5:48 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Hah, I asked this on the forum a while ago here <a href="http://continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=1124&amp;highlight=exponential+map" class="postlink">http://continuousphysics.com/Bullet/php ... ential+map</a>, because I also don't see any advantage. So I wondered if anybody can give  me a real reason to use it. Unfortunately KenB only made some mystical statements about molecular dynamics, but when Antonio asked about it he didn't get an answer.<br>
+<br>
+So sorry, I can't answer this. You might don't need to normalize as often, but I doubt if this can be considered a real advantage.<br>
+<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 25, 2007 10:04 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Jan: I'm confused. You say the impulses have no effect on the accuracy of the solution, but the paper you referred me to analyzes the effect of the impulses on the accuracy of the solution.</div></blockquote>
+
+I say that the impulse has no effect on the accuracy of the integrator. The impulse is regarded during integration. Just the velocity of the body at the beginning of the integration changes.<br>
+
+<blockquote class="uncited"><div>
+I think I understand your method, but you haven't convinced me that the parabolic integrator is more accurate than symplectic Euler when you have constraints. </div></blockquote>
+
+Since there is no continuous force or impulse in my equation of motion (even if there are constraints), the parabolic integrator is absolutely exact and very easy to compute. <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 25, 2007 7:27 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Jan: so using your method, you get an exact solution for a pendulum? That is better than any integrator I have ever heard of.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 26, 2007 7:55 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Jan: so using your method, you get an exact solution for a pendulum? That is better than any integrator I have ever heard of.
+</div></blockquote>
+
+No, of course I don't get the exact solution. I would get it, if I could compute the exact impulse and if there wouldn't be any rotation. <br>
+In my method first I compute a correction impulse using the prediction of the joint state. Roughly speaking this is a kind of integration of the constraint forces and this process is not exact. Then the impulse is applied, so it changes the actual velocities. After that the integration of the velocities and positions is done using the parabolic integrator for positions and a Runge-Kutta method for rotations. So in this case the parabolic integrator is exact. The error of the method just occurs when computing the impulse. <br>
+The advantage of the method is that you can guarantee a maximum distance of the joint points at any step. So no Baumgarte or any other stabilization is required since the method is self-stabilizing. In fact we have even used our method once to stabilize a Lagrange multiplier method. <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 26, 2007 5:51 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">So if the solution is not exact, what is the order of the error in terms of h?<br>
+<br>
+Do you have a guaranteed upper bound on the number of iterations necessary to guarantee a maximum distance of the joint points?<br>
+<br>
+Have you tried simulating complex closed loop mechanisms, such as the bricard mechanism? The bricard mechanism is known to be difficult to simulate due to the constraint redundancy.<br>
+<br>
+<a href="http://www.tu-chemnitz.de/ifm/english/e_ifm_ala4bsp_bricard.htm" class="postlink">http://www.tu-chemnitz.de/ifm/english/e ... ricard.htm</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 26, 2007 6:04 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>Have you tried simulating complex closed loop mechanisms, such as the bricard mechanism? The bricard mechanism is known to be difficult to simulate due to the constraint redundancy.<br>
+<br>
+<a href="http://www.tu-chemnitz.de/ifm/english/e_ifm_ala4bsp_bricard.htm" class="postlink">http://www.tu-chemnitz.de/ifm/english/e ... ricard.htm</a></div></blockquote>
+
+Just to be clear, it is supposed to move, correct (because of the aforementioned constraint redundancy)?  I'm curious which methods (such as Featherstone) can actually handle this.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 26, 2007 8:18 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Yes, the bricard mechanism moves in an interesting way. In one configuration it resembles the perimeter of a box, and fully extended it has the shape of a 2D equilateral triangle.<br>
+<br>
+I've only been able to simulate the bricard mechanism efficiently with the joint coordinate (Featherstone) model. The model was augmented with an explicit loop constraint, since joint coordinate models don't handle loops (in general).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 27, 2007 12:34 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>So if the solution is not exact, what is the order of the error in terms of h? </div></blockquote>
+
+The error is of O(h^3). I hope I will be able to implement the methods of higher order correctly. Then the error term will be smaller.<br>
+
+<blockquote class="uncited"><div>Do you have a guaranteed upper bound on the number of iterations necessary to guarantee a maximum distance of the joint points? </div></blockquote>
+
+No, you can't guarantee something like that. It is possible to simulate even complex models with interrupting the iteration after a few steps. For example you can even simulate a tree with 255 ball joints using just 5-10 iterations. Of course then you can't guarantee the maximum distance. Another possibility is a kind of shock propagation after a few iterations when simulating collisions or contacts (see also the work of Guendelman).<br>
+<br>
+For joints you can also use my SLE method or my linear-time method (for acyclic models). Then you usually get the correct impulses after 1-3 iterations when using a maximum distance of 1.0e-6 m. <br>
+<br>
+
+<blockquote class="uncited"><div>Have you tried simulating complex closed loop mechanisms, such as the bricard mechanism? The bricard mechanism is known to be difficult to simulate due to the constraint redundancy.</div></blockquote>
+
+Yes, I also mentioned this model in my thesis. The iterative approach has no problems with loops. I just simulated this model using a time step size of 1/30s. The SLE method was about 16 times faster than real-time.<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 09, 2007 1:10 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I've been thinking about position projection. Your position correction is basically a projected Gauss-Seidel solver for a nonlinear inequality. We can write the problem as mass-weighted constrained optimization problem:<br>
+<br>
+minimize 1/2 d^T M d<br>
+such that C(x + d) &gt;= 0<br>
+<br>
+In your case x = x0 - 1/2*g*h^2 and d = h * v.<br>
+<br>
+To solve this problem we need to compute Lagrange multipliers (the impulses). This leads to the system:<br>
+<br>
+M * d - J^T * impulse = 0<br>
+C(x) + J * d &gt;= 0<br>
+impulse &gt;= 0<br>
+<br>
+We can solve this system<br>
+<br>
+d = inv(M) * J^T * impulse<br>
+K * impulse &gt;= -C, impulse &gt;= 0<br>
+<br>
+where K is the effective mass (J * inv(M) * J^T). To get the solution we need to invert K, but K can be big so we use cheap Gauss-Seidel iteration to solve each constraint sequentially (perhaps block-wise). The additional trick here is that we adjust x after each GS iteration and therefore compute C(x) for each iteration of each constraint. This immediate update of C(x) is not possible if we were to directly invert the big K that governs the entire system. I suspect the immediate update of C(x) improves the convergence of NPGS (nonlinear PGS). In the field of optimization this is technique is used for nonlinear conjugate gradients (NCG).<br>
+<br>
+NPGS is essentially what Thomas Jacobsen (and others before him) did with particle systems. The only difference is that a single the particle distance constraint can be solved exactly. Many constraints cannot be solved exactly (while being true to the mass weighting), so we use the linear approximation above. We have to iterate anyway because of the constraint graph, so linearization is not a huge loss.<br>
+<br>
+We must be extra careful with inequality constraints like contact and joints limits. The position projection can easily overshoot and lead to jitter. So we need to employ accumulated impulses, slop regions, and/or ramped Baumgarte factors. Yes this is messy, heuristic, ad-hoc, artificial, etc, but nonlinear inequatlity equations cannot be solved exactly in a reasonable amount of time. So we do what we've got to do.<br>
+<br>
+So this just addressed position errors. Do we still need to consider velocity errors? I think so for a number of reasons:<br>
+- velocity constraints let us handle restitution and friction (nonholonomic constraints).<br>
+- used properly, velocity constraints can supply us with reaction forces.<br>
+- we can use velocity constraints to prevent position errors from growing.<br>
+<br>
+In my interpretation, your solver works like this:<br>
+1) Use old velocity and gravity to update position.<br>
+2) Project the position errors using NPGS.<br>
+3) Use gravity to update velocity.<br>
+4) Project the velocity errors using PGS.<br>
+<br>
+I am a little uncomfortable with this algorithm because:<br>
+- Step 1 makes the position errors larger than necessary: imagine you have a block sitting on a table. With a 1 second time step the block will fall 5 meters and you have to resolve 5 meters worth of nonlinear position error. Suppose you did not feed forces into the position update and suppose the initial velocity obeyed the velocity constraint, then the initial velocity would be zero. Then you would have zero position error to resolve. Velocity constraints are linear, so they are easier to solve than position errors.<br>
+- Correct me if I'm wrong, but it appears that you do not use a separate velocity state in Step 2. That means that the position projection affects the system's kinetic energy. This also means that you may see reaction impulses in step 4 that do not accurately reflect the correct reaction forces. This would affect the friction strength.<br>
+<br>
+So I propose the following algorithm:<br>
+1) Update velocity according to external forces.<br>
+2) Project the velocity errors using PGS.<br>
+3) Use the new velocity to update positions.<br>
+4) Project the position errors using NPGS (nonlinear PGS). This step would not use the velocity state at all.<br>
+<br>
+Notice that step 3 begins with an (approximately) admissible velocity, so the position error can be very small. Then step 4 can terminate iterations early if the position tolerance is not exceeded. Also, step 4 does not affect kinetic energy, so this will likely lead to more stable stacking, etc. Finally, as I have been harping on before, this is a symplectic integrator and will not generate energy at reasonable step sizes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 09, 2007 8:26 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Erin,<br>
+what you describe is already implemented in Box2 SuperSplit, right? And what do you mean with ramped Baumgarte factors? Where is this used and how does this help?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>4</strong> of <strong>7</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

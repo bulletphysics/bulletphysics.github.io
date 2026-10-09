@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Constraint Problem: Fix Constraint is Not Fixed</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Constraint Problem: Fix Constraint is Not Fixed</h2>
+		<p><a href="viewtopic.php%3Ft=13036.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13036</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Constraint Problem: Fix Constraint is Not Fixed</h3>
+				<div class="date">Posted: <strong>Mon Jul 20, 2020 4:29 am</strong></div>
+				<div class="author">by <strong>lqb</strong></div>
+				<div class="content">Hi, I am using constraints to connect some joints (yellow sphere):
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1836" class="postimage" alt="1.png" onclick="viewableArea(this);" /></dt>
+						<dd>1.png (12.68 KiB) Viewed 14636 times</dd>
+		</dl>
+		
+		
+			</div>
+
+However, as the time goes, the relative position of connected joints changed:
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1837" class="postimage" alt="2.png" onclick="viewableArea(this);" /></dt>
+						<dd>2.png (12.36 KiB) Viewed 14636 times</dd>
+		</dl>
+		
+		
+			</div>
+
+How can I get the connected joints fixed?<br>
+Note that I have to use constraints to connect them because the environment is dynamic: I don't know which joint to connect before hand.<br>
+I would appreciate any help!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraint Problem: Fix Constraint is Not Fixed</h3>
+				<div class="date">Posted: <strong>Mon Jul 20, 2020 7:24 am</strong></div>
+				<div class="author">by <strong>S1L3nCe</strong></div>
+				<div class="content"><a href="../BulletFull/classbtFixedConstraint.html" class="postlink">Fixed constraints</a><br>
+Or you could destroy both bodies to create one with a <a href="../BulletFull/classbtCompoundShape.html" class="postlink">Compound shape</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraint Problem: Fix Constraint is Not Fixed</h3>
+				<div class="date">Posted: <strong>Mon Jul 20, 2020 2:22 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">btFixedConstraints should work ok until you get interconnected pieces with a large number of joints.  As the constraint number grows the whole collection gets "soft" and the constraints will not be fully satisfied.  The collection will appear to "sag" under collisions (and gravity, if you have it). The number of interconnected constraints at which the softness becomes visible depends on your simulation config (substeps, constraint solver iterations) until you start running out of CPU resources at which point your simulation will fail to be real-time.<br>
+<br>
+If your connected objects remain rigid enough for your needs but the actual connections are drifting over time, then that would be unexpected and I would classify it as a "bug".  If that is the case then my first hypothesis would be to guess you are constantly recomputing the local-frame transforms of your constraints, which could introduce drift.  Dunno if that is what you're doing but if you are: then I would recommend you only set the local-frame transforms only once when the constraint is first created.<br>
+<br>
+Yes, as <strong class="text-strong">S1L3nCe</strong> mentioned: you could "connect" two objects by combining them into a btCompoundShape and replacing the two btRigidBodies with one.  This is the only way to achieve true rigidity between connections.  It might take some trickery to get this exactly right because the destruction/reconstruction of byRigidBodies tends to reset contact points which could introduce non-physical pops, and if you wanted to conserve energy/momentum across transitions then you'd have to do much math.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraint Problem: Fix Constraint is Not Fixed</h3>
+				<div class="date">Posted: <strong>Thu Jul 23, 2020 3:39 am</strong></div>
+				<div class="author">by <strong>lqb</strong></div>
+				<div class="content">Thank you. I am using pyBullet, so I guess the "JOINT_FIXED" constraint is the same as btFixedConstraints in Bullet. I do not update anything once I set up the constraint. I also do not have a lot of constraints.<br>
+<br>
+One thing that might be important is that the blue links are connected to motor, while the green links are not. I think that's the reason why the connection between blue links and green links do not have any problem. I inspected all the parameters while running the environment, and I can see there is nothing changed. So I don't know how to fix it using constraints.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

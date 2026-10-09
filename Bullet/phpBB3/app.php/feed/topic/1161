@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1161" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-05-18T16:28:30+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1161</id>
+
+		<entry>
+		<author><name><![CDATA[raigan2]]></name></author>
+		<updated>2007-05-18T16:28:30+00:00</updated>
+
+		<published>2007-05-18T16:28:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4275#p4275</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4275#p4275"/>
+		<title type="html"><![CDATA[Cloth Bending Constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4275#p4275"><![CDATA[
+My angle constraint is: C = (atan2(n2) - atan2(n1)) - theta = 0<br><br>This is in 2D, so it's constraining two linesegs which share a vertex (instead of two triangles which share an edge), and the normals n1,n2 are the perp()'d lineseg vectors (instead of the crossproduct of triangle edges).<br><br>Actually, I started out using the perp'd lineseg vectors, but soon realized that it was simpler to just use the lineseg vectors themselves. I'm not sure if you could do something analogous in 3D.<br><br>This angle constraint behaves _really_ well (though it may be more due to the solver than the formulation of this particular constraint), you can set it to be perfectly rigid (turning the two linesegs into a single rigid shape).. it's much better than anything else I've tried. Start in any arbitrary configuration and they'll snap together regardless of the initial error!<br><br>The Jacobian is (found via LiveMath):<br><br>points p1,p2,p3<br>let vA = p1-p2, vB = p3-p2<br>constraint is C = atan2(vB) - atan2(vA) - theta<br><br>dC/dp1 = Perp(vA) * ( -1 / ( ((vA.y/vA.x)^2 + 1)*(vA.x^2) ) )<br>dC/dp3 = Perp(vB) * ( -1 / ( ((vB.y/vB.x)^2 + 1)*(vB.x^2) ) )<br>dC/dp2 = -(dC/dp1) - (dC/dp3)<br><br>It's possible that the denominator terms on the right can be simplified/reduced to vector operations -- the program I'm using to derive the Jacobians prefers scalars, so I've been treating each vector component as a seperate scalar, it's a bit awkward <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br><br>The only problem is that when p2.x == p1.x or p2.x == p3.x, things are undefined; currently I'm simply skipping/ignoring the constraint when this happens (similar to when a distance constraint finds a current length of 0, thus the direction of projection is undefined). <br><br>This hasn't caused any problems so far, it may simply be due to the fact that the program I'm using only supports arctan(y/x), which is undefined for the same cases. Frankly I have very little theoretical understanding of trig functions or the difference between the implementation of atan() and atan2().<br><br>It seems to me that there should be a simple fix to this problem: rotate everything 90deg, solve in that space, then rotate the solutions back. Haven't tried this yet though, as so far the problem case doesn't happen much in practice (and skipping the constraint in those cases seems to "work").<br><br>Just to be sure, atan2(v) = atan2(v.y,v.x)<br><br>Finally, would it be possible to reduce your 3D constraint into 2D? It seems like you could simply use the shared edge between triangles as the normal of a plane, and constrain the angles in that plane. I guess the problem is how to distribute the correction between the two vertices which form the shared edge..<br><br>raigan<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=748">raigan2</a> — Fri May 18, 2007 4:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Antonio Martini]]></name></author>
+		<updated>2007-05-18T13:53:27+00:00</updated>
+
+		<published>2007-05-18T13:53:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4274#p4274</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4274#p4274"/>
+		<title type="html"><![CDATA[Cloth Bending Constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4274#p4274"><![CDATA[
+<blockquote class="uncited"><div> My personal experience with bending constraints is that the win in quality of your cloth simulation doesn't outweight the extra overhead.<br>Cheers,<br>-Dirk</div></blockquote>you can just use a fast bending constraint where the rest curvature is zero, this is usually almost everywhere on the cloth and use the more complicated type elsewhere. There number of iterations doesn't need to be the same for the entire cloth/set of constraints. Given a set of constraints of any type, we can partition it in subsets accordingly to the desired level of stiffness and type(this usually depends on the location of the subcloth and constraint type) and solve these subsets once every n iterations. so you can have different cloth area with different solving accuracy and the same is valid for constraint types. <br><br>cheers,<br>Antonio<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=145">Antonio Martini</a> — Fri May 18, 2007 1:53 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2007-05-18T13:04:21+00:00</updated>
+
+		<published>2007-05-18T13:04:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4273#p4273</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4273#p4273"/>
+		<title type="html"><![CDATA[Cloth Bending Constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4273#p4273"><![CDATA[
+I think Raigan implement something also based on atan2 a while ago, though in 2D. He seemed very pleased with the results. There should be some posts on this in the forum.<br><br>Out of personal interesst? Where do you see the advantage in your constraint over other implementations? I think the constraint C(n1, n2) = n1 * n2 is the worst formulation, since it can flip and also for a restangle of zero the constraint might be numerical instable. From the back of my head the rule of thumb was to use a constraint based on the dot product (cos) for othogonal vectors and something like sin(theta) = |n1 x n2| for vectors that should be constrained to be parallel. The justification is in the free books of two spanish guys, but I can't find the link at the moment. I can dig it out if somebody is interessted. My personal experience with bending constraints is that the win in quality of your cloth simulation doesn't outweight the extra overhead.<br><br><br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Fri May 18, 2007 1:04 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[clanzotti]]></name></author>
+		<updated>2007-05-18T09:07:25+00:00</updated>
+
+		<published>2007-05-18T09:07:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4272#p4272</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4272#p4272"/>
+		<title type="html"><![CDATA[Re: Cloth Bending Constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4272#p4272"><![CDATA[
+Hi Erin,<br><br>You may want to look at the Bridson's implementation:<br><br><a href="http://www-graphics.stanford.edu/~fedkiw/papers/stanford2003-06.pdf" class="postlink">http://www-graphics.stanford.edu/~fedki ... 003-06.pdf</a><br><br>Regards,<br><br>Carlo Lanzotti<br><br><blockquote class="uncited"><div>I would like to have a cloth bending constraint that can handle a non-zero rest angle. The constraint should not allow reflection of the vertices the negative rest angle. There is one bending constraint per edge shared by two triangles, so there are four vertices involved, some of which may be kinematic. I came up with this constraint:<br><br>sin(theta) = dot(cross(normal1, normal2), edge)<br>cos(theta) = dot(normal1, normal2)<br><br>C = atan2(sin(theta), cos(theta)) - theta_rest<br><br>The constraint is easy to write but the Jacobian is quite nasty because the normals are a function of the various vertex positions.<br><br>My current thinking is to simply rotate the two far vertices (of the shared triangles) about the middle edge.<br><br>Has anyone attempted this or seen such an approach in the literature?</div></blockquote><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=111">clanzotti</a> — Fri May 18, 2007 9:07 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2007-05-18T00:44:47+00:00</updated>
+
+		<published>2007-05-18T00:44:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4270#p4270</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4270#p4270"/>
+		<title type="html"><![CDATA[Cloth Bending Constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4270#p4270"><![CDATA[
+I would like to have a cloth bending constraint that can handle a non-zero rest angle. The constraint should not allow reflection of the vertices the negative rest angle. There is one bending constraint per edge shared by two triangles, so there are four vertices involved, some of which may be kinematic. I came up with this constraint:<br><br>sin(theta) = dot(cross(normal1, normal2), edge)<br>cos(theta) = dot(normal1, normal2)<br><br>C = atan2(sin(theta), cos(theta)) - theta_rest<br><br>The constraint is easy to write but the Jacobian is quite nasty because the normals are a function of the various vertex positions.<br><br>My current thinking is to simply rotate the two far vertices (of the shared triangles) about the middle edge.<br><br>Has anyone attempted this or seen such an approach in the literature?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Fri May 18, 2007 12:44 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

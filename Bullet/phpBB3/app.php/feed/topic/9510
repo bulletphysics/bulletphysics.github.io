@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9510" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-06-17T10:32:44+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9510</id>
+
+		<entry>
+		<author><name><![CDATA[DannyChapman]]></name></author>
+		<updated>2014-06-17T10:32:44+00:00</updated>
+
+		<published>2014-06-17T10:32:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33566#p33566</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33566#p33566"/>
+		<title type="html"><![CDATA[Re: Constraint of multiple objects?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33566#p33566"><![CDATA[
+The 6DOF joint in PhysX is asymmetric (I find this bizarre) - it will generally be more effective if the first actor in the pair is the heavier one. This might be true of the distance constraint too.<br><br>One problem that you may have is that the constraints are generating more angular motion than is desired (due to linearisation). This can happen when there's some joint separation, and/or when the moments of inertia of the objects are small. When the system is integrated this results in the joint separating even more, and then the problem becomes worse etc, until you're left with a jittering mess.<br><br>To improve this you can encourage the solver to solve the constraint using linear forces rather than torques - either artificially increase the moments of inertia of the objects permanently, or pass in a smallish number (e.g. 0.1) to the inverse inertia scale functions on the constraint: PxJoint::setInvInertiaScale0 (and setInvInertiaScale1)<br><br>You will also get better results by: making all the parts in the chain have similar masses, using a small (constant) timestep and increasing the iteration counts (PxRigidDynamic::setSolverIterationCounts - try increasing the position iterations).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1517">DannyChapman</a> — Tue Jun 17, 2014 10:32 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kingchurch]]></name></author>
+		<updated>2014-06-13T16:35:59+00:00</updated>
+
+		<published>2014-06-13T16:35:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33557#p33557</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33557#p33557"/>
+		<title type="html"><![CDATA[Re: Constraint of multiple objects?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33557#p33557"><![CDATA[
+If you just use a spring force to correct position error between each pair of bodies it will work assuming g:<br>1. You tune the PD constants of the spring nicely and don't attempt to correct any error "instantly"<br>2. Lower your simulation step size to small enough to pair with your body's mass and the spring stiffness constants<br><br>This is essentially the penalty based method used by simulator such as the ROR truck sim.<br><br>If you inclined to solve the error with impulse you can just use the sequential impulse solver directly in the engine. Does PhysX not have a distance joint to use?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9310">kingchurch</a> — Fri Jun 13, 2014 4:35 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ynm]]></name></author>
+		<updated>2013-11-01T02:50:02+00:00</updated>
+
+		<published>2013-11-01T02:50:02+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32057#p32057</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32057#p32057"/>
+		<title type="html"><![CDATA[Re: Constraint of multiple objects?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32057#p32057"><![CDATA[
+Thanks,<br><br>I calculate relative position and velocity then add force/ velocity manually. I also add position correction force to push object back to original position instantly (in case of fixed joint or fixed axes) and while it works perfectly in two objects scene, it seems this instant correction makes physics very unstable when involved multiple object.<br><br>I think I need to broadcast the fixed joint force from a pair to every fixed constraint of an object, but this will make computation increase with number of objects<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10397">ynm</a> — Fri Nov 01, 2013 2:50 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2013-10-31T17:17:05+00:00</updated>
+
+		<published>2013-10-31T17:17:05+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32053#p32053</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32053#p32053"/>
+		<title type="html"><![CDATA[Re: Constraint of multiple objects?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32053#p32053"><![CDATA[
+Are you using existing constraints, that are solved together (by PhysX) or are you manually applying external forces? Multiple constraints shouldn't cancel eachother.<br><blockquote class="uncited"><div>How do physics engines solve the constraint of multiple objects?</div></blockquote>Pairwise constraints should work fine, as long as they are solved together. Another way is using multi body joints, such as Featherstone. That's what we added to Bullet recently.<br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Oct 31, 2013 5:17 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ynm]]></name></author>
+		<updated>2013-10-31T16:44:27+00:00</updated>
+
+		<published>2013-10-31T16:44:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32052#p32052</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32052#p32052"/>
+		<title type="html"><![CDATA[Constraint of multiple objects?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32052#p32052"><![CDATA[
+I am writing some simple physics codes, e.g the spring joint and the distant joint based on PhysX: add force/ velocity based on current state of objects. It worked with two objects connect by one joint. The problem is when multiple objects connect to a single objects, the cumulative forces of each objects cancel/ adding each other and make them very unstable and quickly explode with very high velocity.<br><br>E.g I have distant joint, basically it cancels velocity projected on link between them and add a pulse force to fix any distance error. But when multiple objects connect, they shake quite hard and then explode, I don't know how to solve this.<br><br>How do physics engines solve the constraint of multiple objects?<br><br>Regards<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10397">ynm</a> — Thu Oct 31, 2013 4:44 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

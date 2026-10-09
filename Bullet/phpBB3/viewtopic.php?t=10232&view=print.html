@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; CPU multithreading is working!</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>CPU multithreading is working!</h2>
+		<p><a href="viewtopic.php%3Ft=10232.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10232</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>10</strong></div>
+					<div class="post">
+				<h3>CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sat Nov 15, 2014 6:18 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><a href="https://github.com/bulletphysics/bullet3/issues/126" class="postlink">https://github.com/bulletphysics/bullet3/issues/126</a><br>
+<br>
+I'd like to get Bullet 2 running with CPU multithreading but it has been removed from recent versions of the repository.  I looked up the commit that removed it (f06312c632492200ba1478ddc84c5ee474f74e54, comment is "remove most clutter (todo)"), but it doesn't explain why BulletMultithreaded was dropped.  Anybody know why it was dropped?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sun Nov 16, 2014 1:56 pm</strong></div>
+				<div class="author">by <strong>Basroil</strong></div>
+				<div class="content"><blockquote><div><cite>lunkhound wrote:</cite><a href="https://github.com/bulletphysics/bullet3/issues/126" class="postlink">https://github.com/bulletphysics/bullet3/issues/126</a><br>
+<br>
+I'd like to get Bullet 2 running with CPU multithreading but it has been removed from recent versions of the repository.  I looked up the commit that removed it (f06312c632492200ba1478ddc84c5ee474f74e54, comment is "remove most clutter (todo)"), but it doesn't explain why BulletMultithreaded was dropped.  Anybody know why it was dropped?</div></blockquote>
+
+1) It didn't work all that well<br>
+2) Bullet3 mostly replaces the functionality<br>
+<br>
+You can still download an older commit easily if you want the code, through it might be better to develop a multithreaded dispatcher and making per-island calculations still single threaded for accuracy</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sun Nov 16, 2014 9:50 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">Thanks for the reply!<br>
+So BulletMultiThreaded didn't work well, was it poor performance?  Or perhaps stability/accuracy of simulation issues?  Or was it &lt;shudder&gt; deadlocks, race conditions, or crashes?<br>
+<br>
+Bullet3 works on CPU?  I was under the impression that it was a GPU-only thing.  To quote from the link in my post above:
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Bullet 3 OpenCL is mainly designed for GPU and OpenCL drivers are unreliable</div></blockquote>
+Is it possible to run Bullet3 without an OpenCL driver?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sat Nov 29, 2014 8:04 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><blockquote><div><cite>Basroil wrote:</cite><blockquote><div><cite>lunkhound wrote:</cite><a href="https://github.com/bulletphysics/bullet3/issues/126" class="postlink">https://github.com/bulletphysics/bullet3/issues/126</a><br>
+<br>
+I'd like to get Bullet 2 running with CPU multithreading but it has been removed from recent versions of the repository.  I looked up the commit that removed it (f06312c632492200ba1478ddc84c5ee474f74e54, comment is "remove most clutter (todo)"), but it doesn't explain why BulletMultithreaded was dropped.  Anybody know why it was dropped?</div></blockquote>
+
+1) It didn't work all that well<br>
+2) Bullet3 mostly replaces the functionality<br>
+<br>
+You can still download an older commit easily if you want the code, through it might be better to develop a multithreaded dispatcher and making per-island calculations still single threaded for accuracy</div></blockquote>
+
+I had a look at the old BulletMultiThreaded code and I can see now why it was dropped.  Basically it was designed around the Playstation 3 (asymmetric multiprocessing) architecture, and then retrofitted to work on SMP (Symmetric MP) architectures.  It really is quite a mess, it looks like the constraint solver and collision dispatcher have been copied wholesale from Bullet and then heavily modified to work on the memory-limited SPUs.  In short, it is not a good starting point for CPU multithreading.  Too many things about it are locked in by the PS3-centric design.<br>
+<br>
+So a few days ago I started developing a multithreaded Bullet based on the current Bullet 2 code in GitHub.  I have a multithreaded dispatcher working already.  The speedup on a 4-core system for the dispatchAllPairs call is about 2.2x.  This is using a patched up version of the MultithreadedDemo using Intel TBB (Threading Building Blocks) as a task scheduler.<br>
+I'm trying to keep the changes to Bullet to a minimum, and incur no performance loss for the single-threaded version.  Basically I'm throwing a few locks in at certain places that only get compiled in if you opt for it.<br>
+Also I'm not making Bullet depend on any specific threading library -- the launching of tasks all happens outside of Bullet -- so it can be used with any task scheduler.  The demo app depends on TBB, but Bullet libraries do not.<br>
+Code is here: <a href="https://github.com/lunkhound/bullet3" class="postlink">https://github.com/lunkhound/bullet3</a><br>
+<br>
+Instructions:<br>
+
+<ul><li>install TBB 4.3 (build if using the open source version)<br>
+download my bullet3 fork<br>
+run Cmake on bullet<br>
+look for and enable the cmake option called BULLET2_USE_THREAD_LOCKS<br>
+look for and enable the cmake option called BULLET2_MULTITHREADED_TBB_DEMO<br>
+do a cmake configure (new options should appear)<br>
+set the option called BULLET2_TBB_INCLUDE_DIR to the path to the TBB includes directory<br>
+set the option called BULLET2_TBB_LIB_DIR to the path to the TBB .lib files (needs tbb.lib and tbbmalloc.lib)<br>
+do a cmake generate<br>
+open up the resulting solution in Visual Studio (there should be a project called "AppMultiThreadedDemo")<br>
+build the MultiThreadedDemo project in "Release"<br>
+find the appropriate TBB .dlls (tbb.dll and tbbmalloc.dll) for your version of Visual Studio and manually copy them into the same directory as AppMultiThreadedDemo.exe</li>
+</ul>
+
+Now you should be able to run the demo. Pay attention to the numbers after "collision detection time" on screen. Those are the numbers that should be improved compared to a single-threaded version. To compile a single-threaded version for comparison, edit MultiThreadedDemo.cpp, and change USE_PARALLEL_DISPATCHER to 0.<br>
+<br>
+Oh, and keep in mind that in this particular demo, most of the time is going towards solving constraints, and that part is still completely single threaded.<br>
+Other caveats:<br>
+I've only tested this on Windows 7 with MSVC 2013.  There is some pthreads code in btThreads.cpp for supporting OSX and Linux but I haven't even tried to compile it.<br>
+Bullet's built-in profiling isn't threadsafe, so it gets automatically disabled (with BT_NO_PROFILE) by Cmake when you enable the "USE_THREAD_LOCKS" option.<br>
+The Cmake TBB integration is pretty rough.  For the debug build, the demo should link with tbb_debug.lib and tbbmalloc_debug.lib rather than tbb.lib and tbbmalloc.lib, but I couldn't figure out how to do that via Cmake.<br>
+I also hate that you have to manually copy the tbb dlls.  I'm not sure how to do that in Cmake either.<br>
+<br>
+I've also been working on threading the constraint solver and part of it is now working (sequential impulse solver, ConvertContacts).  The code for that part isn't up on GitHub just yet.<br>
+<br>
+I don't think the one-task-per island is the best approach however, the performance improvement would be heavily dependent on the composition of islands.  For example, if everything is clumped into one large island, it would drop to single-threaded performance.  So I'm trying to make the tasks finer-grained than one-per-island.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sat Nov 29, 2014 8:08 pm</strong></div>
+				<div class="author">by <strong>c6burns</strong></div>
+				<div class="content">I'm cheering you on from the sidelines  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sun Nov 30, 2014 12:10 am</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">@c6burns: Thanks!<br>
+<br>
+So I've put my latest changes up.  The solver is partly parallelized now.  It is in a branch called "thread-work".<br>
+<br>
+When profiling the single-threaded version, the ConvertContacts() method of the solver was taking about 60% of the total solver time (on the MultiThreadedDemo test case with the iteration-count set to 4), while the actual iteration solving function was taking about 33%.<br>
+<br>
+With multithreading enabled on a 4-core processor, ConvertContacts() gets a speedup between 2-3x.<br>
+<br>
+In order to get this part of the solver working, I had to use some compare and exchange operations to get threadsafe vector3 addition working.  I didn't want to use C++11 atomics because Bullet isn't using C++11 features yet.  For now I'm using Visual Studio intrinsics.  Not sure what the most portable way of doing that is.<br>
+<br>
+Also, it only works when the island manager has splitIslands set to false.  Haven't looked into that yet.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Wed Dec 03, 2014 2:11 pm</strong></div>
+				<div class="author">by <strong>xexuxjy</strong></div>
+				<div class="content">Good Stuff!<br>
+<br>
+I tried adding in some multi-threaded processing on my c# version but it got quite hairy so interested to see your approach.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Fri Dec 12, 2014 6:12 am</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1248" class="postimage" alt="bullet-multi-threaded-demo-Capture.PNG" onclick="viewableArea(this);" /></dt>
+						<dd>bullet-multi-threaded-demo-Capture.PNG (111.2 KiB) Viewed 459185 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Some good progress to report -- I'm now running simulation islands in parallel!<br>
+<br>
+For scenes with a good number of islands, this can yield a pretty nice speedup on a multicore CPU.<br>
+<br>
+I'll share some numbers from the multithreaded demo.  This demo consists of 15 stacks of boxes, each stack is 120 boxes.  The times I recorded are from before any of the islands go to sleep.<br>
+<br>
+  simulation step:  30.5ms (1 thread), 12.5ms (4 threads), speedup ~2.4x<br>
+<br>
+So the simulation step includes everything, it can be broken into 2 major parts--collision detection and constraint solving.  Other things are done besides those 2, but those 2 account for the majority of the CPU time.<br>
+<br>
+collision detection: 6.3ms (1 thread), 2.4ms (4 threads)<br>
+constraint solving: 22.5ms (1 thread), 8ms (4 threads)<br>
+<br>
+Note that if all the bodies in the simulation clump together into one big island, there won't be any benefit to being able to run them in parallel -- it will be back to single-threaded performance for the constraint solving part.  Running the collision dispatcher in parallel works much better because the work is broken into much finer-grained tasks, so the task scheduler can do a much better job of keeping the worker-threads busy.<br>
+<br>
+I did some work on breaking the constraint solver into fine grained tasks, but the results of that have been mixed -- it helps some of the time, but at other times it can actually slow things down.  Because of that, I've disabled it for now.  I haven't totally given up on finding some fine-grained parallelism in the solver, but I need a break from it for a while.<br>
+<br>
+The code is up at my repo here:  <a href="https://github.com/lunkhound/bullet3" class="postlink">https://github.com/lunkhound/bullet3</a><br>
+<br>
+I would love to hear any feedback about how (or IF) it works on other OSs or hardware.  In theory it should be compatible with any platform that supports C++11 atomics, however I've only tested it on Windows/x86.<br>
+The instructions I wrote up earlier in this thread should still apply.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Fri Dec 12, 2014 10:24 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">To give a better picture of how the multi-threading works, here are a couple of screen captures from my own application which supports profiling on multiple cores.<br>
+The horizontal axis is time (with vertical white lines marking off 1 millisecond intervals).  The vertical axis is call-depth, and each colored box represents the time taken by a given function call.<br>
+The blue arrow points to the blue box that represents internalSingleStepSimulation -- the top level bullet function that steps the Bullet world once.  You can ignore everything before or after that blue box.<br>
+The single threaded case:
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1249" class="postimage" alt="Bullet simulation profile (single threaded)" onclick="viewableArea(this);" /></dt>
+			<dd><em>Bullet simulation profile (single threaded)</em></dd>			<dd>bullet-profile-single-threadedCapture.PNG (49.29 KiB) Viewed 459154 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Now with multi-threading enabled:
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1250" class="postimage" alt="Bullet simulation profile (multi-threaded)" onclick="viewableArea(this);" /></dt>
+			<dd><em>Bullet simulation profile (multi-threaded)</em></dd>			<dd>bullet-profile-multi-threadedCapture.PNG (70.36 KiB) Viewed 459154 times</dd>
+		</dl>
+		
+		
+			</div>
+
+In the multi-threaded case you can see the 3 worker threads below the main thread.<br>
+<br>
+Notice that the collision detection threading keeps all of the worker threads busy once they all get going (it looks like the first worker thread had a little bit of a delay getting started relative to the others, but not too bad).<br>
+<br>
+By contrast, there are only 5 islands (and one of them is so small you can't see it on this graph), so the overall solver time is determined by the largest island (marked "island 1" in the image) which runs on the main thread.  Meanwhile the worker threads run out of work to do and sit idle for a good part of the time.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sat Dec 13, 2014 12:10 am</strong></div>
+				<div class="author">by <strong>c6burns</strong></div>
+				<div class="content">It definitely compiles for android. This might completely change what I am able to do in my game. I have a kind of angry birds 3d thing going, where you steer a player into destructible structures. It's not the main game mechanic, but something I dropped in because it's good for a laugh. Not everything I have can be separated into islands for the FULL benefit, but some things can and I will give it a proper test as soon as soon as I have time.<br>
+<br>
+Looks really cool!<br>
+<br>
+EDIT: Eh actually it didn't work in gcc ... I didnt have the thread locks option set in CMake when I first built. It doesn't build in gcc 4.7.2 with -std=c++11 set ... I'll have time to look at why later this weekend<br>
+<br>
+EDIT2: OK sent you a PR. It definitely gets through the compiler now in windows and gcc. It needs some CMake love in finding TBB on both platforms, and postbuild copy the dll would be nice too. I'm not great with CMake but I'll try my hand at it.<br>
+<br>
+EDIT3: Yes yes, I had nothing to do on a Friday night <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"> altered CMake to perform a find_library for tbb and tbbmalloc and added them to a target_link_library command. Now CMake will fail on configure until you help it find TBB (which I prefer to failing after you open the .sln). Builds and runs on linux. Postbuild copies dll on win32 (assuming vc12 and ia32).<br>
+<br>
+One issue I didn't touch are the references to btThreadsAreRunning in asserts when debug building the library without enabling the thread support. This will cause a linker error since btThreadsAreRunning won't have a definition.<br>
+<br>
+Need more time to assess performance. Fun!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sat Dec 13, 2014 7:13 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">@c6burns: Thanks for your work on that!  I've merged your changes.  The CMake process is much smoother now.  I should fix up the instructions I wrote up earlier.<br>
+<br>
+I'll fix the non-threaded debug build issue you found in just a bit [EDIT: fixed!].  I'm eager to hear if it runs on ARM hardware.<br>
+<br>
+Revised Instructions:<br>
+
+<ul><li>install TBB 4.3 (build if using the open source version)<br>
+download my bullet3 fork<br>
+run Cmake on bullet<br>
+look for and enable the cmake option called BULLET2_USE_THREAD_LOCKS<br>
+look for and enable the cmake option called BULLET2_MULTITHREADED_TBB_DEMO<br>
+do a cmake configure (new options should appear, and you may get an error)<br>
+set the option called BULLET2_TBB_INCLUDE_DIR to the path to the TBB includes directory (something like "C:/tbb43_20140724oss/include")<br>
+set the option called BULLET2_TBB_LIB_DIR to the path to the TBB .lib files (something like "C:/tbb43_20140724oss/lib/ia32/vc12")<br>
+do another cmake configure for good measure (should be no errors this time)<br>
+do a cmake generate<br>
+open up the resulting solution in Visual Studio (there should be a project called "AppMultiThreadedDemo")<br>
+build the MultiThreadedDemo project in "Release"</li>
+</ul>
+
+When running the MulthThreadedDemo, use the "m" key to toggle between multi-threaded and single-threaded operation.<br>
+<br>
+[edit: simplified the revised instructions to remove TBB_LIBRARY and TBBMALLOC_LIBRARY variable references]</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why was BulletMultiThreaded thrown out?</h3>
+				<div class="date">Posted: <strong>Sat Dec 13, 2014 8:21 pm</strong></div>
+				<div class="author">by <strong>c6burns</strong></div>
+				<div class="content"><blockquote><div><cite>lunkhound wrote:</cite>
+set the option called TBB_LIBRARY to the path to the tbb.lib file (should look something like "C:/tbb43_20140724oss/lib/ia32/vc12/tbb.lib")<br>
+set the option called TBBMALLOC_LIBRARY to the path to the tbbmalloc.lib file (something like "C:/tbb43_20140724oss/lib/ia32/vc12/tbbmalloc.lib")
+</div></blockquote>
+Actually, the cool thing is CMake will find those libs for you, and fill out those vars. As long both libs reside inside BULLET2_TBB_LIB_DIR<br>
+
+<blockquote><div><cite>lunkhound wrote:</cite>I'm eager to hear if it runs on ARM hardware.</div></blockquote>
+Cool! I'm sure it will since it builds in gcc now. I've never used TBB on android so it might take me a bit to get that sorted, plus I need to integrate what's in your demo into my own framework to give it a shot. I'll let you know how it turns out.<br>
+<br>
+In case this saves anyone a minute or two, this is the cmake command I used (it should find TBB in /usr/lib)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10232&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>cmake -DBULLET2_MULTITHREADED_TBB_DEMO=ON -DBULLET2_USE_THREAD_LOCKS=ON -DCMAKE_CXX_FLAGS=-std=c++11 ..
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sun Dec 14, 2014 12:35 am</strong></div>
+				<div class="author">by <strong>c6burns</strong></div>
+				<div class="content">It does run on android arm. tbb was a monster pain until I found that opencv builds it using CMake, so I hijacked that. As to performance, I have no idea. I'll need to take a bit of time, do some instrumenting for systrace and set up a test similar to the demo. When I get around to that I'll be sure to show any results.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sun Dec 14, 2014 8:53 am</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><blockquote><div><cite>c6burns wrote:</cite>It does run on android arm. tbb was a monster pain until I found that opencv builds it using CMake, so I hijacked that. As to performance, I have no idea. I'll need to take a bit of time, do some instrumenting for systrace and set up a test similar to the demo. When I get around to that I'll be sure to show any results.</div></blockquote>
+
+That's great to hear!  I wasn't sure if the mutex would work correctly on ARM.  ARM is more aggressive when it comes to reordering memory operations than X86 is, so that can cause problems for multithreaded code sometimes.<br>
+<br>
+I updated the instructions in my last post to remove the TBB_LIBRARY, etc parts.  I must have put the wrong path for BULLET2_TBB_LIB_DIR when I did it (I didn't include the "ia32/vc12" part) so that must be why I had to set those other variables by hand.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Tue Dec 16, 2014 7:39 am</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">Latest changes in my repo:<br>
+<br>
+The DbvtBroadphase rayTest is now threadsafe.<br>
+Changed the island batching/merging to improve performance and reduce memory usage.<br>
+3 methods of the DiscreteDynamicsWorld now run in parallel for the MultiThreadedDemo: predictUnconstraintMotion, createPredictiveContacts, and integrateTransforms<br>
+<br>
+Here is a visual to illustrate which parts of the physics pipeline are running multithreaded:<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1254" class="postimage" alt="bullet-profile-multi-threaded2.PNG" onclick="viewableArea(this);" /></dt>
+						<dd>bullet-profile-multi-threaded2.PNG (67.56 KiB) Viewed 458928 times</dd>
+		</dl>
+		
+		
+			</div>
+
+The 5 areas marked in blue are multithreaded, everything else is still single-threaded.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>10</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

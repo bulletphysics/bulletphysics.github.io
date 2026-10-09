@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/257" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-03-25T04:11:13+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/257</id>
+
+		<entry>
+		<author><name><![CDATA[sbroumley]]></name></author>
+		<updated>2006-03-25T04:11:13+00:00</updated>
+
+		<published>2006-03-25T04:11:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=797#p797</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=797#p797"/>
+		<title type="html"><![CDATA[Implementing friction correctly]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=797#p797"><![CDATA[
+Danny Chapman's "Jiglib" - is a very nice impulse based physics engine that implements contact, static, and dynamic friction using impulses just as you need.<br><br>See here:<br><a href="http://www.rowlhouse.co.uk/jiglib/index.html" class="postlink">http://www.rowlhouse.co.uk/jiglib/index.html</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=207">sbroumley</a> — Sat Mar 25, 2006 4:11 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[gfaraj]]></name></author>
+		<updated>2006-03-08T05:41:46+00:00</updated>
+
+		<published>2006-03-08T05:41:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=759#p759</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=759#p759"/>
+		<title type="html"><![CDATA[Implementing friction correctly]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=759#p759"><![CDATA[
+I'm trying to implement friction correctly. I am having trouble computing the right impulse magnitude for the friction. I haven't found much information about friction in an impulse-based physics engine. Is there a good article that discusses this fully?<br><br>It seems that the friction applied has too much magnitude. I guess that  could that be caused by an incorrect inertia tensor. But, does anyone see any problem with my formulas?<br><br>The function that does collision response is:<br><div class="codebox"><p>Code: </p><pre><code>        void BeSimulator::doCollisionResponse(Float DeltaTime)        {            ContactIterator ContactItr;            for (ContactItr = m_Contacts.begin(); ContactItr != m_Contacts.end(); ++ContactItr)            {                BeContactConstraint&amp; Contact = *ContactItr;                                BeRigidBody&amp; BodyA = *Contact.BodyA();                BeRigidBody&amp; BodyB = *Contact.BodyB();                if (BodyA.IsDynamic() || BodyB.IsDynamic())                {                    // We have to calculate the response impulse                    BeVector3 VelocityA = BodyA.LinearVelocity() + (BodyA.AngularVelocity() % Contact.RelativePositionA());                    BeVector3 VelocityB = BodyB.LinearVelocity() + (BodyB.AngularVelocity() % Contact.RelativePositionB());                    Float PreRelativeVel = Contact.CollisionNormal() * (VelocityA - VelocityB);                    if (PreRelativeVel &lt; 0.0f)                    {                        BeVector3 AxN = Contact.RelativePositionA() % Contact.CollisionNormal();                        BeVector3 BxN = Contact.RelativePositionB() % Contact.CollisionNormal();                        BeVector3 JInvAxN = BodyA.WorldInverseInertia() * AxN;                        BeVector3 JInvBxN = BodyB.WorldInverseInertia() * BxN;                        Float Restitution = Material(Contact.ShapeA()-&gt;MaterialIndex()).Restitution() +                                            Material(Contact.ShapeB()-&gt;MaterialIndex()).Restitution();                        Float ImpulseNumer = (-1.0f - Restitution) * PreRelativeVel;                        Float ImpulseDenom = BodyA.InverseMass() + BodyB.InverseMass() + (Contact.CollisionNormal() * (JInvAxN % Contact.RelativePositionA())) + (Contact.CollisionNormal() * (JInvBxN % Contact.RelativePositionB()));                        Float ImpulseMag = ImpulseNumer/ImpulseDenom;                        BeVector3 Impulse = Contact.CollisionNormal() * ImpulseMag;                                                if (BodyA.IsDynamic())                        {                            BodyA.AddLinearMomentum(Impulse);                             BodyA.AddAngularMomentum(Contact.RelativePositionA() % Impulse);                        }                        if (BodyB.IsDynamic())                        {                            BodyB.AddLinearMomentum(-Impulse);                            BodyB.AddAngularMomentum(Contact.RelativePositionB() % -Impulse);                        }                        // Calculate and apply friction                        BeVector3 ContactTangent = (Contact.RelativeVelocity() - (Contact.CollisionNormal() * PreRelativeVel));                        ContactTangent.ToNormalize();                        VelocityA = BodyA.LinearVelocity() + (BodyA.AngularVelocity() % Contact.RelativePositionA());                        VelocityB = BodyB.LinearVelocity() + (BodyB.AngularVelocity() % Contact.RelativePositionB());                        BeVector3 RelVelocity = VelocityA - VelocityB;                        Float RelativeVelTangent = RelVelocity * -ContactTangent;                        Float FrictionCoefficient;                        if (RelVelocity.Length() &gt; m_RestSpeed)                        {                            FrictionCoefficient = Material(Contact.ShapeA()-&gt;MaterialIndex()).DynamicFriction() *                                                   Material(Contact.ShapeB()-&gt;MaterialIndex()).DynamicFriction();                        }                        else                        {                            FrictionCoefficient = Material(Contact.ShapeA()-&gt;MaterialIndex()).StaticFriction() *                                                   Material(Contact.ShapeB()-&gt;MaterialIndex()).StaticFriction();                            RelativeVelTangent /= m_RestSpeed;                        }                        if (RelativeVelTangent &lt; 0.0f)                        {                            BeVector3 AxT = Contact.RelativePositionA() % ContactTangent;                            BeVector3 BxT = Contact.RelativePositionB() % ContactTangent;                            BeVector3 JInvAxT = BodyA.WorldInverseInertia() * AxT;                            BeVector3 JInvBxT = BodyB.WorldInverseInertia() * BxT;                            Float FrictionNum = RelativeVelTangent * FrictionCoefficient;                            Float FrictionDen = BodyA.InverseMass() + BodyB.InverseMass() + (JInvAxT % AxT) * ContactTangent + (JInvBxT % BxT) * ContactTangent;                            Float FrictionMag = FrictionNum / FrictionDen;                            BeVector3 Friction = ContactTangent * FrictionMag;                            if (BodyA.IsDynamic())                            {                                BodyA.AddLinearMomentum(Friction);                                BodyA.AddAngularMomentum(Contact.RelativePositionA() % Friction);                            }                            if (BodyB.IsDynamic())                            {                                BodyB.AddLinearMomentum(-Friction);                                BodyB.AddAngularMomentum(Contact.RelativePositionB() % Friction);                            }                        }                    }                }            }            m_Contacts.clear();        }</code></pre></div>Thanks.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=441">gfaraj</a> — Wed Mar 08, 2006 5:41 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

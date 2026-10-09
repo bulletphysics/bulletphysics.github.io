@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; center of mass not at mesh origin</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>center of mass not at mesh origin</h2>
+		<p><a href="viewtopic.php%3Ft=2209.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=2209</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Tue Jun 03, 2008 4:43 pm</strong></div>
+				<div class="author">by <strong>PaulMartz</strong></div>
+				<div class="content">Hello all --<br>
+<br>
+I have a tri mesh, for simplicity let's say it's a cube 2x2x2 units in size, with one corner at the origin. Bullet treats this body as if the center of mass is at the origin corner. I'd like to tell Bullet that the center of mass is at (1,1,1) -- in the center of the 2x2x2 cube-- but so far I haven't been able to accomplish this. btRigidBody::setCenterOfMassOffset doesn't appear to do this; setting btMotionState::m_centerOfMassTransform direcctly also doesn't appear to do this. (In fact, the code seems to be quite confusing regarding the concepts of "ccenter of mass" and "world transform". It almost looks like they are used interchangeably. Very odd.)<br>
+<br>
+If someone could point me to an example that demonstrates how to set a non-origin center of mass in Bullet, I'd appreciate it.<br>
+<br>
+(Sorry if this is a newb question. I did search the forum and the FAQ, to no avail. I also searched the sourrce code, but -- probably due to my own lack of familiarity with the Bullet API -- it wasn't immediatelyt clear to me which examples handled this situation correctly.)<br>
+<br>
+Thanks,<br>
+   -Paul</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Tue Jun 03, 2008 6:08 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi Paul,<br>
+<br>
+the easiest way would to offset you mesh point for example by (-1,-1,-1) an move origin in the centre of mesh (cube).<br>
+Look to ConvexDecompositionDemo.cpp for this.<br>
+<br>
+<br>
+Another way would be to use CompoundShape like this code from VehicleDemo.cpp
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=2209&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btCollisionShape* boxShape = new btBoxShape(btVector3(2.f,2.f, 2.0f));
+	btCompoundShape* compound = new btCompoundShape();
+	btTransform localTrans;
+	localTrans.setIdentity();
+	//localTrans effectively shifts the center of mass with respect to the chassis
+	localTrans.setOrigin(btVector3(0,0,1));
+	compound-&gt;addChildShape(localTrans,boxShape);
+...
+</code></pre></div>
+
+DevO</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Tue Jun 03, 2008 8:21 pm</strong></div>
+				<div class="author">by <strong>PaulMartz</strong></div>
+				<div class="content">I appreciate your assistance. I have a working solution now. Thanks much.<br>
+   -Paul</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Tue Jun 03, 2008 11:14 pm</strong></div>
+				<div class="author">by <strong>PaulMartz</strong></div>
+				<div class="content">Okay, after playing wih this for a while, I'd like to reopen this issue.<br>
+<br>
+Thanks for the help, but both of the solutions provided appear to result in moving the mesh in the world so that it's centered on the origin -- either by offsetting the mesh vertices, or by setting a transform. Neither of the solutions work by actually having Bullet use a different center of mass.<br>
+<br>
+So, unless I've misunderstood something, both of these solutions require me to perform an equivalent operation to my visual scene -- either offset the actual vertices one-by-one, or apply a transformation matrix. If I don't do this, the visual geometry doesn't correspond with the mesh location in the physics simulation.<br>
+<br>
+Unfortunately, this adds a lot of complexity to my application. My app now needs to keep track of the additional matrices in my scene graph so that they can be removed, and the vertices and transforms restored to their original state, when the user saves the model.<br>
+<br>
+Is there really no way to tell Bullet to use a center of mass other than the origin? If not, this is surprising, as I see the phrase "centerofmass" all over the code -- it just doesn't appear to do what I thought that phrase meant.<br>
+<br>
+Thanks, and I appreciate any enlightenment.<br>
+   -Paul</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Wed Jun 04, 2008 5:16 pm</strong></div>
+				<div class="author">by <strong>pico</strong></div>
+				<div class="content">Hi,<br>
+<br>
+i also had to get used to this. However, there is really no other way to set the center of mass. You can go through Bullets OpenGl debug drawer code to see how to get the correct model matrix.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Wed Jun 04, 2008 7:51 pm</strong></div>
+				<div class="author">by <strong>bbangerter</strong></div>
+				<div class="content">Ultimately if you are rendering an object that is represented in the physics engine, you will (most likely) want your model origin and the physics center of mass to coincide with each other.  If they do not you will have to do a center of mass offset translation before doing any rotation/scaling translations as part of your render pipeline.  Failing to do so will always result in the the visual representation of your model not being in sync with the physics representation of it's location and orientation.<br>
+<br>
+Consider your box as a scenario.  If center of mass is 1, 1, 1 and you rotate it around the z-axis by 90 degrees, then in the physics system your box is taking up the exact same space and volume that it was prior to the rotation - or rather the min/max corners as represented in the physics system in both cases will be (0, 0, 0) - (2, 2, 2).  Graphically if you then render based on a rotation of 90 degrees from the model origin (one of the corners) it will go from occupying the min/max corners of (0, 0, 0) - (2, 2, 2) to (-2, 0, 0) - (0, 2, 2) - occupying a completely different volume of space.<br>
+<br>
+That said, I agree it would be nice to be able to set center of mass on an object - but I can't think of any pratical use for doing so when the intent is to render images based off the physics data.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Thu Jun 05, 2008 9:23 am</strong></div>
+				<div class="author">by <strong>DannyChapman</strong></div>
+				<div class="content"><blockquote><div><cite>bbangerter wrote:</cite>
+That said, I agree it would be nice to be able to set center of mass on an object - but I can't think of any pratical use for doing so when the intent is to render images based off the physics data.</div></blockquote>
+
+There's lots of uses - e.g.<br>
+<br>
+1. Artists may want to set the origin of models at ground level - e.g. level with the bottom of the feet for a table, and it would be nice if the game code didn't have to store the offsets.<br>
+<br>
+2. You may have a car object that has different configurations based on its CoM - i.e. you can have different versions of the car differing only in handling characteristics (including different CoM positions). Again, awkward to absorb the offsets into the game code.<br>
+<br>
+3. A model aircraft flight simulator may want to move the CoM as the plane flies - e.g. as a result of geometry moving (swept wing etc) or the fuel tank emptying, or simply to allow the flight params to be modified whilst flying.<br>
+<br>
+I don't think generally artists will care exactly where the CoM is, or be able to construct the model geometry so that the origin is at the CoM, so there will have to be an offset somewhere in the code. It makes sense to put this offset in the physics engine code rather than game code for any physics engine that wants to support more than just boxes and spheres.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Thu Jun 05, 2008 11:02 pm</strong></div>
+				<div class="author">by <strong>PaulMartz</strong></div>
+				<div class="content">Thanks for the input, all. Here's what I have finally done as a solution...<br>
+<br>
+Yes, the Bullet mesh must have center of mass at the origin, and I must do something to make that work, such as applying an offset to each vertex or using a CompiundShape and transform as mentioned earlier.<br>
+<br>
+In addition to that, I have a class derived from btDefaultMotionState, and I override setWorldTransform to drive the position of the geometry in my visual scene. It turns out btDefaultMotionState has a member m_centerOfMassOffset. In my override of setWorldTransform, I first call the base class's setWorldTransform, and this folds the m_centerOfMassOffsset into the m_graphicsEWorldTrans -- and then I just use that to transform my visual scene geometry.<br>
+<br>
+The problem I had up until now was that I had tried both of those (transforming the mesh, and setting the m_centerOfMassOffset) in isolation. Separately, they don't provide a complete solution, But together they resolve the issue.<br>
+<br>
+The nice thing about this is that I can hide the center of mass offset entirely in the code module that glues Bullet together with my rendering code, and it's all managed transparently there.<br>
+<br>
+Thanks again for everyone's input.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Tue Sep 09, 2008 3:23 pm</strong></div>
+				<div class="author">by <strong>peacemoon</strong></div>
+				<div class="content">Hello Paul,<br>
+can you post your working solution. I have the same problem and can't figure out, how i can fix it<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Tue Sep 09, 2008 4:05 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The rigid body world transform is the center of mass.<br>
+<br>
+If your graphics mesh needs an offset, you can use a btCompoundShape to shift the graphics mesh, relative to the center of mass, and use the btDefaultMotionState to apply the inverse shift.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Sat May 02, 2009 9:11 am</strong></div>
+				<div class="author">by <strong>Heizer</strong></div>
+				<div class="content">Hello,<br>
+<br>
+In my project Im using Ogre together with btOgre. I have exported a car chassis and 4 wheels from 3dsmax <br>
+to Ogre mesh. All this meshs are loading as seperate entitys and are not alligned to orgin.<br>
+Without gluing the car to bullet, the position is ok in render.<br>
+<br>
+When I glue it to bullet with btOgre, there is an offset in calculation. The debug-drawer shows that the collision<br>
+spere are alligned to the mesh, but the calculation is not. <br>
+<br>
+I try different solutions found here in the forum and look in some demos without success.  <br>
+<br>
+Here is my code of creating a wheel body:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=2209&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Wheel::Wheel(Model *Model, BTPhysics *Physics, WHEEL_POSITION WheelPosition, std::string path, std::string name)
+   {
+   m_Model   = Model;
+   m_Physics = Physics;
+   m_Part    = (MODEL_PARTS)WheelPosition;
+   
+   m_Node = m_Model-&gt;get_Node((MODEL_PARTS)WheelPosition);                        // get scene node
+   Ogre::Entity *ent=(Ogre::Entity *)m_Node-&gt;getAttachedObject(0);                  // get attached entity
+   Ogre::AxisAlignedBox BBox = ent-&gt;getBoundingBox();                                      // get bounding box
+
+   m_CylinderShape = new btCylinderShape(Convert::toBullet(BBox.getHalfSize()));  
+   m_ColShape       = new btCompoundShape;
+   
+   btTransform localTransform;
+   localTransform.setIdentity();
+   // car is facing in -Z direction, rotating cylinder to fit wheel orientation
+   localTransform.setRotation(Convert::toBullet(Ogre::Quaternion(Ogre::Degree(-90),Ogre::Vector3::UNIT_Z)));
+   // move shape to graphical center
+   localTransform.setOrigin(Convert::toBullet(BBox.getCenter()));
+   m_ColShape-&gt;addChildShape(localTransform,m_CylinderShape);
+
+   btScalar mass(30.0);                                                // 
+   btVector3 localInertia(0,0,0);                                     // Is this ok when it is not at orgin ?
+   m_ColShape-&gt;calculateLocalInertia(mass,localInertia);    //
+
+   btTransform MassTransform;
+   MassTransform.setIdentity();
+   MassTransform.setOrigin(Convert::toBullet(BBox.getCenter()));
+   MassTransform.setRotation(Convert::toBullet(Ogre::Quaternion(Ogre::Degree(-90),Ogre::Vector3::UNIT_Z)));
+
+   localTransform.inverse();      // inverse shift
+   MassTransform.inverse();     // inverse massposition
+
+   m_BodyState = new RigidBodyState(localTransform, MassTransform, m_Node); 
+
+   btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,m_BodyState,m_ColShape,localInertia);
+   m_WheelBody = new btRigidBody(rbInfo);
+
+   Physics-&gt;getWorld()-&gt;addRigidBody(m_WheelBody);
+   }  
+</code></pre></div>
+
+The code I use to set the wheel to a specific position<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=2209&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void Wheel::set_Position(Ogre::Vector3 Position)
+   {
+   btTransform transform; 
+   transform.setIdentity();                                                
+   transform.setOrigin(Convert::toBullet(Position));                
+   m_WheelBody-&gt;setWorldTransform(transform);                  
+   }
+</code></pre></div>
+
+What is the right way to setup a rigid body which is not orgin alligned ?<br>
+I have not found a working solution withing the last 7 days and I realy tryed everyting<br>
+found in forum and demos. <br>
+<br>
+I need your help guys.<br>
+<br>
+( sorry for my bad english )</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Fri Nov 18, 2011 7:06 am</strong></div>
+				<div class="author">by <strong>Bigpet</strong></div>
+				<div class="content">Sorry for necroing this thread but I thought that this would fit nicely in here.<br>
+So, I know that for the translation of objects a btCompoundShape has been recommended in multiple threads. btCompoundShape may have a negligible overhead if you wrap a single complex shape into it but using it to offset the center of gravity of a lot of simple shapes (like btBoxShapes in my example) does produce a significant overhead. <br>
+<br>
+basically I created a huge stack of cubes and let the tower fall. When using btCompoundShapes around the btBoxShapes I had spikes of over 100ms while the spikes of using simple btBoxShapes were in the range of 25-35ms. For this use-case (offsetting the center of mass of a lot of simple shapes) btCompoundShape seems unfit. I am currently looking into writing a "btTransformShape" that just hosts one child shape and applies a transformation to it (an equivalent to the ode GeomOffsets). If something like this already exists, please let me know.<br>
+<br>
+here's the demo Video: <br>
+<a href="http://www.youtube.com/watch?v=KLDDExjgosk" class="postlink">http://www.youtube.com/watch?v=KLDDExjgosk</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Sun Nov 20, 2011 10:05 pm</strong></div>
+				<div class="author">by <strong>majestik666</strong></div>
+				<div class="content">I do this kind of things a lot because of the meshes we get from maya<br>
+are basically never centered around their pivot.<br>
+Instead of adding a transform I transform the vertices of the shape<br>
+so that the vertices are centered around the pivot, and no need for a top transform,<br>
+once that is done I apply an invert offset on the transform to move the object back<br>
+into the correct position.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: center of mass not at mesh origin</h3>
+				<div class="date">Posted: <strong>Mon Nov 21, 2011 6:15 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">#BigPet, there is no btTransformShape right now, but if you need it for simple convex shapes (btBoxShape etc) you can create it indeed<br>
+(you will need to create a new collision algorithm too, not sure if it will be much more efficient than a btCompoundShape)<br>
+<br>
+We'll have a more efficient method for Bullet 3.x (see the Physics Effects code in <a href="https://github.com/erwincoumans/experiments" class="postlink">https://github.com/erwincoumans/experiments</a> )<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

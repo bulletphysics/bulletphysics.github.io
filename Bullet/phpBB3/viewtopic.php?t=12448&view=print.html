@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Car Simulation for Radar</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Car Simulation for Radar</h2>
+		<p><a href="viewtopic.php%3Ft=12448.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12448</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Car Simulation for Radar</h3>
+				<div class="date">Posted: <strong>Mon Sep 24, 2018 3:37 pm</strong></div>
+				<div class="author">by <strong>mimeakadug</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I am a beginner user of Bullet Physics and have found it very useful. Currently I am working in the field of radar signal processing and would like to generate a radar signal using a car simulation. My Requirement is as follows:<br>
+<br>
+-World coordinate Positions of the following:<br>
+4 points on the car (Wheel Axle ends) and 2 points fixed to the rim of the car  as the car moves.<br>
+-I need high numerical precision, it needn't run real-time.<br>
+<br>
+My approach:<br>
+1). I have build my code on top of the differential_car notebook example.<br>
+2). Two points are attached at a fixed distance - wheel radius r from the origin of the inertial coordinate system of the axles of my car.<br>
+3). I have scaled the car model 10 times to get the size of a real car<br>
+4). The mass of the base is set to 300 kg with the other parts of the car being scaled 10 times their original mass<br>
+5). Real time Processing is switched off, The time step of the physics engine is set to be 1/1000 of a second. <br>
+6). I apply a force to the motors of the car using TORQUE_CONTROL mode and get the car accelerating from the origin along X axis.<br>
+7). Using getLinkState(car,track<em class="text-italics">,1,1)[4] I get the position of the axle ends which is also the origin of my inertial coordinate system<br>
+<img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool">. Using getLinkState(car,track<em class="text-italics">,1,1)[5] I get the orientation of the axle ends coordinate system.<br>
+9). I move the points on the wheel to the origin using 7). and rotate them using <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool">. and again using 7). I translate it back. This way I get the world coordinates of the points on the wheels. <br>
+<br>
+This approach however is not giving me expected plots of position and velocity. For points on the wheel rim, they should follow a cycloid (<a href="https://en.wikipedia.org/wiki/Cycloid" class="postlink">https://en.wikipedia.org/wiki/Cycloid</a>). The speed should change from 0 to 2v m/s where v is the translational velocity of the the car as it moves. However Neither of these plots are as expected. Does anyone have a simpler approach? <br>
+<br>
+thanks for your time!</em></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Car Simulation for Radar</h3>
+				<div class="date">Posted: <strong>Fri Sep 28, 2018 5:15 pm</strong></div>
+				<div class="author">by <strong>richardbloemenkamp</strong></div>
+				<div class="content">Your story is a bit complicated to me and maybe some code would clarify. I have experienced difficulties myself with torque driven motors. I tried a few work arounds, played with various friction components, but still my torque motor did not meet perfectly with analytical calculations. If you do not really need the torque-motor with correct mass-acceleration etc, then you can simply set rotation velocity or angle of the wheel at every time-step following your analytical calculation. Below is some code using a torque motor to swing an inertial mass. It is not perfect and you see a lot of commented commands I tried to play with. It may just help you a small step further. BTW if you find better ways I'm interested too.<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12448&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import numpy as np
+
+p.connect(p.GUI)
+p.createCollisionShape(p.GEOM_PLANE)
+p.createMultiBody(0,0)
+#top
+boxHalfLength = 0.05
+boxHalfWidth = 0.05
+boxHalfHeight = 0.5
+body = p.createCollisionShape(p.GEOM_BOX,halfExtents=[boxHalfLength,boxHalfWidth,boxHalfHeight])
+pin = p.createCollisionShape(p.GEOM_BOX,halfExtents=[0.05,0.05,0.05])
+wgt = p.createCollisionShape(p.GEOM_BOX,halfExtents=[0.05,0.05,0.05])
+
+mass = 10000
+visualShapeId = -1
+nlnk=2
+link_Masses=[0,1]
+linkCollisionShapeIndices=[pin,wgt]
+linkVisualShapeIndices=[-1]*nlnk
+linkPositions=[[0.0, 0.0, 0.0],[1.0,0,0]]
+linkOrientations=[[0,0,0,1]]*nlnk
+linkInertialFramePositions=[[0,0,0]]*nlnk
+linkInertialFrameOrientations=[[0,0,0,1]]*nlnk
+indices=[0,1]
+jointTypes=[p.JOINT_REVOLUTE,p.JOINT_REVOLUTE]
+axis=[[0,0,1],[0,1,0]]
+basePosition = [0,0,0.5]
+baseOrientation = [0,0,0,1]
+
+block = p.createMultiBody(mass,body,visualShapeId,basePosition,baseOrientation,
+                        linkMasses=link_Masses,
+                        linkCollisionShapeIndices=linkCollisionShapeIndices,
+                        linkVisualShapeIndices=linkVisualShapeIndices,
+                        linkPositions=linkPositions,
+                        linkOrientations=linkOrientations,
+                        linkInertialFramePositions=linkInertialFramePositions,
+                        linkInertialFrameOrientations=linkInertialFrameOrientations,
+                        linkParentIndices=indices,
+                        linkJointTypes=jointTypes,
+                        linkJointAxis=axis)			
+p.setGravity(0,0,-0.0)
+
+p.setTimeStep(0.01)
+p.setRealTimeSimulation(0)
+#p.resetBaseVelocity(top,angularVelocity=[0,0,30])
+p.changeDynamics(block,0,lateralFriction=0,angularDamping=0.000,linearDamping=0.000,spinningFriction=0,rollingFriction=0)
+p.changeDynamics(block,1,lateralFriction=0,angularDamping=0.000,linearDamping=0.000,spinningFriction=0,rollingFriction=0)
+#p.changeDynamics(block,-1,lateralFriction=10000,angularDamping=1.000,linearDamping=0.000,spinningFriction=10000)
+p.resetDebugVisualizerCamera( cameraDistance=2, cameraYaw=10, cameraPitch=-20, cameraTargetPosition=[0.0, 0.0, 0.25])
+
+
+t0=time.time()
+t=time.time()
+while ((t-t0)&lt;3):
+    t=time.time()
+
+p.resetBasePositionAndOrientation(block,[0,0,0.5],[0,0,0,1])
+p.enableJointForceTorqueSensor(block,0,enableSensor=1)
+#p.setJointMotorControl2(block,0,p.POSITION_CONTROL,targetPosition=-1,force=1000,maxVelocity=1)
+p.setJointMotorControl2(block,0,p.VELOCITY_CONTROL,0,0,0)
+#p.setJointMotorControl2(block,0,controlMode=p.TORQUE_CONTROL,force=-20)
+#dum2=p.getDynamicsInfo(block,0)
+
+dum2=p.getJointState(block,0)
+
+#init robot position
+t0=time.time()
+t=time.time()
+its=0
+while ((t-t0)&lt;5):
+    its+=1
+    #p.enableJointForceTorqueSensor(block,0,enableSensor=1)
+    p.setJointMotorControl2(block,0,controlMode=p.TORQUE_CONTROL,force=-1)
+    dum2=p.getJointState(block,0)
+
+    t=time.time()
+    
+    dum=p.getLinkState(block,1)
+    xft=dum[0]
+    dum=p.rayTest(xft-np.array([0,0,0.051]),xft-np.array([0,0,1.051]))
+    #print(t-t0,1*dum[0][2])
+
+    p.stepSimulation()
+    time.sleep(1./100.)
+    #print(t-t0,80*dum[0][2])
+p.disconnect()
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Car Simulation for Radar</h3>
+				<div class="date">Posted: <strong>Fri Oct 05, 2018 1:30 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It is better to add some fixed dummy links in the URDF file. Then let getLinkState compute the world space position and world space velocity for those dummy links.<br>
+<br>
+You could create a small pybullet test and share it on github, plot the curve with matplotlib (keep all dependencies to a minimum) link to it, so someone can have a look at it.<br>
+<br>
+You should be able to model robots and cars pretty accurate with PyBullet.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Car Simulation for Radar</h3>
+				<div class="date">Posted: <strong>Mon Oct 15, 2018 3:56 pm</strong></div>
+				<div class="author">by <strong>mimeakadug</strong></div>
+				<div class="content">Thank You for your reply. I have been able to get the car moving and as the physics engine time has been set to 1/1000. It seems to be running in high precision mode. I am pretty sure I need to use the multiplyTransforms function however I am unable to understand how to use it. I have not found any example codes for it either. Say I have the orientatin quaternion of a link with respect to the world coordinates system, and the origin of the link local coordinate system in world coordinates, How do I get the world position of a point [1,0,0] in the link local coordinate system using the multiplyTransforms? I will attach my code after I clean up the unecessary stuff in some time.<br>
+
+<blockquote cite="./viewtopic.php?p=41472#p41472"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13031.html">richardbloemenkamp</a> wrote: <a href="viewtopic.php%3Fp=41472.html#p41472" data-post-id="41472" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Fri Sep 28, 2018 5:15 pm</span></cite>
+Your story is a bit complicated to me and maybe some code would clarify. I have experienced difficulties myself with torque driven motors. I tried a few work arounds, played with various friction components, but still my torque motor did not meet perfectly with analytical calculations. If you do not really need the torque-motor with correct mass-acceleration etc, then you can simply set rotation velocity or angle of the wheel at every time-step following your analytical calculation. Below is some code using a torque motor to swing an inertial mass. It is not perfect and you see a lot of commented commands I tried to play with. It may just help you a small step further. BTW if you find better ways I'm interested too.<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12448&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import numpy as np
+
+p.connect(p.GUI)
+p.createCollisionShape(p.GEOM_PLANE)
+p.createMultiBody(0,0)
+#top
+boxHalfLength = 0.05
+boxHalfWidth = 0.05
+boxHalfHeight = 0.5
+body = p.createCollisionShape(p.GEOM_BOX,halfExtents=[boxHalfLength,boxHalfWidth,boxHalfHeight])
+pin = p.createCollisionShape(p.GEOM_BOX,halfExtents=[0.05,0.05,0.05])
+wgt = p.createCollisionShape(p.GEOM_BOX,halfExtents=[0.05,0.05,0.05])
+
+mass = 10000
+visualShapeId = -1
+nlnk=2
+link_Masses=[0,1]
+linkCollisionShapeIndices=[pin,wgt]
+linkVisualShapeIndices=[-1]*nlnk
+linkPositions=[[0.0, 0.0, 0.0],[1.0,0,0]]
+linkOrientations=[[0,0,0,1]]*nlnk
+linkInertialFramePositions=[[0,0,0]]*nlnk
+linkInertialFrameOrientations=[[0,0,0,1]]*nlnk
+indices=[0,1]
+jointTypes=[p.JOINT_REVOLUTE,p.JOINT_REVOLUTE]
+axis=[[0,0,1],[0,1,0]]
+basePosition = [0,0,0.5]
+baseOrientation = [0,0,0,1]
+
+block = p.createMultiBody(mass,body,visualShapeId,basePosition,baseOrientation,
+                        linkMasses=link_Masses,
+                        linkCollisionShapeIndices=linkCollisionShapeIndices,
+                        linkVisualShapeIndices=linkVisualShapeIndices,
+                        linkPositions=linkPositions,
+                        linkOrientations=linkOrientations,
+                        linkInertialFramePositions=linkInertialFramePositions,
+                        linkInertialFrameOrientations=linkInertialFrameOrientations,
+                        linkParentIndices=indices,
+                        linkJointTypes=jointTypes,
+                        linkJointAxis=axis)			
+p.setGravity(0,0,-0.0)
+
+p.setTimeStep(0.01)
+p.setRealTimeSimulation(0)
+#p.resetBaseVelocity(top,angularVelocity=[0,0,30])
+p.changeDynamics(block,0,lateralFriction=0,angularDamping=0.000,linearDamping=0.000,spinningFriction=0,rollingFriction=0)
+p.changeDynamics(block,1,lateralFriction=0,angularDamping=0.000,linearDamping=0.000,spinningFriction=0,rollingFriction=0)
+#p.changeDynamics(block,-1,lateralFriction=10000,angularDamping=1.000,linearDamping=0.000,spinningFriction=10000)
+p.resetDebugVisualizerCamera( cameraDistance=2, cameraYaw=10, cameraPitch=-20, cameraTargetPosition=[0.0, 0.0, 0.25])
+
+
+t0=time.time()
+t=time.time()
+while ((t-t0)&lt;3):
+    t=time.time()
+
+p.resetBasePositionAndOrientation(block,[0,0,0.5],[0,0,0,1])
+p.enableJointForceTorqueSensor(block,0,enableSensor=1)
+#p.setJointMotorControl2(block,0,p.POSITION_CONTROL,targetPosition=-1,force=1000,maxVelocity=1)
+p.setJointMotorControl2(block,0,p.VELOCITY_CONTROL,0,0,0)
+#p.setJointMotorControl2(block,0,controlMode=p.TORQUE_CONTROL,force=-20)
+#dum2=p.getDynamicsInfo(block,0)
+
+dum2=p.getJointState(block,0)
+
+#init robot position
+t0=time.time()
+t=time.time()
+its=0
+while ((t-t0)&lt;5):
+    its+=1
+    #p.enableJointForceTorqueSensor(block,0,enableSensor=1)
+    p.setJointMotorControl2(block,0,controlMode=p.TORQUE_CONTROL,force=-1)
+    dum2=p.getJointState(block,0)
+
+    t=time.time()
+    
+    dum=p.getLinkState(block,1)
+    xft=dum[0]
+    dum=p.rayTest(xft-np.array([0,0,0.051]),xft-np.array([0,0,1.051]))
+    #print(t-t0,1*dum[0][2])
+
+    p.stepSimulation()
+    time.sleep(1./100.)
+    #print(t-t0,80*dum[0][2])
+p.disconnect()
+</code></pre></div>
+</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Car Simulation for Radar</h3>
+				<div class="date">Posted: <strong>Mon Oct 15, 2018 3:58 pm</strong></div>
+				<div class="author">by <strong>mimeakadug</strong></div>
+				<div class="content">Thank You, yeah that is correct, that approach should work, I have been trying to do this for the past 15-20 days and I am unable to modify the urdf, do you have any reference codes / tutorials that can help me with adding dummy links?<br>
+
+<blockquote cite="./viewtopic.php?p=41486#p41486"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=2.html">Erwin Coumans</a> wrote: <a href="viewtopic.php%3Fp=41486.html#p41486" data-post-id="41486" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Fri Oct 05, 2018 1:30 am</span></cite>
+It is better to add some fixed dummy links in the URDF file. Then let getLinkState compute the world space position and world space velocity for those dummy links.<br>
+<br>
+You could create a small pybullet test and share it on github, plot the curve with matplotlib (keep all dependencies to a minimum) link to it, so someone can have a look at it.<br>
+<br>
+You should be able to model robots and cars pretty accurate with PyBullet.
+</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Car Simulation for Radar</h3>
+				<div class="date">Posted: <strong>Mon Oct 15, 2018 9:12 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Create a dummy link (replace planeLink with parent link name, joint origin xyz is in local parent link coordinates):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12448&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> &lt;link name="dummy"&gt;
+      &lt;inertial&gt;
+      &lt;mass value="0"/&gt;
+      &lt;inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+ &lt;joint name="base_to_dummy" type="fixed"&gt;
+    &lt;parent link="planeLink"/&gt;
+    &lt;child link="dummy"/&gt;
+    &lt;origin xyz="0 0 0.1"/&gt;
+  &lt;/joint&gt;
+</code></pre></div>
+
+Reading the dummy link world position:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12448&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+p.connect(p.GUI)
+plane = p.loadURDF("plane.urdf")
+dummyLink=0
+s = p.getLinkState(plane,dummyLink, computeForwardKinematics=True, computeLinkVelocity=True)
+pos = s[0]
+orn = s[1]
+linvel = s[6]
+angvel = s[7]
+print("world pos=",pos)
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Car Simulation for Radar</h3>
+				<div class="date">Posted: <strong>Wed Oct 17, 2018 6:45 am</strong></div>
+				<div class="author">by <strong>mimeakadug</strong></div>
+				<div class="content">Thank You Erwin, this is perfect. I have managed by manually putting some points fixed to the local coordinates on the wheel and then calculating their world position by using the quaternion that tells me the orientation of the wheel local coordinate frame with respect to the world frame. Currently my code s not very clean. I will put up a link to this version of the code in a few days after my paper deadline. Will also explore the urdf way which is a lot cleaner. Additionally I'd like to add, the addUserDebugLine() really helped me figure out the local coordinate frame orientation visually so I could do the necessary math externally. It would be helpful if there is some sort of example / tutorial to use multiplyTransforms() and invertTransform().</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

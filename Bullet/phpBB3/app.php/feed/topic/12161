@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12161" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2018-07-24T17:06:38+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12161</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2018-07-24T17:06:38+00:00</updated>
+
+		<published>2018-07-24T17:06:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41100#p41100</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41100#p41100"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41100#p41100"><![CDATA[
+When I look at the behavior of some of your objects one idea does occur to me.  I've seen similar behavior for small objects whose inertia tensors were too large for their mass.<br><br>Suppose you make an object and give it a low mass (like it was made of styrofoam or lighter material) but then give it a very large inertia tensor (like it was a giant granite bolder).  What would be the behavior of such an object?  It turns out the torques its linear mass applies under gravity on contact points are not strong enough to significantly affect the objects rotational motion, so it continues to slowly roll around instead of settling down.<br><br>So my questions would be:  How are you computing/assigning mass and inertia?  Are you sure your inertia tensors are correct?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Jul 24, 2018 5:06 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2018-07-22T02:17:21+00:00</updated>
+
+		<published>2018-07-22T02:17:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41091#p41091</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41091#p41091"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41091#p41091"><![CDATA[
+GOT IT. rollingFriction needs to be 0.<br><br>Apparently this parameter is there to allow things to not roll indefinitely.... (like pool balls):<br><br>"the m_rollingFriction prevents rounded shapes, such as spheres, cylinders and capsules from rolling forever."<br><br>I had (incorrectly) assumed it was kinetic/sliding friction, and that the "friction" parameter was static friction.  That will teach me to read the docs and stop asking stupid questions!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br><br>Does bullet differentiate between static and kinetic friction?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Sun Jul 22, 2018 2:17 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2018-07-21T05:03:10+00:00</updated>
+
+		<published>2018-07-21T05:03:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41088#p41088</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41088#p41088"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41088#p41088"><![CDATA[
+I just tried the margin at 0 again but without luck. :\<br><br>I also did two other things:<br><br>1. Dropped a fresh source clone from the bullet repo into my extern/ directory and re-build the project (can't believe it built without CMake mods!).  No change in behavior.<br><br>2. Instead of relying on a bunch of abstraction layers with bullet code buried under my framework's API, I exposed the Bullet headers to a test application and re-created the simulation manually. Here is a stripped-down version:<br><br><br>----- HEADER -----<br><div class="codebox"><p>Code: </p><pre><code>class Test {public:int run(const std::vector&lt;std::string&gt;&amp; args);void updateCallback(RenderContext&amp; renderContext, float time); // called every frameprivate:btBroadphaseInterface* m_broadphase;btCollisionConfiguration* m_collisionConfiguration;btCollisionDispatcher* m_dispatcher;btConstraintSolver* m_solver;btDynamicsWorld* m_world;std::vector&lt;btDefaultMotionState*&gt;m_motionStates;std::vector&lt;std::shared_ptr&lt;Node&gt;&gt;m_boxNodes;};</code></pre></div>----- IMPLEMENTATION -----<br><div class="codebox"><p>Code: </p><pre><code>int Test::run(const vector&lt;string&gt;&amp; args) {// &lt;make a window, make a scene, set callbacks&gt;// init bulletm_collisionConfiguration = new btDefaultCollisionConfiguration();m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);m_broadphase = new btDbvtBroadphase();m_solver = new btSequentialImpulseConstraintSolver();m_world = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);// create falling boxes{constexpr unsigned OBJECT_ARRAY_SIZE_X = 2;constexpr unsigned OBJECT_ARRAY_SIZE_Y = 4;constexpr unsigned OBJECT_ARRAY_SIZE_Z = 2;constexpr unsigned SPACING = 1.0;constexpr unsigned DROP_HEIGHT = 40.0;for (int k=0; k&lt;OBJECT_ARRAY_SIZE_Y; ++k) {for (int i=0;i &lt;OBJECT_ARRAY_SIZE_X; ++i) {for(int j = 0; j&lt;OBJECT_ARRAY_SIZE_Z; ++j) {vec3 position = {SPACING * i - (OBJECT_ARRAY_SIZE_X / 2.0),DROP_HEIGHT + SPACING * k - (OBJECT_ARRAY_SIZE_Y / 2.0),SPACING * j  - (OBJECT_ARRAY_SIZE_Z / 2.0) };// create bullet model{btBoxShape* boxShape = new btBoxShape(btVector3(1.0f/2.0, 1.0f/2.0, 1.0f/2.0));// (makes no difference)//boxShape-&gt;setMargin(0);btTransform transform;transform.setIdentity();transform.setOrigin(btVector3(position.x, position.y, position.z));btDefaultMotionState* motionState = new btDefaultMotionState(transform);m_motionStates.push_back(motionState);float mass = 2.0;btVector3 localInertia = {0, 0, 0};boxShape-&gt;calculateLocalInertia(mass, localInertia);btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, boxShape, localInertia);rbInfo.m_friction = 0.25;rbInfo.m_rollingFriction = 0.25;rbInfo.m_restitution = 0.25;btRigidBody* rigidBody = new btRigidBody(rbInfo);m_world-&gt;addRigidBody(rigidBody);}// create visual model{auto node = Node::GeometryNode(make_shared&lt;Box&gt;(1.0, 1.0, 1.0));node-&gt;position(position);m_boxNodes.push_back(node);scene-&gt;rootNode()-&gt;addChild(node);}}}}}// create ground box{constexpr float GROUND_DIM = 50.0;// create bullet model{btBoxShape* groundShape = new btBoxShape(btVector3(GROUND_DIM/2.0, 0.25/2.0, GROUND_DIM/2.0));// (makes no difference)//groundShape-&gt;setMargin(0);btTransform transform;transform.setIdentity();transform.setOrigin(btVector3(0, 0, 0));btDefaultMotionState* motionState = new btDefaultMotionState(transform);btVector3 localInertia = {0, 0, 0};groundShape-&gt;calculateLocalInertia(0, localInertia);btRigidBody::btRigidBodyConstructionInfo rbInfo(0, motionState, groundShape, localInertia);rbInfo.m_mass = 0;rbInfo.m_friction = 1.0;rbInfo.m_rollingFriction = 1.0;rbInfo.m_restitution = 0.1;btRigidBody* rigidBody = new btRigidBody(rbInfo);m_world-&gt;addRigidBody(rigidBody);}// create visual model{auto groundNode = make_shared&lt;Node&gt;("Box");groundNode-&gt;geometry(make_shared&lt;Box&gt;(GROUND_DIM, 0.25, GROUND_DIM));auto gridImage = TestImageNamed("grid10");auto planeDiffuseProperty = make_shared&lt;MaterialProperty&gt;(gridImage);planeDiffuseProperty-&gt;wrapS(WRAP_MODE::REPEAT);planeDiffuseProperty-&gt;wrapT(WRAP_MODE::REPEAT);planeDiffuseProperty-&gt;maxAnisotropy(16);planeDiffuseProperty-&gt;minificationFilter(FILTER_MODE::LINEAR_MIPMAP_LINEAR);planeDiffuseProperty-&gt;magnificationFilter(FILTER_MODE::LINEAR);auto planeMaterial = make_shared&lt;Material&gt;(nullptr, planeDiffuseProperty, nullptr);planeMaterial-&gt;uvScale(GROUND_DIM/10.0);planeMaterial-&gt;doubleSided(true);groundNode-&gt;geometry()-&gt;addMaterial(planeMaterial);groundNode-&gt;position({0, 0, 0});scene-&gt;rootNode()-&gt;addChild(groundNode);}}// &lt;set background, lights, etc&gt;m_window-&gt;display(); // blocks until closed by the callback belowreturn 0;}void Test::updateCallback(RenderContext&amp; renderContext, float time) { // called every framestatic float previousSeconds = time;float deltaSeconds = time - previousSeconds;previousSeconds = time;// step the simulation{m_world-&gt;stepSimulation(deltaSeconds, 10, 1.0/120.0);}// update visual model{for (unsigned i=0; i&lt;m_motionStates.size(); ++i) {auto motionState = m_motionStates[i];auto boxNode = m_boxNodes[i];btTransform btWorldTransform;btWorldTransform.setIdentity();motionState-&gt;getWorldTransform(btWorldTransform);mat4 worldMat;btWorldTransform.getOpenGLMatrix(value_ptr(worldMat));boxNode-&gt;transform(worldMat);}}}</code></pre></div><br>Here's what happens.. same thing!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_neutral.gif" width="15" height="15" alt=":|" title="Neutral"> <br><br><img src="http://goosesensor.net/bt_10.gif" class="postimage" alt="Image"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Sat Jul 21, 2018 5:03 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Mwni]]></name></author>
+		<updated>2018-07-21T04:04:30+00:00</updated>
+
+		<published>2018-07-21T04:04:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41087#p41087</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41087#p41087"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41087#p41087"><![CDATA[
+Just found out this could have something to do with the collision margins.<br><br>Quote from lazenby:<blockquote class="uncited"><div>There are some default collision margins in the Bullet simulation and if the dimensions of the important details of your model are near those margins then you'll get unexpected results and easier tunneling. If you haven't heard about these margins yet you could watch this video. The default margin is around 0.04m (as I recall, dunno if Blender messes with that), which means your smallest important "flange" must be several multiples of that dimension before the simulation will start to look "correct".</div></blockquote>Had the same weird behavour on a very thin cylinder...setting the margin to 0 fixed it.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12809">Mwni</a> — Sat Jul 21, 2018 4:04 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2018-07-21T02:45:16+00:00</updated>
+
+		<published>2018-07-21T02:45:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41086#p41086</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41086#p41086"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41086#p41086"><![CDATA[
+Thanks... plugged that in to replace my existing function:<br><br>mat4 GLMMat4FromBTTransform(const btTransform&amp; from) {<br>mat4 glmMat;<br>from.getOpenGLMatrix(value_ptr(glmMat));<br>return glmMat;<br>}<br><br>Exacto-el-same-o.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Sat Jul 21, 2018 2:45 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[PcChip]]></name></author>
+		<updated>2018-07-21T02:34:18+00:00</updated>
+
+		<published>2018-07-21T02:34:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41085#p41085</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41085#p41085"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41085#p41085"><![CDATA[
+regarding bullet to opengl, I stole this from a forum somewhere  <br>  <div class="codebox"><p>Code: </p><pre><code>glm::mat4 bulletToGlm(const btTransform&amp; t){glm::mat4 m(0);const btMatrix3x3&amp; basis = t.getBasis();// rotationfor (int r = 0; r &lt; 3; r++){for (int c = 0; c &lt; 3; c++){m[c][r] = basis[r][c];}}// traslationbtVector3 origin = t.getOrigin();m[3][0] = origin.getX();m[3][1] = origin.getY();m[3][2] = origin.getZ();// unit scalem[0][3] = 0.0f;m[1][3] = 0.0f;m[2][3] = 0.0f;m[3][3] = 1.0f;return m;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12732">PcChip</a> — Sat Jul 21, 2018 2:34 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2018-07-21T02:42:13+00:00</updated>
+
+		<published>2018-07-21T02:15:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41084#p41084</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41084#p41084"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41084#p41084"><![CDATA[
+Thanks Chip.  Probably a good idea.<br><br>I think I will try managing the physics simulation from the "client side" of my framework (as opposed to opaquely through a wrapper) first, then start from scratch.  Weird stuff.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Sat Jul 21, 2018 2:15 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2018-07-21T02:13:06+00:00</updated>
+
+		<published>2018-07-21T02:13:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41083#p41083</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41083#p41083"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41083#p41083"><![CDATA[
+A little more info...<br><br>Everything with configuring the world, creating shapes and rigid bodies, and configuring those objects all seems to be by the book...<br><br>There are only two things that I am somewhat concerned about:<br><br>1. For resource management and scene graph synchronization purposes, I'm storing bt objects (btRigiBody, bt...Shape, etc) in std::maps, which map them to their associated higher-level game objects/nodes.  I am not making any use of btAlignedObjectArray.  It's my understanding that this is okay as long as I don't use SSE (I'm not -- I was getting crashes every once in a while in a Bullet SSE-enabled function when converting OpenGL matrices to BT matrices and vise-versa. Commenting out the SSE code to enable the regular user code seemed to fix the issue.)<br><br>2. I can't say why, but my simulation stepping seems a little smelly.  It essentially looks like this:<br><br>btWorld-&gt;stepSimulation(deltaSeconds, 10, 1.0/120.0);<br><br>My test (gifs posted above) is running somewhere in the neighborhood of 300-400fps, so deltaSeconds is between 0.0025 and 0.0033 for any given step.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Sat Jul 21, 2018 2:13 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[PcChip]]></name></author>
+		<updated>2018-07-21T02:04:23+00:00</updated>
+
+		<published>2018-07-21T02:04:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41081#p41081</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41081#p41081"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41081#p41081"><![CDATA[
+this is how I call stepSimulation (in both my hacky playground project, and my actual hobby game project)  <br>  <div class="codebox"><p>Code: </p><pre><code>simTime = glfwGetTime();dynamicsWorld-&gt;stepSimulation(deltaTime, 20, 1./100);dynamicsWorld-&gt;synchronizeMotionStates();  //if I remember correctly this was for the btRaycastVehicle's wheelsif (drawDebug){dynamicsWorld-&gt;debugDrawWorld();}simTime = (glfwGetTime() - simTime);</code></pre></div>  <br>  <br>I would suggest starting a new project, compiling a fresh version of Bullet from github, and testing there with a basic bare-bones approach<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12732">PcChip</a> — Sat Jul 21, 2018 2:04 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2018-07-20T20:56:26+00:00</updated>
+
+		<published>2018-07-20T20:56:26+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41079#p41079</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41079#p41079"/>
+		<title type="html"><![CDATA[Re: Squirrely dynamic bodies resting on flat static surface (video)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41079#p41079"><![CDATA[
+Hi Mwni,<br><br>Unfortunately timestep &amp; number of substeps don't appear to be the issue.<br><br>Since the simulation appears to run much more stably with very high masses (10,000x scale) I'm tempted to just move forward with that.<br><br>I'm wondering what types unforeseen issues scaling the mass for all my objects may present in the future.  Obviously applied forces and torques need to be adjusted.  Perhaps restitution will need tweaking as well.  What adjustments might need to be made?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Fri Jul 20, 2018 8:56 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

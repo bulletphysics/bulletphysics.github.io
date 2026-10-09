@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Kinematic cc bug standing on 2 bodies at the same time</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Kinematic cc bug standing on 2 bodies at the same time</h2>
+		<p><a href="viewtopic.php%3Ft=9567.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9567</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Kinematic cc bug standing on 2 bodies at the same time</h3>
+				<div class="date">Posted: <strong>Thu Nov 21, 2013 11:08 pm</strong></div>
+				<div class="author">by <strong>Pacha</strong></div>
+				<div class="content">Hello everyone.<br>
+<br>
+I implemented the stock character controller in my game and it works alright, except when my ghost object is on top of 2 or more bodies at the same time. It flickers and moves a lot. Explanation gif:<br>
+<br>
+<a href="http://bigchannel.org/recording-42.gif" class="postlink">http://bigchannel.org/recording-42.gif</a><br>
+<img src="http://bigchannel.org/recording-42.gif" class="postimage" alt="Image"><br>
+<br>
+I tried to modify the code that comes with bullet, but I am not really good at it and I created a lot of bugs. Here is the function that is in charge of collision detection:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9567&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool btKinematicCharacterController::recoverFromPenetration ( btCollisionWorld* collisionWorld)
+{
+	// Here we must refresh the overlapping paircache as the penetrating movement itself or the
+	// previous recovery iteration might have used setWorldTransform and pushed us into an object
+	// that is not in the previous cache contents from the last timestep, as will happen if we
+	// are pushed into a new AABB overlap. Unhandled this means the next convex sweep gets stuck.
+	//
+	// Do this by calling the broadphase's setAabb with the moved AABB, this will update the broadphase
+	// paircache and the ghostobject's internal paircache at the same time.    /BW
+
+	btVector3 minAabb, maxAabb;
+	m_convexShape-&gt;getAabb(m_ghostObject-&gt;getWorldTransform(), minAabb,maxAabb);
+	collisionWorld-&gt;getBroadphase()-&gt;setAabb(m_ghostObject-&gt;getBroadphaseHandle(), 
+						 minAabb, 
+						 maxAabb, 
+						 collisionWorld-&gt;getDispatcher());
+						 
+	bool penetration = false;
+
+	collisionWorld-&gt;getDispatcher()-&gt;dispatchAllCollisionPairs(m_ghostObject-&gt;getOverlappingPairCache(), collisionWorld-&gt;getDispatchInfo(), collisionWorld-&gt;getDispatcher());
+
+	m_currentPosition = m_ghostObject-&gt;getWorldTransform().getOrigin();
+	btScalar maxPen = btScalar(0.0);
+	for (int i = 0; i &lt; m_ghostObject-&gt;getOverlappingPairCache()-&gt;getNumOverlappingPairs(); i++)
+	{
+		m_manifoldArray.resize(0);
+
+		btBroadphasePair* collisionPair = &amp;m_ghostObject-&gt;getOverlappingPairCache()-&gt;getOverlappingPairArray()[i];
+		
+		if (collisionPair-&gt;m_algorithm)
+			collisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(m_manifoldArray);
+
+		
+		for (int j=0;j&lt;m_manifoldArray.size();j++)
+		{
+			btPersistentManifold* manifold = m_manifoldArray[j];
+			btScalar directionSign = manifold-&gt;getBody0() == m_ghostObject ? btScalar(-1.0) : btScalar(1.0);
+			for (int p=0;p&lt;manifold-&gt;getNumContacts();p++)
+			{
+				const btManifoldPoint&amp;pt = manifold-&gt;getContactPoint(p);
+
+				btScalar dist = pt.getDistance();
+
+				if (dist &lt; 0.0)
+				{
+					if (dist &lt; maxPen)
+					{
+						maxPen = dist;
+						m_touchingNormal = pt.m_normalWorldOnB * directionSign;//??
+
+					}
+					/*static int updateCounter = 0;
+					if (mJumpHorizontalHelper.length() != 0)
+					{
+						updateCounter++;
+						if (updateCounter &gt; 25)
+						{
+							mJumpHorizontalHelper = btVector3(0, 0, 0);
+						}
+					}
+					else
+					{
+						updateCounter = 0;
+					}*/
+					//mJumpHorizontalHelper = btVector3(0, 0, 0);
+					m_currentPosition += pt.m_normalWorldOnB * directionSign * dist * btScalar(0.2);
+					penetration = true;
+				} else {
+					//printf("touching %f\n", dist);
+				}
+			}
+			
+			//manifold-&gt;clearManifold();
+		}
+	}
+	btTransform newTrans = m_ghostObject-&gt;getWorldTransform();
+	newTrans.setOrigin(m_currentPosition);
+	m_ghostObject-&gt;setWorldTransform(newTrans);
+//	printf("m_touchingNormal = %f,%f,%f\n",m_touchingNormal[0],m_touchingNormal[1],m_touchingNormal[2]);
+	return penetration;
+}</code></pre></div>
+
+Could someone help me out, please? Thanks.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,969 @@
+/*
+Copyright (c) 2011, Movania Muhammad Mobeen
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list
+of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list
+of conditions and the following disclaimer in the documentation and/or other
+materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.
+*/
+
+//A simple cloth using position based dynamics based on the SIGGRAPH course notes
+//"Realtime Physics" http://www.matthiasmueller.info/realtimephysics/coursenotes.pdf using 
+//GLUT,GLEW and GLM libraries. This code is intended for beginners so that they may 
+//understand what is required to implement position based dynamics based cloth simulation.
+//
+//This code is under BSD license. If you make some improvements,
+//or are using this in your research, do let me know and I would appreciate
+//if you acknowledge this in your code.
+//
+//Controls:
+//left click on any empty region to rotate, middle click to zoom 
+//left click and drag any point to drag it.
+//
+//Author: Movania Muhammad Mobeen
+//        School of Computer Engineering,
+//        Nanyang Technological University,
+//        Singapore.
+//Email : mova0002@e.ntu.edu.sg 
+ 
+#include <GL/glew.h>
+#include <GL/wglew.h>
+#include <GL/glut.h>
+#include <vector>
+#include <glm/glm.hpp>
+ 
+#pragma comment(lib, "glew32.lib")
+
+using namespace std;  
+const int width = 1024, height = 1024;
+
+#define PI 3.1415926536
+#define EPSILON  0.0000001
+
+int numX = 32, numY=32;
+const size_t total_points = (numX+1)*(numY+1);
+int size = 4;
+float hsize = size/2.0f;
+
+char info[MAX_PATH]={0};
+
+float timeStep = 1.0/60.0f; //1.0/60.0f;
+float currentTime = 0;
+double accumulator = timeStep;
+int selected_index = -1;
+
+struct DistanceConstraint {	int p1, p2;	float rest_length, k; float k_prime; };
+struct  BendingConstraint {	int p1, p2, p3, p4;	float rest_length1, rest_length2, w,  k;};// int cp1, cp2; };
+
+vector<GLushort> indices;
+vector<DistanceConstraint> d_constraints;
+
+vector<BendingConstraint> b_constraints;
+vector<float> phi0; //initial dihedral angle between adjacent triangles
+
+//particle system
+vector<glm::vec3> X; //position
+vector<glm::vec3> tmp_X; //predicted position
+vector<glm::vec3> V; //velocity
+vector<glm::vec3> F;
+vector<float> W; //inverse particle mass 
+
+
+//???
+//vector<glm::vec3> Ri; //Ri = Xi-Xcm 
+//vector<float> M; //mass vector
+//vector<float> inv_M; //inverse mass vector
+//vector<float> A; //area of triangles
+
+int oldX=0, oldY=0;
+float rX=15, rY=0;
+int state =1 ;
+float dist=-23;
+const int GRID_SIZE=10;
+
+const int solver_iterations = 4; //number so solver iterations per step. PBD  
+
+const float kBend = 0.1f; 
+const float kStretch = 1.0f; //actually this should work if 1.0 is used!!!
+
+const float global_dampening = 0.99f;  //global velocity dampening !!!
+const float kDamp = 1.05f;//0.001f; //COM dampening
+
+//const float ns = 1.50f;
+const float DEFAULT_DAMPING = -0.0325f;
+glm::vec3 gravity=glm::vec3(0.0f,-0.00981f,0.0f);  
+
+const float global_mass = 1.0/total_points;
+//float w_i = 1.0f/mass;
+
+
+GLint viewport[4];
+GLdouble MV[16];
+GLdouble P[16];
+
+LARGE_INTEGER frequency;        // ticks per second
+LARGE_INTEGER t1, t2;           // ticks
+double frameTimeQP=0;
+float frameTime =0 ;
+
+
+glm::vec3 Up=glm::vec3(0,1,0), Right, viewDir;
+float startTime =0, fps=0;
+int totalFrames=0;
+
+//----------------------------------------------------------------------------------------------------
+template<class T> //http://en.wikipedia.org/wiki/Kahan_summation_algorithm
+struct KahanSum { //DevO: 25.07.2011
+	KahanSum(void) : c(T(0.0)), sum(T(0.0)) {}
+	KahanSum(const T &value) : c(value), sum(value) {}
+	inline T Add(const T &value) {  
+#if 1
+		const T y = value - c;  //So far, so good: c is zero.
+		const T temp = sum + y; //sum is big, y small, so low-order digits of y are lost.
+		c = (temp - sum) - y; //(t - sum) recovers the high-order part of y; subtracting y recovers -(low part of y)
+		sum = temp;
+		return sum;
+#else
+		sum += value; //No KahanSum for comparison 
+		return sum;
+#endif
+	}
+	T operator += (const T &value) { return Add(value); }
+	operator T() const { return sum; }
+	T sum;
+	T c;
+};
+
+void StepPhysics(float dt);
+
+//DevO: 25.07.2011
+inline float CalcMass(const float w){
+	return (w>0.0) ? (1.0/w) : 100.0; //big but not infinite mass for fixed particles 
+}
+
+float GetArea(int a, int b, int c) {
+	glm::vec3 e1 = X[b]-X[a];
+	glm::vec3 e2 = X[c]-X[a];
+	return 0.5f * glm::length(glm::cross(e1,e2));
+}
+void AddDistanceConstraint(int a, int b, float k) {
+	DistanceConstraint c;
+	c.p1=a;
+	c.p2=b;
+	c.k =k;
+	c.k_prime = 1.0f-pow((1.0f-c.k), 1.0f/solver_iterations);  //1.0f-pow((1.0f-c.k), 1.0f/ns);
+	if(c.k_prime>1.0) c.k_prime = 1.0;
+	//printf(" c.k_prime %f \n",c.k_prime);
+	
+	glm::vec3 deltaP = X[c.p1]-X[c.p2];
+	c.rest_length = glm::length(deltaP);
+
+	d_constraints.push_back(c);
+}
+
+void AddBendingConstraint(int pa, int pb, int pc,int pd, float k) {
+	BendingConstraint c;
+	c.p1=pa;
+	c.p2=pb;
+	c.p3=pc; 
+	c.p4=pd; 
+	c.w = W[pa] + W[pb] + W[pc] + W[pd];//w_i + w_i + 2*w_i;
+	glm::vec3 center1 = 0.3333f * (X[pa] + X[pb] + X[pc]);
+	glm::vec3 center2 = 0.3333f * (X[pa] + X[pb] + X[pd]);
+	//glm::vec3 center2 = 0.3333f * (X[pa] + X[pd] + X[pb]);//changing the order did'nt help
+	c.rest_length1 = glm::length(X[pc]-center1);
+	c.rest_length2 = glm::length(X[pd]-center2);
+	c.k = k;
+	b_constraints.push_back(c);
+}
+void OnMouseDown(int button, int s, int x, int y)
+{
+	if (s == GLUT_DOWN) 
+	{
+		oldX = x; 
+		oldY = y; 
+		int window_y = (height - y);
+		float norm_y = float(window_y)/float(height/2.0);
+		int window_x = x ;
+		float norm_x = float(window_x)/float(width/2.0);
+		
+		float winZ=0;
+		glReadPixels( x, height-y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
+		if(winZ==1)
+			winZ=0; 
+		double objX=0, objY=0, objZ=0;
+		gluUnProject(window_x,window_y, winZ,  MV,  P, viewport, &objX, &objY, &objZ);
+		glm::vec3 pt(objX,objY, objZ); 
+		size_t i=0;
+		for(i=0;i<total_points;i++) {			 
+			if( glm::distance(X[i],pt)<0.1) {
+				selected_index = i;
+				printf("Intersected at %d\n",i);
+				break;
+			}
+		}
+	}	
+
+	if(button == GLUT_MIDDLE_BUTTON)
+		state = 0;
+	else
+		state = 1;
+
+	if(s==GLUT_UP) {
+		selected_index= -1;
+		glutSetCursor(GLUT_CURSOR_INHERIT);
+	}
+}
+
+void OnMouseMove(int x, int y)
+{
+	if(selected_index == -1) {
+		if (state == 0)
+			dist *= (1 + (y - oldY)/60.0f); 
+		else
+		{
+			rY += (x - oldX)/5.0f; 
+			rX += (y - oldY)/5.0f; 
+		} 
+	} else {
+		float delta = 1500/abs(dist);
+		float valX = (x - oldX)/delta; 
+		float valY = (oldY - y)/delta; 
+		if(abs(valX)>abs(valY))
+			glutSetCursor(GLUT_CURSOR_LEFT_RIGHT);
+		else 
+			glutSetCursor(GLUT_CURSOR_UP_DOWN);
+
+		V[selected_index] = glm::vec3(0);
+		X[selected_index].x += Right[0]*valX ;
+		float newValue = X[selected_index].y+Up[1]*valY;
+		if(newValue>0)
+			X[selected_index].y = newValue;
+		X[selected_index].z += Right[2]*valX + Up[2]*valY;		
+	}
+	oldX = x; 
+	oldY = y; 
+
+	glutPostRedisplay(); 
+}
+
+
+void DrawGrid()
+{
+	glBegin(GL_LINES);
+	glColor3f(0.5f, 0.5f, 0.5f);
+	for(int i=-GRID_SIZE;i<=GRID_SIZE;i++)
+	{
+		glVertex3f((float)i,0,(float)-GRID_SIZE);
+		glVertex3f((float)i,0,(float)GRID_SIZE);
+
+		glVertex3f((float)-GRID_SIZE,0,(float)i);
+		glVertex3f((float)GRID_SIZE,0,(float)i);
+	}
+	glEnd();
+}
+
+inline glm::vec3 GetNormal(int ind0, int ind1, int ind2) {
+	glm::vec3 e1 = X[ind0]-X[ind1];
+	glm::vec3 e2 = X[ind2]-X[ind1];
+	return glm::normalize(glm::cross(e1,e2));
+}
+
+inline float GetDihedralAngle(BendingConstraint c, float& d, glm::vec3& n1, glm::vec3& n2) {	 
+	n1 = GetNormal(c.p1, c.p2, c.p3);
+	n2 = GetNormal(c.p1, c.p2, c.p4);
+	//n2 = GetNormal(c.p1, c.p4, c.p2);//changing the order did'nt help
+	d = glm::dot(n1, n2);
+	return acos(d);
+}
+void InitGL() { 
+ 
+	startTime = (float)glutGet(GLUT_ELAPSED_TIME);
+	currentTime = startTime;
+
+	// get ticks per second
+    QueryPerformanceFrequency(&frequency);
+
+    // start timer
+    QueryPerformanceCounter(&t1);
+
+
+	glEnable(GL_DEPTH_TEST);
+	size_t i=0, j=0, count=0;
+	int l1=0, l2=0;
+	float ypos = 7.0f;
+	int v = numY+1;
+	int u = numX+1;
+
+	indices.resize( numX*numY*2*3);
+ 
+	X.resize(total_points);
+	tmp_X.resize(total_points);
+	V.resize(total_points);
+	F.resize(total_points); 
+	//Ri.resize(total_points); 
+	 
+	//fill in positions
+	for(int j=0;j<=numY;j++) {		 
+		for(int i=0;i<=numX;i++) {	 
+			X[count++] = glm::vec3( ((float(i)/(u-1)) *2-1)* hsize, size+1, ((float(j)/(v-1) )* size));
+		}
+	}
+
+
+	///DevO: 24.07.2011
+	W.resize(total_points); 
+	for(int i=0;i<total_points;i++) {	
+		W[i] = 1.0f/global_mass;
+	}
+	/// 2 Fixed Points 
+	W[0] = 0.0;
+	W[numX] = 0.0;
+
+	memcpy(&tmp_X[0].x, &X[0].x, sizeof(glm::vec3)*X.size());
+	//fill in velocities	 
+	memset(&(V[0].x),0,total_points*sizeof(glm::vec3));
+
+	//fill in indices
+	GLushort* id=&indices[0];
+	for (int i = 0; i < numY; i++) {        
+		for (int j = 0; j < numX; j++) {            
+			int i0 = i * (numX+1) + j;            
+			int i1 = i0 + 1;            
+			int i2 = i0 + (numX+1);            
+			int i3 = i2 + 1;            
+			if ((j+i)%2) {                
+				*id++ = i0; *id++ = i2; *id++ = i1;                
+				*id++ = i1; *id++ = i2; *id++ = i3;            
+			} else {                
+				*id++ = i0; *id++ = i2; *id++ = i3;                
+				*id++ = i0; *id++ = i3; *id++ = i1;            
+			}        
+		}    
+	}
+
+	 
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_BACK, GL_LINE);
+	glPointSize(5);
+
+	wglSwapIntervalEXT(0);
+
+	//setup constraints
+	// Horizontal
+	for (l1 = 0; l1 < v; l1++)	// v
+		for (l2 = 0; l2 < (u - 1); l2++) {
+			AddDistanceConstraint((l1 * u) + l2,(l1 * u) + l2 + 1, kStretch);
+		}
+
+	// Vertical
+	for (l1 = 0; l1 < (u); l1++)	
+		for (l2 = 0; l2 < (v - 1); l2++) {
+			AddDistanceConstraint((l2 * u) + l1,((l2 + 1) * u) + l1, kStretch);
+		}
+
+	
+	// Shearing distance constraint
+	for (l1 = 0; l1 < (v - 1); l1++)	
+		for (l2 = 0; l2 < (u - 1); l2++) {
+			AddDistanceConstraint((l1 * u) + l2,((l1 + 1) * u) + l2 + 1, kStretch);
+			AddDistanceConstraint(((l1 + 1) * u) + l2,(l1 * u) + l2 + 1, kStretch);
+		}
+
+	
+	// create bending constraints
+	
+	for(int i = 0; i < v-1; ++i) {
+		for(int j = 0; j < u-1; ++j) {	 			 
+			int p1 = i * (numX+1) + j;            
+			int p2 = p1 + 1;            
+			int p3 = p1 + (numX+1);            
+			int p4 = p3 + 1;   
+			 
+			if ((j+i)%2) {                           
+				//printf("%3d %3d %3d - %3d %3d %3d\n",p1,p3,p2, p2,p3,p4); 
+				///AddBendingConstraint(p1,p3,p4,p2, kBend);					
+				AddBendingConstraint(p3,p2,p1,p4, kBend);					
+				//b_constraints[b_constraints.size()-1].cp1 = p2;
+				//b_constraints[b_constraints.size()-1].cp2 = p3;
+			} else {                    
+				//printf("%3d %3d %3d - %3d %3d %3d\n",p1,p3,p4, p1,p4,p2); 
+				///AddBendingConstraint(p1,p3,p4,p2, kBend);	
+				
+				AddBendingConstraint(p4,p1,p3,p2, kBend);	
+				//b_constraints[b_constraints.size()-1].cp1 = p1;
+				//b_constraints[b_constraints.size()-1].cp2 = p4;
+			}     
+		}
+	}
+
+		 
+
+	float d;
+	glm::vec3 n1, n2;
+	phi0.resize(b_constraints.size());
+	
+	for(i=0;i<b_constraints.size();i++) {		
+		phi0[i] = GetDihedralAngle(b_constraints[i],d,n1,n2);		
+	}	
+}
+
+void OnReshape(int nw, int nh) {
+	glViewport(0,0,nw, nh);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(60, (GLfloat)nw / (GLfloat)nh, 1.f, 100.0f);
+	
+	glGetIntegerv(GL_VIEWPORT, viewport); 
+	glGetDoublev(GL_PROJECTION_MATRIX, P);
+
+	glMatrixMode(GL_MODELVIEW);
+}
+
+void OnRender() {		
+	size_t i=0;
+	float newTime = (float) glutGet(GLUT_ELAPSED_TIME);
+	frameTime = newTime-currentTime;
+	currentTime = newTime;
+	//accumulator += frameTime;
+
+	//Using high res. counter
+    QueryPerformanceCounter(&t2);
+	 // compute and print the elapsed time in millisec
+    frameTimeQP = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
+	t1=t2;
+	accumulator += frameTimeQP;
+
+	++totalFrames;
+	if((newTime-startTime)>1000)
+	{		
+		float elapsedTime = (newTime-startTime);
+		fps = (totalFrames/ elapsedTime)*1000 ;
+		startTime = newTime;
+		totalFrames=0;
+	}
+
+	sprintf_s(info, "FPS: %3.2f, Frame time (GLUT): %3.4f msecs, Frame time (QP): %3.3f", fps, frameTime, frameTimeQP);
+	glutSetWindowTitle(info);
+
+	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+
+	//set viewing transformation
+	glTranslatef(0,0,dist);
+	glRotatef(rX,1,0,0);
+	glRotatef(rY,0,1,0);
+	
+	glGetDoublev(GL_MODELVIEW_MATRIX, MV);
+	viewDir.x = (float)-MV[2];
+	viewDir.y = (float)-MV[6];
+	viewDir.z = (float)-MV[10];
+	Right = glm::cross(viewDir, Up);
+
+	//draw grid
+	DrawGrid();
+	
+	//draw polygons
+	glColor3f(1,1,1);
+	glBegin(GL_TRIANGLES);
+	for(i=0;i<indices.size();i+=3) {
+		glm::vec3 p1 = X[indices[i]];
+		glm::vec3 p2 = X[indices[i+1]];
+		glm::vec3 p3 = X[indices[i+2]];
+		glVertex3f(p1.x,p1.y,p1.z);
+		glVertex3f(p2.x,p2.y,p2.z);
+		glVertex3f(p3.x,p3.y,p3.z);
+	}
+	glEnd();	 
+
+	//draw points
+	
+	glBegin(GL_POINTS);
+	for(i=0;i<total_points;i++) {
+		glm::vec3 p = X[i];
+		int is = (i==selected_index);
+		glColor3f((float)!is,(float)is,(float)is);
+		glVertex3f(p.x,p.y,p.z);
+	}
+	glEnd();
+
+
+	//draw normals for debug only 	
+	BendingConstraint b;
+	float size = 0.1f;
+	float d = 0;
+	glm::vec3 n1, n2, c1, c2;
+
+	
+	glBegin(GL_LINES);
+	for(i=0;i<b_constraints.size();i++) {
+		b = b_constraints[i];
+		c1 = (X[b.p1] + X[b.p2] + X[b.p3]) /3.0f;
+		c2 = (X[b.p1] + X[b.p2] + X[b.p4]) /3.0f;
+		GetDihedralAngle(b,d,n1,n2);
+		glColor3f(abs(n1.x), abs(n1.y), abs(n1.z) );
+		glVertex3f(c1.x,c1.y,c1.z);		glVertex3f(c1.x+size*n1.x,c1.y+size*n1.y,c1.z+size*n1.z);
+
+		glColor3f(abs(n2.x), abs(n2.y), abs(n2.z));
+		glVertex3f(c2.x,c2.y,c2.z);		glVertex3f(c2.x+size*n2.x,c2.y+size*n2.y,c2.z+size*n2.z);
+	}
+	glEnd();
+ 
+	glutSwapBuffers();
+}
+
+void OnShutdown() {	
+	d_constraints.clear();
+	b_constraints.clear();
+	indices.clear();
+	X.clear();
+	F.clear();
+	V.clear();
+	phi0.clear();
+//	M.clear();
+//	A.clear();
+	tmp_X.clear();
+	//Ri.clear();
+	//inv_M.clear();
+}
+
+void ComputeForces( ) {
+	size_t i=0;
+	
+	for(i=0;i<total_points;i++) {
+		F[i] = glm::vec3(0);
+		 
+		//add gravity force
+		if(i!=0 && i!=( numX)	)		 
+			F[i] += gravity ;
+
+		//add force due to damping of velocity
+		//F[i] += DEFAULT_DAMPING*V[i];
+	}	 
+ 
+}
+void ApplyProvotDynamicInverse() {
+	 
+	for(size_t i=0;i<d_constraints.size();i++) { 
+		//check the current lengths of all springs
+		glm::vec3 p1 = X[d_constraints[i].p1];
+		glm::vec3 p2 = X[d_constraints[i].p2];
+		glm::vec3 deltaP = p1-p2;
+		  
+		float dist = glm::length(deltaP);
+		if(dist>d_constraints[i].rest_length) {
+			dist -= (d_constraints[i].rest_length);
+			dist /= 2.0f;
+			deltaP = glm::normalize(deltaP);
+			deltaP *= dist;
+			if(d_constraints[i].p1==0 || d_constraints[i].p1 ==numX) {
+				V[d_constraints[i].p2] += deltaP;
+			} else if(d_constraints[i].p2==0 || d_constraints[i].p2 ==numX) {
+			 	V[d_constraints[i].p1] -= deltaP;
+			} else { 	
+				V[d_constraints[i].p1] -= deltaP;
+				V[d_constraints[i].p2] += deltaP;
+			}
+		}
+	}
+}
+void IntegrateExplicitWithDamping(float deltaTime) {
+	float deltaTimeMass = deltaTime;
+	size_t i=0;
+ 
+
+	float sumM = 0.0;
+	float sumMc = 0.0;  //A running compensation for lost low-order bits.
+	for(i=0;i<total_points;i++) {
+		const float mass = CalcMass(W[i]); //calc mass
+		//sumM += mass;
+		//using KahanSum >>>
+		const float y = mass - sumMc; 
+		const float temp = sumM + y;
+		sumMc = (temp - sumM) - y;
+		sumM = temp;
+	}
+	const float sumMinv = 1.0/sumM;
+	//printf(" sumMinv (%f) \n",sumMinv);
+
+	//glm::vec3 Xcm = glm::vec3(0);
+	//glm::vec3 Vcm = glm::vec3(0);
+
+	KahanSum<glm::vec3> XcmK; //KahanSum
+	KahanSum<glm::vec3> VcmK; //KahanSum
+
+	for(i=0;i<total_points;i++) {
+		//float mass = M[i];
+		V[i] *= global_dampening; //global velocity dampening !!!
+		V[i] = V[i] + (F[i]*deltaTime)*W[i]; //add forces
+			
+
+		const float mass = CalcMass(W[i]); //calc mass
+		//calculate the center of mass's position 
+		//and velocity for damping calc
+		//Xcm += X[i]*mass * sumMinv;
+		//Vcm += V[i]*mass * sumMinv;
+
+		XcmK += X[i]*mass * sumMinv;
+		VcmK += V[i]*mass * sumMinv;
+		//sumM += mass;
+	}
+	glm::vec3 Xcm = XcmK.sum;
+	glm::vec3 Vcm =	VcmK.sum;
+
+	//Xcm /= sumM; 
+	//Vcm /= sumM; 
+	//printf(" Xcm (%f,%f,%f) \n",Xcm.x,Xcm.y,Xcm.z);
+	//printf(" XcmK (%f,%f,%f) \n",XcmK.sum.x,XcmK.sum.y,XcmK.sum.z);
+	
+	//printf(" Vcm (%f,%f,%f) \n",Vcm.x,Vcm.y,Vcm.z);
+	//printf(" VcmK (%f,%f,%f) \n",VcmK.sum.x,VcmK.sum.y,VcmK.sum.z);
+
+	//glm::mat3 I = glm::mat3(1);
+	KahanSum<glm::mat3> IK(glm::mat3(1.0)); //KahanSum
+	KahanSum<glm::vec3> LK; //KahanSum
+	//glm::vec3 L = glm::vec3(0);
+	//glm::vec3 w = glm::vec3(0);//angular velocity
+
+	//printf("Xcm: %3.3f %3.3f %3.3f\tVcm %3.3f %3.3f %3.3f\n",Xcm.x, Xcm.y, Xcm.z, Vcm.x, Vcm.y, Vcm.z);
+	for(i=0;i<total_points;i++) {
+		const float mass = CalcMass(W[i]); //calc mass
+		const glm::vec3 ri = X[i] - Xcm;
+
+		LK += glm::cross(ri,mass*V[i]);
+
+		//thanks to DevO for pointing this and these notes really helped.
+		//http://www.sccg.sk/~onderik/phd/ca2010/ca10_lesson11.pdf
+		glm::mat3 tmp = glm::mat3(0,-ri.z,  ri.y, ri.z,       0,-ri.x, -ri.y,ri.x,        0);
+		IK +=(tmp*glm::transpose(tmp))*mass;
+	}
+	glm::mat3 I = IK.sum;
+	glm::vec3 L = LK.sum;
+	//printf(" L (%f,%f,%f) \n",L.x,L.y,L.z);
+	glm::vec3 w = glm::inverse(I)*L; //angular velocity
+	//printf(" w (%f,%f,%f) \n",w.x,w.y,w.z);
+
+	for(i=0;i<total_points;i++) {
+		const glm::vec3 ri = X[i] - Xcm;
+		const glm::vec3 delVi = Vcm + glm::cross(w,ri) - V[i]; //from paper
+		V[i] += kDamp*delVi;
+	}
+
+	//calculate predicted position
+	for(i=0;i<total_points;i++) {
+		if(W[i] <= 0.0){ 
+			tmp_X[i] = X[i]; //fixed points
+		}else{
+			tmp_X[i] = X[i] + (V[i]*deltaTime);	
+		}
+	}
+
+	//glm::vec3 p = tmp_X[1];
+	//printf("p1: %3.3f %3.3f\tw: %3.3f %3.3f %3.3f \tL: %3.3f %3.3f %3.3f \n",p.x, p.y, p.z, w.x, w.y, w.z, L.x, L.y, L.z);
+	//printf("L: %3.3f %3.3f %3.3f\tRi %3.3f %3.3f %3.3f\n",L.x, L.y, L.z, Ri[1].x, Ri[1].y, Ri[1].z);
+}
+ 
+void Integrate(float deltaTime) {	
+	float inv_dt = 1.0f/deltaTime;
+	size_t i=0; 
+
+	for(i=0;i<total_points;i++) {	
+		V[i] = (tmp_X[i] - X[i])*inv_dt;		
+		X[i] = tmp_X[i];	
+		//if(X[i].y<0) X[i].y=0;//collision with ground
+		
+		tmp_X[i] = glm::vec3(0); //not needed
+		///V[i] = glm::vec3(0); //Wrong !!!
+	}
+}
+
+void UpdateDistanceConstraint(int i) {
+
+	DistanceConstraint c = d_constraints[i];
+	glm::vec3 dir = tmp_X[c.p1] - tmp_X[c.p2];
+
+	float len = glm::length(dir); 
+	if(len <= EPSILON) return;
+
+	float invMass = W[c.p1]+W[c.p2];//w_i+w_i;
+	if(invMass <= EPSILON) return;
+
+	//float k_prime = 1.0f-pow((1.0f-c.k), 1.0f/ns);
+	glm::vec3 dP = (1.0f/invMass) * (len-c.rest_length ) * (dir/len)* c.k_prime;
+	
+	//if(c.p1!=0 && c.p1 != numX)
+	if(W[c.p1] > 0.0)
+		tmp_X[c.p1] -= dP*W[c.p1];
+
+	//if(c.p2 != 0 && c.p2 != numX )
+	if(W[c.p2] > 0.0)
+		tmp_X[c.p2] += dP*W[c.p2];
+}
+
+void UpdateBendingConstraint(int index) {
+	size_t i=0;
+	BendingConstraint c = b_constraints[index]; 
+#if 0
+	//Using the paper suggested by DevO
+
+	float global_k = 0.010f;
+	glm::vec3 center1 = 0.3333f * (X[c.p1] + X[c.p2] + X[c.p3]);
+	glm::vec3 center2 = 0.3333f * (X[c.p1] + X[c.p2] + X[c.p4]);
+	
+	glm::vec3 dir_center1 = center1-X[c.p3];
+	glm::vec3 dir_center2 = center2-X[c.p4];
+
+	float dist_center1 = glm::length(dir_center1);
+	float dist_center2 = glm::length(dir_center2);
+
+	float diff1 = 1.0f - ((global_k + c.rest_length1) / dist_center1);
+	glm::vec3 dir_force1 = dir_center1 * diff1;
+
+	float diff2 = 1.0f - ((global_k + c.rest_length2) / dist_center2);
+	glm::vec3 dir_force2 = dir_center2 * diff2;
+	
+	glm::vec3 fa = c.k * ((2.0f*W[c.p1])/c.w) * dir_force1;
+	glm::vec3 fb = c.k * ((2.0f*W[c.p2])/c.w) * dir_force1;
+	glm::vec3 fc = c.k * ((4.0f*W[c.p3])/c.w) * dir_force1;
+
+	//if(c.p1!=0 && c.p1 != numX) {
+	if(W[c.p1]>0.0){
+		tmp_X[c.p1] += fa;
+	}
+	//if(c.p2!=0 && c.p2 != numX) {
+	if(W[c.p2]>0.0){
+		tmp_X[c.p2] += fb;
+	}
+	//if(c.p3!=0 && c.p3 != numX) {
+	if(W[c.p3]>0.0){
+		tmp_X[c.p3] += fc;
+	}
+
+	fa = c.k * ((2.0f*W[c.p1])/c.w) * dir_force2;
+	fb = c.k * ((2.0f*W[c.p2])/c.w) * dir_force2;
+	fc = c.k * ((4.0f*W[c.p4])/c.w) * dir_force2;
+
+	//if(c.p1!=0 && c.p1 != numX) 
+	if(W[c.p1]>0.0){
+		tmp_X[c.p1] += fa;
+	}
+	//if(c.p2!=0 && c.p2 != numX) 
+	if(W[c.p2]>0.0){
+		tmp_X[c.p2] += fb;
+	}
+	//if(c.p4!=0 && c.p4 != numX) 
+	if(W[c.p4]>0.0){
+		tmp_X[c.p4] += fc;
+	}
+
+#else
+
+	//Using the dihedral angle approach of the position based dynamics		
+	float d = 0, phi=0,i_d=0;
+	glm::vec3 n1=glm::vec3(0), n2=glm::vec3(0);
+	
+	glm::vec3 p1 = tmp_X[c.p1];
+	glm::vec3 p2 = tmp_X[c.p2]-p1;
+	glm::vec3 p3 = tmp_X[c.p3]-p1;
+	glm::vec3 p4 = tmp_X[c.p4]-p1;
+
+	glm::vec3 p2p3 = glm::cross(p2,p3);		
+	glm::vec3 p2p4 = glm::cross(p2,p4);		
+
+	float lenp2p3 = glm::length(p2p3);
+	
+	if(lenp2p3 == 0.0) { return; } //need to handle this case.
+
+	float lenp2p4 = glm::length(p2p4);
+
+	if(lenp2p4 == 0.0) { return; } //need to handle this case.
+
+	
+	n1 = glm::normalize(p2p3);
+	n2 = glm::normalize(p2p4); 
+
+ 	d	= glm::dot(n1,n2);
+	phi = acos(d);
+
+	//try to catch invalid values that will return NaN.
+	// sqrt(1 - (1.0001*1.0001)) = NaN 
+	// sqrt(1 - (-1.0001*-1.0001)) = NaN 
+	if(d<-1.0) 
+		d = -1.0; 
+	else if(d>1.0) 
+		d=1.0; //d = clamp(d,-1.0,1.0);
+	
+	//in both case sqrt(1-d*d) will be zero and nothing will be done.
+	//0° case, the triangles are facing in the opposite direction, folded together.
+	if(d == -1.0){ 
+	   phi = PI;  //acos(-1.0) == PI
+       if(phi == phi0[index]) 
+		   return; //nothing to do 
+
+      //in this case one just need to push 
+	  //vertices 1 and 2 in n1 and n2 directions, 
+	  //so the constrain will do the work in second iterations.
+	  if(c.p1!=0 && c.p1!=numX)
+		tmp_X[c.p3] += n1/100.0f;
+
+	  if(c.p2!=0 && c.p2!=numX)
+		tmp_X[c.p4] += n2/100.0f;
+
+	  return;
+	}
+	if(d == 1.0){ //180° case, the triangles are planar
+		phi = 0.0;  //acos(1.0) == 0.0
+        if(phi == phi0[index]) 
+			return; //nothing to do 
+	}
+
+	i_d = sqrt(1-(d*d))*(phi-phi0[index]) ;
+
+	glm::vec3 p2n1 = glm::cross(p2,n1);
+	glm::vec3 p2n2 = glm::cross(p2,n2);
+	glm::vec3 p3n2 = glm::cross(p3,n2);
+	glm::vec3 p4n1 = glm::cross(p4,n1);
+	glm::vec3 n1p2 = -p2n1;
+	glm::vec3 n2p2 = -p2n2;
+	glm::vec3 n1p3 = glm::cross(n1,p3);
+	glm::vec3 n2p4 = glm::cross(n2,p4);
+
+	glm::vec3 q3 =  (p2n2 + n1p2*d)/ lenp2p3;
+	glm::vec3 q4 =  (p2n1 + n2p2*d)/ lenp2p4;
+	glm::vec3 q2 =  (-(p3n2 + n1p3*d)/ lenp2p3) - ((p4n1 + n2p4*d)/lenp2p4);
+
+	glm::vec3 q1 = -q2-q3-q4;
+	
+	float q1_len2 = glm::dot(q1,q1);// glm::length(q1)*glm::length(q1);
+	float q2_len2 = glm::dot(q2,q2);// glm::length(q2)*glm::length(q1);
+	float q3_len2 = glm::dot(q3,q3);// glm::length(q3)*glm::length(q1);
+	float q4_len2 = glm::dot(q4,q4);// glm::length(q4)*glm::length(q1); 
+
+	float sum = W[c.p1]*(q1_len2) +
+				W[c.p2]*(q2_len2) +
+				W[c.p3]*(q3_len2) +
+				W[c.p4]*(q4_len2);	
+				
+	glm::vec3 dP1 = -( (W[c.p1] * i_d) /sum)*q1;
+	glm::vec3 dP2 = -( (W[c.p2] * i_d) /sum)*q2;
+	glm::vec3 dP3 = -( (W[c.p3] * i_d) /sum)*q3;
+	glm::vec3 dP4 = -( (W[c.p4] * i_d) /sum)*q4;
+	
+	//if(c.p1!=0 && c.p1 != numX) 
+	if(W[c.p1] > 0.0) {
+		tmp_X[c.p1] += dP1*c.k;
+	}
+	//if(c.p2!=0 && c.p2 != numX) 
+	if(W[c.p2] > 0.0) {
+		tmp_X[c.p2] += dP2*c.k;
+	}
+	//if(c.p3!=0 && c.p3 != numX) 
+	if(W[c.p3] > 0.0) {
+		tmp_X[c.p3] += dP3*c.k;
+	}	
+	//if(c.p4!=0 && c.p4 != numX) 
+	if(W[c.p4] > 0.0) {
+		tmp_X[c.p4] += dP4*c.k;
+	}  
+#endif
+}
+//----------------------------------------------------------------------------------------------------
+void GroundCollision() //DevO: 24.07.2011
+{
+	for(size_t i=0;i<total_points;i++) {	
+		if(tmp_X[i].y<0) //collision with ground
+			tmp_X[i].y=0;
+	}
+}
+
+//----------------------------------------------------------------------------------------------------
+void UpdateInternalConstraints(float deltaTime) {
+	size_t i=0;
+ 
+	//printf(" UpdateInternalConstraints \n ");
+	for (size_t si=0;si<solver_iterations;++si) {
+		for(i=0;i<d_constraints.size();i++) {
+			UpdateDistanceConstraint(i);
+		} 
+		for(i=0;i<b_constraints.size();i++) {
+			UpdateBendingConstraint(i);
+		}
+		GroundCollision();
+	}
+}
+void OnIdle() {	
+	
+/*
+	//Semi-fixed time stepping
+	if ( frameTime > 0.0 )
+    {
+        const float deltaTime = min( frameTime, timeStep );
+        StepPhysics(deltaTime );
+        frameTime -= deltaTime;    		
+    }
+	*/
+	
+	//printf(" ### OnIdle %f ### \n",accumulator);
+	//Fixed time stepping + rendering at different fps	
+	if ( accumulator >= timeStep )
+    {	 
+        StepPhysics(timeStep );		
+        accumulator -= timeStep;
+    }
+	
+	glutPostRedisplay();
+	 //glutTimerFunc(1, OnIdle, 0);
+	Sleep(5); //TODO
+}
+
+void StepPhysics(float dt ) {
+	
+	ComputeForces();
+	IntegrateExplicitWithDamping(dt);
+	 
+	// for collision constraints
+	//UpdateExternalConstraints(dt);
+	UpdateInternalConstraints(dt);
+	Integrate(dt);
+
+	//printf("Pos: %3f %3f %3f\n", X[1].x, X[1].y, X[1].z);
+	//ApplyProvotDynamicInverse();	
+
+}
+
+void main(int argc, char** argv) {
+	atexit(OnShutdown);
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
+	glutInitWindowSize(width, height);
+	glutCreateWindow("GLUT Cloth Demo [Position based Dynamics]");
+
+	glutDisplayFunc(OnRender);
+	glutReshapeFunc(OnReshape);
+	glutIdleFunc(OnIdle);
+	
+	glutMouseFunc(OnMouseDown);
+	glutMotionFunc(OnMouseMove);	
+
+	glewInit();
+	InitGL();
+	
+	glutMainLoop();		
+}
+ 

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to handle large mass ratios ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to handle large mass ratios ?</h2>
+		<p><a href="viewtopic.php%3Ft=54.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=54</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to handle large mass ratios ?</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2005 10:06 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Iterative solvers are very popular nowadays. However most methods don't copy well with large mass ratios. How do people deal with this ?<br>
+<br>
+Perhaps an LCP version of conjugate gradient may be the answer to this. Someone on the list mentioned PCG which may be what I'm looking for. Any good references on that?<br>
+<br>
+Also, diagonalization was mentioned, has any tried this ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to handle large mass ratios ?</h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2005 9:49 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Iterative solvers are very popular nowadays. However most methods don't copy well with large mass ratios. How do people deal with this ?</div></blockquote>
+
+Well, there is a bunch of iterative methods, I guess you refer to matrix splitting methods? I will consider only these in the following discussion.<br>
+If you rephrase the iterative method as a matrix equation, for GS this is something like <br>
+<br>
+  x = T x + c<br>
+<br>
+with<br>
+<br>
+  T =  (D+L)^{-1}  U<br>
+  c =  (D+L)^{-1}  b<br>
+<br>
+In order for GS to converge at all the spectral radius of T must be less than 1. General speaking the smaller spectral radius the better it is (or should I say the faster the convergence).<br>
+<br>
+Large mass ratios seem to affect the magnitude of the eigenvalues of the system matrix. Thus the spectral radius of the A-matrix is affected.<br>
+So the trick is to get a small spectral radius! However, this is not easy.<br>
+<br>
+General speaking preconditioning and diagonal scaling (diagonal scaling can be seen as a left-right preconditioning) can be used to ``change'' the spectrum of the eigenvalues. General speaking, the new preconditioned system looks like<br>
+<br>
+  A' = (C^{-1} A C^{-T}) C^{ T}<br>
+  b' = C^{-1}  b<br>
+<br>
+I have tried using C = sqrt( 1.0 / diag(A) )  (this is diagonal scaling). If one compares a plot of the residual error of the new system with the old system then one see a small displacement of the curves. Diagonal scaling seems to lower the convergence rate by a constant but it does not change the asymptotic behavior.<br>
+<br>
+To really get this preconditioning to work one needs to find a C-matrix which is a good approximation to A^{-1}) If this can be achieved one would have A' \approx I.  Using diagonal scaling C is of course not a really good approximation to the inverse of A. Diagonal scaling seems to work best for diagonal dominant systems. In my experience multibody dynamics problems does not appear to be that. In genral matrix splitting methods seem to work best on diagonal dominant systems. Just consider the contrived case of using Jacobi on a diagonal system. Here T will be the identity matrix, and you will hit the solution in one iteration.<br>
+<br>
+Shock-propagation can also be understood as a two stage blocked iterative scheme with a kind of preconditioner. The outer stage consist of deviding your problem into stack-layers. Each stack layer corresponds to a single block. Then one iterates over the blocks in a bottom-up fastion (this is a strange mixture of Jacobi/Gauss-Seidel like iteration. The diagonal blocking is similar to a Jacobi scheme, however layers must be processed in a certain order, which makes the processing of blocks sequential in nature, i.e. similar to Gauss-Seidel). For each block the mass ratios are changed by fixating some of the bodies, before solving the block.<br>
+<br>
+Relaxation or damping also seem to work rather well. That is use<br>
+<br>
+  A' = A + epsilon I<br>
+<br>
+For non-negative epsilon. Now as n-&gt; infty we have epsilon -&gt; zero. This is termed constaint force mixing in the ODE community. To really see what it means consider the equivalent QP. That is minimize<br>
+<br>
+  f(lambda) = lambda^T b + lambda^T A lambda + epsilon lambda^T lambda<br>
+<br>
+s.t <br>
+<br>
+  lambda &gt;= 0<br>
+<br>
+Using KKT-conditions leads to an LCP with the A' matrix above. Looking closely at f one see that the magnitude of lambda is minimized by the last term. Also note lambda always will be dampen by this scheme. This leads to weaker constraint forces..... This can be used to model soft constraints but if you really want hard-constraints then you have lost!!!<br>
+<br>
+However in my experiece relaxation seem to really change the slope of the convergenece rate. That is to say for the convergence rate p given by<br>
+<br>
+  lim_{n \rightarrow \infty} \frac{|e^n|}{|e^{n-1}|^p} = c<br>
+<br>
+where c is called the convergence constant. Larger epsilon usually in my experience means lower c. Try looking at log-plots of the residual error and the different slopes becomes apparent. For GS type of solvers p=1 (this is really bad:-()</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to handle large mass ratios ?</h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2005 11:01 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content">has anyone tried the method proposed in the following paper?:<br>
+<br>
+<a href="http://www-evasion.imag.fr/Publications/2003/MGCF03/jnrr.pdf" class="postlink">http://www-evasion.imag.fr/Publications ... 3/jnrr.pdf</a><br>
+<br>
+it seems to be a sort of projected biconjugate gradient solver. So it should have fewer requirements than PGS and PCG in order to converge.<br>
+<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2005 4:40 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">It is odd that they are using biconjugate gradient when conjugate gradient would do. They appear to be restarting the BCG whenever the active set changes. This might be inefficient. A good PCG algorithm should work on the whole system, not just the active set. Then the PCG does not restart and needs less bookkeeping.<br>
+<br>
+This paper presents a PCG method but does not go into much detail:<br>
+<br>
+<a href="http://www.inrialpes.fr/bipop/publications/acary/mbd2005.pdf" class="postlink">http://www.inrialpes.fr/bipop/publicati ... bd2005.pdf</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2005 4:58 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I already asked Stephane Redon, who is a collegue of 3 of the authors, for a reply from one of them. He mailed them, so lets cross the fingers <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2005 7:47 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>It is odd that they are using biconjugate gradient when conjugate gradient would do. They appear to be restarting the BCG whenever the active set changes. This might be inefficient. </div></blockquote>
+
+they mention a Baraff 94's paper in regard to the LCP formulation and <br>
+in the initial part of section 6(dynamic friction) of the following mentioned paper:<br>
+<br>
+<a href="http://citeseer.csail.mit.edu/baraff94fast.html" class="postlink">http://citeseer.csail.mit.edu/baraff94fast.html</a><br>
+<br>
+it can be seen that the friction model employed leads to an unsymmetric LCP matrix and a PCG solver would not work in that case. However i personally prefer the less accurate friction models that lead to a symmetric system. <br>
+<br>
+talking about performances they say that their method is slightly faster than a standard BCG applied to equality constraints. A standard BCG should be twice as slower than a CG:<br>
+<br>
+from:<br>
+<a href="http://mathworld.wolfram.com/BiconjugateGradientMethod.html" class="postlink">http://mathworld.wolfram.com/Biconjugat ... ethod.html</a><br>
+<br>
+"For symmetric positive definite systems, the method delivers the same results as the conjugate gradient method, but at twice the cost per iteration"<br>
+<br>
+however it would be very interesting to see the paper's authors direct comments.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2005 8:22 pm</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite>
+they mention a Baraff 94's paper in regard to the LCP formulation and <br>
+in the initial part of section 6(dynamic friction) of the following mentioned paper:<br>
+<br>
+<a href="http://citeseer.csail.mit.edu/baraff94fast.html" class="postlink">http://citeseer.csail.mit.edu/baraff94fast.html</a><br>
+<br>
+it can be seen that the friction model employed leads to an unsymmetric LCP matrix and a PCG solver would not work in that case. However i personally prefer the less accurate friction models that lead to a symmetric system.
+</div></blockquote>
+
+In this paper Baraff use a splitting method for handling friction in 3D. Strictly speaking this is in fact a NCP not a LCP.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 02, 2005 10:25 pm</strong></div>
+				<div class="author">by <strong>butcher</strong></div>
+				<div class="content">I feel ashamed for admitting this, but we sidestepped the whole problem of mass ratios in Halo 2. Havok allows you to mess with the collision response directly, so we simply pin the relative masses of objects so that there is never more than a 16:1 ratio between them.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

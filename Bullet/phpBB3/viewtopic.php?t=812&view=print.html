@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Creating Stiff Angular Springs</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Creating Stiff Angular Springs</h2>
+		<p><a href="viewtopic.php%3Ft=812.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=812</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Creating Stiff Angular Springs</h3>
+				<div class="date">Posted: <strong>Wed Dec 13, 2006 11:48 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">I'm trying to implement some of the techniques layed out in this paper on Interactive Dynamics: <a href="http://www.cs.ubc.ca/~van/papers/skistunt.pdf" class="postlink">http://www.cs.ubc.ca/~van/papers/skistunt.pdf</a><br>
+<br>
+I have a working 2D physics engine based off Erin Cattos Box2D code. (The updated version with the split impulses). <br>
+<br>
+I'm having trouble implementing angular dampned springs that are stiff.  The paper above uses these dampned angular springs to control the angles between all the rigid bodies that make up the human model. (torso, arms, legs..)<br>
+<br>
+What I have works pretty good but if I make the spring constant to high, the simulation explodes. The best I can get is still a bit bouncy/soft, especially when I have 3/4 bodies connected in series. It's about as rigid as a good fishing pole.<br>
+<br>
+Here is how I currently have it implemented.<br>
+<br>
+1. compute the angle difference between bodies.<br>
+2. calculate torque using: torque = k1(delta theta) - k2(angularVel)<br>
+3. At the beginning of the simulation, Apply Torque. (I do this at the same point that I apply other forces such as gravity.)<br>
+4. run the rest of the simulation loop. (see below)<br>
+<br>
+My simulation loop, is the same as that in Erin's Box2D code.<br>
+<br>
+Apply forces and torques<br>
+Appy impulses (for contacts and joints)<br>
+Update Position<br>
+Loop<br>
+<br>
+I really don't think there is a problem with my simulator other than it's just not stable enough right now for stiff angular springs.  <br>
+<br>
+I'm looking for hints on how to modify my simulation code to allow for more stability so that I can realize these stiff angular springs.  I've read about some different techniques: clamping, more accurate integration techniques.. etc. But I'm not sure where to start.<br>
+<br>
+-thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2006 12:09 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">It is possible to achieve stiff spring-dampers using constraints. What you do is create a motor on the hinge joint as a constraint, then you use a beta (ERP) and softness (CFM) that mimics a spring-damper system.<br>
+<br>
+See this section of the ODE docs:<br>
+<br>
+<a href="http://ode.org/ode-latest-userguide.html#sec_3_8_2" class="postlink">http://ode.org/ode-latest-userguide.html#sec_3_8_2</a><br>
+<br>
+You can adjust the motor's position error to target specific joint angles.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2006 12:45 am</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Sounds like exactly what I want. I will take a look.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2006 2:29 am</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Looking at the joint code from Box2D.  Are the relaxation and ".1" from <br>
+<br>
+here<br>
+            bias = -.1 * inverseDt * difference;<br>
+and here<br>
+            accumulatedImpulse *= relaxation;<br>
+<br>
+analogouse in any way to the erp and cfm in ode?<br>
+<br>
+I've read the docs from ode, now I'm trying to figure out how to go about implementing a Joint Motor on the Revolute joint from the Box2D paper.<br>
+<br>
+I'll keep working on it, but any input anyone can provide to point me in the right direction would be great.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2006 2:54 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">The .1 is the ERP. CFM is not in Box2D. CFM would come in by adding a constant to k.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2006 12:54 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Thanks for the help so far.<br>
+<br>
+A couple follow up questions.<br>
+<br>
+Is the CFM constant a matrix?  In your joint code, you have:<br>
+<br>
+. . . Matrix K = K1 + K2 + K3;<br>
+<br>
+For the CFM, should I just add a K4, where K4 is a matrix with each elment set to a constant?<br>
+<br>
+Also, I've been digesting other posts on this topic in order to understand what I need to do for my angular motor.  My first goal is just to contrain two bodies to stay at a fixed angle.<br>
+<br>
+This code of yours from another post seems to be what I want: 
+<blockquote class="uncited"><div>
+Angular momentum: <br>
+<br>
+w1 = w1b - invI1 N <br>
+w2 = w2b + invI2 N <br>
+<br>
+N = angular impulse (scalar in 2D) <br>
+<br>
+<br>
+Constraint: <br>
+<br>
+w2 - w1 = 0 <br>
+<br>
+<br>
+With Baumgarte: <br>
+<br>
+C = angle - angle_limit <br>
+if abs(C) &lt; small_angle <br>
+then C = 0 <br>
+<br>
+w2 - w1 = - beta/dt * C <br>
+<br>
+(now you can compute N). <br>
+<br>
+<br>
+Accumulated Clamping: <br>
+<br>
+Na = Na + N <br>
+<br>
+If at the lower limit: Na = max(Na, 0) <br>
+If at the upper limit: Na = min(Na, 0) <br>
+<br>
+N = Na - Na_old 
+</div></blockquote>
+
+I think I can implement this with out too much problem, but I'm not sure how to get started on the AngularMotor system. What does the constraint formulation look like for an AMotor?  <br>
+<br>
+Again, my ultimate goal is just to be able to dynamically set a target angle between two bodies with the added caveat that I would like to have some control over the stiffness.  <br>
+<br>
+I think the term "Motor" is confusing me a bit.  It seems like I would just add a constraint along the lines of body2.Rotation - body1.Rotation = TargetAngle. Then I could just set the target angle to whatever I want on the fly and let the erp/cfm factors do there magic.  I'm sitll getting my head around these constraints, though, so I'm sure I'm missing something. (all this is in 2D of course)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2006 1:45 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+Is the CFM constant a matrix? In your joint code, you have:<br>
+<br>
+. . . Matrix K = K1 + K2 + K3; 
+</div></blockquote>
+
+It is a diagonal matrix. You add the CFM term to the diagonal elements of the K matrix for my understanding. Another approach (like used in Bullet) would be to scale the velocity error.<br>
+<br>
+impulse = invK ( stiffness * positionError/dt + damping * velocityError )<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 14, 2006 6:43 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content"><blockquote class="uncited"><div>It seems like I would just add a constraint along the lines of body2.Rotation - body1.Rotation = TargetAngle. Then I could just set the target angle to whatever I want on the fly and let the erp/cfm factors do there magic. </div></blockquote>
+
+This sounds correct. In 2D it should be this simple.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Dec 19, 2006 12:09 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">I got my AngularJoint working... sort of.  If I use 10 iterations and set my stepsize to 1/100, it works quite well, but is still just slightly softer than I would like.  <br>
+<br>
+I know this has been discussed in other posts, but I really haven't seen a solution. Has anyone come up with a way to harden the joints while using sequential impulses?  Everything I've read on these forums point toward the fact that doing the split impulse thing does not work for joints. Anyone find a way to make it work?<br>
+<br>
+Here is the code for my AngularJoint, possibly I'm doing something wrong to keep the joint from being as hard as it could be. (note: this is in c#):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=812&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>namespace FarseerGames.FarseerXNAPhysics.Dynamics {
+    public class AngleJoint : Joint {
+        private float biasFactor = .1f;
+        private float bias;
+        private float relaxation;
+        private float accumulatedAngularImpulse;
+        //private float oldAccumulatedAngularImpulse;
+        private float targetAngle;
+
+        public AngleJoint(Body body1, Body body2) {
+            this._body1 = body1;
+            this._body2 = body2;
+
+            accumulatedAngularImpulse = 0;
+            relaxation = 1f;
+            targetAngle = _body2.TotalOrientation - _body1.TotalOrientation;
+        }
+
+        public float TargetAngle {
+            get { return targetAngle; }
+            set { targetAngle = value; }
+        }
+
+        public override void PreStep(float inverseDt) {
+            float difference;
+            difference = (_body2.TotalOrientation - _body1.TotalOrientation) - targetAngle;
+
+            bias = -biasFactor * inverseDt * difference;
+
+            accumulatedAngularImpulse *= relaxation;
+
+            _body1.AngularVelocity -= _body1.InverseMomentOfInertia * accumulatedAngularImpulse;
+            _body2.AngularVelocity += _body2.InverseMomentOfInertia * accumulatedAngularImpulse;
+        }
+
+        public override void Update() {
+            float angularImpulse;
+            angularImpulse = (bias - _body2.AngularVelocity + _body1.AngularVelocity) / (_body1.InverseMomentOfInertia  + _body2.InverseMomentOfInertia);
+            accumulatedAngularImpulse += angularImpulse;
+
+            _body1.AngularVelocity -= _body1.InverseMomentOfInertia * angularImpulse;
+            _body2.AngularVelocity += _body2.InverseMomentOfInertia * angularImpulse;
+        }
+    }
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Dec 19, 2006 12:48 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I might have written somewhere that the split impulse didn't work form me. Well I found a bug in my code recently that might have be the reason for this and there was also another issue due to floatin point precision that might be anohter reason for my problems. I haven' tested it again so maybe I can encourage you to use the splitimpulse and let us know how it worked out...<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Dec 19, 2006 6:21 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">You can try to use a bias factor of 0.2 to 0.4. That will make it stiffer. Also, you should verify your velocity constraint by setting the bias factor to zero. The relative angle should be locked, but you will get numerical drift.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Dec 26, 2006 3:53 am</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I've also been trying to get rigid orientation constraints working in a 2D sim (for use with physics-driven character animation).. not much luck though. <br>
+<br>
+This is speculation, but part of the problem may be the way the position-level constraint is approximated/linearized: for larger errors this can result in several dozens of iterations before things converge. For limb-like joints there can be problems when the two "attachment vectors" (objspace r vectors that point from COM to joint position) are near parallel when the joint is violated: the correcting impulses tend to make the bodies' orientations oscillate back and forth as they're very slowly pulled together.<br>
+<br>
+It's quite possible that my impulse-based attempts had errors in them though.<br>
+<br>
+I've experimented with some ad-hoc "projection" methods which would attempt to satisfy the joint constraint perfectly in a single step; these are promising but still somewhat unstable (the solution was geometric, based on ideas similar to section 3.5 of this paper: <a href="http://www.icg.seas.gwu.edu/Publications/won_paper.pdf" class="postlink">http://www.icg.seas.gwu.edu/Publications/won_paper.pdf</a> , and doesn't conserve momentum without extra correction/projection steps). It _was_ really nice though to see things snapping together exactly after a single iteration.<br>
+<br>
+<br>
+One thing I plan on trying after the holidays is to try different methods to solve for the position error/correction; using a more accurate approximation might really help, for instance using second-order/"hessian-based" Newton-Raphson (I _think_ this is what it's called -- online references seem to be ambiguous about whether Newton-Raphson is f(x)/f'(x) or f'(x)/f''(x)). <br>
+<br>
+The main problem with this approach is that you need to properly derive a set of second-order partial derivatives, which is currently proving to be a bit more than I can handle!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Dec 26, 2006 8:46 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Hey Raigan,<br>
+<br>
+how do you formulate your orientation constraint? Assume (in 2D) you have a vector to the pivot point r and two orthonormal vectors describing the constraint space. Let's call them u and v. These vectors are stored as usual w.r.t. to the first and second body. We call these vectors u1', v1' and u2', v2'.<br>
+<br>
+At each frame you compute the framespace w.r.t to each body as usual:<br>
+<br>
+u1 = R1 * u1'<br>
+v1 = R1 * v1'<br>
+u2 = R2 * u2'<br>
+v2 = R2 * v2'<br>
+<br>
+If you now require the u1 and v2 or u2 and v1 to be orthorgonal you block the rotation. Basically you drive the rotation through the projection (dot product) of u onto v or vice versa. So you get:<br>
+<br>
+C = u1 * v2<br>
+dC/dt = dot( cross( omega1, u1 ), v2 ) + dot( u1, cross( omega2, v2 ) )<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 27, 2006 2:56 am</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I'm using the same approach as crashlander -- applying orientation-only impulses to drive the difference between relative orientation/angular velocity and target orientation/angular velocity to 0. <br>
+<br>
+Your suggestion seems like it would be much simpler to extend to 3D, are there any other benefits (stability/etc)?<br>
+<br>
+<br>
+Another simple solution I haven't got around to trying is: if using a smaller step (and thus keeping the joint error low) really helps, one thing to try might be to take "sub-steps" -- I know someone who uses explicit euler and springs, but gets very rigid behaviour simply by integrating and applying spring forces at &gt;1000hz. Something similar was mentioned in "A Practical Dynamics System" from someone at ILM i think -- at each "frame" you run collision/logic once, but integrate+apply forces/impulses many times.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 27, 2006 9:59 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You have to try it. Note that I edited my first post since there was a small typo in dC/dt. It should be quite stable and it saves you the computation of angle.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btMotionState questions</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btMotionState questions</h2>
+		<p><a href="viewtopic.php%3Ft=670.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=670</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btMotionState questions</h3>
+				<div class="date">Posted: <strong>Wed Nov 08, 2006 2:59 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">1) You call <em class="text-italics">motionState-&gt;getWorldTransform(m_worldTransform)</em> in btRigidBody constructor. I need to prepare Transform before object creation. It is not good. Normal sequence is:
+<ul><li>a) Create object<br>
+b) Set position<br>
+c) Add to Scence</li></ul>
+Something like:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=670&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const __m128 m128 = _mm_set_ps(0,6,6,6);
+BODY_BOX *p = new BODY_BOX(m128);
+
+p-&gt;SetPosition(D3DXVECTOR3(4*x-8,3*y+1.5f,4*z-5));
+p-&gt;SetFriction(0.8f);
+p-&gt;SetRestitution(0.5f);
+
+RENDER::COMPLEX::AddToComplex(p);
+PHYSICS::COMPLEX::AddToComplex(p);</code></pre></div>
+
+It is better to call <em class="text-italics">motionState-&gt;getWorldTransform(m_worldTransform)</em> in void	btDiscreteDynamicsWorld::addRigidBody(btRigidBody* body)<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=670&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void	btDiscreteDynamicsWorld::addRigidBody(btRigidBody* body)
+{
+if (body-&gt;getMotionState())
+	body-&gt;getMotionState()-&gt;getWorldTransform(body-&gt;getWorldTransform());
+body-&gt;setGravity(m_gravity);
+bool isDynamic = !(body-&gt;isStaticObject() || body-&gt;isKinematicObject());
+short collisionFilterGroup = isDynamic? btBroadphaseProxy::DefaultFilter : btBroadphaseProxy::StaticFilter;
+short collisionFilterMask = isDynamic? btBroadphaseProxy::AllFilter : 	btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+
+addCollisionObject(body,collisionFilterGroup,collisionFilterMask);
+}</code></pre></div>
+
+2) Unable to set new Transform several times (while object is in the Scene). Where are functions like SetPosition, SetOrientation? How can I set new position/orientation to the object? The only function I found is void translate(const btVector3&amp; v). But it sets relative position.  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad">  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad">  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"> I need ability to set absolute position...<br>
+<br>
+3) Objects stand unstable. Stack of cylinders is shaking (They stood calm in prev. versions).  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 08, 2006 3:42 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">If you want to set a new world transform on a dynamic rigidbody, just call
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=670&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void	setWorldTransform(const btTransform&amp; worldTrans)
+</code></pre></div>
+
+Static objects (mass 0) should not move, unless you use the kinematic flag.<br>
+<br>
+Are you using the btDefaultMotionState, or your own derived version?<br>
+What timestep are you passing? variable? fixed?<br>
+You can pass variable timestep, and the system does interpolation for you.<br>
+<br>
+For dynamic objects, do you make sure to read the worldtransform from the motionstate?<br>
+<br>
+Not sure about your cylinder issues, can you give more details about sizes etc?<br>
+Thanks,<br>
+Erwin<br>
+<br>
+<br>
+<br>
+
+<blockquote><div><cite>Jack wrote:</cite>1) You call <em class="text-italics">motionState-&gt;getWorldTransform(m_worldTransform)</em> in btRigidBody constructor. I need to prepare Transform before object creation. It is not good. Normal sequence is:
+<ul><li>a) Create object<br>
+b) Set position<br>
+c) Add to Scence</li></ul>
+Something like:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=670&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const __m128 m128 = _mm_set_ps(0,6,6,6);
+BODY_BOX *p = new BODY_BOX(m128);
+
+p-&gt;SetPosition(D3DXVECTOR3(4*x-8,3*y+1.5f,4*z-5));
+p-&gt;SetFriction(0.8f);
+p-&gt;SetRestitution(0.5f);
+
+RENDER::COMPLEX::AddToComplex(p);
+PHYSICS::COMPLEX::AddToComplex(p);</code></pre></div>
+
+It is better to call <em class="text-italics">motionState-&gt;getWorldTransform(m_worldTransform)</em> in void	btDiscreteDynamicsWorld::addRigidBody(btRigidBody* body)<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=670&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void	btDiscreteDynamicsWorld::addRigidBody(btRigidBody* body)
+{
+if (body-&gt;getMotionState())
+	body-&gt;getMotionState()-&gt;getWorldTransform(body-&gt;getWorldTransform());
+body-&gt;setGravity(m_gravity);
+bool isDynamic = !(body-&gt;isStaticObject() || body-&gt;isKinematicObject());
+short collisionFilterGroup = isDynamic? btBroadphaseProxy::DefaultFilter : btBroadphaseProxy::StaticFilter;
+short collisionFilterMask = isDynamic? btBroadphaseProxy::AllFilter : 	btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+
+addCollisionObject(body,collisionFilterGroup,collisionFilterMask);
+}</code></pre></div>
+
+2) Unable to set new Transform several times (while object is in the Scene). Where are functions like SetPosition, SetOrientation? How can I set new position/orientation to the object? The only function I found is void translate(const btVector3&amp; v). But it sets relative position.  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad">  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad">  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"> I need ability to set absolute position...<br>
+<br>
+3) Objects stand unstable. Stack of cylinders is shaking (They stood calm in prev. versions).  <img class="smilies" src="images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"></div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bad 2.23 :(</h3>
+				<div class="date">Posted: <strong>Wed Nov 08, 2006 4:31 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">1) Can we have additionally to setWorldTransform separate setPosition and setOrientation?<br>
+<br>
+Initial transform you get via MotionState::getWorldTransform. Next transforms go via RigidBody::setWorldTransform. Why make things so complicated? We need one indoor and one outdoor.<br>
+<br>
+<strong class="text-strong">To the Bullet:</strong><br>
+a) All transforms go via RigidBody::setWorldTransform. There is no MotionState::getWorldTransform method.<br>
+<strong class="text-strong">OR</strong><br>
+b) MotionState::getWorldTransform is called in each frame. There is no RigidBody::setWorldTransform method.<br>
+<br>
+<strong class="text-strong">From the Bullet:</strong><br>
+a) All transforms go via MotionState::setWorldTransform. No calls for static/kinematic objects (if we use point "a" in prev. section - "To the Bullet").<br>
+<strong class="text-strong">OR</strong><br>
+b) All transforms go via MotionState::setWorldTransform. It is called for static/kinematic objects once RigidBody::setWorldTransform is called.<br>
+<br>
+2) cylinder issues: A pile of three cylinders. HalfSize = {1.5f,1.5f,1.5f}. I noticed that resulting cylinder size is slightly greater. It is around 3.1 (instead of 3). If I put them one on one with gap=3, they jump up due to interpenetration. For example, if I use BOX shape (HalfSize=1.5), then I can put them one on one with exact gap=3. Even if I put cylinders with gap=3.1, all pile is shaking around Y-axis (precession).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bad 2.23 :(</h3>
+				<div class="date">Posted: <strong>Wed Nov 08, 2006 4:43 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>1) Can we have additionally to setWorldTransform separate setPosition and setOrientation?<br>
+<br>
+Initial transform you get via MotionState::getWorldTransform. Next transforms go via RigidBody::setWorldTransform. Why make things so complicated? We need one indoor and one outdoor.<br>
+<br>
+<strong class="text-strong">To the Bullet:</strong><br>
+a) All transforms go via RigidBody::setWorldTransform. There is no MotionState::getWorldTransform method.<br>
+<strong class="text-strong">OR</strong><br>
+b) MotionState::getWorldTransform is called in each frame. There is no RigidBody::setWorldTransform method.<br>
+<br>
+<strong class="text-strong">From the Bullet:</strong><br>
+a) All transforms go via MotionState::setWorldTransform. No calls for static/kinematic objects (if we use point "a" in prev. section - "To the Bullet").<br>
+<strong class="text-strong">OR</strong><br>
+b) All transforms go via MotionState::setWorldTransform. It is called for static/kinematic objects once RigidBody::setWorldTransform is called.
+</div></blockquote>
+
+OK, the motionstate should be improved and made more consistent. I will look into the interface issue. It got complicated due to the additional interpolation scheme and kinematic support.<br>
+
+<blockquote class="uncited"><div>
+2) cylinder issues: A pile of three cylinders. HalfSize = {1.5f,1.5f,1.5f}. I noticed that resulting cylinder size is slightly greater. It is around 3.1 (instead of 3). If I put them one on one with gap=3, they jump up due to interpenetration. For example, if I use BOX shape (HalfSize=1.5), then I can put them one on one with exact gap=3. Even if I put cylinders with gap=3.1, all pile is shaking around Y-axis (precession).
+</div></blockquote>
+There are 2 issues: The collision margin affects different shapes in different ways. For cylinders, the collision margin is outside for cylinders. You can subtract the margin from the cylinder extends to hide this issue.<br>
+<br>
+About stability, I'm not aware of issues, here. Can you reproduce this in the CcdPhysicsDemo?<br>
+<br>
+What timestep are you using? Variable or fixed? What are the values passed when you calling stepSimulation?<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 08, 2006 5:04 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">I use variable time stamp:<br>
+<br>
+void PHYSICS::Sync(void)<br>
+{<br>
+const float dt = DeltaTime();<br>
+<br>
+LockWrite();<br>
+_pPhysWorld-&gt;stepSimulation(dt, 10);<br>
+UnlockWrite();<br>
+<br>
+}<br>
+<br>
+I'll try to reproduce it in demo...</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

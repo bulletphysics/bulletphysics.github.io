@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Replicate ai generated animation back in pybullet.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Replicate ai generated animation back in pybullet.</h2>
+		<p><a href="viewtopic.php%3Ft=13525.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13525</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Replicate ai generated animation back in pybullet.</h3>
+				<div class="date">Posted: <strong>Sat Jan 28, 2023 9:25 am</strong></div>
+				<div class="author">by <strong>joebiden</strong></div>
+				<div class="content">Wassup fellow programmers I have been working on a project for a while now and decided this is the right time to get some advice, help or anything else idk. Long story short I have created and been training my own AI for a specific simulation of a movement and record that movement onto a JSON file, this would go through generations and generations to create better results and it did, but working with pybullet lead me to know that no matter the time parameters I give it, recorded joint info on its own implemented to replicate the animation would just run through all of the animations in a second. So I recorded time too but python is pretty darn slow to pick up the correct time to execute the exact movement in the exact time it is shown, rounding up the time would give a disaster where the body would just flinch and stop every split second, so after trying linear interpolation, setting the time step and numerous amounts of combinations for calculating time and still nothing worked. I ask you guys because Im sure my task was done at least once by one of you so I want to learn from you, what is your sauce?<br>
+<br>
+To give you a more of a look into what I'm doing, heres a single 1/5 key out of the json file<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13525&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>{"1.2839901447296143": {"0": {"joint_positions": -0.2660407240964722}, "1": {"joint_positions": 0.5304539359064856}, "2": {"joint_positions": -0.44852838864481787}, "3": {"joint_positions": -0.14016010671763662}, "4": {"joint_positions": 0.5558784919638431}, "5": {"joint_positions": 0.463813963178519}, "6": {"joint_positions": 0.1232185850913412}, "7": {"joint_positions": 0.5509734074329725}, "8": {"joint_positions": -0.5095558255751145}, "9": {"joint_positions": 0.08173290868566063}, "10": {"joint_positions": 0.3949344400183078}</code></pre></div>
+
+The full one would count all of the 50 joints respectively and such keys would go on into the hundreds.<br>
+<br>
+The script that tries to replicate this is very simple<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13525&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import json
+# Connect to the PyBullet physics server
+p.connect(p.GUI)
+p.setRealTimeSimulation(0)
+
+# Load the humanoid model
+skeleton = p.loadURDF("skeleton.urdf", useFixedBase=False)
+p.setTimeStep(0.01)
+
+# add a ground plane
+plane_id = p.createCollisionShape(p.GEOM_PLANE)
+ground = p.createMultiBody(baseCollisionShapeIndex=plane_id, basePosition=[0, 0, 0])
+
+# enable collisions between the humanoid model and the ground plane
+p.setCollisionFilterPair(skeleton, ground, -1, -1, 1)
+
+# set the gravity
+p.setGravity(0, 0, -9.8)
+
+# load the joint angles from json file
+with open("joint_angles.json", "r") as file:
+    joint_angles = json.load(file)
+
+# Initialize a dictionary to store the current joint angles
+current_joint_angles = {joint_num: 0 for joint_num in range(p.getNumJoints(skeleton))}
+
+# Get the start time
+start_time = time.time()  +
+offset = [0, 0, 1]
+position, orientation = p.getBasePositionAndOrientation(skeleton)
+new_position = [position[i] + offset[i] for i in range(3)]
+p.resetBasePositionAndOrientation(skeleton, new_position, orientation)
+n = 1
+
+# Get the list of all time frames
+time_frames = list(joint_angles.keys())
+
+# Iterate through the time frames and set the joint angls
+for i, keyframe_time in enumerate(time_frames):
+    keyframe_time = float(keyframe_time)
+    current_time = time.time() - start_time 
+    time_to_sleep = keyframe_time - current_time
+    while time_to_sleep &gt; 0:
+        time_to_sleep = keyframe_time - current_time
+    # Sleep for the calculated amount of time
+    time.sleep(time_to_sleep)
+
+    # Get the joint angles for this time frame
+    for joint_num, joint_data in joint_angles[str(keyframe_time)].items():
+        joint_positions = joint_data['joint_positions']
+        p.setJointMotorControl2(bodyIndex=0, jointIndex=int(joint_num), controlMode=p.POSITION_CONTROL, targetPosition=joint_positions)
+
+# Step the simulation
+    p.stepSimulation()
+
+print(time.time() - start_time)
+p.disconnect()</code></pre></div>
+
+Now Im sure this would be enough for you to understand a bit of the logic to try to figure something out yourself  but I know you will might notbe  able to fully replicate what I'm doing since of the sheer amount of data you might need to have to do so, so I want you to just to tell me more about the experience of you doing something similar to this rather than solving this like some overstackflow problem, python scripts are very appreciated. Furthermore the model is a XSensStyleModel generated using their motion capture, which I took from github: <a href="https://github.com/robotology/human-gazebo" class="postlink">https://github.com/robotology/human-gazebo</a> and found it has 50 joints, some are a bit glitchy on their own but it didnt really glitch me when I was doing simulations which I guess mostly because every movement was designed to not exceed their joint angles. <br>
+<br>
+TLDR: <br>
+Give me your experience in replicating animations preferably in python (C++ scares me).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Replicate ai generated animation back in pybullet.</h3>
+				<div class="date">Posted: <strong>Sat Jan 28, 2023 6:28 pm</strong></div>
+				<div class="author">by <strong>joebiden</strong></div>
+				<div class="content">Replying to my own post because I really need some help. Anything would help, this is going to define how from now on will I record any new found simulations and have them tested in a manner which can be displayed effectively. We're talking about an advancement that I have been looking forward for about a month now.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Replicate ai generated animation back in pybullet.</h3>
+				<div class="date">Posted: <strong>Mon Jan 30, 2023 1:44 am</strong></div>
+				<div class="author">by <strong>dodge</strong></div>
+				<div class="content">I'm also interested to hear how this can be done</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Replicate ai generated animation back in pybullet.</h3>
+				<div class="date">Posted: <strong>Mon Mar 17, 2025 10:16 am</strong></div>
+				<div class="author">by <strong>otis</strong></div>
+				<div class="content">To replicate AI-generated animations in PyBullet smoothly, ditch time.sleep() and sync playback to p.stepSimulation() with a fixed timestep like 1/240 Hz,<a href="https://buckshotroulette.com/home" class="postlink"><span style="color:#FFFFFF"><span style="font-size:1%;line-height:116%">Buckshot Roulette</span></span></a> interpolating joint positions between keyframes for fluidity.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

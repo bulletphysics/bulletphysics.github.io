@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Problem with character controller and btHeightfieldTerrainShape</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Problem with character controller and btHeightfieldTerrainShape</h2>
+		<p><a href="viewtopic.php%3Ft=13088.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13088</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Problem with character controller and btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Fri Oct 16, 2020 9:21 pm</strong></div>
+				<div class="author">by <strong>Ezlo</strong></div>
+				<div class="content">I'm writing my own character controller class inheriting from btActionInterface and using a capsule collision shape. When I move the player over a completely flat heightfield it starts to "bounce" slightly but very noticeably, especially as the camera is bound to the player position in my case. I assume the issue is related to this topic <a href="https://github.com/godotengine/godot/issues/21341#issuecomment-417537807" class="postlink">https://github.com/godotengine/godot/is ... -417537807</a> and this <a href="https://stackoverflow.com/questions/25605659/avoid-ground-collision-with-bullet" class="postlink">https://stackoverflow.com/questions/256 ... ith-bullet</a><br>
+<br>
+Does this mean the btHeightfieldTerrainShape is unusable for this purpose and I'm forced to use the btBvhTriangleMeshShape or is there something I am missing?<br>
+<br>
+Thank you in advance.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Problem with character controller and btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Sat Oct 17, 2020 4:44 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Mmmmaybe... but it is not clear.  I have experienced the case where hidden normals introduce odd collision directions on a flat <strong class="text-strong">btBvhTriangleMeshShape</strong> surface.  My understanding is: <strong class="text-strong">btHeightfieldTerrainShape</strong> builds temporary <strong class="text-strong">btTriangleShapes</strong> instances as necessary whereas <strong class="text-strong">btBvhTriangleMeshShape</strong> caches its <strong class="text-strong">btTriangleShapes</strong> in a "boundary volume hierarchy (bvh)".  But in both cases you are effectively colliding against "triangle soup" and it is possible to get odd normals at the edges adjacent triangles.<br>
+<br>
+Assuming your character's "bounce" is purely linear and isn't a wobble of rotation... I would suggest trying the following:<br>
+<br>
+<strong class="text-strong">(1)</strong> Reduce the character's restitution (bounciness) to zero.<br>
+<br>
+<strong class="text-strong">(2)</strong> Increase effective gravity when character is walking.  If you ever need weaker/normal gravity you could set it dynamically as necessary (i.e. when jumping or walking off a ledge).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Problem with character controller and btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Mon Oct 19, 2020 2:15 pm</strong></div>
+				<div class="author">by <strong>Ezlo</strong></div>
+				<div class="content">Thanks a lot for your reply! <br>
+<br>
+The character's restitution I had already set to zero, but increasing the character's gravity definitely helps minimizing the bouncing even though it's still there. With normal gravity the maximum distance from the ground is ~ 0.2 (for reference the character/capsule is ~ 2 units) and with a gravity -50.0f the value decreases to ~0.04.<br>
+<br>
+This is a gif of the character with increased gravity and the bouncing is only noticeable if you're really paying attention to it.<br>
+<a href="https://gfycat.com/hugeagreeablecurlew" class="postlink">https://gfycat.com/hugeagreeablecurlew</a><br>
+<br>
+So while it works and I will keep it for now this solution seems to be a little hacky and I would prefer a cleaner solution, so if anyone has any other ideas I'm all ears.<br>
+<br>
+EDIT:<br>
+I just found out that the solution of the first link (<a href="https://stackoverflow.com/questions/25605659/avoid-ground-collision-with-bullet" class="postlink">https://stackoverflow.com/questions/256 ... ith-bullet</a>) also works for btHeightfieldTerrainShape and not only the btBvhTriangleMeshShape, so generating a btTriangleInfoMap and implementing a custom callback for the terrain shape fixes the bouncing completely.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13088&amp;hilit=btAdjustInternalEdgeContacts&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include &lt;BulletCollision/CollisionDispatch/btInternalEdgeUtility.h&gt;
+  
+    ....
+    //register callback function
+    gContactAddedCallback = collisionCallback;
+    ....
+    //generate triangle info map
+    terrainTriangleInfo = new btTriangleInfoMap();
+    btGenerateInternalEdgeInfo(terrainShape, terrainTriangleInfo);
+    terrainShape-&gt;setTriangleInfoMap(terrainTriangleInfo);
+    ....
+    //create rigid body for the terrain shape
+    btRigidBody::btRigidBodyConstructionInfo bodyInfo(0.0f, motionState, terrainShape, btVector3(0,0,0));
+    btRigidBody* body = new btRigidBody(bodyInfo);
+
+    //enable custom callback
+    body-&gt;setCollisionFlags(body-&gt;getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
+   ....
+   
+   //custom callback function
+bool BulletPhysics::collisionCallback(btManifoldPoint&amp; cp, const btCollisionObjectWrapper* obj1, int id1, int index1, const btCollisionObjectWrapper* obj2, int id2, int index2)
+{
+        <span class="posthilit">btAdjustInternalEdgeContacts</span>(cp, obj2, obj1, id2, index2);
+        return true;
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

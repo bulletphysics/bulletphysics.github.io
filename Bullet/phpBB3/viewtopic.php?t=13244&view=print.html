@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Units of Pybullet</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Units of Pybullet</h2>
+		<p><a href="viewtopic.php%3Ft=13244.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13244</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 4:03 pm</strong></div>
+				<div class="author">by <strong>dmulroy</strong></div>
+				<div class="content">Hello, <br>
+<br>
+I'm new to Pybullet and I wanted to confirm something. I was reading through the posts and it seems pybullet is unitless and I want to make sure of this? So for instance When I ay a cylinder is a radius of 10 it can be 10 meters or 10 centimeters based on by scale correct? And based on this I adjust gravity and my mass?  <br>
+I just want to make sure before proceeding further with this software. <br>
+<br>
+<br>
+Thank you,<br>
+<br>
+Declan Mulroy</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 5:24 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">This is true... with caveats.  It really comes down to how accurate of a simulation you need.  Are you trying to make a fun game, or are you trying to model physical interactions with accuracy.  If the latter, how much accuracy do you need?<br>
+<br>
+Bullet is tuned to be "accurate enough" for real-time simulations of dynamic objects ranging from about 0.1 meters to 10.0's of meters.  You can squeeze more accuracy by taking smaller substeps but as you move in that direction you are flirting with non-real-time simulations where the computer takes longer to compute the step in the real-world than the simulation advances in the virtual one.  This real-time performance has implications for what units you're using... mostly on the small-scale end.<br>
+<br>
+As you reduce the size  of your "real" units while maintaining accuracy you must also either reduce the max allowable velocity of your objects else suffer non-physical artifacts (e.g. interpenetration and tunneling), or you must decrease your substep and flirt with non-real-time simulation.<br>
+<br>
+But as you move to smaller timesteps you start to violate some implicit approximations of the physics simulation logic.  In particular: bodies stop being "approximately rigid" at short timescales; they actually vibrate and flex.  Meanwhile Bullet uses implicit approximations about how contact friction works which are statistically true for contacts that last for "long" timesteps but are violated for short-scale contacts between small objects.<br>
+<br>
+On the large-scale side... large objects are not truly rigid: they flex and break at significant velocities, and Bullet does not handle those kinds of interactions well.  But if you don't mind bouncy planets and indestructible space stations Bullet should work fine for you at large scale.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 5:52 pm</strong></div>
+				<div class="author">by <strong>dmulroy</strong></div>
+				<div class="content">Im looking to model a system consisting of about 500 bodies at the most. Approximately 3 meters in diameters in any direction at the most. <br>
+<br>
+I expect general accuracy since its multi body but not extreme accuracy if that makes sense?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 5:57 pm</strong></div>
+				<div class="author">by <strong>dmulroy</strong></div>
+				<div class="content">So the answer is yes I need to be able to model physical interactions accurately.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 8:47 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">If possible stick with meters and let a 3m object be 3 units.  Bullet should run at real-time for 500 dynamic objects built out of convex shapes. Shapes smaller than about 0.1 units start to get smoothed out by the "collision tolerance" feature which defaults to 0.04m IIRC so if you need small sharp edges you may want to scale your units.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 9:01 pm</strong></div>
+				<div class="author">by <strong>dmulroy</strong></div>
+				<div class="content">ok thank you. Out of curiosity how much of a difference would it be for scaling units? I've started scaling units and it performs better (more stable) since my objects are smaller then .1 meter in any direction. The objects are  cylinders or spheres as well.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 9:27 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">To understand how the collision tolerance affects shapes there is a neat Youtube video: <a href="https://www.youtube.com/watch?v=BGAwRKPlpCw&amp;t=14s" class="postlink">Bullet Physics Collision Margins and Shapes</a>.  As I mentioned previously, the default collision tolerance is, I believe, 0.04 units.  So consider your smallest possible object dimension and decide how many multiples of the collision tolerance it should be, as per your needs and preferences, and from that you can compute the scaling you would need.<br>
+<br>
+When it comes to substeps: decide on the maximum speed you will allow your objects to have.  As a good rule of thumb: the distance the fastest object can move during one substep should not be more than one quarter the minimum dimension of the smallest convex shape since otherwise it becomes possible for two objects to tunnel through each other.  It might be ok to violate this condition and take longer substeps if the fastest shapes are roundish (e.g. their shape approximates well to a bounding sphere) and you enable continuous collision detection (CCD).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units of Pybullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 20, 2021 9:30 pm</strong></div>
+				<div class="author">by <strong>dmulroy</strong></div>
+				<div class="content">Excellent. Thank you for the assistance. I will look at the video as well</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

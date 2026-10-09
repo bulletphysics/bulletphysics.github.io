@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Creating Stiff Angular Springs - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Creating Stiff Angular Springs</h2>
+		<p><a href="viewtopic.php%3Ft=812.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=812</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 27, 2006 2:05 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Interesting. I will try to implement an AnuglarJoint using this and compare them.<br>
+<br>
+@raigan2. In you current implementation for the AngularJoint. Do you use any slop factor?  I don't, but was wondering if I should be...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 28, 2006 1:58 am</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I'm not -- but let me know if it helps at all. My impression was that the "slop" is left in collision so that the contacts are persistent for warm-starting.. is there any other benefit?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 28, 2006 11:17 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">If you mean by slop some kind of allowed penetration it will also help with the coherence for limits. Basically this is the same concept like contacts. For limits you can also allow some violation of the position constraint...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 28, 2006 4:08 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Yes, "allowed penetration" is what I meant.  I can see using it with limits. I was just not sure it would be helpful for a constraint that is designed to simply keep two bodies at a fixed angle with no "play" in either direction.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 28, 2006 5:49 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">You shouldn't use slop for fixed angles. Slop is useful for inequality (unilateral) constraints. What you have is an equality (bilateral) constraint.<br>
+<br>
+Let me explain how slop helps limits. Suppose you have an angular limit. The limit has three states: at_lower, neutral, at_upper. At the lower limit the impulse must be positive. In the neutral state, the impulse is zero, the constraint is off. At the upper limit the impulse must be negative.<br>
+<br>
+Now assume the angle has hit the lower limit because some torque is rotating the body. There will be some overshoot passed the lower limit because of the discrete time step of the integrator. You will detect the overshoot and try to compensate by applying some position bias (or split impulse). You will also arrest any negative angular velocity. There are now two cases:<br>
+<br>
+1. Your position correction does not overshoot the lower limit into the neutral region. The state remains at_lower. All is good.<br>
+<br>
+2. Your position correction overshoots the lower limit into the neutral region. The state goes from at_lower to neutral. The next time step the torques in the system might drive the angle back passed the lower limit. We now have oscillations (this is often called a limit cycle).<br>
+<br>
+Slop remedies case 2 by reducing the chance of overshoot from the lower limit into the neutral region. The position correction only tries to drive the angle up to lower_limit - slop.<br>
+<br>
+An open question is whether the position correction should try to drive the angle down to lower_limit - slop when the angle is in the range [lower_limit-slop, lower_limit]. In my experiments with contact constraints, this did not help. Intuitively it seems wrong to have an inequality constraint "suck."</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

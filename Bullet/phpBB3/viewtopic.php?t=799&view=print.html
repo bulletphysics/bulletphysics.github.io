@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Open Scenegraph and Bullet?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Open Scenegraph and Bullet?</h2>
+		<p><a href="viewtopic.php%3Ft=799.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=799</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Is anyone working on openscenegraph + bullet?</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2006 3:05 pm</strong></div>
+				<div class="author">by <strong>HeroIsNotBorn</strong></div>
+				<div class="content">Is anyone working on openscenegraph + bullet?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is anyone working on openscenegraph + bullet?</h3>
+				<div class="date">Posted: <strong>Tue Dec 12, 2006 2:17 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>HeroIsNotBorn wrote:</cite>Is anyone working on openscenegraph + bullet?</div></blockquote>
+
+Probably not yet. Are you interested in starting an integration?<br>
+<br>
+If so, You can post your results here, and get some feedback/help on this forum.<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Thin Box Problem</h3>
+				<div class="date">Posted: <strong>Fri Dec 15, 2006 10:46 pm</strong></div>
+				<div class="author">by <strong>HeroIsNotBorn</strong></div>
+				<div class="content">I created multiple thin boxes with size of (1.6, 0.1, 1.6) in my scene, some of them occasionally will penetrate into each other.<br>
+<br>
+ Like, with a scene including hundreds of thin boxes and one thin box to represent the ground, one box occasionally will penetrate the ground.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Dec 16, 2006 12:26 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>I created multiple thin boxes with size of (1.6, 0.1, 1.6) in my scene, some of them occasionally will penetrate into each other.<br>
+<br>
+ Like, with a scene including hundreds of thin boxes and one thin box to represent the ground, one box occasionally will penetrate the ground.
+</div></blockquote>
+
+It's easier to break a rigidbody dynamics engine then to make effective use of it. Some rules of thumb might help: sizes of less then 0.2 are not supported. Large mass ratios are not supported either (avoid 100kg on top of 1kg), don't use huge sizes for collision shapes (&lt;10 units). If you need a larger static environment, use either triangle meshes with reasonable sized triangles (&lt; 10 units), or a plane shape.<br>
+<br>
+This and much more should go in the manual (Bullet_User_Manual.pdf)<br>
+Hope this helps,<br>
+<br>
+Do you have some demo using OpenSceneGraph?<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>I made a video</h3>
+				<div class="date">Posted: <strong>Sat Dec 16, 2006 9:20 pm</strong></div>
+				<div class="author">by <strong>HeroIsNotBorn</strong></div>
+				<div class="content">I guess I can work around the thickness problem by changing the world dimension unit.<br>
+<br>
+My application is for visualizing hurricane damage process. <br>
+I made a video showing shingles fell to the ground under gravity force. but I donot know how to paste here. It's about 4 megabytes.<br>
+And I am still working on that.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: I made a video</h3>
+				<div class="date">Posted: <strong>Sat Dec 16, 2006 9:33 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>HeroIsNotBorn wrote:</cite>I guess I can work around the thickness problem by changing the world dimension unit.<br>
+<br>
+My application is for visualizing hurricane damage process. <br>
+I made a video showing shingles fell to the ground under gravity force. but I donot know how to paste here. It's about 4 megabytes.<br>
+And I am still working on that.</div></blockquote>
+
+Perhaps you can upload it to YouTube?<br>
+<br>
+It's best to use meters for units: 1 meter = 1 unit. Then gravity around 10.<br>
+And keep object sizes 'reasonable' above 20 centimeter (in any direction) and at most 10 meters. <br>
+Also, never make the margin totally zero or too small (setCollisionMargin/setMargin), that's destined to fail. Best to use at least 0.02 - 0.05 units. Other improvements include making the internal timesteps smaller.<br>
+The internal timestep is normally 60 hertz, and you can change this by changing the 3rd parameter of 'stepSimulation'. The second should be large enough too:<br>
+This would use an internal timestep of 240 hertz:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=799&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>dynamicsWorld-&gt;stepSimulation(timeStep, 1000, 1.0 / 240.0);
+</code></pre></div>
+It will allow at most 1000 times 240 hertz internal fixed steps to reach your 'timeStep'. Don't pass 0 as second argument.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Open Scenegraph and Bullet?</h3>
+				<div class="date">Posted: <strong>Tue May 20, 2008 5:54 pm</strong></div>
+				<div class="author">by <strong>janoc</strong></div>
+				<div class="content">Hello, <br>
+<br>
+I have posted an example of OSG 2.4 with Bullet 2.68 on the OSG wiki:<br>
+<a href="http://www.openscenegraph.org/projects/osg/wiki/Support/Tutorials" class="postlink">http://www.openscenegraph.org/projects/ ... /Tutorials</a><br>
+<br>
+You need to make a makefile or project, it is using an Eclipse CDT project at the moment.<br>
+<br>
+The example runs the update of the physics in the main rendering loop,<br>
+however that is trivial to move either into a callback of a special node<br>
+or a thread or whatever you need.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Open Scenegraph and Bullet?</h3>
+				<div class="date">Posted: <strong>Thu Nov 12, 2009 10:39 pm</strong></div>
+				<div class="author">by <strong>PaulMartz</strong></div>
+				<div class="content">Anyone interested in using OSG and Bullet should see the topic "Announcing osgBullet" in this forum:<br>
+<a href="viewtopic.php%3Ft=4308.html" class="postlink">http://www.bulletphysics.org/Bullet/php ... =17&amp;t=4308</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

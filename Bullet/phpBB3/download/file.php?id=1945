@@ -1,0 +1,88 @@
+/*
+Bullet Continuous Collision Detection and Physics Library
+Copyright (c) 2003-2006 Erwin Coumans  http://continuousphysics.com/Bullet/
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose, 
+including commercial applications, and to alter it and redistribute it freely, 
+subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+*/
+
+
+///
+/// Collision Demo shows a degenerate case, where the Simplex solver has to deal with near-affine dependent cases
+/// See the define CATCH_DEGENERATE_TETRAHEDRON in Bullet's btVoronoiSimplexSolver.cpp
+///
+
+
+#define CHECK_GENSHER_TRIANGLE_CASE 1
+
+
+///This low-level internal demo does intentionally NOT use the btBulletCollisionCommon.h header
+///It needs internal access
+#include "btBulletCollisionCommon.h"
+#include "LinearMath/btQuaternion.h"
+#include "LinearMath/btTransform.h"
+#include "BulletCollision/NarrowPhaseCollision/btVoronoiSimplexSolver.h"
+#include "BulletCollision/CollisionShapes/btBoxShape.h"
+#include "BulletCollision/NarrowPhaseCollision/btGjkPairDetector.h"
+#include "BulletCollision/NarrowPhaseCollision/btPointCollector.h"
+#include "BulletCollision/NarrowPhaseCollision/btVoronoiSimplexSolver.h"
+#include "BulletCollision/NarrowPhaseCollision/btConvexPenetrationDepthSolver.h"
+#include "BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.h"
+#include "LinearMath/btTransformUtil.h"
+
+
+#include <ctime>
+
+#include "LinearMath/btIDebugDraw.h"
+
+#include <iostream>
+#include <fstream>
+int main(int argc,char** argv)
+{
+	const int numObjects = 2;
+	
+	btTransform tr[numObjects];
+  
+	btScalar coneRad(0.584545); // cone radius
+	btScalar coneheight(1); //height of the cone
+	btScalar sphereRad(0.1); //radius of the sphere
+	btConeShapeZ*	coneA = new btConeShapeZ(coneRad,coneheight); //Declaration of conical shape
+	btSphereShape*	sphereB = new btSphereShape(sphereRad); //Declaration of spherical shape
+	
+	coneA->setMargin(btScalar(0));
+	sphereB->setMargin(btScalar(0));
+	
+	
+	btVoronoiSimplexSolver sGjkSimplexSolver;
+	btGjkEpaPenetrationDepthSolver epaSolver;
+	btPointCollector gjkOutput;
+	
+	btGjkPairDetector convexConvex(coneA,sphereB,&sGjkSimplexSolver,&epaSolver); 
+  
+	btGjkPairDetector::ClosestPointInput input; 
+	btQuaternion q1;
+	q1.setValue(0, 0, 0, 1); //Quaternion to represent the orientation of the cone axis 
+	tr[0].setRotation(q1);
+	tr[0].setOrigin(btVector3(0, 0, -1)); // centre of the base circle of the cone
+
+	tr[1].setIdentity();
+	tr[1].setOrigin((btVector3(0.9,  0.9,  0.1))); // centre of the sphere	
+
+	input.m_transformA = tr[0]; 
+	input.m_transformB = tr[1]; 
+	
+	convexConvex.getClosestPoints(input, gjkOutput, 0); // compute the shortest distance between the sphere and the cone 
+	btVector3 p1 = gjkOutput.m_pointInWorld; //foot of perpendicular on the sphere
+	btVector3 p2 = gjkOutput.m_pointInWorld + gjkOutput.m_normalOnBInWorld*gjkOutput.m_distance; 
+	printf("Shortest distance between the cone and sphere from GJK solver = %lf\n",gjkOutput.m_distance );
+	
+	
+
+}

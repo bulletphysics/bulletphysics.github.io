@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; pure virtual method called: addRigidBody</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>pure virtual method called: addRigidBody</h2>
+		<p><a href="viewtopic.php%3Ft=9456.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9456</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>pure virtual method called: addRigidBody</h3>
+				<div class="date">Posted: <strong>Thu Oct 03, 2013 9:23 am</strong></div>
+				<div class="author">by <strong>rookie86</strong></div>
+				<div class="content">I've started with a simple tutorial, this works without problems:<br>
+<br>
+working code
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9456&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//...
+                //create World
+		btDefaultCollisionConfiguration* config = new btDefaultCollisionConfiguration();
+		btCollisionDispatcher* dispatcher = new btCollisionDispatcher(config);
+		btBroadphaseInterface* broadphase = new btDbvtBroadphase();
+		btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver();
+		btDiscreteDynamicsWorld* world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, config);
+		world-&gt;setGravity(btVector3(0,-10,0));		
+
+		//create Object
+		btCollisionShape* shape = new btBoxShape(btVector3(1,3,1));
+		btTransform transform;
+		transform.setIdentity();
+		btVector3 localInertia(0,0,0);
+		shape-&gt;calculateLocalInertia(40.0f, localInertia);
+	    btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), btVector3(50,50,50)));		
+		btRigidBody* body = new btRigidBody( btRigidBody::btRigidBodyConstructionInfo(40.0f, motionState,shape, localInertia));
+	
+		world-&gt;addRigidBody(body);
+		
+		btVector3 position = body-&gt;getCenterOfMassPosition();
+
+		std::cout &lt;&lt; position.getX() &lt;&lt; " " &lt;&lt; position.getY() &lt;&lt; " " &lt;&lt; position.getZ() &lt;&lt; std::endl;
+
+		for(int i = 0; i &lt; 100; ++i)
+		{
+			world-&gt;stepSimulation(6,10);		
+			position = body-&gt;getCenterOfMassPosition();
+			std::cout &lt;&lt; position.getX() &lt;&lt; " " &lt;&lt; position.getY() &lt;&lt; " " &lt;&lt; position.getZ() &lt;&lt; std::endl;		
+		}
+//...
+</code></pre></div>
+
+Now i want to have all the world code in one class:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9456&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class World
+{
+	btDefaultCollisionConfiguration*		m_Config;
+	btCollisionDispatcher*					m_Dispatcher;
+	btBroadphaseInterface*					m_Interface;
+	btSequentialImpulseConstraintSolver*	m_Solver;
+	btDiscreteDynamicsWorld*				m_World;
+	
+	public:
+	World() 
+	{
+			m_Config     = NULL;
+			m_Dispatcher = NULL;
+			m_Interface  = NULL;
+			m_Solver     = NULL;
+			m_World      = NULL;	
+	}
+
+	void init()
+	{
+		m_Config = new btDefaultCollisionConfiguration();
+		m_Dispatcher = new btCollisionDispatcher(m_Config);
+		m_Interface = new btDbvtBroadphase();
+		m_Solver = new btSequentialImpulseConstraintSolver();
+		m_World = new btDiscreteDynamicsWorld(m_Dispatcher, m_Interface, m_Solver, m_Config);
+		m_World-&gt;setGravity(btVector3(0,-10,0));		
+	}
+
+	~World() 
+	{
+		delete m_Config;
+		delete m_Dispatcher;
+		delete m_Solver;
+		delete m_Interface;
+		delete m_World;		
+	}
+
+	void addObject(btRigidBody* body)
+	{
+		m_World-&gt;addRigidBody(body);	
+	}
+
+	void update()
+	{
+		m_World-&gt;stepSimulation(20,10);	
+	}
+
+};
+</code></pre></div>
+
+It compiles without problems but if i do WorldObject.addObject(object) on the same RigidBody i've created in the working code i get the following error message: "pure virtual method called terminate called without an active exception". If i comment out the "m_World-&gt;addRigidBody(body)" the code runs without problems. It looks like he calls the pure virtual function of btDynamicsWorld. <br>
+<br>
+Can someone tell me where the problem is and how i can fix the problem?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

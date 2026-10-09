@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13150" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-02-07T11:59:20+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13150</id>
+
+		<entry>
+		<author><name><![CDATA[Octavius_Ace]]></name></author>
+		<updated>2021-02-07T11:59:20+00:00</updated>
+
+		<published>2021-02-07T11:59:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43292#p43292</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43292#p43292"/>
+		<title type="html"><![CDATA[Re: Simulate the dynamics in large particle systems on which external forces acts with elastic collisions in real time]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43292#p43292"><![CDATA[
+If you can restrict things to sphere/sphere interactions, the collision detection is as simple as it gets: sum of radii squared &lt;= dist between centres squared is a collision. Penetration depth and recovery normal are equally trivial to calculate.<br>Assuming you have a modern graphics card supporting opengl 3 or higher, you could implement this using a compute shader.<br>Construct a VBO (opengl data array that you construct in main memory and send only once to the graphics memory)<br>This would have data for each particle, including an active/inactive state, which you toggle on/off to simulate adding new particles, without the run time cost of sending new VBO data between main and graphics memory.<br><br>Just look up tutorials on shader based particle systems, for inspiration/guidance.<br><br>If you're on Windows/DirectX, you do the same thing, with MS's equivalent.<br><br>The only real challenges will be porting the solver into a shader and getting interactions between particles working, due to the pipelined nature of GPUs. You can address this with multiple passes through a shader or set of shaders and making use of compute workgroups perhaps.<br><br>Cheers<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11736">Octavius_Ace</a> — Sun Feb 07, 2021 11:59 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-01-28T16:49:04+00:00</updated>
+
+		<published>2021-01-28T16:49:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43281#p43281</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43281#p43281"/>
+		<title type="html"><![CDATA[Re: Simulate the dynamics in large particle systems on which external forces acts with elastic collisions in real time]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43281#p43281"><![CDATA[
+<blockquote class="uncited"><div>The initial situation would be that there are already 10^4-10^5 particles in the world. Then only single objects (positive and negative charges that are creating the electrical field) are added one after the other. In total, about 10 objects will be added to the world.<br>Will there also be problems in this case?</div></blockquote>The cost of adding a new object into the world is O(N).  When N is less than 1e4 this cost is negligible for most applications on most hardware. Somewhere in the "multiple 1e4" range people start to notice, and I would expect you to notice it at 1e5.  It shouldn't be a problem for you... as long as you aren't constantly adding/removing objects every frame.<blockquote class="uncited"><div>So during each integration step (position and velocity changes) it is possible, that the particles are overlapping in the animation. But at the end of the simulation all particles are "overlap free" ?</div></blockquote>No, it really is possible for pairs of bodies to overlap at the end of the step.  However, Bullet will attempt to push them apart (more or less correctly) in the next step.  This usually happens when you assemble a large pile of objects under gravity, or squeeze many objects together between compressing walls.  In other words: when there are multiple simultaneous overlaps and a few iterations are not enough to solve them all.  In a relatively diffuse sphere-sphere interaction I would expect it to be rare but still possible: three or more fast spheres all hitting a tight corner at the same time.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu Jan 28, 2021 4:49 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Blackboard_99]]></name></author>
+		<updated>2021-01-28T11:37:18+00:00</updated>
+
+		<published>2021-01-28T11:37:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43279#p43279</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43279#p43279"/>
+		<title type="html"><![CDATA[Re: Simulate the dynamics in large particle systems on which external forces acts with elastic collisions in real time]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43279#p43279"><![CDATA[
+Thx for your reply drleviathan.<br><blockquote class="uncited"><div>On a suitable machine I believe Bullet could handle 1e5 rigid spheres.</div></blockquote>Sounds good enough. <br><blockquote class="uncited"><div>Bullet starts to have a measurable performance problem when adding new objects to the world</div></blockquote>The initial situation would be that there are already 10^4-10^5 particles in the world. Then only single objects (positive and negative charges that are creating the electrical field) are added one after the other.  In total, about 10 objects will be added to the world.<br>Will there also be problems in this case?<br><blockquote class="uncited"><div>When it comes to electrostatic forces... ignoring the calculation of the field... Bullet could handle applying the forces with little overhead. However, unless you are clever the force calculation is an NxN problem and will stress your real-time budget at suitably large N.<br><br>What you're describing (soup of interacting charged particles) is a known as a "plasma" in the real world and your simulation might benefit from methods developed by theoretical plasma physicists.</div></blockquote>I have expressed myself unclearly. The 10^4-10^5 particles are only interacting with a field that is created by a maximum of 10 objects. The 10^4-10^5 particles are interacting (elastic collision) with themselves only to  prevent them from overlapping. But thx for the hint with the plasma topic.<br><br>One important question from my side. You said<br><blockquote class="uncited"><div>Note, it is possible for rigid bodies to overlap at the end of the Bullet simulation step. They will be pushed apart in later steps, but if you have a very strict requirement that they do not overlap at all, then Bullet will disappoint.</div></blockquote>So during each integration step (position and velocity changes) it is possible, that the particles are overlapping in the animation. But at the end of the simulation all particles are "overlap free" ?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13891">Blackboard_99</a> — Thu Jan 28, 2021 11:37 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-01-27T16:01:18+00:00</updated>
+
+		<published>2021-01-27T16:01:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43274#p43274</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43274#p43274"/>
+		<title type="html"><![CDATA[Re: Simulate the dynamics in large particle systems on which external forces acts with elastic collisions in real time]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43274#p43274"><![CDATA[
+On a suitable machine I believe Bullet could handle 1e5 rigid spheres.  I haven't tried it but this is based on memories of anecdotes I've heard.  Dunno about 1e6.  Bullet starts to have a measurable performance problem when adding new objects to the world when the number of objects already in the world reaches "several 1e4".  So... adding/removing particles in the 1e5 and 1e6 range would start to be problematic when you have a real-time budget.<br><br>Note, it is possible for rigid bodies to overlap at the end of the Bullet simulation step.  They will be pushed apart in later steps, but if you have a very strict requirement that they <strong class="text-strong">do not overlap at all</strong>, then Bullet will disappoint.<br><br>When it comes to electrostatic forces... ignoring the calculation of the field... Bullet could handle applying the forces with little overhead.  However, unless you are clever the force calculation is an NxN problem and will stress your real-time budget at suitably large N.<br><br>If the simulation is 2D and only involves spheres then some overhead in the Bullet simulation, inherently linked to its ability to handle 3D and more varying shapes, could be avoided by finding (or writing) a more specialized simulation.  What you're describing (soup of interacting charged particles) is a known as a "plasma" in the real world and your simulation might benefit from methods developed by theoretical plasma physicists.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Jan 27, 2021 4:01 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Blackboard_99]]></name></author>
+		<updated>2021-01-27T11:09:25+00:00</updated>
+
+		<published>2021-01-27T11:09:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43272#p43272</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43272#p43272"/>
+		<title type="html"><![CDATA[Simulate the dynamics in large particle systems on which external forces acts with elastic collisions in real time]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43272#p43272"><![CDATA[
+Consider the following example: In a two dimensional plane there are a number <strong class="text-strong">N</strong> of particles (small circles) on <br>which several external forces act such as different electrostatic force fields of positive and negative charges.<br><br>Using superposition, one could calculate a total attractive force F for each particle at time t, <br>apply Newton<strong class="text-strong"> d^2 r/ dt^2 = F/M</strong>, and solve the resulting differential equations to determine the current <br>velocity v and position of each particle.<br><br>The particles <strong class="text-strong">should never</strong> overlap each other during the movement and at the end in their final position.<br>When a collision between particles takes place, it should perform elastic collisions.<br><br>Does bullet have an optimized force simulation and collision detection algorithm to simulate the dynamics in large particle systems <strong class="text-strong">N</strong> = 10^4-10^6 in real time?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13891">Blackboard_99</a> — Wed Jan 27, 2021 11:09 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

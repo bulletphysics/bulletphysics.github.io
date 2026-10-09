@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; RaycastVehicle falls through the bvhTriangleMeshShape</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>RaycastVehicle falls through the bvhTriangleMeshShape</h2>
+		<p><a href="viewtopic.php%3Ft=13406.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13406</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>RaycastVehicle falls through the bvhTriangleMeshShape</h3>
+				<div class="date">Posted: <strong>Tue Mar 22, 2022 3:59 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">I make Mesh Shape from Track meshes, and gather it by compound shape like this : 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13406&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+void Mesh::CreateMeshShape(const std::vector&lt;Vertex&gt;&amp; targetVertices, const std::vector&lt;UINT&gt;&amp; targetIndices)
+{
+	mTriangleVertexArray = new btTriangleIndexVertexArray();
+
+	btIndexedMesh tempMesh;
+	mTriangleVertexArray-&gt;addIndexedMesh(tempMesh, PHY_FLOAT);
+
+	btIndexedMesh&amp; mesh = mTriangleVertexArray-&gt;getIndexedMeshArray()[0];
+
+	const int32_t VERTICES_PER_TRIANGLE = 3;
+	size_t numIndices = targetIndices.size();
+	mesh.m_numTriangles = numIndices / VERTICES_PER_TRIANGLE;
+	if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max())
+	{
+		mesh.m_triangleIndexBase = new unsigned char[sizeof(int16_t) * (size_t)numIndices];
+		mesh.m_indexType = PHY_SHORT;
+		mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int16_t);
+	}
+	else
+	{
+		mesh.m_triangleIndexBase = new unsigned char[sizeof(int32_t) * (size_t)numIndices];
+		mesh.m_indexType = PHY_INTEGER;
+		mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int32_t);
+	}
+	mesh.m_numVertices = targetVertices.size();
+	mesh.m_vertexBase = new unsigned char[VERTICES_PER_TRIANGLE * sizeof(btScalar) * (size_t)mesh.m_numVertices];
+	mesh.m_vertexStride = VERTICES_PER_TRIANGLE * sizeof(btScalar);
+	btScalar* vertexData = static_cast&lt;btScalar*&gt;((void*)(mesh.m_vertexBase));
+	for (int32_t i = 0; i &lt; mesh.m_numVertices; ++i)
+	{
+		int32_t j = i * VERTICES_PER_TRIANGLE;
+		const XMFLOAT3&amp; point = targetVertices[i].Position;
+		vertexData[j] = point.x;
+		vertexData[j + 1] = point.y;
+		vertexData[j + 2] = point.z;
+	}
+	if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max())
+	{
+		int16_t* indices = static_cast&lt;int16_t*&gt;((void*)(mesh.m_triangleIndexBase));
+		for (int32_t i = 0; i &lt; numIndices; ++i) {
+			indices[i] = (int16_t)targetIndices[i];
+		}
+	}
+	else
+	{
+		int32_t* indices = static_cast&lt;int32_t*&gt;((void*)(mesh.m_triangleIndexBase));
+		for (int32_t i = 0; i &lt; numIndices; ++i)
+		{
+			indices[i] = targetIndices[i];
+		}
+	}
+
+	const bool USE_QUANTIZED_AABB_COMPRESSION = true;
+	mMeshShape = std::make_shared&lt;btBvhTriangleMeshShape&gt;(mTriangleVertexArray, USE_QUANTIZED_AABB_COMPRESSION);
+}
+
+
+	//Create RigidBody
+	while(*mesh read end*)
+	{
+		for (int i = 0; i &lt; obj-&gt;GetMeshCount(); ++i)
+		{
+			if (meshes[i]-&gt;GetMeshShape())
+			{
+				btTransform btLocalTransform;
+				btLocalTransform.setIdentity();
+				btLocalTransform.setOrigin(btVector3(pos.x, pos.y, pos.z));
+
+				compound-&gt;addChildShape(btLocalTransform, meshes[i]-&gt;GetMeshShape().get());
+			}
+		}
+	}
+	btTransform btObjectTransform;
+	btObjectTransform.setIdentity();
+	btObjectTransform.setOrigin(btVector3(0, 0, 0));
+
+	mTrackRigidBody = physics-&gt;CreateRigidBody(0.0f, btObjectTransform, compound);
+</code></pre></div>
+
+At first, it looks like it's working well, but when the vehicle moves few minute, it breaks through the track.<br>
+<br>
+There seems to be no problem with the code, but is there anything wrong?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: RaycastVehicle falls through the bvhTriangleMeshShape</h3>
+				<div class="date">Posted: <strong>Tue Mar 22, 2022 6:11 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">this was stupid question, I just don't apply quaternion rotation.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13544" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-03-03T11:51:57+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13544</id>
+
+		<entry>
+		<author><name><![CDATA[ed_welch]]></name></author>
+		<updated>2023-03-03T11:51:57+00:00</updated>
+
+		<published>2023-03-03T11:51:57+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44274#p44274</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44274#p44274"/>
+		<title type="html"><![CDATA[Re: Kinematic objects colliding with dynamic objects very badly]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44274#p44274"><![CDATA[
+Thanks for the reply. Unfortunately, it makes no difference. I think velocity is ignored for kinematic objects.<br><br>Edit:<br>I finally figured it out. I was directly updating the WorldTransform, without updating the MotionState. I changed this to update both and now it works great:<br><div class="codebox"><p>Code: </p><pre><code>btTransform&amp; t = m_pRigidBody-&gt;getWorldTransform();t.setOrigin(btVector3(m_x+m_xOffset, m_y+m_yOffset, m_z));m_pRigidBody-&gt;getMotionState()-&gt;setWorldTransform(t);// adding this line fixed the problem</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11234">ed_welch</a> — Fri Mar 03, 2023 11:51 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-03-03T02:25:17+00:00</updated>
+
+		<published>2023-03-03T02:25:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44273#p44273</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44273#p44273"/>
+		<title type="html"><![CDATA[Re: Kinematic objects colliding with dynamic objects very badly]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44273#p44273"><![CDATA[
+What you want to do is to also set the velocities of the kinematic object correctly.  Setting the velocities doesn't help move it to new transoforms, but it does help the collision system impart correct velocity on the dynamic object, allowing it to be knocked out of the way instead of getting into a state of interpenetration and then being ejected by non-physical algorithms.<br><br>So, you need to measure the velocity and ideally this would be done once per substep, which means you would give your Kinematic object a custom KinematicMotionsState and put the velocity measuring logic inside KinematicMotionState::getWorldTransform() method.  It might look something like this:<div class="codebox"><p>Code: </p><pre><code>///synchronizes world transform from user to physicsvoid KinematicMotionState::getWorldTransform(btTransform &amp; newWorldTransform) const override {    // linear velocity    btVector3 old_position = m_body-&gt;getWorldTransform().getPosition();    btVector3 new_position = newWorldTransform.getOrigin();                                  btVector3 new_linear_velocity = (new_position - old_position) / SUBSTEP_DURATION;    constexpr btScalar MIN_LINEAR_SPEED_SQUARED = 0.0001;     // 1 cm/sec    if (new_linear_velocity.length2() &lt; MIN_LINEAR_SPEED_SQUARED) {        new_linear_velocity.setZero();    }    m_body-&gt;setLinearVelocity(new_linear_velocity);        // angular velocity    btQuaternion old_rotation = m_body-&gt;getWorldTransform().getRotation();    btQuaternion new_rotation = newWorldTransform.getRotation();    btQuaternion delta_rotation = m_body-&gt;getWorldTransform().getRotation().inverse() * newWorldTransform.getRotation();    btScalar delta_angle = delta_rotation.getAngle();    btVector3 new_angular_velocity(0.0, 0.0, 0.0);      constexpr btScalar MIN_ANGULAR_SPEED = 0.01; // radians/sec    if (angle &gt; MIN_ANGULAR_SPEED) {        new_angular_velocity = (angle / SUBSTEP_DURATION) * delta_rotation.getAxis();    }    m_body-&gt;setAngularVelocity(new_angular_velocity);        // transform    m_body-&gt;setWorldTransform(newWorldTransform);}</code></pre></div>Note: that is written from scratch and I didn't bother to compile it, so it may have bugs and typos.  Tune the constants to suit your application.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Mar 03, 2023 2:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ed_welch]]></name></author>
+		<updated>2023-03-02T21:10:56+00:00</updated>
+
+		<published>2023-03-02T21:10:56+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44272#p44272</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44272#p44272"/>
+		<title type="html"><![CDATA[Kinematic objects colliding with dynamic objects very badly]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44272#p44272"><![CDATA[
+Kinematic objects do not seem to interact very well with dynamic objects. When you call m_pRigidBody-&gt;getWorldTransform().setOrigin() it caterpults any dynamic objects in it's way with enormous force. Is this normal?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11234">ed_welch</a> — Thu Mar 02, 2023 9:10 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

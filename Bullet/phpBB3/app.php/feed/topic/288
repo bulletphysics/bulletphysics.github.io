@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/288" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-05-02T17:06:01+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/288</id>
+
+		<entry>
+		<author><name><![CDATA[melax]]></name></author>
+		<updated>2006-05-02T17:06:01+00:00</updated>
+
+		<published>2006-05-02T17:06:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=968#p968</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=968#p968"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=968#p968"><![CDATA[
+<blockquote class="uncited"><div>Thanks for the suggestion. However, take a circle with more then 4 points. Wouldn't your algorithms only take triangles along the border into account, not the full area?</div></blockquote>At each "greedy" incremental step the difference in total area by replacing one point <strong class="text-strong">b</strong> with another <strong class="text-strong">b'</strong> *is* the difference in sizes of the two 'border' triangles: the existing one <em class="text-italics">||(b-a)X(c-b)||</em> and the new candidate <em class="text-italics">||(b'-a)X(c-b')||</em>.  The rest of the area is likely to remain unchanged.  I only say "<em class="text-italics">likely</em>" since it is remotely possible that the new point, if far enough out, will also sweep additional area making s neighboring point <em class="text-italics">a</em> or <em class="text-italics">c</em> concave.  That will no longer happen once all the points are in fact somewhere on the limits of the convex contact manifold.  <br><br>Say the contact manifold is shaped like an ellipse with more than four points.  Furthermore, when the faces of two bodies are parallel gjk can end up returning any contact point along the edge or in the interior.   So over many frames the persistant manifold algorithm is gets a sequence of contacts that is like random points from within this area.   You would want the algorithm to efficiently converge to the maximum-area rectangle inscribed within the ellipse.  When those less-suitable contact candidates come along (that would reduce area) they are rejected and do not replace the optimal ones (due to the equations proposed).<br><br>I didn't explain one detail previously.   Instead of doing dotting the cross product with itself to get the magnitude squared (dot(cp,cp)), I take the dot product with the normal of the contact patch.   The normal doesn't have to be unit length since we only are doing this for comparison with another dot product and/or with zero.  The advantage is you have a signed area.  This way all the points end up in ccw order in the array which just makes life easier.<br><br>Referring back to your implementation...<br>if instead of just doing the cross product wrt just one edge on the other side of the contact patch, you could sum up the area (do cross products) for both of the other opposing edges (c,d) and (d,a).    Later, if the code was then optimized so that identical terms are dropped from both sides of the comparison equation, then I suspect it would no longer depends on the far point <strong class="text-strong">d</strong> and we would both end up with identical code.<br><br>Like I said, it was just a minor suggestion.  Feel free to take it or ignore it.<br><br>On the other topics you mention... <br>Yes that likely is a good idea to drop points the same way you add them.     <br><br>I wish I had more time to try more of these things.  (i'm not the low-level engine guy)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=483">melax</a> — Tue May 02, 2006 5:06 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-05-02T05:45:53+00:00</updated>
+
+		<published>2006-05-02T05:45:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=967#p967</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=967#p967"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=967#p967"><![CDATA[
+<blockquote class="uncited"><div>In particular when taking the cross product with an edge on the other side there would be two possible options, and you end up just hardcoding one of the choices.   </div></blockquote>I just wanted to find the triangle with the largest area. So for triangle ABC, it would be 0.5 * |AB x BC|. Because I'm only interested in relative area, I don't take the square root and 0.5.<br><br>Thanks for the suggestion. However, take a circle with more then 4 points. Wouldn't your algorithms only take triangles along the border into account, not the full area?<br><br>A couple of other idea were brought up: Only add a new point if it makes the area bigger. This results in more stable simulation, especially for certain constraint solvers. GJK typically gives points anywhere on the surface.<br><br>Another consideration is to only throw away one point per frame. This adds symmetry of adding only one point per frame. It makes simulation also more stable. I haven't had the chance to add this contribution. Although not perfect, I'm happy with the results, and other areas need more urgent attention.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue May 02, 2006 5:45 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[melax]]></name></author>
+		<updated>2006-05-02T03:57:32+00:00</updated>
+
+		<published>2006-05-02T03:57:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=966#p966</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=966#p966"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=966#p966"><![CDATA[
+Erwin, Since your webpages, explanations and demo code show how trivially easy all this actually is, i just had to try myself.    (only the contact manifold part for now)<br><br>minor minor observation and idea...<br><br>one thing I noticed in how you are deciding which point to replace:<br><a href="http://www.continuousphysics.com/Bullet/BulletFull/PersistentManifold_8cpp-source.html" class="postlink">http://www.continuousphysics.com/Bullet ... ource.html</a><br><br>Obviously it works, but i'm not sure i get the jist of the details.  In particular when taking the cross product with an edge on the other side there would be two possible options, and you end up just hardcoding one of the choices.    <br><br>I figure that the results could be sensitive to the choice of which edge we do the cross product with.  Instead, I tried something that should be more "symmetrical" when searching for contact to replace.   In the case when i've reached the maximum number of contacts and the next contact is at least epsilon away from any of the current ones we consider replacing.  The pseudocode for that is:<div class="codebox"><p>Code: </p><pre><code>for(j=0;j&lt;count;j++){  float3&amp; vp = contact[j-1];  // next point in contact manifold  float3&amp; vn = contact[j+1];  // previous point  float3&amp; vc = contact[j ]; // current point we consider replacing  float3&amp; v  = impact;  // new point  float3&amp; n  = normal;    if(dot(n,cross(v-vp,vn-v))&gt;dot(n,cross(vc-vp,vn-vc)))  {    replace old contact point vc with new impact v    break;  }}</code></pre></div>i.e. for each contact take the cross product of the previous and next edges.  That's the actual area contribution added by that point.  (technically you divide by 2 to get actual triangle area but i'm sure you get the idea.)   <br>The points tend to always end up in a convex ccw order.   Furthermore, the approach should let you scale up if you wanted to have more than just 4 contacts.<br><br><br>Anyways, just a suggestion.  Perhaps i've over-analysed something that isn't all that important.  Or, Perhaps you were already doing things in a particular way in your code for a reason and i simply didn't see what that was.  <br><br>my 2c<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=483">melax</a> — Tue May 02, 2006 3:57 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-04-20T14:57:54+00:00</updated>
+
+		<published>2006-04-20T14:57:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=909#p909</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=909#p909"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=909#p909"><![CDATA[
+<blockquote class="uncited"><div>Given a contact normal N and a support mapping A, the contact area can be defined as the set of support points <br><br>lim conv{S_A(U) : angle between N and U &lt; alpha} <br>alpha -&gt; 0 </div></blockquote><blockquote class="uncited"><div>So the key here is finding correct candidates and right now I'm using a naive heuristic:  pairs that has distance &lt; epsilon are chosen.</div></blockquote>Usually you don't want this whole set. Too many points are redundant, hurt performance and stability (for some solvers).<br><br>Anyhow, this set is build by the PersistentManifold. It keep on adding new points, and updating the old ones. Then there is a reduction step, which reduces the number of contacts to 4.<br><br>You can read a bit about reduction in this paper:<br><a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/papers/&amp;file=Fast_Contact_Reduction_for_Dynamics_Simulation012_draft9.doc" class="postlink">http://www.continuousphysics.com/ftp/pu ... draft9.doc</a><br><br>Or another posting with some details here:<br><a href="https://mollyrocket.com/forums/viewtopic.php?p=760&amp;highlight=#760" class="postlink">https://mollyrocket.com/forums/viewtopi ... light=#760</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Apr 20, 2006 2:57 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ngbinh]]></name></author>
+		<updated>2006-04-20T05:41:22+00:00</updated>
+
+		<published>2006-04-20T05:41:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=907#p907</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=907#p907"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=907#p907"><![CDATA[
+Thanks. <br><br>I'm not particularly after anti-tunelling. Like what I said, our method trying to prevent penetrations not just resolve them. Let me explain more.<br>Our step:<br>+ Check for penetrations + penetration candidates<br>+ Put them in LCP, so the LCP will do:<br>   1) Correct the penetrations<br>   2) Make sure that those candidates won't penetrate ( not 100% because of the linearization of contact surface, with fully implicit geometry I think we could 100% prevent penetration)<br>+ Solve, update.....<br><br>So the key here is finding correct candidates and right now I'm using a naive heuristic:  pairs that has distance &lt; epsilon are chosen.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=225">ngbinh</a> — Thu Apr 20, 2006 5:41 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-04-20T05:19:15+00:00</updated>
+
+		<published>2006-04-20T05:19:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=906#p906</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=906#p906"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=906#p906"><![CDATA[
+<blockquote class="uncited"><div>I've checked that already.Impressive!<br>But PersistentManifold report them when they are already in penetration, right? </div></blockquote>That is not completely accurate.<br>PersistentManifold keeps points, even if they are non-penetrating, within an epsilon. For stable stacking this should be enough. <br><blockquote class="uncited"><div>What I really after now are close enough pairs,i.e prevention not correction. You could see that only use penetration depth is similiar to "chasing your tail".</div></blockquote>As mentioned before, a good contact set is collected by the PersistentManifold, within the positive epsilon distance, not limited to penetrations. If anti-tunneling is what you are after, I would recommend to calculate/estimate the time of impact. But that is a different story.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Apr 20, 2006 5:19 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ngbinh]]></name></author>
+		<updated>2006-04-20T05:13:18+00:00</updated>
+
+		<published>2006-04-20T05:13:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=905#p905</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=905#p905"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=905#p905"><![CDATA[
+And the nice thing about "prevention" method is that it doesn't harm your accuracy if you report redundant pairs(It does hurt performance though but not that much because the LCP solver will quickly find the solution for the constraint enforced by that pairs).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=225">ngbinh</a> — Thu Apr 20, 2006 5:13 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ngbinh]]></name></author>
+		<updated>2006-04-20T05:09:59+00:00</updated>
+
+		<published>2006-04-20T05:09:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=904#p904</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=904#p904"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=904#p904"><![CDATA[
+I've checked that already.Impressive!<br>But PersistentManifold report them when they are already in penetration, right? What I really after now are close enough pairs,i.e prevention not correction. You could see that only use penetration depth is similiar to "chasing your tail".<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=225">ngbinh</a> — Thu Apr 20, 2006 5:09 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-04-20T04:47:58+00:00</updated>
+
+		<published>2006-04-20T04:47:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=903#p903</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=903#p903"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=903#p903"><![CDATA[
+<blockquote class="uncited"><div>Basically you can't have stable simulation by using just infromation of closet feature. We need "close enough" features to prevent and correct penetrations.<br><br>Erwin, do you think I can get all pairs of features (pi,qi) where d|pi,qi| &lt; epsilon? Well, that's not really what I need but it's might be an easy way.</div></blockquote>The PersistentManifold approximates the contact set by sampling. Then it reduces the point set to 4 points, maximizing the area and keeping the deepest point. This is really good enough in practice, as you can experience by just running the latest Bullet demos. You can interact with the boxes using the mouse. It uses GJK and described sampling method.<br><br>Win32:<br><a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/&amp;file=quickprof_bullet_april2006.zip&amp;AutoIndex=a8ac7eeadc78ae0c3af582dfc2849ad4" class="postlink">http://www.continuousphysics.com/ftp/pu ... dfc2849ad4</a><br>Linux:<br><a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/&amp;file=CcdPhysicsDemoLinux.tgz&amp;AutoIndex=a8ac7eeadc78ae0c3af582dfc2849ad4" class="postlink">http://www.continuousphysics.com/ftp/pu ... dfc2849ad4</a><br><br>The proof of the pudding is in the eating <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Apr 20, 2006 4:47 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ngbinh]]></name></author>
+		<updated>2006-04-20T04:05:25+00:00</updated>
+
+		<published>2006-04-20T04:05:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=902#p902</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=902#p902"/>
+		<title type="html"><![CDATA[Contact Manifold Generation: A question about GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=902#p902"><![CDATA[
+<blockquote class="uncited"><div><blockquote class="uncited"><div>Taking the closest features of the last-found simplices (sets of support points) for the two objects tested using GJK gives you a rough approximation of the contact manifold but you can do better, since (a) this simplex is usually not the complete manifold and (b) it is not necessarily a face of the boundary.<br><br>The following single-shot method for computing the contact manifold does a better job:<br> <br>Given a contact normal N and a support mapping A, the contact area can be defined as the set of support points <br><br>          lim                    conv{S_A(U) : angle between N and U &lt; alpha}<br>          alpha -&gt; 0<br><br>Thus, the contact area is the convex hull of the set of support points found by slightly perturbing the contact normal. You can perturb the contact normal by adding a tiny vector orthogonal to the contact normal. These tiny vectors can lie on a circle or can be generated randomly. For instance, you could generate the vectors by hierarchically slicing the unit circle until for some iterations no new support points are found. The actual contact manifold is the intersection (after projection) of the two convex areas.<br>This method is somewhat cumbersome, so in many cases Erwin's solution of maintaining the last-found contact in a persistent manifold is often sufficient and a lot cheaper.<br>Gino</div></blockquote>There is the contact generation, and contact persistency.<br><br>For contact generation, there are sampling methods and intersecting/clipping methods.<br><br>Essentially Gino's approach and mine are both sampling methods to generate the contact manifold. Gino just uses a higher sampling rate.<br>There have been various attempt in generating the 'pertubation' for sampling, using the physics simulation (as I do), or kinematic (as Gino proposes).<br><br>However, Gino seems to not take contact persistency into account.<br>Persistency can be useful in rigidbody dynamics, so the constraint solver can do 'warmstarting'. I've seen distance based methods, or feature based methods to identify persistent contact points.<br><br>There is a lot to write about this topic, I hope to get some time to write it up in a paper.<br><br>Erwin</div></blockquote>It will be helpful.<br>Basically you can't have stable simulation by using just infromation of closet feature. We need "close enough" features to prevent and correct penetrations.<br><br>Erwin, do you think I can get all pairs of features (pi,qi) where d|pi,qi| &lt; epsilon? Well, that's not really what I need but it's might be an easy way.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=225">ngbinh</a> — Thu Apr 20, 2006 4:05 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

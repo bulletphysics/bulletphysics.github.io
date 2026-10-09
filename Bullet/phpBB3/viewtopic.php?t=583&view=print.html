@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Constraining all 6 Degrees of Freedom</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Constraining all 6 Degrees of Freedom</h2>
+		<p><a href="viewtopic.php%3Ft=583.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=583</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Constraining all 6 Degrees of Freedom</h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 12:19 am</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I'm new to Bullet and physics engine in general, so I hope you all can forgive a possibly naive question.<br>
+<br>
+I want to be able to make objects grabable using the ray cast from an input device that has 6 DoF.  Namely, if I point the device at the object and "grab" it, it is as if a solid bar is connected between the input device and the object.  So, until its release, the object would follow all translations and rotations of the input device, as if one was holding the end of the bar and swinging it around.<br>
+<br>
+Could / should this be done using the btGeneric6DofConstraint ?<br>
+<br>
+Thanks for any help,<br>
+  Braden</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraining all 6 Degrees of Freedom</h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 1:20 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>daBrado wrote:</cite>Hi,<br>
+<br>
+I'm new to Bullet and physics engine in general, so I hope you all can forgive a possibly naive question.<br>
+<br>
+I want to be able to make objects grabable using the ray cast from an input device that has 6 DoF.  Namely, if I point the device at the object and "grab" it, it is as if a solid bar is connected between the input device and the object.  So, until its release, the object would follow all translations and rotations of the input device, as if one was holding the end of the bar and swinging it around.<br>
+<br>
+Could / should this be done using the btGeneric6DofConstraint ?<br>
+<br>
+Thanks for any help,<br>
+  Braden</div></blockquote>
+
+Indeed, you can use the btGeneric6DofConstraint. In fact, by default all degrees of freedom are locked, so no need to configure the limits. Just choose an appropriate local coordinate frame for the attachment.<br>
+<br>
+See the ColladaDemo for an example implementation:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=583&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btGeneric6DofConstraint* genericConstraint = new btGeneric6DofConstraint(
+							*bodyRef,*bodyOther,
+							localAttachmentFrameRef,localAttachmentOther);
+
+				m_demoApp-&gt;getDynamicsWorld()-&gt;addConstraint( genericConstraint );
+</code></pre></div>
+
+This btGeneric6DofConstraint follows the COLLADA Physics specification, although not all features are implemented yet. Right now, each DOF can either be fully locked, or fully free, no limits or motors yet. Also bear in mind that there has been some refactoring to cleanup the classes, so expect a few released with (hopefully) minor bugfixes.<br>
+<br>
+Please let me know if there are any issues.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraining all 6 Degrees of Freedom</h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 2:04 am</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Indeed, you can use the btGeneric6DofConstraint. In fact, by default all degrees of freedom are locked, so no need to configure the limits. Just choose an appropriate local coordinate frame for the attachment.</div></blockquote>
+
+So, using btGeneric6DofConstraint, would I create a dummy btRigidBody that represents the input device, and then change its m_worldTransform to track the input device's location and orientation?<br>
+<br>
+Thanks,<br>
+  Braden</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraining all 6 Degrees of Freedom</h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 5:40 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>daBrado wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>Indeed, you can use the btGeneric6DofConstraint. In fact, by default all degrees of freedom are locked, so no need to configure the limits. Just choose an appropriate local coordinate frame for the attachment.</div></blockquote>
+
+So, using btGeneric6DofConstraint, would I create a dummy btRigidBody that represents the input device, and then change its m_worldTransform to track the input device's location and orientation?<br>
+<br>
+Thanks,<br>
+  Braden</div></blockquote>
+
+Yes, you create a fixed rigidbody, setup the constraint and move that fixed body.<br>
+<br>
+Note that Bullet is undergoing refactoring, and although the largest changes are over, the API and internals are still changing. <br>
+Creating a fixed rigidbody in Bullet 2.14 will look like:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=583&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float mass = 0.f; //means fixed
+btCollisionShape* collisionShape = 0;
+btRigidBody fixed(mass, btTransform::getIdentity(),collisionShape);
+</code></pre></div>
+
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

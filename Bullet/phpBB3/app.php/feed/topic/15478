@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15478" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-06-14T04:00:07+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15478</id>
+
+		<entry>
+		<author><name><![CDATA[PgrAm]]></name></author>
+		<updated>2023-06-14T04:00:07+00:00</updated>
+
+		<published>2023-06-14T04:00:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44431#p44431</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44431#p44431"/>
+		<title type="html"><![CDATA[Re: Issues simulating buoyancy with forces]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44431#p44431"><![CDATA[
+Thanks. I ended up just using a linear drag function, specifically there's a good implementation in Game Programming Gems 6 (Can be borrowed for free on archive.org). Seems to be alot more stable.<br><br>Also I should add, the sphere approximation is actually really bad <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad">, unless your shape is already a sphere. So I think I will need to use a different approximation depending on each collision shape.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9253">PgrAm</a> — Wed Jun 14, 2023 4:00 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-06-13T19:12:02+00:00</updated>
+
+		<published>2023-06-13T19:12:02+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44430#p44430</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44430#p44430"/>
+		<title type="html"><![CDATA[Re: Issues simulating buoyancy with forces]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44430#p44430"><![CDATA[
+I believe the general treatment for drag approximations is more of an infinite series:<br><br><strong class="text-strong"> drag_force = c0 * speed^0 + c1 * speed^1 + c2 * speed^2 + ...</strong><br><br>and the empirical exercise is to measure what are the proper values for the various coefficients: <strong class="text-strong">c0</strong>, <strong class="text-strong">c1</strong>, <strong class="text-strong">c2</strong>, ...<br><br>Your calculation of drag has <strong class="text-strong">c0</strong> and <strong class="text-strong">c1</strong> both equal to zero: you only keep <strong class="text-strong">c2</strong>.  Of course <strong class="text-strong">c0</strong> is zero but <strong class="text-strong">c1</strong> should not be.  Note: <strong class="text-strong">c2</strong> dominates only when the velocity gets high enough --&gt; at slow speeds the <strong class="text-strong">c1</strong> term should be stronger.  The measurement of those coefficients are typically done in a steady state experiment where the object is put into a wind tunnel and the force + wind_velocity curve data is given a polynomial fit.  In short: I believe the coefficient you are using (dunno where you got it) might not be the best value to use for a more dynamic interaction.  My advice would be:<br><br><strong class="text-strong">(0)</strong> try the system with zero drag: the floating object won't bounce on water forever because Bullet already has a non-zero damping effect enabled by default (unless you've explicitly disabled Bullet's default damping)<br><br><strong class="text-strong">(1)</strong> add a non-zero <strong class="text-strong">c1</strong> term and manually tune it until your floating object settles down fast enough<br><br><strong class="text-strong">(2)</strong> If and only if your floating object tends to punch through the water too deep at high velocities: then add the <strong class="text-strong">c2</strong> term.  Make it very small at first and manually tune it larger until high-velocity splashes are slowing down better.<br><br>Finally, if you really want a strong c2 term then you will always have instabilities at high velocities... until you make smaller substeps such that the object does not have time to accelerate in and out of the water within one or two substeps.  Basically, there is an inequality relating <strong class="text-strong">c2</strong>, <strong class="text-strong">max_object_speed</strong>, <strong class="text-strong">object_size</strong>, and <strong class="text-strong">substep_duration</strong> that determines the stability threshold of your system.  It is something like:<br><br><strong class="text-strong">c2 * max_object_speed^2 * substep_duration^2 &lt; some_fraction * object_size</strong><br><br>In other words: "the movement of your object after accelerating under drag for one substep must be less than some fraction of the object's dimensions" because otherwise the approximate assumption that "the drag force is relatively constant for the duration of the substep" is incorrect (the object can be both in the water and outside of it during one substep) --&gt; you need to either <strong class="text-strong">(a)</strong> cap the max speed of the object or <strong class="text-strong">(b)</strong> take smaller substeps.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Jun 13, 2023 7:12 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[PgrAm]]></name></author>
+		<updated>2023-06-13T17:11:12+00:00</updated>
+
+		<published>2023-06-13T17:11:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44429#p44429</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44429#p44429"/>
+		<title type="html"><![CDATA[Re: Issues simulating buoyancy with forces]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44429#p44429"><![CDATA[
+Yeah I thought the AABB approximation might have too much error so I tried it with a sphere instead, using the volume of the sphere cap cut off by the water plane. I'm gonna double check my math on that once I get a chance but it's also presenting the same issue. Things are very unstable, so i suspect the volume calculation is not the only problem. As for the torque and all that, I figure I'll make that to work once I get the basics working.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9253">PgrAm</a> — Tue Jun 13, 2023 5:11 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-06-13T15:41:36+00:00</updated>
+
+		<published>2023-06-13T15:41:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44428#p44428</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44428#p44428"/>
+		<title type="html"><![CDATA[Re: Issues simulating buoyancy with forces]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44428#p44428"><![CDATA[
+You're using the AABB of the Box for the buoyancy intersection.  The AABB of a Box is much larger than the Box itself.  It is the bounding box around sphere that contains the Box no matter its orientation.  In other words... when the Box tumbles arbitrarily it will always be inside its bounding sphere... the AABB is the box around that.  When using the AABB you will get buoyancy forces even when the Box and the water don't actually overlap.<br><br>More complex math is required to compute the correct intersection volume between two boxes of arbitrary orientations.  The <strong class="text-strong">find_insersection(btAABB, btAABB)</strong> method does not do what you want here because it assumes the boxes are axis-aligned (e.g. it accepts arguments of type <strong class="text-strong">btAABB</strong>).  The math for arbitrary Box overlap is complicated enough that people usually resort to approximate methods such as using multiple proxy spheres distributed throughout the floating objects body and applying non-centralized partial forces at their locations instead of one big force at the Box's center.  This allows for non-zero torques to be applied to the floating object which makes for more interesting "boat wobble" behavior, especially when the water surface is dynamic.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Jun 13, 2023 3:41 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[PgrAm]]></name></author>
+		<updated>2023-06-13T00:18:08+00:00</updated>
+
+		<published>2023-06-13T00:18:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44427#p44427</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44427#p44427"/>
+		<title type="html"><![CDATA[Issues simulating buoyancy with forces]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44427#p44427"><![CDATA[
+So I'm trying to simulate buoyancy (and drag) by calculating and applying it's force every step. But I'm having some issues, I seem to be getting things exploding and bouncing everywhere when they hit the water (fluid_box in the code below). I'm approximating the displaced fluid using the AABB intersection between the fluid volume and the floating rigidbody. I seem to get better results when I either massively increase the mass of the object beyond realistic values or massively decrease the water density below realistic values. Can anyone see an issue with my approach or my calculations?<br><div class="codebox"><p>Code: </p><pre><code>btAABB box1{}, intersect{};rigid_body-&gt;getAabb(box1.m_min, box1.m_max);fluid_box.find_intersection(box1, intersect);auto velocity = rigid_body-&gt;getLinearVelocity();if (velocity.length() &gt; 0.0f)velocity = velocity.normalized() * (velocity.length() * velocity.length());auto dimensions = intersect.m_max - intersect.m_min;auto volume = dimensions.x() * dimensions.y() * dimensions.z();auto area = dimensions.x() * dimensions.z();if (volume &gt; 0.0f &amp;&amp; area &gt; 0.0f){const float density = 1000.0f; // density of water in kg/m^3const float drag_c = 1.05f; // drag coefficient of a boxauto drag = 0.5f * density * -velocity * drag_c * area;auto buoyancy = volume * density * -rigid_body-&gt;getGravity();rigid_body-&gt;applyCentralForce(buoyancy);rigid_body-&gt;applyCentralForce(drag);}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9253">PgrAm</a> — Tue Jun 13, 2023 12:18 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

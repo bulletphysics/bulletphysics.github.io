@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Box2d - Possible to get rid of accumulated impulses?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Box2d - Possible to get rid of accumulated impulses?</h2>
+		<p><a href="viewtopic.php%3Ft=693.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=693</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Box2d - Possible to get rid of accumulated impulses?</h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 2:40 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Iv been messing around with box2d and it seems that simply creating a new contact each step instead of updating an existing one makes it go a bit faster. THis of coarse makes the accumulated impulses 0 which leads to inaccuracy...<br>
+<br>
+My question is, is there any way to make it more stable without using any sort of accumulated impulse? (calculating the impulse from scratch each frame)<br>
+<br>
+Edit:<br>
+I also realize that the code added to compensate for not having the accumulated impulse would probably make it go slower, but im still interested to know if there is any way of doing it</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 6:27 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Please keep in mind that Box2D code was written as a tutorial, so it has not been optimized.<br>
+<br>
+Before dropping accumulated impulses, I would try to make persistence faster. On the other hand, if you don't care about stacking you can drop it, but then Box2D might not be the right engine for you.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 9:43 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Speed is not really a concern for me, im just interesting in getting stable stacking without accumulating any impulses. I dont plan to actually use it for anything in particular, its just for me to learn from<br>
+<br>
+Getting rid of the accumulation does indeed make the stacking unstable, but theres gota be a way to go without them and still have stable stacking..<br>
+<br>
+When i get rid of them (simply dont transfer it over when an arbiter is updated), the boxes dont penetrate each other, but the stacks will sway, slide on each other and eventually topple over<br>
+<br>
+<br>
+If there is no way to do without them, could you recommend a contact solving method that does not require and frame to frame knolledge but also has stable stacking and accurate behaviour?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 8:43 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">The solver is trying to solve a nonlinear system of equations iteratively. By using accumulated impulses, it is able to spread the cost of an accurate solution over several time steps.<br>
+<br>
+What you are trying to do is achieve the same accuracy within a single time step. I don't know how to do this without a huge additional cost.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 10:50 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">so in theory using a smaller timestep would do the trick?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 12:22 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I think it's better to distinguish two separate/different concepts: accumulating the impulse  during the iterations. And secondly, 'warmstarting': assigning the previous frames values for the accumulated impulse at the start of the frame.<br>
+<br>
+I  have good stacking results in Bullet (in 3D) even when warmstarting is disabled (in fact, it is disabled by default at the moment). ODE also has no warmstarting (all contact points are re-created every frame), and no stacking issues there. So I'm curious how many iterations you use? How do you create the contact ponts? What timestep? fixed/variable? And also, what friction model do you use? How do you interleave friction with contact impulses, and what value do you use for friction: based on normal impulse of this iteration, or accumulated impulse?<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 1:56 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Yes, a smaller time step would help.<br>
+<br>
+Erwin, you are correct about the two concepts. I've been talking about warm starting.<br>
+<br>
+In Box2D Demo 3:<br>
+<br>
+dt = 1/60 (fixed), iterations = 10<br>
+Warm starting: the vertical stack is easily stable with 10 boxes<br>
+No warm starting: the vertical stack is not stable with only 3 boxes<br>
+<br>
+To turn off warm starting:<br>
+Change Arbiter.cpp (66) from<br>
+		if (k &gt; -1)<br>
+To<br>
+		if (false)<br>
+<br>
+When testing stacking, be sure to test vertical stacks. Walls and pyramids are much more stable and don't reveal stability problems as well.<br>
+<br>
+Stacking stability was one of the main problems I had with ODE's QuickStep algorithm. That is why I pursued warm starting.<br>
+<br>
+Friction:<br>
+- point-wise<br>
+- dependent on accumulated normal impulse of the current iteration<br>
+- interleaved</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 2:11 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>Stacking stability was one of the main problems I had with ODE's QuickStep algorithm. That is why I pursued warm starting.
+</div></blockquote>
+
+I am suprised:  Bullet's CcdPhysicsDemo has 2 stacks (1 single stack of 12 boxes, and one wall). The stacks are stable without warmstarting when using SequentialImpulse and ODE quickstep, 10 iterations, 60 hertz (this is not meant to brag: previously I wrongly clipped the incremental impulse instead of the accumulated, thanks to Erin).<br>
+<br>
+Perhaps some other issue then? Every single piece of the puzzle seems to make a global impact on stability/convergence.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 3:46 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Ah I see, I think i may have confused my terms. Warmstarting is whay I want to get rid of and still have stable stacking. So ODE's quickstep does this without warmstarting? I thought that used LPC or somthing<br>
+<br>
+So, to get stable stacking without warmstarting, does quickstep have to be used in conjunction with bullet's SequentialImpulse solver or can bullets solver already do that by itself?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 3:59 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Stable stacking can be done in Bullet using one of the 2 constraint solvers. They both work fine, and are mathematically equivalent (they are both iterative LCP solvers).<br>
+<br>
+Bullet's default constraint solver is the Sequential Impulse solver, see Bullet/src/BulletDynamics/Constraint/btSequentialConstraintSolver.cpp. The other solver can be found easily in Extras. You choose one of the two. Simple.<br>
+<br>
+Erwin<br>
+
+<blockquote><div><cite>coderchris wrote:</cite>Ah I see, I think i may have confused my terms. Warmstarting is whay I want to get rid of and still have stable stacking. So ODE's quickstep does this without warmstarting? I thought that used LPC or somthing<br>
+<br>
+So, to get stable stacking without warmstarting, does quickstep have to be used in conjunction with bullet's SequentialImpulse solver or can bullets solver already do that by itself?</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 4:09 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Right, and bullets sequential solver is the 3d version of erin's if i remember correctly, so how come bullet can stack things with great stability without warmstarting where if I take warmstarting out of box2d, the stability crashes?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 7:21 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I modified appCcdPhysicsDemo in Bullet 2.30 to be roughly equivalent to Box2D Demo 3. Is warm starting on in this version? I couldn't stack more than 7 boxes. Also, there is some high frequency jitter.<br>
+<br>
+It is quite difficult to turn off deactivation in Bullet. I had to do it through the debug draw mode, but this gets messed up when I press z or x. Could this be made easier?<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=693&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include "btBulletDynamicsCommon.h"
+#include "LinearMath/btIDebugDraw.h"
+#include "GLDebugDrawer.h"
+#include &lt;stdio.h&gt;
+#include "CcdPhysicsDemo.h"
+#include "GL_ShapeDrawer.h"
+#include "GlutStuff.h"
+
+float deltaTime = 1.f/60.f;
+float gCollisionMargin = 0.05f;
+const int maxProxies = 32766;
+const int gNumObjects = 8;
+#define CUBE_HALF_EXTENTS 0.5f
+GLDebugDrawer debugDrawer;
+
+btCollisionShape* shapePtr[] = 
+{
+	new btBoxShape(btVector3(50,10,50)),
+	new btBoxShape(btVector3(CUBE_HALF_EXTENTS, CUBE_HALF_EXTENTS, CUBE_HALF_EXTENTS)),		
+};
+
+int main(int argc,char** argv)
+{
+	//experimental jitter damping (1 = no damping, 0 = total damping once motion below threshold)
+	extern float gJitterVelocityDampingFactor;
+	gJitterVelocityDampingFactor = 0.7f;
+	debugDrawer.setDebugMode(btIDebugDraw::DBG_NoDeactivation);
+	CcdPhysicsDemo* ccdDemo = new CcdPhysicsDemo();
+	ccdDemo-&gt;initPhysics();
+	ccdDemo-&gt;setCameraDistance(12.f);
+	return glutmain(argc, argv,640,480,"Bullet Physics Demo. http://bullet.sf.net",ccdDemo);
+}
+
+void CcdPhysicsDemo::clientMoveAndDisplay()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+	if (m_dynamicsWorld)
+	{
+		m_dynamicsWorld-&gt;stepSimulation(deltaTime,1);
+	}
+	
+	renderme(); 
+	glFlush();
+	glutSwapBuffers();
+}
+
+void CcdPhysicsDemo::displayCallback(void) {
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+	m_dynamicsWorld-&gt;updateAabbs();
+	renderme();
+	glFlush();
+	glutSwapBuffers();
+}
+
+inline float Random(float lo, float hi)
+{
+	float r = (float)rand();
+	r /= RAND_MAX;
+	r = (hi - lo) * r + lo;
+	return r;
+}
+
+void CcdPhysicsDemo::initPhysics()
+{
+	btCollisionDispatcher* dispatcher = new	btCollisionDispatcher();
+
+	btVector3 worldAabbMin(-10000,-10000,-10000);
+	btVector3 worldAabbMax(10000,10000,10000);
+	btOverlappingPairCache* broadphase = new btAxisSweep3(worldAabbMin,worldAabbMax,maxProxies);
+	btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
+	m_dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,broadphase,solver);
+	m_dynamicsWorld-&gt;setGravity(btVector3(0,-10,0));
+	m_dynamicsWorld-&gt;setDebugDrawer(&amp;debugDrawer);
+
+	btTransform tr;
+	tr.setIdentity();
+	
+	for (int i=0; i&lt;gNumObjects; i++)
+	{
+		bool isDyna = i&gt;0;
+		btCollisionShape* shape = isDyna ? shapePtr[1] : shapePtr[0];
+		shape-&gt;setMargin(gCollisionMargin);
+
+		btTransform trans;
+		trans.setIdentity();
+		
+		if (isDyna)
+		{
+			float x = Random(-0.1f, 0.1f);
+			float z = Random(-0.1f, 0.1f);
+			btVector3 pos(x,  0.55f + 1.1f * (i - 1.0f) - 10.0f, z);
+			trans.setOrigin(pos);
+		}
+		else
+		{
+			trans.setOrigin(btVector3(0,-20,0));
+		}
+
+		float mass = isDyna ? 1.f : 0.0f;
+		btRigidBody* body = localCreateRigidBody(mass,trans,shape);		
+		body-&gt;setFriction(0.3f);
+		body-&gt;setRestitution(0.0f);
+		body-&gt;setDamping(0.0f, 0.0f);
+
+		body-&gt;setCcdSquareMotionThreshold( CUBE_HALF_EXTENTS );
+		body-&gt;setCcdSweptSphereRadius( 0.2*CUBE_HALF_EXTENTS );
+	}
+
+	clientResetScene();
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 7:43 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>
+It is quite difficult to turn off deactivation in Bullet. I had to do it through the debug draw mode, but this gets messed up when I press z or x. Could this be made easier?
+</div></blockquote>
+
+In the demos, you can just press 'd' to toggle deactivation. But you are right, a proper API for that would be better.<br>
+<br>
+OK, I see how you make conditions worse then my default: random positions instead of a perfect aligned stack makes things a little worse indeed. Also letting the boxes fall down makes things already collapse before settling down, so just takine 0.5 + 1 * i works better. Smaller box sizes are less slightly less stable (I use 1 meter boxes, you use 0.5 meter). Bullet always uses internal timestep of 60 hertz, and interpolates transforms when passing real-time delta times. So you can just pass the realtime as first argument, instead of 1./60. Otherwise it just looks like the stack collapses soon, but it takes thousands of frames in real.<br>
+<br>
+I took your demo, and without the 'random' the stack can be higher, 10 boxes at least without warmstarting, with it is about 7 indeed. <br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 16, 2006 3:16 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">so, basically I can either warmstart, or not warmstart and suffer the consiquences of un-stable stacking.<br>
+<br>
+I read something somewhere about "shock propagation" Supposedly that lets you have fairly stable stacking. I was unable to find any articles describing how to do it, would you happen to have any links?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 16, 2006 6:06 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">this might be a stupid question, but why wouldn't you want to warmstart? <br>
+<br>
+my (limited) understanding is that by warmstarting you're just using the solution calculated by the previous frame as the initial guess for the current frame.. which seems like it would always be a better idea/closer to the current solution  than just always using 0 as an initial guess.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

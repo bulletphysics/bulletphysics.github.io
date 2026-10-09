@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Collisions between Characters Controllers</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Collisions between Characters Controllers</h2>
+		<p><a href="viewtopic.php%3Ft=8021.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8021</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Collisions between Characters Controllers</h3>
+				<div class="date">Posted: <strong>Mon Apr 02, 2012 2:44 pm</strong></div>
+				<div class="author">by <strong>Knn0N</strong></div>
+				<div class="content">(collisions between btPairCachingGhostObject)<br>
+<br>
+Hi everybody,<br>
+<br>
+Me and my team are currently developing a game using bullet physics. The genre of the is basically a tower defense. Well, I'm trying to use characters controllers for IA purposes, because using only rigidBody makes unstable behavior between IA's and the world.<br>
+I thought in configure the world to avoid this penetrations between rigid bodies, etc.<br>
+<br>
+But finally I decided to use the KinematicCharacterController class. It works fine, but this is my problem:<br>
+<br>
+-Before I take this decision, I implemented triggers for the game purposes using btPairCachingGhostObject. This works like a charm when I was using ridigBodies, the behavior was the expected. But well, when I change the IA physic part from rigidBodies to characterController (it uses internally a btPairCachingGhostObject, too), the behavior wasn't the expected.<br>
+<br>
+After this little introduction I ask now:<br>
+-Is the collision between btPairCachingGhostObject provided?<br>
+<br>
+Basically I'm using the next methods to detect the collision when a body joins into the trigger:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8021&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+
+//---------------------------------------------------------
+void CManualTrigger::TriggerTick()
+{
+    btDiscreteDynamicsWorld* m_dynamicsWorld = CPhysicEngine::Ref().GetbtSoftDynamicWorld();
+    //Retrives the content from all ghost objects in the world and call ProcessObectsInsideGhostObjects(...) for each.		
+    if ( m_dynamicsWorld )
+    {
+        btAlignedObjectArray &lt; btCollisionObject* &gt; objsInsidePairCachingGhostObject;	// We might want this to be a member variable...							
+        btAlignedObjectArray &lt; btCollisionObject* &gt;* pObjsInsideGhostObject = NULL;		// We will store a reference of the current array in this pointer
+        const btAlignedObjectArray &lt; btCollisionObject* &gt;&amp; objs = m_dynamicsWorld-&gt;getCollisionObjectArray();	
+        for (int i=0,sz=objs.size();i&lt;sz;i++)	
+        {
+            btCollisionObject* o = objs[i];
+            btGhostObject* go = btGhostObject::upcast(o);
+            if (go)	
+            {
+                objsInsidePairCachingGhostObject.resize(0);
+                btPairCachingGhostObject* pgo = dynamic_cast &lt; btPairCachingGhostObject* &gt; (go);	// No upcast functionality...
+                if (pgo)	
+                {
+                    GetCollidingObjectsInsidePairCachingGhostObject(static_cast &lt; btDiscreteDynamicsWorld* &gt; (m_dynamicsWorld),pgo,objsInsidePairCachingGhostObject);
+                    pObjsInsideGhostObject = &amp;objsInsidePairCachingGhostObject;
+                }
+                else 
+                {
+                    // It's better not to try and copy the whole array, but to keep a reference to it!
+                    pObjsInsideGhostObject = &amp;go-&gt;getOverlappingPairs();
+                    
+                    // Side Note: (at the moment) makes my program crash on my system...
+                    //btAlignedObjectArray &lt; btCollisionObject* &gt; objs = go-&gt;getOverlappingPairs(); 
+                    // Nevermind, that was the wrong way of doing it: 
+                    //btAlignedObjectArray &lt; btCollisionObject* &gt;&amp; objs2 = go-&gt;getOverlappingPairs(); 
+                    //is much better.
+                }	
+                // Here pObjsInsideGhostObject should be valid.	
+                ProcessObectsInsideGhostObjects(*pObjsInsideGhostObject, pgo);
+            }
+        }	
+    }
+}
+
+
+
+
+//---------------------------------------------------------
+// This static method is useful for the demo only. It's called by "void GhostObjectsDemo::clientMoveAndDisplay()".
+// Basically we must find a way to "display" the objects inside ghost objects to the user.
+// We choose to apply a vertical impulse to them (just because it's easier).
+// (The strength of the impulse is different depending on the type of ghost object)
+void CManualTrigger::ProcessObectsInsideGhostObjects(btAlignedObjectArray &lt; btCollisionObject* &gt;&amp; objs, const bool isPairCachingGhostObject)	
+{
+    //Primer paso: Comprobando colisiones e insertando los nuevos objetos que no estaban ya insertados en el mapa de colisiones.
+    for (int j=0,jsz=objs.size();j&lt;jsz;j++) 
+    {
+
+        btPairCachingGhostObject* b = dynamic_cast &lt; btPairCachingGhostObject* &gt;(objs[j]);
+        //This line was the original one, before I change by the line above.
+        //btRigidBody* c = btRigidBody::upcast(objs[j]);
+        if (b) 
+        {
+            //Obtenemos la informacion que relaciona bullet con la logica (TActorInfo).
+            TActorInfo *info = (TActorInfo *)b-&gt;getUserPointer();
+            //Obtenemos el componente entidad fisica al que pertenece el rigidBody 'b'.
+            CPhysicEntity *physicEntity = reinterpret_cast&lt;CPhysicEntity*&gt; (info-&gt;pPhysicObj-&gt;userData);
+            //Obtenemos la entidad logica que contiene el componente anterior.
+            CEntity *entityCollisioned = physicEntity-&gt;getEntity();
+            
+            if (entityCollisioned-&gt;getType() == "StuffedAnimal" ||  entityCollisioned-&gt;getType() == "Player") 
+            {                
+                //Primero comprobamos que el objeto no conste ya en el mapa de objetos colisionados con el trigger.
+                _it = _objectsColliding.find(b);
+                if (_it == _objectsColliding.end()) 
+                {
+                    //Si no estuviera, lo insertamos.
+                    _objectsColliding.insert(std::pair&lt;btCollisionObject*,bool&gt;(b, true));
+                    //Y mandamos el mensaje oportuno.
+                    //Dependiendo de la trampa, habrá un comportamiento u otro.
+                    doAction(entityCollisioned);
+                }
+            }
+        }	
+    }
+    //Si hay algo en contacto con el trigger.
+    if (objs.size() &gt; 0)
+    {
+        //Segundo paso: Marcando en el mapa de colisiones los objetos que ya no esten colisionando con el trigger.
+        for (_it = _objectsColliding.begin(); _it != _objectsColliding.end(); ++_it) 
+        {
+            //Si la busqueda devuelve un entero igual al tamanyo del map objs, es que no se ha encontrado el elemento.
+            if ( objs.findLinearSearch(_it-&gt;first) == objs.size() )
+            {
+                _it-&gt;second = false;
+            }
+        }
+        //Tercer paso: Notificar a las entidades que ya no estan colisionando con el trigger con su correspondiente mensaje.
+        notifyingOnExitEntities();
+    }
+}
+
+
+//---------------------------------------------------------
+// Portable static method: prerequisite call: m_dynamicsWorld-&gt;getBroadphase()-&gt;getOverlappingPairCache()-&gt;setInternalGhostPairCallback(new btGhostPairCallback()); 
+void CManualTrigger::GetCollidingObjectsInsidePairCachingGhostObject(btDiscreteDynamicsWorld* m_dynamicsWorld,
+                                                                    btPairCachingGhostObject* m_pairCachingGhostObject,
+                                                                    btAlignedObjectArray&lt;btCollisionObject*&gt;&amp; collisionArrayOut)	
+{
+    collisionArrayOut.resize(0);
+    if (!m_pairCachingGhostObject || !m_dynamicsWorld) 
+        return;
+    // With "false" things don't change much, and the code is a bit faster and cleaner...
+    const bool addOnlyObjectsWithNegativeDistance(true);	
+    
+    btBroadphasePairArray&amp; collisionPairs = m_pairCachingGhostObject-&gt;getOverlappingPairCache()-&gt;getOverlappingPairArray();
+    const int	numObjects=collisionPairs.size();	
+    static btManifoldArray	m_manifoldArray;
+    bool added;
+    for(int i=0;i&lt;numObjects;i++)	
+    {
+        m_manifoldArray.resize(0);
+        added = false;
+        for (int j=0;j&lt;m_manifoldArray.size();j++)	
+        {
+            btPersistentManifold* manifold = m_manifoldArray[j];
+            // Here we are in the narrowphase, but can happen that manifold-&gt;getNumContacts()==0:
+            if (addOnlyObjectsWithNegativeDistance)	
+            {
+                for (int p=0,numContacts=manifold-&gt;getNumContacts();p&lt;numContacts;p++)			
+                {
+                    const btManifoldPoint&amp;pt = manifold-&gt;getContactPoint(p);
+                    if (pt.getDistance() &lt; 0.0) 	
+                    {
+                        // How can I be sure that the colObjs are all distinct ? I use the "added" flag.
+                        collisionArrayOut.push_back((btCollisionObject*) (manifold-&gt;getBody0() == m_pairCachingGhostObject ? manifold-&gt;getBody1() : manifold-&gt;getBody0()));
+                        added = true;
+                        break;
+                    }	
+                }
+                if (added) 
+                    break;
+            }
+            else if (manifold-&gt;getNumContacts()&gt;0) 
+            {
+                collisionArrayOut.push_back((btCollisionObject*) (manifold-&gt;getBody0() == m_pairCachingGhostObject ? manifold-&gt;getBody1() : manifold-&gt;getBody0()));
+                break;
+            }
+        }
+    }	
+}
+
+
+</code></pre></div>
+
+<br>
+<br>
+So, Is this possible?, I mean, Can we detect collision between characters controllers (between GhostObjects)?. This would be useful too, to avoid the overlapping between two or more btKinematicCharacterControllers.<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collisions between Characters controllers</h3>
+				<div class="date">Posted: <strong>Tue Apr 03, 2012 1:36 pm</strong></div>
+				<div class="author">by <strong>Knn0N</strong></div>
+				<div class="content">Any ideas?!??!<br>
+<br>
+Am I in a wrong way??<br>
+<br>
+Should I change the functionality of my triggers??<br>
+<br>
+thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collisions between Characters Controllers</h3>
+				<div class="date">Posted: <strong>Tue Apr 03, 2012 4:11 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">You might want to go back to the main forum page and read the <span style="color:#FF0000">red</span> text regarding this sub-forum.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collisions between Characters Controllers</h3>
+				<div class="date">Posted: <strong>Tue Apr 03, 2012 4:24 pm</strong></div>
+				<div class="author">by <strong>Knn0N</strong></div>
+				<div class="content">ops!  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> <br>
+<br>
+sorry. I've been moved to the right sub forum.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

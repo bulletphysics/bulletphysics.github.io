@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; issue with softbody vs. custom concave shape</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>issue with softbody vs. custom concave shape</h2>
+		<p><a href="viewtopic.php%3Ft=13541.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13541</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>issue with softbody vs. custom concave shape</h3>
+				<div class="date">Posted: <strong>Thu Feb 23, 2023 7:53 am</strong></div>
+				<div class="author">by <strong>gjaegy</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I'm encountering an issue with Bullet internals, and I'm not sure what the best way to resolve it.<br>
+<br>
+Basically, the issue is related to the collision between a rope (softbody) and a terrain, for which I've derived a class from btConcaveShape, overriding processAllTriangles() etc. <br>
+<br>
+This derived class works well for rigid bodies, however, with soft bodies, I came across an issue.<br>
+<br>
+Initially, I figured out each triangle of that custom concave shape gets turned into a convex hull made of the extruded triangle. This convex hull shape is then cached in btSoftBodyTriangleCallback::m_shapeCache.<br>
+<br>
+However, my issue is that my terrain is huge (the Earth). The key used to index each triangle derived convex hull shape is made out of a single 32-bits integer, with 10 bits for the part ID, and the remaining 22 bits for the vertex ID. <br>
+<br>
+This is clearly not sufficient for my purpose (we would need at least 64-bits if not more).<br>
+<br>
+So, my initial (easy) solution was to call btSoftBodyTriangleCallback::clearCache() after each call to my custom class processAllTriangles(). This works, however, the performance penalty involved by the following line is huge (linear search):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13541&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_softBody-&gt;getWorldInfo()-&gt;m_sparsesdf.RemoveReferences(tmp-&gt;m_childShape);  //necessary?</code></pre></div>
+
+Looking at the code, at a first glance it seems this line could potentially be removed and replaced by a regular call to btSparseSdf::GarbageCollect().<br>
+<br>
+However, this doesn't really work, as in the case a new temporary triangle convex hull is being allocated at the same memory location as a previous destroyed shape, we might end up with a false positive test result in btSparseSdf::Evaluate() (since <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13541&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>(c-&gt;pclient == shape)</code></pre></div> would return true, as the pointers are the same, and the SDF of the previous shape with the same address will be used). This case would not happen very often, but it will (especially with some custom allocators).<br>
+<br>
+So, right now I don't know how the solve that problem. I understand it's not straightforward.<br>
+<br>
+The options I can see:<br>
+- increase the number of bits used to index into btSoftBodyTriangleCallback::m_shapeCache, although the ever growing scheme of that cache worries me a bit<br>
+- find a solution to make RemoveReferences() more efficient<br>
+- ?<br>
+<br>
+Does anyone see any better way of tackling that problem ? Thanks a lot !</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: issue with softbody vs. custom concave shape</h3>
+				<div class="date">Posted: <strong>Mon Feb 27, 2023 4:03 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Every system has its limits and you are adventuring outside those of the softbody collision system.  Meanwhile, if you constantly invalidate the softbody cache (which was probably introduced to speed things up) then it would not be too surprising to suffer consequences of poor performance.<br>
+<br>
+Since you've already overridden the shape for the terrain, perhaps you would not be too shy to override the softbody cache (and/or collision system) to use a 64-bit keyed cache.<br>
+<br>
+Meanwhile, I can't help but question the wisdom of using one giant shape for the Earth.  Would it not be possible to break it up into a manageable set of smaller parts?  Perhaps break it up such that 10-bit part-ID and 22-bit vertex-ID are sufficient.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

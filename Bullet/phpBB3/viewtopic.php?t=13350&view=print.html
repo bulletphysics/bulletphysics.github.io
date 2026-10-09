@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; bvhTriangleMesh glitch</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>bvhTriangleMesh glitch</h2>
+		<p><a href="viewtopic.php%3Ft=13350.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13350</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>bvhTriangleMesh glitch</h3>
+				<div class="date">Posted: <strong>Fri Jan 07, 2022 8:04 pm</strong></div>
+				<div class="author">by <strong>Alastar</strong></div>
+				<div class="content">I've got terrain data as heightmap and converted it to <strong class="text-strong">bvhTriangleMesh </strong>manually, and I also get some game models (as <strong class="text-strong">.obj</strong>) for game objects on scene and passed verts and tris to <strong class="text-strong">bvhTriangleMesh</strong>. <br>
+I've used demo application from github to vizualise physics world and get strange behaviour:<br>
+1) Manually generated terrain mesh looks fine, except strange alignment (looks like it's up axis is <strong class="text-strong">X</strong> or <strong class="text-strong">Z</strong>, not <strong class="text-strong">Y</strong>) and application renders it fine;<br>
+2) Game models looks totally messed and unrecognizable;<br>
+Both terrain and game objects meshes use same rendering code, there's no mistake in models itself, I've checked them with <strong class="text-strong">Noesis </strong>viewer. This also can't be bullet wrapper problem because terrain looks ok.<br>
+What am I doing wrong?
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1899" class="postimage" alt="Снимок.JPG" onclick="viewableArea(this);" /></dt>
+						<dd>Снимок.JPG (70.39 KiB) Viewed 14606 times</dd>
+		</dl>
+		
+		
+			</div>
+I'm using latest BulletSharp from github (CSharp wrapper)<br>
+Creation of game objects in code (C#):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13350&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>            foreach (int key in FixtureInfos.Keys)
+            {
+                FixtureInfo info = FixtureInfos[key]; //getting info about game model
+                //safe checks
+                if (!ModelInfos.ContainsKey(info.NifID))
+                {
+                    Console.WriteLine($"Missing fixture info: {info.NifID} - {info.Name} in {path}");
+                    continue;
+                }
+                if (!BulletOcclusion.Fixtures.ContainsKey(ModelInfos[info.NifID].ModelName))
+                {
+                    Console.WriteLine($"Missing model: {ModelInfos[info.NifID].ModelName}");
+                    continue;
+                }
+                //
+                //creating bvh from pre loaded model
+                BvhTriangleMeshShape shape = BulletOcclusion.Fixtures[ModelInfos[info.NifID].ModelName];
+		//translating it and rotating
+                Matrix startTransform = Matrix.Translation(new BulletSharp.Vector3( //translation
+                        (float)info.X,
+                        (float)info.Y,
+                        (float)info.Z
+                    ));
+                startTransform = Matrix.Add(startTransform, Matrix.RotationQuaternion(BulletSharp.Quaternion.RotationAxis(new BulletSharp.Vector3((float)info.XAxis, (float)info.YAxis, (float)info.ZAxis), info.Angle3D)));
+                //creating rigidbody itself
+                myMotionState = new DefaultMotionState(startTransform);
+                rbInfo = new RigidBodyConstructionInfo(0.0f, myMotionState, shape);
+                rigid = new FixtureRigidBody(rbInfo, info.ID, info.NifID, info.Name);
+                rigid.CollisionFlags |= CollisionFlags.StaticObject;
+                AddRigidBody(rigid);
+                rbInfo.Dispose();
+            }
+
+            FixtureInfos.Clear();
+</code></pre></div>
+
+Reading models and creating collision shapes for them:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13350&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	ObjModel model = new ObjModel();
+        model.Deserialize(bytes);
+        if (model.Vertices.Length &gt; 0 &amp;&amp; model.Polygons.Length &gt; 0)
+        {
+        	TriangleIndexVertexArray indexVertexArray = new TriangleIndexVertexArray(model.Polygons, model.Vertices);
+        	BvhTriangleMeshShape shape = new BvhTriangleMeshShape(indexVertexArray, true, true);
+       	 	Fixtures.TryAdd(name, shape);
+        	Console.WriteLine($"Loaded model: {name}");
+        }
+        else
+        {
+        	Console.WriteLine($"Model {name} has no faces or polygons!");
+        }
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: bvhTriangleMesh glitch</h3>
+				<div class="date">Posted: <strong>Fri Jan 07, 2022 9:06 pm</strong></div>
+				<div class="author">by <strong>Alastar</strong></div>
+				<div class="content">Stupid mistake, in all .obj models vertexes are indexed from 1, not 0, that caused this stupid behavior</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

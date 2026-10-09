@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; driving game - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>driving game</h2>
+		<p><a href="viewtopic.php%3Ft=4142.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4142</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Fri Oct 30, 2009 8:09 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>kester wrote:</cite>The force is clamped after mass is factored in, so you are probably hitting the maximum suspension impulse limits (I've upped the 6000 limit to 100000).</div></blockquote> I see... I'll take a look around there again. It seems a bit strange though to have an arbitrary limit at all, or is it for numerical stability, or some such? But thankfully the source is wide open, so it's easy to just change it at will <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+
+<blockquote><div><cite>kester wrote:</cite>It's good to know my notes are helping people. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"></div></blockquote>For sure they did! Unfortunately, bullet's classes and their behaviour aren't what you'd call "well documented".   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Fri Oct 30, 2009 8:51 pm</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>kester wrote:</cite>...so you are probably hitting the maximum suspension impulse limits...</div></blockquote>You were right! The 6000 cap was indeed the culprit. After upping it a bit the suspension parameters started behaving like expected.<br>
+<br>
+EDIT: perhaps that's another thing to note in your document <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Tue Nov 03, 2009 7:50 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content">Now, I've tried my hand at the interpolation you posted. And there must be something wrong with... something. The result was much worse behaviour. Even more bumpy and jittery than before. I couldn't even manage to complete one curve on the track any more.   <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> <br>
+<br>
+What I did I was overrode the vehicle raycaster class and also the call result class (to get to the shape part and triangle numbers, which the default implementation just throws away   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"> ). After observing the quite horrible behaviour, I traced out all the points and normals I got as input, and noticed that the hit point was actually outside the triangle! No wonder the barycentric and interpolation stuff went haywire...<br>
+<br>
+On the other hand, since the behaviour got that much worse, I guess the resulting normal does play a big part in the behaviour of the suspension <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I was thinking also, when overriding these things, it should also be possible to use a normal map and return a normal from that... a bit more math required though. Anyone tried that?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Wed Nov 04, 2009 12:51 am</strong></div>
+				<div class="author">by <strong>kester</strong></div>
+				<div class="content">It seems weird that you're getting coordinates outside the triangle.  I'm using btBvhTriangleMesh shape, and I get valid positions.<br>
+
+<blockquote><div><cite>tatsujin wrote:</cite>I was thinking also, when overriding these things, it should also be possible to use a normal map and return a normal from that... a bit more math required though. Anyone tried that?</div></blockquote>
+
+I haven't tried it, but you should be able to work out the UV coordinates and tangent space from the barycentric coordinates, and then transform into world space.  The main advantage from modifying the normal is smoothing out the seams between triangle edges, so it'd only help that if your normals were continuous across edges.<br>
+<br>
+It might be useful for an off-road game, or for when you drive outside the optimal parts of the track.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Wed Nov 04, 2009 8:29 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>kester wrote:</cite>It seems weird that you're getting coordinates outside the triangle.  I'm using btBvhTriangleMesh shape, and I get valid positions.</div></blockquote>Same here, the collision shape is a btBvhTriangleMeshShape that I feed using a btTriangleIndexVertexArray from a custom source. That same custom source is used for lookup of the triangles in the ray caster.<br>
+Hmm.... now that I mention it, when rendering, I have to offset the visible mesh by -4.52 on the y-axis to make it match the collision shape - yup, a real wtf, and something I'll have to resolve, sooner or later. The same probably applies to the ray cast result! Didn't think of that, until now... I'll have to try that <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Maybe it would be more correct to use the btTriangleIndexVertexArray instead (for positions)...<br>
+
+<blockquote><div><cite>kester wrote:</cite>The main advantage from modifying the normal is smoothing out the seams between triangle edges, so it'd only help that if your normals were continuous across edges.</div></blockquote>Yup, that's something I'll have to do correctly as well... not yet complete. However, I was thinking if I add interpolation now when the normals are hard there should at least be no difference in behaviour <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+
+<blockquote><div><cite>kester wrote:</cite>It might be useful for an off-road game, or for when you drive outside the optimal parts of the track.</div></blockquote>Yeah, I realise it's usefulness is quite limited and most probably not worth the effort <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Wed Nov 04, 2009 11:58 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>tatsujin wrote:</cite>Maybe it would be more correct to use the btTriangleIndexVertexArray instead (for positions)...</div></blockquote>Nope. Indeed that class is only a thin wrapper for the arrays supplied in the constructor... Hmmm</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Thu Nov 05, 2009 8:30 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>tatsujin wrote:</cite>... I have to offset the visible mesh by -4.52 on the y-axis to make it match the collision shape ... The same probably applies to the ray cast result!</div></blockquote>Right.<br>
+I tried the same tweak on the ray cast result, and voilà: the interpolation works. And it rocks! <br>
+The diference is huge, goddamit! Why aren't normals, and their interpolation, supported by Bullet itself? Thanks for dropping the hint <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+<br>
+I'm still no closer to the mystery why this offset hack is needed, however... it just shouldn't be... <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Fri Nov 06, 2009 2:32 pm</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>tatsujin wrote:</cite>I'm still no closer to the mystery why this offset hack is needed, however... it just shouldn't be... <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div></blockquote>Turns out that in the beginning of time I had put a +4.5 translation on the Y axis on the generated terrain shape (much later a mesh loaded from file) and then efficiently forgot about it.  <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> <br>
+<br>
+Btw, I've the track mesh is now written with smooth normals all over (previously only some of them were), and I'll say it again: it rocks! The difference is considerably not insignificant!   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_surprised.gif" width="15" height="15" alt=":o" title="Surprised"><br>
+<br>
+I vote for normal smoothing to be added to Bullet's btRaycastVehicle by default! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+(collision shapes need to support normals then also of course).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Mon Nov 09, 2009 5:16 am</strong></div>
+				<div class="author">by <strong>kester</strong></div>
+				<div class="content">It's good to hear that it's working!<br>
+<br>
+Adding it by default to Bullet probably requires some quite invasive changes.  It's quite a bit of work just for vehicle simulation.  I think you'd only want to add it to the 'mesh' shapes: the bvh tri mesh shape, and the heightfield terrain shape.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Mon Nov 09, 2009 8:10 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>kester wrote:</cite>I think you'd only want to add it to the 'mesh' shapes: the bvh tri mesh shape, and the heightfield terrain shape.</div></blockquote>Yeah, and it's probably only useful for ray cast vehicle-type things.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Thu Dec 10, 2009 7:05 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content">Btw, I created <a href="http://code.google.com/p/bullet/issues/detail?id=307" class="postlink">an enhancement "issue"</a> for having support for normals in the collision shape(s).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Tue Jun 08, 2010 9:28 pm</strong></div>
+				<div class="author">by <strong>dakffyd</strong></div>
+				<div class="content">I'm trying to create realistic simulations of very large and heavy vehicles - bulldozers, dump trucks, etc. Masses of 35 000 kg or so. I've had to bump up the max suspension force, and I've got a couple questions.<br>
+A) are there any repercussion for bumping this limit way higher?<br>
+B) are there any other limits I might run into?<br>
+thanks.....</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Wed Jun 09, 2010 1:19 am</strong></div>
+				<div class="author">by <strong>dakffyd</strong></div>
+				<div class="content"><blockquote><div><cite>kester wrote:</cite>Bullet sets the wheel contact normal in btVehicleRaycaster::castRay.<br>
+<br>
+I derive from btVehicleRaycaster and override that method ... </div></blockquote>
+
+How do you determine which vertices to use? <br>
+I assume the data must be somewhere in either the btRigidBody or the btVehicleRaycasterResult ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Wed Jun 09, 2010 3:30 am</strong></div>
+				<div class="author">by <strong>kester</strong></div>
+				<div class="content">castRay performs a ray-cast, which returns the triangle index, part id, collision object, and hit position of the end of the ray.<br>
+<br>
+You can use the triangle index to work out which vertices form the hit triangle.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: driving game</h3>
+				<div class="date">Posted: <strong>Wed Jun 09, 2010 9:57 am</strong></div>
+				<div class="author">by <strong>tatsujin</strong></div>
+				<div class="content"><blockquote><div><cite>dakffyd wrote:</cite><blockquote><div><cite>kester wrote:</cite>Bullet sets the wheel contact normal in btVehicleRaycaster::castRay.<br>
+<br>
+I derive from btVehicleRaycaster and override that method ... </div></blockquote>
+How do you determine which vertices to use? <br>
+I assume the data must be somewhere in either the btRigidBody or the btVehicleRaycasterResult ?</div></blockquote>
+Generally, since the vehicles are heavy &amp; slow-moving, perhaps you'll get better result using rigid body wheels instead of ray cast.<br>
+In my own experiments, rigid body wheels have quite big advantages over raycast in terms of being realistic. But since things usually breaks apart physics-wise at high speed (rotations) and require more processing power, raycast usually is better suited for racing-type games... But your choice of vehicles implies that this is not racing <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

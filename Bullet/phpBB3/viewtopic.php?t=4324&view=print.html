@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet Serialization - general</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet Serialization - general</h2>
+		<p><a href="viewtopic.php%3Ft=4324.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4324</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet Serialization - general</h3>
+				<div class="date">Posted: <strong>Mon Nov 16, 2009 11:55 am</strong></div>
+				<div class="author">by <strong>Chris Simson</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I cannot find any generic Bullet serialization routines in the API (not <em class="text-italics">conversion </em>such as ColladaConverter, but pure serialization).<br>
+<br>
+Therefore I am attempting to write a serialization system for Bullet.  I am goind to associate a serialize() function with each Bullet class.  <br>
+<br>
+Currently I am on the serialize&lt;btRigidBody&gt;() function.  The bool m_additionalDamping member of btRigidBody is declared as private and has no accessor functions.  How is one supposed to write this out to disk?  You might think therefore that its value is implied by the value of other members, such as m_additionalDampingFactor(btScalar, but I cannot work out how!<br>
+<br>
+Please advise.<br>
+<br>
+Chris Simson</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Serialization - general</h3>
+				<div class="date">Posted: <strong>Tue Nov 17, 2009 7:54 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It is a good idea to add (de)serialization to Bullet. I've been looking into this for a while, and I'm planning to provide some solution soon.<br>
+<br>
+Let's add serialize and deserialize methods (similar to irrlicht for example), and provide a basic binary chunk format that is backward/forward compatible (based on the <a href="http://www.martinreddy.net/gfx/2d/IFF.txt" class="postlink">iff format</a> but adding support for little/bit endian and 32bit/64bit similar to the <a href="http://www.atmind.nl/blender/mystery_ot_blend.html" class="postlink">Blender .blend format</a>).<br>
+<a href="http://code.google.com/p/bullet/issues/detail?id=308" class="postlink">http://code.google.com/p/bullet/issues/detail?id=308</a><br>
+<br>
+If you are running into issues on your side, please just make the members protected for now,<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Serialization - general</h3>
+				<div class="date">Posted: <strong>Thu Nov 19, 2009 7:46 am</strong></div>
+				<div class="author">by <strong>Chris Simson</strong></div>
+				<div class="content"><span style="text-decoration:underline">20091116 Bullet serialization</span><br>
+<br>
+Sorry for the length of this posting.<br>
+<br>
+The attached project needs to reside in the ...\bullet-2.75\Demos directory in order to build correctly.  Please let me know if you can’t get it to work.<br>
+<br>
+Attached is the first-cut, debug only go at a serialization system for Bullet.  I must apologise in advance for strange development comments (to myself!)  I am afraid it does not yet offer compatibility with any file-type standards (eg IFF), although that could be worked-in at later stages, (eg by deriving different Archive classes - maybe an IFFArchive?).  That said, the attached work is not trivial (it took a good while to complete!)  It is based upon the open-source Boost library serialization code (<a href="http://www.boost.org" class="postlink">www.boost.org</a>)(although there are very few, if any, direct code copies - parts of has_new_operator and the HashedString code).<br>
+<br>
+The attached system was developed on a Win XP Pro X86 platform, using MS Visual Studio 2005 (Service Pack 1) (sorry if this offends Linux purists!)  No attempt has yet been made to make it cross-compatible.  Bullet-2.75 is being used.<br>
+<br>
+Please see what you think -  constructive criticism and feedback is welcomed.<br>
+<br>
+I am currently making the serialization functions as globals, so that they are not intrusive into the Bullet system proper.  This has the added advantage that the serialization system can be loaded-in as an optional extra, if needed.  Also, in its current early state of development, I feel it is best to keep it separate.  This does however necessitate accessor functions to all of the private and protected member variables within the Bullet classes (or for the serialization system to be made a friend of each of the Bullet classes, which again is intrusive, ie it requires modification of the main Bullet classes code).  For the most part, such accessor methods are provided, but there are just a few exceptions which I have come across, as identified below.  Other suggestions for minor Bullet modifications are also suggested below:<br>
+<br>
+<br>
+<span style="text-decoration:underline">____Suggested changes to Bullet (for the sake of serialization) ( 2 items ):____</span><br>
+<br>
+1)Accessor functions required for private/protected members;<br>
+Marked with INACCESSIBLE() in the code.<br>
+<br>
+2) ...\bullet-2.75\src\BulletCollision\CollisionDispatch\btCollisionObject.h :<br>
+Line 118 +<br>
+Currently:<br>
+	enum	CollisionObjectTypes<br>
+	{<br>
+		CO_COLLISION_OBJECT =1,<br>
+		CO_RIGID_BODY,<br>
+		///CO_GHOST_OBJECT keeps track of all objects overlapping its AABB and that pass its collision filter<br>
+		///It is useful for collision sensors, explosion objects, character controller etc.<br>
+		CO_GHOST_OBJECT,<br>
+		CO_SOFT_BODY,<br>
+		CO_HF_FLUID<br>
+	};<br>
+<br>
+<span style="text-decoration:underline">Suggestion:</span><br>
+	enum	CollisionObjectTypes<br>
+	{<br>
+		CO_COLLISION_OBJECT =1,<br>
+		CO_RIGID_BODY = 2,<br>
+		///CO_GHOST_OBJECT keeps track of all objects overlapping its AABB and that pass its collision filter<br>
+		///It is useful for collision sensors, explosion objects, character controller etc.<br>
+		CO_GHOST_OBJECT = 3,<br>
+		CO_SOFT_BODY = 4,<br>
+		CO_HF_FLUID = 5<br>
+	};<br>
+<br>
+<span style="text-decoration:underline">Reasoning:</span><br>
+In order to re-attach a base class pointer from an archive, type information needs to be stored within the archive.  Where RTTI is available, no assumptions about the class need to be made.  However, since btCollisionObject and btRigidBody are not RTTI compatible (why, I do not know), the getInteralType() function has been used to provide type information.  If therefore the ordering of enum CollisionObjectTypes is changed, this will confuse any archive that has stored these type values; hence the need to make them explicit.<br>
+<br>
+<span style="text-decoration:underline">NOTES</span><br>
+#20091119 The code has been tested (superficially) for memory leaks, and is currently clear.<br>
+#You get an access violation error message if you attempt to close the application via the OpenGl window (as opposed to the console window).  This is nothing to do with the serialization code (the other Bullet demos have the same behaviour). <br>
+<br>
+<span style="text-decoration:underline">SERIALIZATION TODO:</span><br>
+# versioning not yet implemented.<br>
+# error-condition processing (modify all the asserts etc)<br>
+# complete the ‘add code’ segments!<br>
+# expand to incorporate other collisionobject types other than just rigid bodies.<br>
+# expand to include serialization of the elements of the debugWorld (such as the btBroadphaseInterface, btCollisionDispatcher etc); I don’t currently know if this is either a good idea, or necessary.<br>
+<br>
+<br>
+Chris Simson</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Serialization - general</h3>
+				<div class="date">Posted: <strong>Thu Nov 19, 2009 4:06 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi Chris,<br>
+<br>
+Thanks for sharing your work. I had a look at it. Good point about the enums/flags, they should not be re-ordered.<br>
+<br>
+Bullet serialization will be built-in (each class gets its own methods), and allows for custom archives (and versioning, 32/64bit, little/big endian support and forward/backwards compatibility. <br>
+<br>
+We don't want to add BOOST, RTTI or STL dependencies, to keep the code simple, portable and compiling out-of-the-box in all kind of environments.<br>
+Thanks,<br>
+Erwin<br>
+<br>
+By the way: closing the window is probably a Windows Glut issue. Maybe we should replace Glut console app by a Win32 windowed OpenGL app, the code is already available. For now, just press 'Q' to exit demos.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Serialization - general</h3>
+				<div class="date">Posted: <strong>Fri Nov 20, 2009 5:21 am</strong></div>
+				<div class="author">by <strong>Chris Simson</strong></div>
+				<div class="content">Hi Erwin,<br>
+<br>
+Thanks for the prompt response.<br>
+But how far down the rabbit hole to go, asked Alice!<br>
+<br>
+Ok, so a set of criteria:<br>
+1) No RTTI<br>
+2) No STL<br>
+3) No Boost<br>
+4) Member serialization functions, not globals<br>
+5) 32/64 bit support<br>
+6) little/big endian support<br>
+7) Allows for custom archives, so as allowing for different file formats, or to serialize to/from clipboard instead of a file etc.<br>
+<img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"> Versioning support / support forward and backward compatibility<br>
+<br>
+You are a Task Master, Sir!<br>
+<br>
+Taking these in turn:<br>
+<br>
+<strong class="text-strong"><span style="text-decoration:underline">1) No RTTI</span></strong><br>
+As you can see from the BasicDemoPersist program, it does not use rtti to serialize the btCollisionObject hierarchy.  Runtime type information (whether provided by rtti or some other mechanism) is necessary as far as I can see in order to reconnect/reinstantiate via base class pointers.  In order to gain (non-rtti) runtime type information, one must therefore make some kind of assumption about the class.  At the moment the serialization code within BasicDemoPersist assumes that an ‘int getInternalType()’ member function is present.  This seems to work for the btCollisionObject class hierarchy.  However, I have just started to look at the code for the btTypedConstraint (derived from btTypedObject); a separate ‘int getObjectType()’ function is used.<br>
+Suggestion<br>
+Derive btCollisionObject (and all other class hierarchies, if there are any others that Ive not found yet) from btTypedObject, so that you have a single universal system for providing type information.  A good idea also would be to provide a single ‘typeinfo enum’ for all of the classes, to avoid uniqueid duplication, eg:<br>
+<br>
+Currently you have:<br>
+enum btTypedConstraintType<br>
+{<br>
+	POINT2POINT_CONSTRAINT_TYPE=MAX_CONTACT_MANIFOLD_TYPE+1,<br>
+	HINGE_CONSTRAINT_TYPE,<br>
+	CONETWIST_CONSTRAINT_TYPE,<br>
+	D6_CONSTRAINT_TYPE,<br>
+	SLIDER_CONSTRAINT_TYPE,<br>
+	CONTACT_CONSTRAINT_TYPE<br>
+};<br>
+and <br>
+enum	CollisionObjectTypes<br>
+{<br>
+	CO_COLLISION_OBJECT =1,<br>
+	CO_RIGID_BODY,<br>
+	///CO_GHOST_OBJECT keeps track of all objects overlapping its AABB and that pass its collision filter<br>
+	///It is useful for collision sensors, explosion objects, character controller etc.<br>
+	CO_GHOST_OBJECT,<br>
+	CO_SOFT_BODY,<br>
+	CO_HF_FLUID<br>
+};<br>
+and <br>
+enum BroadphaseNativeTypes<br>
+{<br>
+	// polyhedral convex shapes<br>
+	BOX_SHAPE_PROXYTYPE,<br>
+	TRIANGLE_SHAPE_PROXYTYPE,<br>
+	TETRAHEDRAL_SHAPE_PROXYTYPE,<br>
+	CONVEX_TRIANGLEMESH_SHAPE_PROXYTYPE,<br>
+	CONVEX_HULL_SHAPE_PROXYTYPE,<br>
+	CONVEX_POINT_CLOUD_SHAPE_PROXYTYPE,<br>
+	CUSTOM_POLYHEDRAL_SHAPE_TYPE,<br>
+//implicit convex shapes<br>
+IMPLICIT_CONVEX_SHAPES_START_HERE,<br>
+<br>
+	...<br>
+<br>
+<br>
+You could have:<br>
+Enum ObjectTypes<br>
+{<br>
+	CO_COLLISION_OBJECT =1,<br>
+	CO_RIGID_BODY =2,<br>
+	CO_GHOST_OBJECT =3,<br>
+	CO_SOFT_BODY =4,<br>
+	CO_HF_FLUID =5,<br>
+<br>
+	POINT2POINT_CONSTRAINT_TYPE=6,<br>
+	HINGE_CONSTRAINT_TYPE =7,<br>
+	CONETWIST_CONSTRAINT_TYPE =8,<br>
+	D6_CONSTRAINT_TYPE =9,<br>
+	SLIDER_CONSTRAINT_TYPE =10,<br>
+	CONTACT_CONSTRAINT_TYPE =11<br>
+<br>
+	BOX_SHAPE_PROXYTYPE =12,<br>
+	<br>
+	... plus all other types listed here, with explicit, non-reorderable identifiers<br>
+};<br>
+<br>
+By making type identifiers unique and explicit, this goes some way to satisfying criteria <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"> above – forward and backward compatibility.<br>
+<br>
+If rtti is not used, mechanism of providing a unique class identifier is needed.  At the moment, as far as I can see, Bullet does not provide this.  For example, <br>
+	TETRAHEDRAL_SHAPE_PROXYTYPE<br>
+and	CO_RIGID_BODY<br>
+both currently evaluate to 2.  <br>
+<br>
+What do you think?<br>
+<br>
+<br>
+<strong class="text-strong"><span style="text-decoration:underline">2) No STL</span></strong><br>
+As I understand it, this means not using any of the std:: classes or functionality.  To be honest, I think you are missing out on a good thing.  However, that said, I believe the serialization code only uses the std::map structure, and the for_each() function.  These are easy enough to implement ‘bullet-bespoke’ (see “Algorithms”, R. Sedgewick (1988)).<br>
+<br>
+<span style="text-decoration:underline"><strong class="text-strong">3) No Boost</strong></span><br>
+Again, missing out on a good thing in my opinion, since, like STL, the code is tested on many different platforms, and as far as I am aware is completely open-source. <br>
+That said however, the serialization code provided has no dependency on Boost; it is based upon the Boost serialization framework, but does not use it.  Ie the problem is NULL and <span style="color:#0000FF">void </span>(sorry for the pun!)<br>
+<br>
+<strong class="text-strong"><span style="text-decoration:underline">4) Member serialization functions, not globals</span></strong><br>
+This is not really an issue.  The global functions could be made members.  It is also possible to provide either-or (member or global), and for the serialization code to deduce at compile time which is provided for that particular class, and use the appropriate one (see the Chooser&lt;&gt;).  This has the advantage non-intrusion if necessary.<br>
+<br>
+<span style="text-decoration:underline"><strong class="text-strong">5) 32/64 bit support</strong></span><br>
+My knowledge of this issue is somewhat scant Im afraid.  Could you enlighten me, or suggest a good source (book or url) please.  If it simply means that, for example the btScalar type will be declared as a float or a double depending upon which architecture is used, I don’t really see this as a big problem – the system will work with all primitive types.<br>
+If you mean that, depending upon the architecture (32 or 64 bit) different primitive types will have different sizeof(type)s, eg is sizeof(int) on a 32 bit machine the same as on a 64 bit?  <br>
+Suggestion<br>
+Include in the archive whether it is a 64 or 32 bit archive.  That way the correct sizes for the data types can be assumed.  But how do you interrogate the system to find out whether the system is 64 or 32 bit?  Is there some kind of universally agreed function?  Or do you just do a sizeof(int), and if it == 4, =&gt; 32bit ; sizeof(int) == 8 =&gt; 64 bit ??<br>
+<br>
+<strong class="text-strong"><span style="text-decoration:underline">6) little/big endian support</span></strong><br>
+Again, little knowledge of this Im afraid.  Could a good source be pointed out please.  At a superficial level I understand this to determine the bit ordering of the types, so an int stored in big-endian fashion will have its most-significant bit at the other end of the block of memory to a little-endian implementation.  Is this correct?<br>
+Suggestion<br>
+Again, the ‘endian-ness’ of the archive could be stored within it.  But again, like the ‘bit-ness’, how do you gather this information (platform-independently) from the system?  Is there a magic function?<br>
+<br>
+<span style="text-decoration:underline"><strong class="text-strong">7) Allows for custom archives</strong></span><br>
+As I see it this is a matter of deriving from the Archive class different implementation, and reading/writing the data accordingly.<br>
+Again, the type of the archive could be stored within it, and a check be done to make sure that the correct archive class type is being used to read it.<br>
+<br>
+<strong class="text-strong"><span style="text-decoration:underline"><img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"> Versioning support / support forward and backward compatibility</span></strong><br>
+Do you version at the whole archive level, or at the individual class level?  Either way, this means writing out the version number to the archive (either once for the whole archive, or once for each class instance).  This information is read in and provided as a variable to the serialization function.  The serialization function then modifies its loading behaviour depending upon the version number.<br>
+	Thinking about it, an overall archive version number could be stored within the archive.  This could be used to alter the behaviour of the archive system itself according to its value (ie so you can version the archive system itself).  Then, if necessary, each serialization function could implement its own versioning (by reading in its own, class-level version number).  This would then cater for both classes that have different versions, but also have the efficiency of not making it a prerequisite, and hence not serializing a version number for each class instance if it is superfluous.<br>
+<br>
+<span style="text-decoration:underline"><strong class="text-strong">Problems with Glut</strong></span><br>
+Indeed, re the window-closing issue: I have implemented a non-glut OpenGL window and do not get these issues; the problem seems to be with glut.  The bigger problem with glut is regarding checking for memory leaks -  because the glutmain function does not return, this proves to be an issue when debugging for them.  Is there a way around this? By the way, I also heard that the licence for it is not strictly open-source – a guy called Mark Kilgard retains it (see<a href="http://www.opengl.org/resources/libraries/glut/" class="postlink">http://www.opengl.org/resources/libraries/glut/</a>).<br>
+<br>
+<br>
+I’m afraid there are quite a few questions and suggestions there.  However, with this additional information I feel that the serialization system could be hammer into something shipshape.<br>
+<br>
+Chris Simson</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Serialization - general</h3>
+				<div class="date">Posted: <strong>Fri Nov 20, 2009 10:24 am</strong></div>
+				<div class="author">by <strong>Chris Simson</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Have just thought of something else - as well as a serialize function, for classes with no default constructor, like btRigidBody, it may be necessary to include something like:<br>
+<br>
+template&lt;class Arch&gt;<br>
+inline void load_construct_data( Arch &amp; ar, btRigidBody * t, const UINT file_version)<br>
+{<br>
+	btScalar mass;<br>
+	ar &gt;&gt; mass;<br>
+	btMotionState *pms = NULL;<br>
+	ar &gt;&gt; pms;<br>
+	btVector3 inertia;<br>
+	ar &gt;&gt; inertia;<br>
+	btCollisionShape *pcs = NULL;<br>
+	ar &gt;&gt; pcs;<br>
+	btRigidBody::btRigidBodyConstructionInfo info(mass, pms, pcs, inertia);<br>
+	::new(t)btRigidBody(info);<br>
+}<br>
+<br>
+It is necessary that this is either global, or a static member since it is called in order to undertake the instantiation via a placement new operator.<br>
+<br>
+The other option is just to make sure that all classes you want to serialize have default constructors, ie have no arguements.<br>
+<br>
+What are your thoughts?<br>
+<br>
+Chris</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Serialization - general</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2010 7:33 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">We started the binary serialization code, and there will be a Bullet/Demos/SerializationDemo in Bullet 2.76.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

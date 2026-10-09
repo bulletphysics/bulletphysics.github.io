@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7432" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2011-09-14T18:18:52+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7432</id>
+
+		<entry>
+		<author><name><![CDATA[Antodologo]]></name></author>
+		<updated>2011-09-14T18:18:52+00:00</updated>
+
+		<published>2011-09-14T18:18:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=25391#p25391</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=25391#p25391"/>
+		<title type="html"><![CDATA[Soft bodies bug: crash on remove while on TickCallback]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=25391#p25391"><![CDATA[
+Hi<br><br>I have been experiencing crashes when deleting soft bodies (that are attached to rigid bodies) but now I know how it happens.<br><br>I don't know if I am doing something strange, but I think that my approach should be right.<br><br>The problem is here:<br><div class="codebox"><p>Code: </p><pre><code>voidbtSoftRigidDynamicsWorld::internalSingleStepSimulation( btScalar timeStep ){// Let the solver grab the soft bodies and if necessary optimize for itm_softBodySolver-&gt;optimize( getSoftBodyArray() );                               // COPY SOFT BODIES VECTORif( !m_softBodySolver-&gt;checkInitialized() ){btAssert( "Solver initialization failed\n" );}btDiscreteDynamicsWorld::internalSingleStepSimulation( timeStep );             // RIGID BODY STEP AND MANAGE CONTACTS ///solve soft bodies constraintssolveSoftBodiesConstraints( timeStep );                                        // UPDATE SOFT BODIES IN VECTOR COPY//self collisionsfor ( int i=0;i&lt;m_softBodies.size();i++)[...]}</code></pre></div>As you can see, "m_softBodySolver-&gt;optimize( getSoftBodyArray() )" copies the soft bodies vector to be used on "btDiscreteDynamicsWorld::internalSingleStepSimulation( timeStep )" and the soft bodies updates.<br><br>But what happens if during "btDiscreteDynamicsWorld::internalSingleStepSimulation( timeStep )", a step is finished and the call to "PhysicManagerTickCallback( btDynamicsWorld *world, btScalar timeStep )" results on a call to "btSoftRigidDynamicsWorld::removeSoftBody(btSoftBody* body)"?<br><br>In my game, for example, collisions are managed on PhysicManagerTickCallback and a collision (from a projectile) can destroy a rigid body. If the rigid body has soft bodies attached (ropes) they are destroyed too and removed from the soft bodies vector, but... <strong class="text-strong">not from the vector copy</strong>. So the next access to the deleted soft body results in a crash.<br><br>I have fixed the bug calling "m_softBodySolver-&gt;optimize( getSoftBodyArray() )" again after the call to "btDiscreteDynamicsWorld::internalSingleStepSimulation( timeStep )" to update the vector copy. But there are other possible fixes.<br><br>Anyway I think the bug should be solved in one way or another, it can affect anyone using collisions and soft bodies.<br><br>Any ideas about this?<br><br>Thank you for your time once more<br><br>Greetings  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6295">Antodologo</a> — Wed Sep 14, 2011 6:18 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

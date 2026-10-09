@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; SAT: OBB vs 90 degree arc segment (2D)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>SAT: OBB vs 90 degree arc segment (2D)</h2>
+		<p><a href="viewtopic.php%3Ft=831.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=831</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>SAT: OBB vs 90 degree arc segment (2D)</h3>
+				<div class="date">Posted: <strong>Tue Dec 19, 2006 6:11 pm</strong></div>
+				<div class="author">by <strong>hankbain</strong></div>
+				<div class="content">Im trying to implement the SAT between an OBB and a concave 90 degree arc segment, in 2D. To understand what this looks like, check out the tutorial on the SAT here:<br>
+<br>
+<a href="http://www.harveycartel.org/metanet/tutorials/tutorialA.html" class="postlink">http://www.harveycartel.org/metanet/tut ... rialA.html</a> (figure 7)<br>
+<br>
+Figure 7 shows the technique to check for a collision between an AABB and a Concave Circular Shape. This works great. I would like to extend it to allow for both shapes to be rotated.<br>
+<br>
+The separating axis for the circle segment in the AABB test is the axis parallel to the vector from (the closest corner on the AABB to the arc segment) to (the center of the arcs circle). When the rectangle is rotated, I'm not sure on how to create/handle this axis. In the AABB test the arc axis is ignored if the closest corner on the AABB is outside of the quadrant, but im not sure how that should be applied in the OBB case.<br>
+<br>
+Any help greatly appreciated. Let me know if you need further information. Ive been banging my head against this for a couple of days and its gone blurry for me.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 20, 2006 8:09 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">Hi,<br>
+I'm afraid we took some liberties with the actual definition of "separating axis" in those tutorials <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+<br>
+Extension to OBBs should be mostly straightforward; as with the AABB, you want to find the corner of the OBB that's "furthest into" the arc, and see if it's behind the arc.<br>
+<br>
+I'm not actually certain if our code is correct for AABB-vs-arc, playing with that diagram I've noticed that there seem to be cases where the AABB _should_ be pushed out of the arc, but is instead pushed out of the side of the tile: the case we're missing is when the corner that should be pushed out of the arc is below the bottom of the tile -- in this case we're rejecting it, but we should still calculate the penetration length wrt the arc because it can be shorter than the x-penetration length.<br>
+<br>
+<br>
+Anyway, here's something that may or may not work, but will hopefully get you thinking along the right lines:<br>
+<br>
+-calculate the seperating axis/penetration stuff as usual for the other axes (tile's 2 axes, and OBB's 2 axes).<br>
+-now, we need to calculate a penetration amount for the arc "axis":<br>
+   -start with all four OBB corners/vertices<br>
+   -reject any vertex that's outside of the arc's external "voronoi region" (this is another concept I think we're bastardizing; in the context of fig7, you'd reject any vertex that's right of or above the arc's "center point" (i.e the center of the circle that the arc is a part of))<br>
+   -if there are any verts left to consider, find the one that's furthest from the arc's "center point"; the furthest vert is the one you should test (which is simple since you've already found its distance from the circle center.. you just need to subtract the circle radius to get the penetration amount).<br>
+<br>
+If you reject all four verts, then you don't need to consider the arc's "axis" as a potentially seperating axis.<br>
+<br>
+One tricky bit is that our approach implies only particle dynamics, i.e no angular/rotation collision response. This means we only ever need to generate a single projection vector, and it doesn't matter where it's applied.<br>
+<br>
+Since you've got an OBB, I'm assuming you've got a 2D rigid body simulator.. this means that you will sometimes want/need to generate _two_ contacts (i.e projection vectors). The case you should watch out for is when two of the OBBs verts penetrate the arc by the same amount: my above solution will arbitrarily report one of them as the contact, while in  you'd probably want to generate contacts for both of them.<br>
+<br>
+<br>
+Hope this helps,<br>
+raigan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Dec 20, 2006 9:04 pm</strong></div>
+				<div class="author">by <strong>hankbain</strong></div>
+				<div class="content">Thanks for the reply. I actually cross posted to your forums so feel free to ignore that one.<br>
+<br>
+With regards to the example on your site, yeah, I did notice that the arc penetration gets dumped if the relevant box vertex is outside the bounds of the rect enclosing the arcsegment. There are certain situations where the MTD of the arc would be shorter than the XY axes. I seem to recall a valid reason for doing this though, although I cant remember it right now.<br>
+<br>
+Im still using particles, so I only need one contact point.<br>
+<br>
+I think there might need to be a special case when the rotated obb is near/intersecting either corner of the arc, (In fig 7, those corners would be the top left and lower right corners of the arc segment.) although the SAT might take care of that issue.<br>
+<br>
+Thanks alot for your help. I'll try your suggestion and let you know.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Problem case</h3>
+				<div class="date">Posted: <strong>Thu Dec 21, 2006 4:41 pm</strong></div>
+				<div class="author">by <strong>hankbain</strong></div>
+				<div class="content">Hi Raigan,<br>
+<br>
+I posted an image to show what the problem case is.<br>
+<br>
+<a href="http://allyoucanupload.webshots.com/v/2001872211888135380" class="postlink"><img src="http://aycu30.webshots.com/image/7269/2001872211888135380_th.jpg" class="postimage" alt="Image"></a><br>
+<br>
+There's clearly a collision on all three "axes" but the rect vertex inside the voronoi region is not at a distance greater than the arc radius. In using an AABB this is handled because the vertex is aligned exactly with the voronoi region (not sure if the terminology is exactly correct here) but when the rect is rotated there needs to be some kind of test of a point on the side of the OBB, not a vertex.<br>
+<br>
+If the rect in the example is moved slightly to the right, the top vertex becomes "active" and collision is handled correctly. In the example the top vertex is just outside the voronoi region, and is ignored.<br>
+<br>
+It could be there needs to be a special case -- possibly when the corner of the arc is inside the rect. I'm considering a closest point on obb solution also, but can't seem to figure out what to do. Do you have any thoughts? Thanks again for your help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 21, 2006 5:52 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">hm.. that is definitely a problem. <br>
+<br>
+I'm afraid I haven't got any ideas -- to be honest, since writing those tutorials we've decided that tile-based is a good paradigm for geometry when it comes to editing, but sucks as an actual representation for collision detection/etc.<br>
+<br>
+What we currently do is CSG the tiles together to generate a set of linesegs and "circlesegs" (arcs), and at runtime each object is tested using an object-vs-seg test for any nearby segs. This is a _lot_ simpler both conceptually and implementation-wise, and the CSG is trivial since all intersections will be located at grid points.<br>
+<br>
+<br>
+It's not that much work to set up, and I think you'll find that it makes things much easier to work with.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 21, 2006 7:00 pm</strong></div>
+				<div class="author">by <strong>hankbain</strong></div>
+				<div class="content">Interesting, Im not familiar with that technique. I googled around a bit and could only find paper abstracts with regards to collision. christer ericson refers a bit to it in his book, but not in depth.<br>
+<br>
+Does it provide a projection depth/vector?  I would be happy to just have an object vs arc segment test.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Dec 22, 2006 12:26 am</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">Hi,<br>
+You just need a collision test (that reports the penetration vector) for object-vs-lineseg and object-vs-arc. You can use object-vs-line and object-vs-circle, adding code to handle the endpoints: your code should identify the "contact point" on both object and line/circle; with that it's simple to test if the point on the line/circle lies within the segment of the line/circle. If not, there's no collision.<br>
+<br>
+Our segs are "sided", i.e all geometry is specified with counter-clockwise winding, so that we only project the object out of the "front" face of the line/circle.<br>
+<br>
+Note that you also need to collide vs. convex verts seperately; this is something I'm not satisfied with yet, there are a few ways to approach it: you can project the object out of each lineseg/arc (i.e consider convex verts) as you process them, or consider convex verts a third type of geometry and project out of them individually. Both ways have their own little problems (i.e pushing an object out of the end of one segment might push it into another), I'm actually interested in knowing how everyone else does this.<br>
+<br>
+The problem, as far as i can tell, is that we're trying to find a global solution (push object out of world) using an iterative solution that solves a local problem (push object out of segment) at each iteration. This inevitably leads to some errors/problems since it's not a guaranteed way to find the global solution. In this light, handling convex verts with the segment you're testing, or seperately, are two different local solution methods. <br>
+<br>
+It really bugs me that no one seems to have published anything about this problem (collision vs. concavities is the general problem i think); people tend to dismiss it as a solved problem with "decompose into convex pieces and handle each convex piece seperately", but that's not a solution -- _HOW_ do you properly use the individual convex solutions to build a single global solution?!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Dec 22, 2006 4:08 pm</strong></div>
+				<div class="author">by <strong>hankbain</strong></div>
+				<div class="content">Hi,<br>
+<br>
+If I understand you correctly, you're encountering the same situation I am with the special case of the end points of the arc. The enclosing 'tile' test is really trivial, its the OBB vs arc that gets tricky, since the endpoints of the arc present a special case.<br>
+<br>
+To your comment about the difference of the convex vs concave segment, I see your point. But it seems to be related to the 'sidedness' of the shape: with a concave arc you want to project out towards the center of the arc, with a convex youre projecting away from it. I suppose it would be possible to design a curved shape class which contained a projection hint, a simple vector that indicated which way the collision should be resolved -- then there wouldn't really be any difference between concave or convex besides that.<br>
+<br>
+I like what your suggesting with the global vs local problem. The only small thing I can add to it - and one that I'm sure you're already aware of -- is that there are some fairly complex curves (appearing to be composed of several smaller concave and convex segments) that can be described by a single equation. It's well beyond my math to say how one goes about generating a single equation from a subsect of smaller curves, or even if its always possible, but once that equation is known you can always test if a point lies on one side of that curve using inequality tests. I used to use stuff like that back when using the dreaded collision root finding - since you only needed to know if and when a collision has occured. Since I need to know "how much", Ive been mostly sticking to the SAT.  I would think there's probably some way to derive a collision depth/vector also, but haven't really looked at it in a while.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Dec 24, 2006 2:36 am</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I think the problem is fundamental, and not really related to using arcs -- even with just linesegs you get the same problems. Concave arcs are just very good at producing symptoms of the problem, because they get very thin near a convex vert.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

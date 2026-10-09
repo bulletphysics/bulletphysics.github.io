@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; filtering collision normals on concave mesh</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>filtering collision normals on concave mesh</h2>
+		<p><a href="viewtopic.php%3Ft=929.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=929</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>filtering collision normals on concave mesh</h3>
+				<div class="date">Posted: <strong>Thu Jan 18, 2007 1:04 am</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">For collision tests of a convex object against concave world geometry composed of triangles; the usual procedure is to query your Bounding Volume Tree for triangle candidates and then dispatch individual triangle-vs-queryObject tests with the candidates.  But these local tests can give you incorrect collision normals compared to what would be correct for the compound geometry.  <br>
+<br>
+For example; hitting a triangle edge in a tesselated plane when both triangles sharing the edge are coplanar.  Your sliding object will hit a bump where none exists.<br>
+<br>
+It's a pretty common issue when using GJK.  There are a number of ways to fix it, but it seems tricky to get right for all cases.  What do people do about this situation?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jan 18, 2007 1:58 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">For box-triangle I used SAT and disregarded edge-edge contact points. I also weighted the axis selection to use the triangle normal instead of the box face normals.<br>
+<br>
+For a time I was also ignoring box face normals, but then I had a case where a box is hanging over the edge a cliff. The triangle on the face of the cliff saw the box as being deeply penetrated and shot the box off the cliff. So triangle normals are not enough.<br>
+<br>
+With GJK, perhaps you could ignore the contact point if the closest points are on edges of both objects, and one is a triangle. You could also pre-process the triangle mesh to mark shared edges between coplanar triangles as non-colliding (see GPG4).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 19, 2007 10:51 am</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content">What I did and it's working quite well for now is this:<br>
+<br>
+I do a full SAT of the candidate triangles against the convex hull.<br>
+<br>
+The difference is that I only do the SAT to know if I can reject the candidate triangle, if I find that the triangle is actually in contact with the hull, I get the triangle normal as the valid separation axis.<br>
+<br>
+This solves completely the problem with coplanar triangles, but under other triangle configurations some problems may arise, so a correct solution will be more difficult to find</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jan 20, 2007 12:30 am</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">I'm looking for a solution that works with general concave polyhedra.<br>
+<br>
+The GPG4 triangle preprocessing is nice, but I see a problem with it for a gradually sloping tesselated hill.  All those edges are convex, but could still result in bumps.  Also I'm not crazy about the extra per-triangle bitfield.<br>
+<br>
+Previously I implemented a solution that filtered the new points using the existing manifolds between the moving object and the concave mesh.  There were a number of rules which looked at things like the difference between the angle of the incoming normal and the existing normals, whether or not the new point has a greater penetration depth ( or smaller distance ) etc.  I can't recall the details, but I do remember it was a bit of a pain in teh arse and I was never really convinced it was the best solution.  In it's defense, it worked and has been used in a number of shipped games.<br>
+<br>
+I see 3 catagories here:<br>
+<br>
+1) Filtering based on looking at neighbouring triangles ( preprocessed or run-time )<br>
+<br>
+2) Filtering based on just the new contact data<br>
+<br>
+3) Filtering based on the existing manifold</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

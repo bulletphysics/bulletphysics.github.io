@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; collision with very big static object</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>collision with very big static object</h2>
+		<p><a href="viewtopic.php%3Ft=346.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=346</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>collision with very big static object</h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 11:48 am</strong></div>
+				<div class="author">by <strong>~MyXa~</strong></div>
+				<div class="content">Hello!<br>
+<br>
+I have changed CcdPhysicsDemo.cpp (bullet-1.5b) line<br>
+new BoxShape (SimdVector3(50,10,50)),<br>
+to<br>
+new BoxShape (SimdVector3(250,10,250)),<br>
+then wall of stacked boxes falls through this static box.<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 3:21 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The GJK implementation has some limitations for large size ratios.<br>
+As most physics engines, there are several restrictions and rules, and those should be documented and explained.<br>
+<br>
+It's best to keep the object sizes between 0.25 units, and at most 50 units.<br>
+Also, mass ratios should be fairly small, preferably maximum 1 to 10. So avoid stacking a 100 kg box on a 1 kg box.<br>
+<br>
+If you need larger objects (ratios) either splitting up objects into multiple smaller ones. (We could also use doubles rather then floats, but those might have performance issues on some platforms).<br>
+<br>
+Thanks for pointing it out, it should be in a FAQ!<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 5:24 pm</strong></div>
+				<div class="author">by <strong>Etherton</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>The GJK implementation has some limitations for large size ratios.<br>
+As most physics engines, there are several restrictions and rules, and those should be documented and explained.<br>
+<br>
+It's best to keep the object sizes between 0.25 units, and at most 50 units.<br>
+Also, mass ratios should be fairly small, preferably maximum 1 to 10. So avoid stacking a 100 kg box on a 1 kg box.Erwin</div></blockquote>
+Not that it is a big deal, but as far as I know the only two engines with those limitations are Bullet and ODE. <br>
+This seems to confirm the numerical instability of GJK that was assumed to be overcomed in Bullet implementation.<br>
+In fact contrary to what was stated the rate of failure in Bullet and Ginos average amount the same especially when features are very close.<br>
+Maybe it will be more concrete documenting that the 10 to 1 mass ratio and the 100 units size limit is a limitation of Bullet, without bringing other physics engine into the equation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 6:29 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Etherton wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>The GJK implementation has some limitations for large size ratios.<br>
+As most physics engines, there are several restrictions and rules, and those should be documented and explained.<br>
+<br>
+It's best to keep the object sizes between 0.25 units, and at most 50 units.<br>
+Also, mass ratios should be fairly small, preferably maximum 1 to 10. So avoid stacking a 100 kg box on a 1 kg box.Erwin</div></blockquote>
+Not that it is a big deal, but as far as I know the only two engines with those limitations are Bullet and ODE. 
+</div></blockquote>
+ODE uses SAT, so it is not using GJK (yet).<br>
+
+<blockquote class="uncited"><div>
+This seems to confirm the numerical instability of GJK that was assumed to be overcomed in Bullet implementation.
+</div></blockquote>
+
+Where was this assumed? Except for extreme size ratios, that can be avoided, GJK works fine. The GJK implementations that I know of (Havok, Solid and Bullet) all have limitations in extreme cases due to floating point and the nature of the algorithm/implementation. Improvements can be made, but for most scenarios its practical to limit the maximum object size.<br>
+
+<blockquote class="uncited"><div>
+In fact contrary to what was stated the rate of failure in Bullet and Ginos average amount the same especially when features are very close.<br>
+and the 100 units size limit is a limitation of Bullet, without bringing other physics engine into the equation.</div></blockquote>
+
+The mass ratio problem currently exists in all engines using PGS iterative solvers, including Havok, Ageia/PhysX, ODE, Bullet etc. For an actual confession for Havok, see<br>
+<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?p=185&amp;highlight=#185" class="postlink">http://www.continuousphysics.com/Bullet ... light=#185</a><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 7:48 pm</strong></div>
+				<div class="author">by <strong>Etherton</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>ODE uses SAT, so it is not using GJK (yet).</div></blockquote>
+Maybe I am wrong but I think I did play a test demo with bullet integration. <br>
+Anyway when you add bullet to ODE/Bullet combined will probably be the best physicist solution ever implemented. I am just salivating for that. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> <br>
+ 
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Where was this assumed? Except for extreme size ratios, that can be avoided, GJK works fine. The GJK implementations that I know of (Havok, Solid and Bullet) all have limitations in extreme cases due to floating point and the nature of the algorithm/implementation. Improvements can be made, but for most scenarios its practical to limit the maximum object size. </div></blockquote>
+In truth I do not think it is important because a body with such irregular aspect ratio lead to such heavy and skew mass matrix that not solver is capable of handle it with enough stability, so it will be only practical for static geometry. However the fact is that one user just changed the size for 50 to 250 (5/1 ratio) and it did produced a failure. Maybe he did it wrong but that does not seem as extreme as you are saying, and that is a fact. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+The superiority of Bullet to ordinary GJK was assumed everywhere, more than that. It was introduced as the new panacea to the normal implementation of GJK. As I remember it was said that by using Voronoi space search the numerical errors due to lost of precision in the analytical distance calculation are avoided. In fact it can be proven that both methods are mathematically equivalent.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+The mass ratio problem currently exists in all engines using PGS iterative solvers, including Havok, Ageia/PhysX, ODE, Bullet etc. For an actual confession for Havok, see<br>
+Erwin</div></blockquote>
+Well I do not have proof about Havok, Ageia/PhysX because I have never seen the source code, I did worked on a game using Havok and I do not remember having such problems, maybe they hide it, but who am I to say? <br>
+You seem to have seen the source and therefore you can make that confirmation, maybe then you can be more specific and said that Bullet, have the same limitations of Havok, Ageia and ODE. But saying that all physics engine has that limitation is absolutely not true.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 8:19 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">The mass ratio limitation is for heavy on light. Light on heavy is quite stable. <br>
+<br>
+The last time I tried to balance a sofa on a shoe box, it was also unstable.<br>
+<br>
+That said, we would love to hear about an O(n) algorithm that can handle heavy on light. It should also require only 10 iterations at 60Hz. Also, weight should be transmitted correctly (no shock propagation).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 8:41 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Etherton wrote:</cite>As I remember it was said that by using Voronoi space search the numerical errors due to lost of precision in the analytical distance calculation are avoided. In fact it can be proven that both methods are mathematically equivalent.
+</div></blockquote>
+Unfortunately they are indeed mathematically equivalent. The reason why I chose for Christer Ericson's implementation is intuition, and the oportunity to easier optimize individual cases. This is discussed on Molly Rocket's forum here: <a href="http://www.mollyrocket.com/forums/viewtopic.php?t=245&amp;sid=a4324d73c111f33cb32964b87b50d844" class="postlink">http://www.mollyrocket.com/forums/viewt ... b87b50d844</a><br>
+<br>
+Perhaps this intuition leads to better understanding so we can sort out this problem. I found that affinely dependent points in the simplex is one part of the puzzle.<br>
+
+<blockquote><div><cite>Etherton wrote:</cite>
+But saying that all physics engine has that limitation is absolutely not true.</div></blockquote>
+If you can name me one current physics engine using PGS that doesn't suffer the mass ratio problem, please let us know. As Erin pointed out, I would also be very interested to know how to solve this problem (without reverting to shock propagation)<br>
+<br>
+Bullet has a SAT implementation, a contribution by Simon Hobbs, that actually works for this case (250x10x250 box). It has been in Bullet for a few months now, and you can enable it by adding #define TEST_HULL 1<br>
+in ConvexConvexAlgorithm.cpp. See the Hull class in <a href="http://www.continuousphysics.com/Bullet/BulletFull/index.html" class="postlink">http://www.continuousphysics.com/Bullet ... index.html</a><br>
+<br>
+As Erin pointed out in a conversation recently, this SAT Convex Hull implementation has some issues, because it doesn't search some edge-edge combinations. This might lead to 'floating' objects, especially for long thin objects. It should be fine for boxes, so not all convex polyhedra are affected by this edge problem.<br>
+
+<blockquote><div><cite>Erin Catto wrote:</cite>
+The mass ratio limitation is for heavy on light. Light on heavy is quite stable. 
+</div></blockquote>
+Indeed, I assumed heavy on light.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 10:31 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I just improved the Bullet GJK implementation so it can handle object sizes of up to 1000 units.<br>
+<br>
+The updated source code is online here:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=bullet-1.5d-source.zip" class="postlink">http://www.continuousphysics.com/ftp/pu ... source.zip</a><br>
+<br>
+Still it's best to stay below those sizes. Preferably use a static triangle mesh, with triangles up to 10 units.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 23, 2006 11:37 pm</strong></div>
+				<div class="author">by <strong>Etherton</strong></div>
+				<div class="content">Very good maybe now you can document that Bullet does not have the limitation that Havok and Ageia has in its GJK.<br>
+I think that Bullet is a very good library and before it, there were only three legs on physics: Havok, Agia and ODE, now with Bullet quatrenium is completed. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"><br>
+<br>
+PS:<br>
+On the bright side from this criticism the result was positive: an improvement of what was already excellent and know is brilliant</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 24, 2006 7:15 am</strong></div>
+				<div class="author">by <strong>Christer Ericson</strong></div>
+				<div class="content"><blockquote><div><cite>Etherton wrote:</cite>As I remember it was said that by using Voronoi space search the numerical errors due to lost of precision in the analytical distance calculation are avoided. In fact it can be proven that both methods are mathematically equivalent.</div></blockquote>
+You misunderstood. It is trivially the case that we can have two expressions, A and B, which are different looking but mathematically equivalent, and where one has less numerical errors than the other. Obviously, by rewriting A as B (or B as A) you can achieve the same error, but that presupposes (a) that you realize that A can be written as B, and (b) that such a rewrite is easy to perform in the form in which A is given.<br>
+<br>
+In that light, the point I was trying to make was that a cascaded, recursive expression gives less control over how you deal with numerical errors compared to a case-by-case approach where the numerical error in each case can be explored and handled independently from each other.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 24, 2006 1:41 pm</strong></div>
+				<div class="author">by <strong>Etherton</strong></div>
+				<div class="content"><blockquote><div><cite>Christer Ericson wrote:</cite>You misunderstood. It is trivially the case that we can have two expressions, A and B, which are different looking but mathematically equivalent, and where one has less numerical errors than the other. Obviously, by rewriting A as B (or B as A) you can achieve the same error, but that presupposes (a) that you realize that A can be written as B, and (b) that such a rewrite is easy to perform in the form in which A is given.<br>
+<br>
+In that light, the point I was trying to make was that a cascaded, recursive expression gives less control over how you deal with numerical errors compared to a case-by-case approach where the numerical error in each case can be explored and handled independently from each other.</div></blockquote>
+Maybe I should had said they are numerically equivalent, it is not truth calculating the closest distance to a tetrahedron could be done with more accuracy using Voronoi feature search, than using Lagrange multipliers minimization (wich is what GJK originally uses). That is simple false.<br>
+<br>
+The truth is that any given implementation of GJK is extremely sensitive to lost of significant bit in floating point operations, and since GJK is a steepest descend search method each time an incorrect search direction is selected it lead to infinite cycling.<br>
+This has nothing to do with breaking the test for more optimization, or making then more intuitive or even implementing then is cache friendly way or not.<br>
+<br>
+edit:<br>
+I must say that GJK implemented using Voronoi search is a good implementation of the algorithm, and it does has the bonus that is can be seen as a strictly geometrically method that do not required the knowledge of more advanced algebraic techniques.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> <br>
+<br>
+However that does not make it in any way more intuitive, less error tolerance, more geometrical, or more efficient than any other flavor of the same algorithm, as it is has been sold.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 24, 2006 9:22 pm</strong></div>
+				<div class="author">by <strong>Christer Ericson</strong></div>
+				<div class="content"><blockquote><div><cite>Etherton wrote:</cite>Maybe I should had said they are numerically equivalent</div></blockquote>
+You could say that, but that would be wrong, assuming you by "numerically equivalent" mean having the same error numerically. (If you mean something else, you need to define what you mean by that nonstandard term.) For example, consider the expressions A*A - B*B and (A+B)*(A-B). They are mathematically equivalent, but they have different numerical errors. It is an incredibly rare occurance for two mathematically equivalent (yet different) expressions to have the same numerical error!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 25, 2006 4:58 pm</strong></div>
+				<div class="author">by <strong>Etherton</strong></div>
+				<div class="content">You are probably right and I am wrong. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun May 28, 2006 6:33 pm</strong></div>
+				<div class="author">by <strong>Christer Ericson</strong></div>
+				<div class="content"><blockquote><div><cite>Etherton wrote:</cite>You are probably right and I am wrong. :(</div></blockquote>
+Almost humble?! Doesn't sound at all like the child who first posted this belligerent post:<br>
+
+<blockquote><div><cite>Etherton wrote:</cite>Wow, thanks you for letting it me know about that algebraic identity (I feel so much empowered now). Is this a principle you came up with? Would that be the Ericson?s inequivalence of the transitivity principle of algebra for better factorization? [other vitriol deleted]</div></blockquote>
+which you edited into the above post (yes, I caught your initial post before you retracted it).<br>
+<br>
+There's no "probably" right here. Let me elaborate on why the expressions A*A-B*B and (A+B)*(A-B) have different numerical errors, and what this has to do with the GJK algorithm (and all other algorithms implemented in floating-point arithmetic).<br>
+<br>
+Under IEEE-754 floating-point arithmetic we are guaranteed the expression "A op B" (where op is +, -, *, or /) will result in the value (A op B) * (1 + epsilon) where |epsilon| &lt;= u, where u is the machine epsilon. This error is due to rounding of the result to the nearest machine-representable number. For the first expression, A*A-B*B, what is actually computed numerically is therefore:<br>
+<br>
+(A*A*(1+e1) - B*B*(1+e2))*(1+e3)<br>
+<br>
+where each error ei is of the order |ei|&lt;=u, where u is the machine epsilon.<br>
+<br>
+Expanded, this gives:<br>
+<br>
+A*A - B*B + A*A*(e1 + e3) - B*B*(e2 + e3) + O(u^2)<br>
+<br>
+where O(u^2) contains all the rest terms involving two or more error terms (which are so small that they can be safely ignored).<br>
+<br>
+The second expression, (A+B)*(A-B), will be evaluated as:<br>
+<br>
+((A+B)*(1+e1)*(A-B)*(1+e2))*(1+e3)<br>
+<br>
+This expands to:<br>
+<br>
+A*A - B*B + A*A*(e1 + e2 + e3) - B*B*(e1 + e2 + e3) + O(u^2)<br>
+<br>
+For comparison purposes, we can drop the insignificant O(u^2) error terms. Then, as one can see, when computed in floating-point, the expression A*A-B*B has an error of A*A*(e1 + e3) - B*B*(e2 + e3) whereas the expression (A+B)*(A-B) has an error of A*A*(e1 + e2 + e3) - B*B*(e1 + e2 + e3). These errors are <strong class="text-strong">clearly</strong> different.<br>
+<br>
+Going beyond this simple example, we have that just about <strong class="text-strong">any two</strong> different but mathematically equivalent expression will have <strong class="text-strong">different numerical errors</strong> when subject to an error analysis as above.<br>
+<br>
+This applies to the expressions computed in the distance calculations of GJK too (or any other algorithm for that matter). Thus, if you express the "Johnson's subdistance algorithm" bit of GJK in two different ways, <strong class="text-strong">they will have different numerical errors even if those two ways are <em class="text-italics">mathematically</em> equivalent</strong>.<br>
+<br>
+A good resource for learning more about error analysis of floating-point expressions is Wilkinson's "Rounding Errors in Algebraic Processes" (in reprint from Dover for just a few dollars).<br>
+<br>
+Next time you have an urge to post some malevolent drivel, first consider if you actually have a clue what you're talking about, then, when you decide to post it regardless, be a man and post under your real name.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Placement of Colliders in MultiBody</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Placement of Colliders in MultiBody</h2>
+		<p><a href="viewtopic.php%3Ft=13407.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13407</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Placement of Colliders in MultiBody</h3>
+				<div class="date">Posted: <strong>Tue Mar 22, 2022 2:38 pm</strong></div>
+				<div class="author">by <strong>LukeMurray</strong></div>
+				<div class="content">Hi all,<br>
+<br>
+I'm creating a MultiBody and I'm having a hard time figuring out whether or not I am actually supposed to have control over where to place the colliders?<br>
+<br>
+To take the MultiDofDemo example provided, in the code there is the following:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13407&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for (int i = 0; i &lt; pMultiBody-&gt;getNumLinks(); ++i)
+	{
+		[b]btVector3 posr = local_origin[i + 1] + btVector3(30.f, 1.f, 0.f);//
+		//	float pos[4]={posr.x(),posr.y(),posr.z(),1};
+
+		btScalar quat[4] = {-world_to_local[i + 1].x(), -world_to_local[i + 1].y(), -world_to_local[i + 1].z(), world_to_local[i + 1].w()};
+
+		btCollisionShape* box = new btBoxShape(linkHalfExtents);
+		btMultiBodyLinkCollider* col = new btMultiBodyLinkCollider(pMultiBody, i);
+
+		col-&gt;setCollisionShape(box);
+		btTransform tr;
+		tr.setIdentity();
+		tr.setOrigin(posr);
+		tr.setRotation(btQuaternion(quat[0], quat[1], quat[2], quat[3]));
+		col-&gt;setWorldTransform(tr);
+		col-&gt;setFriction(friction);
+		pWorld-&gt;addCollisionObject(col, 2, 1 + 2);
+		pMultiBody-&gt;getLink(i).m_collider = col;[/b]
+	}</code></pre></div>
+
+What I have found though is once the Collider is set: 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13407&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>pMultiBody-&gt;getLink(i).m_collider = col;</code></pre></div>
+
+All the transforms added prior are gone! In fact, I have found the below has the exact same effect:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13407&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for (int i = 0; i &lt; pMultiBody-&gt;getNumLinks(); ++i)
+	{
+
+		btCollisionShape* box = new btBoxShape(linkHalfExtents);
+		btMultiBodyLinkCollider* col = new btMultiBodyLinkCollider(pMultiBody, i);
+
+		col-&gt;setCollisionShape(box);
+		col-&gt;setFriction(friction);
+		pWorld-&gt;addCollisionObject(col, 2, 1 + 2);
+		pMultiBody-&gt;getLink(i).m_collider = col;
+	}</code></pre></div>
+
+This is currently an issue for me since I have everything working on a MultiBody of my own, however since I am wanting to use capsules I can not rotate them to face the correct way. Am I missing something? <br>
+<br>
+Thanks everyone, any help would be greatly appreciated!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Placement of Colliders in MultiBody</h3>
+				<div class="date">Posted: <strong>Wed Mar 23, 2022 10:51 am</strong></div>
+				<div class="author">by <strong>LukeMurray</strong></div>
+				<div class="content">Found a simple solution to this is just to use btCompoundShape and add both the shape and the transform as a child shape.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13407&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>CompoundShape-&gt;addChildShape(transform/*offset*/, CollisionShape);</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

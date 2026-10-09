@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Common World Matrix</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Common World Matrix</h2>
+		<p><a href="viewtopic.php%3Ft=567.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=567</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Common World Matrix</h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 11:33 am</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">I am full of ideas  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> <br>
+<br>
+1)<br>
+PHY_IMotionState is used to copy World Matrix to/from Bullet. It is not good. Why not to mantain Common World Matrix for both renderer and Bullet? Instead of PHY_IMotionState Bullet could accept pointer to something like WORLD_MATRIX.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=567&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>struct WORLD_MATRIX : public Matrix4x4
+{
+void Lock();
+void Unlock();
+some other useful methods...
+};</code></pre></div>
+
+Renderer (in most cases) does not need you pass separate QUATERNION, POSITION. It only has to waste time to convert QUATERNION to matrix, put it all together...<br>
+Both Renderer and Bullet want to access World Info directly (without useless conversions and copy operations). Is not it?<br>
+<br>
+2)<br>
+It is also good to pack normal and inverse matrices into one matrix4x4. If we put:<br>
+<br>
+matrix4x4 m;<br>
+m._14 = -dot(m._line1, m._line4);<br>
+m._24 = -dot(m._line2, m._line4);<br>
+m._34 = -dot(m._line3, m._line4);<br>
+<br>
+then<br>
+<br>
+mul(m,v) gives us inverse transform of vector v. And we do not need to transpose something...<br>
+Keeping all in ONE matrix could increase performance (espesially using SIMD operations).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 3:10 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Please upgrade to Bullet 2.11, there is no PHY_MotionState anymore!<br>
+There is just a m_worldtransform in the btCollisionObject (and therefore in the derived btRigidBody class). <br>
+<br>
+I don't want to add any dependency in memory layout between physics and graphics matrix. It's up to the user to synchronize them. A good optimization, which is not in Bullet at the moment is to only synchronize 'active' objects. That reduces the work to less then a handful of objects usually.<br>
+<br>
+Sharing the reference is not so useful for performance: in the end, it is all about reducing cache misses and optimizing code loops. Right now, Bullet is not optimized yet, but I will pack the data per simulation islands and perform collision detection and constraint solving on packed data. This is very cache friendly. Then, synchronizing the transforms only when it is necessary (based on active islands) should make it very fast.<br>
+<br>
+But I agree, we should add SIMD sooner or later. I got contribution of Win32 SIMD classes, we can merge that into LinearMath.<br>
+<br>
+Thanks for sharing the ideas!<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; get btCollisionShape current transform</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>get btCollisionShape current transform</h2>
+		<p><a href="viewtopic.php%3Ft=9553.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9553</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>get btCollisionShape current transform</h3>
+				<div class="date">Posted: <strong>Sun Nov 17, 2013 5:32 pm</strong></div>
+				<div class="author">by <strong>b0gd4n</strong></div>
+				<div class="content">Hey guys,<br>
+<br>
+I have made a compound shape <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9553&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>compound = new btCompoundShape();</code></pre></div>
+
+Then I have a collision shape added to the compound:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9553&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btCollisionShape* turretShape = new btBoxShape(btVector3(0.4f, 0.2f, 1.2f));
+btTransform turretTrans;
+turretTrans.setIdentity();
+turretTrans.setOrigin(btVector3(0.0f, 2.2f, 0.0f));
+compound-&gt;addChildShape(turretTrans, turretShape);</code></pre></div>
+
+The compund shape is then transformed into a rigid body and then added to a vehicle raycaster as a chassis:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9553&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_carChassis = CreateRigidBody(2000, tr, compound);
+m_vehicle = new btRaycastVehicle(m_tuning, m_carChassis, m_vehicleRayCaster);</code></pre></div>
+
+<br>
+<br>
+The vehicle is moving along, together with it's wheels, chassis and turret, but I cannot seem to get hold of the updated turret transform.<br>
+Whenever I try something like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9553&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>compound-&gt;getChildTransform(1).getOpenGLMatrix(mturret);</code></pre></div>
+
+I always get the initial position of the turret, where it was first created.<br>
+<br>
+Now, for the wheels I can do this: 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9553&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_vehicle-&gt;getWheelInfo(i).m_worldTransform.getOpenGLMatrix(mwheel);</code></pre></div>
+And for the chassis I can do this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9553&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_vehicle-&gt;getChassisWorldTransform().getOpenGLMatrix(mchassis);</code></pre></div>
+
+But I don't know how do I get hold of that turret collision shape updated transform?<br>
+<br>
+Please note that where I need this information I have access to both the compound and the turretShape (the actual btCollisionShape).<br>
+<br>
+EDIT:<br>
+<br>
+I found the answer. Here's what I did:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9553&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btTransform chassisMatrix = m_vehicle-&gt;getChassisWorldTransform();
+	btTransform turretMatrix = compound-&gt;getChildTransform(1);
+	turretMatrix *= chassisMatrix;
+	turretMatrix.getOpenGLMatrix(mturret);</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

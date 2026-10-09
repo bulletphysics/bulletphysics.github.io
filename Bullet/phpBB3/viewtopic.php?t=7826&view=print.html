@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; rotating bodies</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>rotating bodies</h2>
+		<p><a href="viewtopic.php%3Ft=7826.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7826</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>rotating bodies</h3>
+				<div class="date">Posted: <strong>Tue Jan 31, 2012 7:19 pm</strong></div>
+				<div class="author">by <strong>wolverineun</strong></div>
+				<div class="content">I'm trying to simulate bodies that are stacked and has a 6d0f constraint that lets you rotate it <br>
+around the X axis. When i move the first one it makes the other boxes rotate, <br>
+but when they come to rest and i try to move then in the oposite direction it does not work.<br>
+<br>
+this code create the bodies:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7826&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btCollisionShape* boxShape = new btBoxShape(btVector3(halfW,halfH,halfD));
+   
+for (int i=0;i&lt;numBodies;i++)
+{
+		btTransform bodyTransform;
+		bodyTransform.setIdentity();
+		bodyTransform.setOrigin(btVector3(0,-27+i*halfH,0));
+        
+		
+		btScalar mass(10.);
+		bool isDynamic = (mass != 0.f);
+		btVector3 localInertia;
+		if (isDynamic)
+				boxShape-&gt;calculateLocalInertia(mass,localInertia);
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(bodyTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,boxShape,localInertia);
+        btRigidBody* boxBody=new btRigidBody(rbInfo);
+        
+        boxBody-&gt;setActivationState(DISABLE_DEACTIVATION);
+        
+		sBoxBodies.push_back(boxBody);
+        
+		sDynamicsWorld-&gt;addRigidBody(boxBody);
+        
+        btTransform frameInB;
+        frameInB = btTransform::getIdentity();
+        frameInB.setOrigin(btVector3(btScalar(0), btScalar(-halfH), btScalar(0.)));
+        
+        
+        btGeneric6DofConstraint* pGen6DOF = new btGeneric6DofConstraint(*boxBody, frameInB, true);
+        
+        pGen6DOF-&gt;setLimit(0, btScalar(0.), btScalar(0.));
+        pGen6DOF-&gt;setLimit(1, btScalar(0.), btScalar(0.));
+        pGen6DOF-&gt;setLimit(2, btScalar(0.), btScalar(0.));
+        pGen6DOF-&gt;setLimit(3, btScalar(0.), btScalar(SIMD_PI));
+        pGen6DOF-&gt;setLimit(4, btScalar(0.), btScalar(0.));
+        pGen6DOF-&gt;setLimit(5, btScalar(0.), btScalar(0.));
+        
+        sDynamicsWorld-&gt;addConstraint(pGen6DOF);
+}
+</code></pre></div>
+
+and then when i make my object pickup <br>
+i have these code to rotate the selected body<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7826&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>sDynamicsWorld-&gt;rayTest(CameraPosition, Ray, rayCallback);
+                if (rayCallback.hasHit())
+                {
+                    
+                    btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObject);
+                    if (body)
+                    {
+                        body-&gt;setActivationState(DISABLE_DEACTIVATION);
+                       
+                        if(oldy &gt; TouchScreen-&gt;LocationYTouchesMoved)
+                        {    
+                            body-&gt;applyTorque(btVector3(25000,0,0));
+                        }
+                        else
+                        {
+                            body-&gt;applyTorque(btVector3(-25000,0,0));
+                        }
+                        
+                    }
+                    
+                   
+                }
+</code></pre></div>
+
+if these is not the way to go please tell me what should i do.<br>
+I appreciate any help</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

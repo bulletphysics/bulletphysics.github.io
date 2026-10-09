@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7575" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2011-11-03T11:41:47+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7575</id>
+
+		<entry>
+		<author><name><![CDATA[Flix]]></name></author>
+		<updated>2011-11-03T11:41:47+00:00</updated>
+
+		<published>2011-11-03T11:41:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26083#p26083</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26083#p26083"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26083#p26083"><![CDATA[
+<blockquote class="uncited"><div>Now the big issue I have is to find a way (if it is possible) to handle bodies marked as non-occlubable [...]</div></blockquote>I've discovered that this is not necessary, since there are not "false positives" at all (all the pixels that make up the 6 (global) aabb quads of an object are checked for occlusion).<br><br>I've updated the demo in the third post. <br><br>It's all I was able to understand based on the CDTestFramework demo, so maybe somebody can make a better demo based on GameKit or Blender code (I'm aware that I'm a newbie about occlusion culling after all). <br>As usual, feel free to improve/modify/extend/use the code in the demo as you like (well, to be honest it's more than 50% CDTestFramework code, so...).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2180">Flix</a> — Thu Nov 03, 2011 11:41 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Flix]]></name></author>
+		<updated>2011-11-02T12:36:17+00:00</updated>
+
+		<published>2011-11-02T12:36:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26074#p26074</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26074#p26074"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26074#p26074"><![CDATA[
+<blockquote class="uncited"><div>I create a new issue to show how the btDbvt occlusion culling works:<br><a href="https://github.com/erwincoumans/experiments/issues/9" class="postlink">https://github.com/erwincoumans/experiments/issues/9</a></div></blockquote>Thanks  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> <br><br>Anyway I managed to make it work by adding the following code:<div class="codebox"><p>Code: </p><pre><code>voidOcclusionBuffer::appendOccluder( const btVector3&amp; occluderInnerBoxCollisionShapeHalfExtent,const btTransform&amp; collisionObjectWorldTransform){const btVector3 c(collisionObjectWorldTransform.getOrigin());const btVector3&amp; e = occluderInnerBoxCollisionShapeHalfExtent;const btMatrix3x3&amp; basis = collisionObjectWorldTransform.getBasis();const btVector4x[]={transform(c+basis*btVector3(-e[0],-e[1],-e[2])),transform(c+basis*btVector3(+e[0],-e[1],-e[2])),transform(c+basis*btVector3(+e[0],+e[1],-e[2])),transform(c+basis*btVector3(-e[0],+e[1],-e[2])),transform(c+basis*btVector3(-e[0],-e[1],+e[2])),transform(c+basis*btVector3(+e[0],-e[1],+e[2])),transform(c+basis*btVector3(+e[0],+e[1],+e[2])),transform(c+basis*btVector3(-e[0],+e[1],+e[2]))};static const intd[]={1,0,3,2,4,5,6,7,4,7,3,0,6,5,1,2,7,6,2,3,5,4,0,1};for(int i=0;i&lt;(sizeof(d)/sizeof(d[0]));){const btVector4p[]={x[d[i++]],x[d[i++]],x[d[i++]],x[d[i++]]};clipDraw&lt;4,WriteOCL&gt;(p,ocarea);}}</code></pre></div>And by using it this way:<div class="codebox"><p>Code: </p><pre><code>voidDbvtBroadphaseFrustumCulling::Process(const btDbvtNode* leaf){btBroadphaseProxy*proxy=static_cast &lt; btBroadphaseProxy*&gt; (leaf-&gt;data);if ((proxy-&gt;m_collisionFilterGroup &amp; m_collisionFilterMask) != 0){btCollisionObject* co = static_cast &lt; btCollisionObject* &gt; (proxy-&gt;m_clientObject);if (co == m_additionalCollisionObjectToExclude) return;m_pCollisionObjectArray-&gt;push_back( co );if (m_ocb &amp;&amp; IsOccluder(co) &amp;&amp; co-&gt;getCollisionShape()) {static btVector3 aabbMin;static btVector3 aabbMax;co-&gt;getCollisionShape()-&gt;getAabb(btTransform::getIdentity(),aabbMin,aabbMax);// Actually here I should get the MINIMAL aabb that can be nested INSIDE the shape (ie. only btBoxShapes work)m_ocb-&gt;appendOccluder((aabbMax-aabbMin)*btScalar(0.5f),co-&gt;getWorldTransform());// Note that only a btVector3 (the inner box shape half extent) seems to be needed...}}}</code></pre></div>Now the big issue I have is to find a way (if it is possible) to handle bodies marked as non-occlubable, since I suspect (but I must check it), that objects are considered "occluded" if the 8 points of their (global) aabb are occluded: I think this approach creates a lot of false positives (i.e. blinking objects). I'll see what I'll manage to do about it. <br><br>For now, I can only have (oriented) box shaped occluders, but it's enough for me (I'm even thinking about (software) rendering just 3 quads (passing from the center of the box) instead of all the 6 box quads, if the software rasterizer is the bottleneck (or if the camera is far from the body center for example)).<br><br>I'll update the code when I'll clean it up a bit... [This could be used as an easier to understand example on how to use btDbvt frustum and occlusion culling, if needed (and good enough); although most of it it's just a direct copy of the CDTestFramework...].<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2180">Flix</a> — Wed Nov 02, 2011 12:36 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2011-11-01T17:02:01+00:00</updated>
+
+		<published>2011-11-01T17:02:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26061#p26061</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26061#p26061"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26061#p26061"><![CDATA[
+I create a new issue to show how the btDbvt occlusion culling works:<br><a href="https://github.com/erwincoumans/experiments/issues/9" class="postlink">https://github.com/erwincoumans/experiments/issues/9</a><br><br>Note that there are several implementations, not just CDTestFramework.<br>It is also used in Blender Game Engine and in Gamekit so you might want to check out their source code and some docs in their wiki.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Nov 01, 2011 5:02 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Flix]]></name></author>
+		<updated>2011-11-01T16:48:33+00:00</updated>
+
+		<published>2011-11-01T16:48:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26060#p26060</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26060#p26060"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26060#p26060"><![CDATA[
+I've made a small progress (basically just by passing the modelview * projection matrix (already calculated) instead of the simple projection matrix in the occlusion buffer, and by setting code to display it):<div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=846" class="postimage" alt="btDbvtOcclusionCulling.JPG" onclick="viewableArea(this);" /></dt></dl></div>Basically now the problem is that one of my two box shaped occluders (the ground body) works correctly, but for the other its whole aabb is taken into consideration as the occluding shape (instead of the "oriented" bounding box). In short it's too big. The CDTestFramework had all its boxes aabb aligned, so I think it wasn't affected by this problem...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2180">Flix</a> — Tue Nov 01, 2011 4:48 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Flix]]></name></author>
+		<updated>2011-11-01T07:59:39+00:00</updated>
+
+		<published>2011-11-01T07:59:39+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26057#p26057</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26057#p26057"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26057#p26057"><![CDATA[
+<blockquote class="uncited"><div>I got the frustum culling to work now, after some time of trial and error. The OCL sorting works just fine. </div></blockquote>Glad you made it  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">. I think the main difficulty is the correct extraction of the frustum planes. <blockquote class="uncited"><div>I also tried to use the occlusion culling code from the test framework. It seems it's assuming a fixed camera with no rotation, as the buffer is not paying any attention to the OpenGL modelview matrix. Have you had any success yourself? I have never actually run this application myself, did anyone compile it on Linux? </div></blockquote>Interesting stuff. Actually I was thinking about it myself yesterday (the fact that the modelview was not taken into account). The truth is that I didn't bother too much about trying to understand how occlusion culling works and there are still some pieces I need to know better (for example how the software rasterizer works, where in my ICollide struct I must add/query occluders, which "bounding box" I must use for them, how I can be sure that a body is completely behind them if I use an aabb for occluders and things like them). And no, I didn't compile it on Linux, but I can run the CDTestFramework on windows and I think that displaying the occlusion buffer can be very useful to understand how things are going (so I think I'll add that code as soon as possible, before experimenting with occlusion culling myself).Another thing is that the CDTestFramework uses an "oriented bounding box class", and it's not clear to me if this is something just related to it, or something I have to add myself... As you can see, I suppose it's going to take a LOT of time for me to (hopefully) master the "occlusion API".<blockquote class="uncited"><div>If I understand the method correctly then the occlusion buffer is a low-resolution eye-space depth buffer (128x128 pixels). The front-to-back OCL query renders into this buffer per node and stops "descending" when the occlusion buffer says a node boundingbox is completely occluded by a pixel in the buffer. </div></blockquote>This makes sense (this theory looks similiar in some aspects to the shadow mapping technique), but this time all must be done in sofware, and the point is that, to fill a pixel, I would like to understand what I'm supposed to use (I mean, occluders should use their whole collision shape that will be "software rendered" to a pixel in the occlusion map? The code seems to use just "btDbvt node bounding boxes as occluders": are they oriented or not?).<br><br>...the more I dig into it, the more I understand how difficult this subject is...  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_cry.gif" width="15" height="15" alt=":cry:" title="Crying or Very sad"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2180">Flix</a> — Tue Nov 01, 2011 7:59 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ola]]></name></author>
+		<updated>2011-10-31T15:09:33+00:00</updated>
+
+		<published>2011-10-31T15:09:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26040#p26040</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26040#p26040"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26040#p26040"><![CDATA[
+Thank you very much, Flix <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br><br>I got the frustum culling to work now, after some time of trial and error. The OCL sorting works just fine. <br><br>I also tried to use the occlusion culling code from the test framework. It seems it's assuming a fixed camera with no rotation, as the buffer is not paying any attention to the OpenGL modelview matrix. Have you had any success yourself? I have never actually run this application myself, did anyone compile it on Linux? <br><br>If I understand the method correctly then the occlusion buffer is a low-resolution eye-space depth buffer (128x128 pixels). The front-to-back OCL query renders into this buffer per node and stops "descending" when the occlusion buffer says a node boundingbox is completely occluded by a pixel in the buffer. <br><br>Best regards,<br>Ola<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1554">ola</a> — Mon Oct 31, 2011 3:09 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Flix]]></name></author>
+		<updated>2011-11-03T11:37:21+00:00</updated>
+
+		<published>2011-10-30T17:59:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26031#p26031</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26031#p26031"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26031#p26031"><![CDATA[
+<blockquote class="uncited"><div>I'll see if I can put together something next week about it if you need it.<br>(and I hope somebody will extend it to support basic occlusion culling).</div></blockquote>No need to wait, I've just found it:<div class="inline-attachment"><dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=849">DbvtCullingDemo.zip</a></dt></dl></div><strong class="text-strong"><span style="color:#400000">UPDATE:</span></strong>Updated DbvtCullingDemo.zip to support very basic occlusion culling with box shaped occluders only.<br><strong class="text-strong"><span style="color:#400000">Keys:</span></strong><br>'c': change culling mode (frustum+occlusion / frustum only / none)<br>'s': show / hide occlusion buffer (visible only when occlusion culling is activated: slow)<br>'+','-': change the size of the occlusion buffer (currently powers of two with width = height, but it can be any number AFAIK)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2180">Flix</a> — Sun Oct 30, 2011 5:59 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Flix]]></name></author>
+		<updated>2011-10-30T08:30:23+00:00</updated>
+
+		<published>2011-10-30T08:30:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26021#p26021</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26021#p26021"/>
+		<title type="html"><![CDATA[Re: btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26021#p26021"><![CDATA[
+<blockquote class="uncited"><div>I am trying to make sense of the frustum culling feature of btDbvt [...]</div></blockquote> I would like better documentation about it too (expecially for occlusion culling, actually).<br>I can be of some help if you just want to add btDbvt frustum culling to, let's say, a Bullet Demo (I remember I made it a few years ago, and I reused it in some of my Bullet-plain OpenGL integrations (I don't know if it's possible to do it with rendering engines that already perform frustum culling for you...)). <br><br>In short, I don't know much about docs and I think I can set up a Bullet Demo with btDbvt frustum culling, but I need some time (to look for the code pieces and put them together). <br><br>The main point is to extract the frustum correctly in a suitable way, then you can just copy the code in CDTestFramework. Posting generic code snippets wouldn't be too useful here...<br><br>I'll see if I can put together something next week about it if you need it.<br>(and I hope somebody will extend it to support basic occlusion culling).<br><br>In the meantime, answers to your specific questions are welcome <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2180">Flix</a> — Sun Oct 30, 2011 8:30 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ola]]></name></author>
+		<updated>2011-10-28T14:45:33+00:00</updated>
+
+		<published>2011-10-28T14:45:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26005#p26005</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26005#p26005"/>
+		<title type="html"><![CDATA[btDbvt::collideOCL (and KDOP) documentation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26005#p26005"><![CDATA[
+Hi all,<br><br>I am trying to make sense of the frustum culling feature of btDbvt (the collideOCL and collideKDOP functions). I am looking at the single implementation I can find using it in the BulletSAPCompleteBoxPruningTest.cpp file (found in the Extras/CDTestFramework) as reference but as I read elsewhere here on the forum it's not written to be a properly documented example. <br><br>I nearly got it working now, but I'm struggling with the back-to-front sorting which fails (reverses) depending on the rotation of my frustum and I think I probably defined something wrong somewhere. <br><br>Both the code in the example and in btDbvt itself is completely written without any usable comments or documentation, which is a real shame. I've successfully used this tree in a couple of interesting ways now and it is extremely useful, I just wish it was better documented. I spend a lot of time trying to figure it out based on the usage elsewhere in Bullet. <br><br>If anyone can share some more information on this topic it would be great!<br><br>- How exactly is the definition of the normal and offset arrays in the collideOCL/collideKDOP functions? (ok, normals of the frustum planes, but should the normals point in or out, for example? Offset from what?)<br><br>- What does KDOP and OCL stand for?<br><br>- Can any number of planes be defined or is just 4 or 5 allowed?<br><br>- Is the sort axis algorithm in btDbvt::collideOCL tested properly (widespread use in games etc), or can there still be bugs with the sorting algorithm?<br><br>- Also is there any documentation on which functions in btDbvt::ICollide should be implemented or not depending on the usage? In my case I only re-implemented Process(const btDbvtNode*).<br><br>- What does btDbvt::collideTU do? <br><br>- How often should the optimize-functions be called? Which one of the 3 is recommended, what are the trade-offs? Must the optimize-functions be called to get correct results, or do they just improve the query performance? <br><br>Best regards,<br>Ola<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1554">ola</a> — Fri Oct 28, 2011 2:45 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

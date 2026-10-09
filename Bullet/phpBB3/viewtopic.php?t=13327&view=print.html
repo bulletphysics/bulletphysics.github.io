@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; TORQUE_CONTROL Not working</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>TORQUE_CONTROL Not working</h2>
+		<p><a href="viewtopic.php%3Ft=13327.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13327</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>TORQUE_CONTROL Not working</h3>
+				<div class="date">Posted: <strong>Thu Nov 25, 2021 4:38 pm</strong></div>
+				<div class="author">by <strong>exo</strong></div>
+				<div class="content">I am using pybullet to simulate a bipedal robot using pre calculated trajectory. I have joints angles for the whole trajectory. It works perfectly using POSITION_CONTROL with "setJointMotorControl2". However, using a torque input with TORQUE_CONTROL the robot gets loose and the joints don't move.<br>
+<br>
+I am also using the pdControllerExplicit from the examples provided in bullet3 repository by pybullet to generate torque values from the desired angles and error. I have also made sure to turn off the velocity control giving zero force. <br>
+<br>
+1. Why is the TORQUE_CONTROL failing to work? I have tried the following to troubleshoot it am I missing something else?<br>
+-Changing the masses and inertias (I tried both using inertia values from the URDF file and letting pybullet calculate them) <br>
+-enabled the JointForceTorqueSensor and recorded the values for the torque and they gave zeros or they give constant values throughout the simulation.<br>
+-checked the code for bugs as well, here is the code and the URDF file below.<br>
+-Changing the timestep and sleeptime values.<br>
+Is there a problem with the  TORQUE_CONTROL command or something I mentioned or something else entirely.<br>
+<br>
+2. Also,  How does the "setJointMotorControl2" work? Is there an open access source code for it? <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13327&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as pb
+import time
+from numpy import *
+import pybullet_data
+import struct 
+
+def computePD(bodyUniqueId, jointIndices, desiredPositions, desiredVelocities, kps, kds, maxForces, timeStep):
+    # numJoints = pb.getNumJoints(bodyUniqueId)
+    numJoints = len(jointIndices)
+    jointStates = pb.getJointStates(bodyUniqueId, jointIndices)
+    q1 = []
+    qdot1 = []
+    for i in range(numJoints):
+      q1.append(jointStates[i][0])
+      qdot1.append(jointStates[i][1])
+    q = array(q1)
+    qdot = array(qdot1)
+    qdes = array(desiredPositions)
+    qdotdes = array(desiredVelocities)
+    qError = qdes - q
+    qdotError = qdotdes - qdot
+    Kp = diagflat(kps)
+    Kd = diagflat(kds)
+    forces = Kp.dot(qError) + Kd.dot(qdotError)
+    maxF = array(maxForces)
+    forces = clip(forces, -maxF, maxF)
+    return forces
+
+#______________________________________________________________________________
+
+#joint axis matrix
+jointIdListR = [0,1,2,3,4,5]
+jointIdListL = [6,7,8,9,10,11]
+LEG_DOF = 6
+maxForce = 10e20
+maxForceListForLeg = [maxForce]*LEG_DOF
+
+with open("JointsLeftTotalMATLAB6.csv") as jointslefttotal:
+    jointslefttotal = loadtxt(jointslefttotal, delimiter=",")
+
+with open("JointsRightTotalMATLAB6.csv") as jointsrighttotal:
+    jointsrighttotal = loadtxt(jointsrighttotal, delimiter=",")
+    
+with open("torright.csv") as torright:
+    torright = loadtxt(torright, delimiter=",")
+
+with open("torleft.csv") as torleft:
+    torleft = loadtxt(torleft, delimiter=",")
+    
+with open("velleft.csv") as velleft:
+    velleft = loadtxt(velleft, delimiter=",")
+
+with open("velright.csv") as velright:
+    velright = loadtxt(velright, delimiter=",")    
+#______________________________________________________________________________
+
+pb.connect(pb.GUI)
+#Add earth like gravity
+pb.setGravity(0,0,-9.807)
+pb.setRealTimeSimulation(1)
+#Point the camera at the robot at the desired angle and distance
+pb.resetDebugVisualizerCamera(cameraDistance=1.5, cameraYaw=135, cameraPitch=-30, cameraTargetPosition=[0.0, 0.0, 0.25])
+
+if (0):
+    t0=time.time()
+    t=time.time()
+    while ((t-t0)&lt;10):
+        t=time.time()
+        pb.disconnect()
+        break  
+#______________________________________________________________________________
+
+# controlMode=pb.POSITION_CONTROL
+pb.setAdditionalSearchPath(pybullet_data.getDataPath())
+planeId = pb.loadURDF("plane.urdf")
+robotId = pb.loadURDF("urdf/bipedalMini.urdf",[0,0,0.8],useFixedBase=True)
+
+for i in range (1):
+    pb.stepSimulation()    
+    time.sleep(1./240.)  
+
+# qua = pb.getBasePositionAndOrientation(robotId)
+position, orientation = pb.getBasePositionAndOrientation(robotId)
+pb.resetBasePositionAndOrientation(robotId, position, orientation)
+numJoint = pb.getNumJoints(robotId)
+jointIdList = list(range(numJoint))
+#______________________________________________________________________________
+
+TorLHY = array([])
+TorLHR = array([])
+TorLHP = array([])
+TorLKP = array([])
+TorLAP = array([])
+TorLAR = array([])
+TorRHY = array([])
+TorRHR = array([])
+TorRHP = array([])
+TorRKP = array([])
+TorRAP = array([])
+TorRAR = array([])
+
+TorLHY1 = transpose(array([0,0,0,0,0,0]))
+TorLHR1 = transpose(array([0,0,0,0,0,0]))
+TorLHP1 = transpose(array([0,0,0,0,0,0]))
+TorLKP1 = transpose(array([0,0,0,0,0,0]))
+TorLAP1 = transpose(array([0,0,0,0,0,0]))
+TorLAR1 = transpose(array([0,0,0,0,0,0]))
+TorRHY1 = transpose(array([0,0,0,0,0,0]))
+TorRHR1 = transpose(array([0,0,0,0,0,0]))
+TorRHP1 = transpose(array([0,0,0,0,0,0]))
+TorRKP1 = transpose(array([0,0,0,0,0,0]))
+TorRAP1 = transpose(array([0,0,0,0,0,0]))
+TorRAR1 = transpose(array([0,0,0,0,0,0]))
+
+#______________________________________________________________________________
+for i in arange(len(jointIdList)):
+
+    pb.enableJointForceTorqueSensor(robotId, jointIndex=i)
+    
+#______________________________________________________________________________
+for i in arange(len(jointIdList)):
+    
+    pb.setJointMotorControl2(robotId, jointIndex = i, controlMode=pb.VELOCITY_CONTROL, force=0)
+    
+#______________________________________________________________________________
+pb.setTimeStep(1/240)
+
+kp = [1000]*LEG_DOF
+kd = [300]*LEG_DOF
+timeStep = 1./240.
+
+#______________________________________________________________________________
+
+for i in arange(len(jointsrighttotal[0])):
+    
+    tausright = computePD(robotId, jointIdListR, jointsrighttotal[:,i], velright[:,i], kp, kd, maxForceListForLeg, timeStep)  
+    tausleft = computePD(robotId, jointIdListL, jointslefttotal[:,i], velleft[:,i], kp, kd, maxForceListForLeg, timeStep)
+    print(tausright[2])
+    pb.setJointMotorControl2(robotId, jointIndex=0, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausright[0])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=1, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausright[1])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=2, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausright[2])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=3, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausright[3])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=4, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausright[4])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=5, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausright[5])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=6, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausleft[0])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=7, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausleft[1])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=8, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausleft[2])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=9, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausleft[3])
+    
+    pb.setJointMotorControl2(robotId, jointIndex=10, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausleft[4]) 
+    
+    pb.setJointMotorControl2(robotId, jointIndex=11, controlMode=pb.TORQUE_CONTROL,
+                                  force=tausleft[5])
+    
+    TorLHY = append(TorLHY,pb.getJointState(robotId, jointIndex=0)[-1])
+    TorLHR = append(TorLHR,pb.getJointState(robotId, jointIndex=1)[-1])
+    TorLHP = append(TorLHP,pb.getJointState(robotId, jointIndex=2)[-1])
+    TorLKP = append(TorLKP,pb.getJointState(robotId, jointIndex=3)[-1])
+    TorLAP = append(TorLAP,pb.getJointState(robotId, jointIndex=4)[-1])
+    TorLAR = append(TorLAR,pb.getJointState(robotId, jointIndex=5)[-1])
+    TorRHY = append(TorRHY,pb.getJointState(robotId, jointIndex=6)[-1])
+    TorRHR = append(TorRHR,pb.getJointState(robotId, jointIndex=7)[-1])
+    TorRHP = append(TorRHP,pb.getJointState(robotId, jointIndex=8)[-1])
+    TorRKP = append(TorRKP,pb.getJointState(robotId, jointIndex=9)[-1])
+    TorRAP = append(TorRAP,pb.getJointState(robotId, jointIndex=10)[-1])
+    TorRAR = append(TorRAR,pb.getJointState(robotId, jointIndex=11)[-1])
+    
+    TorLHY1 = vstack((TorLHY1,pb.getJointState(robotId, jointIndex=0)[-2]))
+    TorLHR1 = vstack((TorLHR1,pb.getJointState(robotId, jointIndex=1)[-2]))
+    TorLHP1 = vstack((TorLHP1,pb.getJointState(robotId, jointIndex=2)[-2]))
+    TorLKP1 = vstack((TorLKP1,pb.getJointState(robotId, jointIndex=3)[-2]))
+    TorLAP1 = vstack((TorLAP1,pb.getJointState(robotId, jointIndex=4)[-2]))
+    TorLAR1 = vstack((TorLAR1,pb.getJointState(robotId, jointIndex=5)[-2]))
+    TorRHY1 = vstack((TorRHY1,pb.getJointState(robotId, jointIndex=6)[-2]))
+    TorRHR1 = vstack((TorRHR1,pb.getJointState(robotId, jointIndex=7)[-2]))
+    TorRHP1 = vstack((TorRHP1,pb.getJointState(robotId, jointIndex=8)[-2]))
+    TorRKP1 = vstack((TorRKP1,pb.getJointState(robotId, jointIndex=9)[-2]))
+    TorRAP1 = vstack((TorRAP1,pb.getJointState(robotId, jointIndex=10)[-2]))
+    TorRAR1 = vstack((TorRAR1,pb.getJointState(robotId, jointIndex=11)[-2]))
+    
+    pb.stepSimulation()
+    time.sleep(1./960.)  
+
+#______________________________________________________________________________
+    
+
+pb.disconnect()
+
+
+</code></pre></div>
+
+<br>
+URDF File 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13327&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;?xml version="1.0" ?&gt;
+&lt;robot name="quadrupedal_robot" xmlns:xacro="https://ros.org/wiki/xacro"&gt;
+  &lt;!--link name="world"/&gt;
+
+	&lt;joint name="world_joint" type="floating"&gt;
+		&lt;parent link="world"/&gt;
+		&lt;child link="body"/&gt; 
+		&lt;origin  rpy="0 0 0" xyz="0 0 0"/&gt;
+	&lt;/joint --&gt;
+  &lt;link name="body"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.1"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="0.06765345" ixy="0.0" ixz="0.0" iyy="0.053440875" iyz="0.0" izz="0.017235495"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/TorsoMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/TorsoMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  
+  &lt;joint name="r_yaw_hipJoint" type="revolute"&gt;
+    &lt;parent link="body"/&gt;
+    &lt;child link="r_yaw_hipLink"/&gt;
+    &lt;axis xyz="0 0 1"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 -0.12 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="0" upper="0" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="r_yaw_hipTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="r_yaw_hipJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="r_yaw_hipMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="r_yaw_hipLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.108149"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="3.9598421e-05" ixy="0.0" ixz="0.0" iyy="3.9598427e-05" iyz="0.0" izz="5.0357027e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Zaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Zaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="r_roll_hipJoint" type="revolute"&gt;
+    &lt;parent link="r_yaw_hipLink"/&gt;
+    &lt;child link="r_roll_hipLink"/&gt;
+    &lt;axis xyz="1 0 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-0.5" upper="0.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="r_roll_hipTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="r_roll_hipJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="r_roll_hipMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="r_roll_hipLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.108149"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="5.0357027e-05" ixy="0.0" ixz="0.0" iyy="3.9598427e-05" iyz="0.0" izz="3.9598421e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Xaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Xaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="r_pitch_hipJoint" type="revolute"&gt;
+    &lt;parent link="r_roll_hipLink"/&gt;
+    &lt;child link="r_thighLink"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="r_pitch_hipTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="r_pitch_hipJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="r_pitch_hipMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="r_thighLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.12805"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="0.000525492139" ixy="0.0" ixz="0.0" iyy="0.000525518548" iyz="0.0" izz="2.4541119e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/upper_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/upper_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="r_kneeJoint" type="revolute"&gt;
+    &lt;parent link="r_thighLink"/&gt;
+    &lt;child link="r_kneeLink"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 -0.40"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="r_kneeTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="r_kneeJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="r_kneeMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="r_kneeLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.123672"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 -0.18"/&gt;
+      &lt;inertia ixx="0.000345322965" ixy="0.0" ixz="0.0" iyy="0.000345322962" iyz="0.0" izz="2.2817471e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/lower_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/lower_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="r_pitch_ankleJoint" type="revolute"&gt;
+    &lt;parent link="r_kneeLink"/&gt;
+    &lt;child link="r_ankleLink"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 -0.38"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="r_pitch_ankleTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="r_pitch_ankleJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="r_pitch_ankleMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="r_ankleLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.0972"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="2.025e-05" ixy="0.0" ixz="0.0" iyy="2.025e-05" iyz="0.0" izz="1.458e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/Ankle_Sphere_Hidden.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/Ankle_Sphere_Hidden.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="r_roll_ankleJoint" type="revolute"&gt;
+    &lt;parent link="r_ankleLink"/&gt;
+    &lt;child link="r_tipLink"/&gt;
+    &lt;axis xyz="1 0 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="r_roll_ankleTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="r_roll_ankleJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="r_roll_ankleMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="r_tipLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.139622"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="8.1336818e-05" ixy="0.0" ixz="7.800852e-06" iyy="0.000185289302" iyz="0.0" izz="0.000251133962"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/FootMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/FootMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+
+
+  &lt;!-- left leg --&gt;
+  &lt;joint name="l_yaw_hipJoint" type="revolute"&gt;
+    &lt;parent link="body"/&gt;
+    &lt;child link="l_yaw_hipLink"/&gt;
+    &lt;axis xyz="0 0 1"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.12 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="0" upper="0" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="l_yaw_hipTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="l_yaw_hipJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="l_yaw_hipMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="l_yaw_hipLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.108149"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="3.9598421e-05" ixy="0.0" ixz="0.0" iyy="3.9598427e-05" iyz="0.0" izz="5.0357027e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Zaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Zaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="l_roll_hipJoint" type="revolute"&gt;
+    &lt;parent link="l_yaw_hipLink"/&gt;
+    &lt;child link="l_roll_hipLink"/&gt;
+    &lt;axis xyz="1 0 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-0.5" upper="0.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="l_roll_hipTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="l_roll_hipJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="l_roll_hipMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="l_roll_hipLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.108149"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="5.0357027e-05" ixy="0.0" ixz="0.0" iyy="3.9598427e-05" iyz="0.0" izz="3.9598421e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Xaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/hip_Xaxis_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="l_pitch_hipJoint" type="revolute"&gt;
+    &lt;parent link="l_roll_hipLink"/&gt;
+    &lt;child link="l_thighLink"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="l_pitch_hipTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="l_pitch_hipJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="l_pitch_hipMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="l_thighLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.12805"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="0.000525492139" ixy="0.0" ixz="0.0" iyy="0.000525518548" iyz="0.0" izz="2.4541119e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/upper_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/upper_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="l_kneeJoint" type="revolute"&gt;
+    &lt;parent link="l_thighLink"/&gt;
+    &lt;child link="l_kneeLink"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 -0.40"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="l_kneeTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="l_kneeJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="l_kneeMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="l_kneeLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.123672"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 -0.18"/&gt;
+      &lt;inertia ixx="0.000345322965" ixy="0.0" ixz="0.0" iyy="0.000345322962" iyz="0.0" izz="2.2817471e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/lower_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/lower_leg_lengthMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="l_pitch_ankleJoint" type="revolute"&gt;
+    &lt;parent link="l_kneeLink"/&gt;
+    &lt;child link="l_ankleLink"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 -0.38"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="l_pitch_ankleTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="l_pitch_ankleJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="l_pitch_ankleMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="l_ankleLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.0972"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="2.025e-05" ixy="0.0" ixz="0.0" iyy="2.025e-05" iyz="0.0" izz="1.458e-05"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/Ankle_Sphere_Hidden.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/Ankle_Sphere_Hidden.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="l_roll_ankleJoint" type="revolute"&gt;
+    &lt;parent link="l_ankleLink"/&gt;
+    &lt;child link="l_tipLink"/&gt;
+    &lt;axis xyz="1 0 0"/&gt;
+    &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+    &lt;!--dynamics damping="0.05"/--&gt;
+    &lt;dynamics friction="0.05"/&gt;
+    &lt;limit effort="18.0" lower="-1.5" upper="1.5" velocity="10.0"/&gt;
+  &lt;/joint&gt;
+  &lt;transmission name="l_roll_ankleTrans"&gt;
+    &lt;type&gt;transmission_interface/SimpleTransmission&lt;/type&gt;
+    &lt;joint name="l_roll_ankleJoint"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+    &lt;/joint&gt;
+    &lt;actuator name="l_roll_ankleMotor"&gt;
+      &lt;hardwareInterface&gt;hardware_interface/EffortJointInterface&lt;/hardwareInterface&gt;
+      &lt;mechanismReduction&gt;1&lt;/mechanismReduction&gt;
+    &lt;/actuator&gt;
+  &lt;/transmission&gt;
+
+  &lt;link name="l_tipLink"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="0.139622"/&gt;
+      &lt;origin rpy="0 0 0" xyz="0.0 0.0 0.0"/&gt;
+      &lt;inertia ixx="8.1336818e-05" ixy="0.0" ixz="7.800852e-06" iyy="0.000185289302" iyz="0.0" izz="0.000251133962"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/FootMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="meshes/stl/FootMini.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+&lt;/robot&gt;
+
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

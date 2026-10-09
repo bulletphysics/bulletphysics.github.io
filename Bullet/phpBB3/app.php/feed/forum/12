@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/forum/12" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-10-27T12:53:43+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/forum/12</id>
+
+		<entry>
+		<author><name><![CDATA[sky10086]]></name></author>
+		<updated>2022-10-27T12:53:43+00:00</updated>
+
+		<published>2022-10-27T12:53:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44157#p44157</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44157#p44157"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Re: Bullet serialization from Maya not saving components]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44157#p44157"><![CDATA[
+How did I solve it later, I have the same problem now<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14458">sky10086</a> — Thu Oct 27, 2022 12:53 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[guasqui_act]]></name></author>
+		<updated>2021-05-21T10:23:07+00:00</updated>
+
+		<published>2021-05-21T10:23:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43432#p43432</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43432#p43432"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • How to speed up the deserialization of 'btBvhTriangleMeshShape' object.]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43432#p43432"><![CDATA[
+Hello everyone!<br><br>I am trying to take advantage of the serialization/deserialization feature to speed up the time of constructing a <strong class="text-strong">btBvhTriangleMeshShape</strong> object but for some reason I do not get the result I would expect.<br><br>Without using serialization/deserialization, my <strong class="text-strong">btBvhTriangleMeshShape</strong> object is constructed as:<div class="codebox"><p>Code: </p><pre><code>//////// Inputs are://x - matrix with x-component values//y - matrix with y-component values//z - matrix with z-component values//nRows, nCols - number of rows and columns of the input x, y, and z matrixes//////// populating ground verticesconst int totalVerts = nRows * nCols;btVector3 *groundVertices = new btVector3[totalVerts];for (int i = 0; i &lt; nRows; i++){for (int j = 0; j &lt; nCols; j++){groundVertices[i * nCols + j].setValue( x[i][j], y[i][j], z[i][j] );}}// populating ground indicesconst int totalTriangles = 2 * (nRows - 1) * (nCols - 1);const int numTriangleIndexes = totalTriangles * 3;int *groundIndices = new int[numTriangleIndexes];int index = 0;for (int i = 0; i &lt; nRows - 1; i++){for (int j = 0; j &lt; nCols - 1; j++){groundIndices[index++] = i * nCols + j;groundIndices[index++] = (i + 1) * nCols + j;groundIndices[index++] = i * nCols + j + 1;groundIndices[index++] = i * nCols + j + 1;groundIndices[index++] = (i + 1) * nCols + j;groundIndices[index++] = (i + 1) * nCols + j + 1;}}// constructing 'btBvhTriangleMeshShape'int vertStride = sizeof(btVector3);int indexStride = 3 * sizeof(int);btTriangleIndexVertexArray *indexVertexArrays = new btTriangleIndexVertexArray(totalTriangles, groundIndices, indexStride, totalVerts, (btScalar*)&amp;groundVertices[0].x(), vertStride);btBvhTriangleMeshShape *groundShape = new btBvhTriangleMeshShape(indexVertexArrays, false);</code></pre></div>Now, I am willing to speed up the construction of the <strong class="text-strong">btBvhTriangleMeshShape</strong> by serializing/deserializing the <strong class="text-strong">btBvhTriangleMeshShape</strong> object. The following code is how I serialize it:<div class="codebox"><p>Code: </p><pre><code>btDefaultSerializer serializer;serializer.startSerialization();groundShape-&gt;serializeSingleShape( &amp;serializer );serializer.finishSerialization();FILE* ff = fopen("my_ground_shape.bullet", "wb");if ( !ff ){printf("Unable to open file\n");return;}fwrite(serializer.getBufferPointer(), serializer.getCurrentBufferSize(), 1, ff);fclose(ff);</code></pre></div>and the deserialization code is as follows:<div class="codebox"><p>Code: </p><pre><code>btBulletWorldImporter importer(NULL);if ( !importer.loadFile("my_ground_shape.bullet") ){printf("Unable to load file\n");return;}int numShape = importer.getNumCollisionShapes();if (!numShape) {printf("No terrain info found in file\n");return;}btBvhTriangleMeshShape *groundShape = (btBvhTriangleMeshShape*)importer.getCollisionShapeByIndex(0);</code></pre></div>Let's assume that the serialization process was done offline and therefore that 'my_ground_shape.bullet' file already exists. At this stage, I would expect a speed-up when constructing <strong class="text-strong">btBvhTriangleMeshShape</strong> object using the desirialization approach as opposed to doing this from scratch, but unfortunately it looks like there is no gain in terms of execution time.<br>My usual test case has <em class="text-italics">nRows = nCols = 400</em> and has the construction of <strong class="text-strong">btBvhTriangleMeshShape</strong> object being repeated 40 to 50 times. With these parameters the first snippet of code (creating the triangle mesh and allocating <strong class="text-strong">btBvhTriangleMeshShape</strong>) takes around 10 seconds, while the deserialization approach takes about 23.5 seconds (more than double).<br><br>I am sure I am missing some implementation point but I really can't get why the deserialization is such an inefficient method here. Can anyone explain this and give me the right implementation to speed-up the construction of <strong class="text-strong">btBvhTriangleMeshShape</strong> object?<br><br>Thank you!<br>Pierluigi Guasqui<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13985">guasqui_act</a> — Fri May 21, 2021 10:23 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Troye]]></name></author>
+		<updated>2020-03-20T05:51:47+00:00</updated>
+
+		<published>2020-03-20T05:51:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42713#p42713</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42713#p42713"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • how to sloving adding block(urdf) crashing]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42713#p42713"><![CDATA[
+ok! when i want to add random block urdf(bring by pybullet). but when the block adding, droping in the table, they will crash and always jumping. somtimes two blocks will adhere toghter and juming down the table. so i don't konw where is the problem. and i set rhe graviety is -10.? is it problem of urdf? the collision?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13384">Troye</a> — Fri Mar 20, 2020 5:51 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ritzmax72]]></name></author>
+		<updated>2019-04-15T02:52:41+00:00</updated>
+
+		<published>2019-04-15T02:52:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42015#p42015</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42015#p42015"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Re: Bullet Physics can something like this?]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42015#p42015"><![CDATA[
+I have to experiment and check. But as far as my intuition goes it is minkowski substraction of two mesh with one mesh being rigid i.e the wheels. Bullet will return scaling factors I suppose and you will have to pass that information to your renderer and do appropriate texture manipulation. Hope this helps.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13264">ritzmax72</a> — Mon Apr 15, 2019 2:52 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Al_Ba]]></name></author>
+		<updated>2019-03-24T09:44:58+00:00</updated>
+
+		<published>2019-03-24T09:44:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41959#p41959</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41959#p41959"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Importing and Exporting files between Bullet and Blender]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41959#p41959"><![CDATA[
+Hi everyone, <br><br>I already have a simulation in blender and I want to import this simulation into Bullet in order to retrieve contact forces between the collision shapes or rigid bodies. I also want add some features to the simulation in Bullet (e.g. implementing explosion force as body force to the simulation) which are not in blender and then export a blender file from bullet, in order to visualize the new simulation in Blender.<br><br>I wonder to know how to export a bullet file from blender and how to export a blender file from bullet?<br><br>Thank you,<br>Ali<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13245">Al_Ba</a> — Sun Mar 24, 2019 9:44 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[nickolai]]></name></author>
+		<updated>2018-02-14T06:43:04+00:00</updated>
+
+		<published>2018-02-14T06:43:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40421#p40421</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40421#p40421"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Why are chunk pointers updated when deserializing?]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40421#p40421"><![CDATA[
+Sorry for the rather terse title.<br><br>I’ve been playing around with the serialization/deserialization code. It’s really awesome that it can resolve pointers to structures (so long as the struct being pointed to is serializable of course), but I find one of the details of how it does this confusing.<br><br>On the serialization side, you get an id for an object in memory by passing its pointer into the serializer’s getUniqueId function, which returns an void* that’s actually hiding an int, which is weird, but that’s a separate discussion.*<br><br>And whatever object is being pointed to, whenever it serializes itself, it stores that same id in the chunk in which it’s serialized.<br><br>So far so good. All chunks have ids, and some chunks contain data members containing the id of chunks that they need once deserialization happens.<br><br>Now we get to deserialization, and these chunk ids, which are really ints, get updated to be pointers to where the chunk is being stored in memory. ???<br><br>Of course, the data members inside the chunks get updated from their int nature to be pointers (I guess that’s done through the resolvePointers function?), and then at the application level there’s the business of storing these things in maps with the key being the pointer to the chunk and the value being the pointer to the newly constructed object in memory.<br><br>So my question is, why this complex business of updating these ids? Why not just leave them as ints?<br><br>And while we’re here, thanks Erwin for <a href="https://github.com/bulletphysics/bullet3/blob/master/Extras/Serialize/BulletFileLoader/bFile.cpp#L1228" class="postlink">this comment</a>. It saved me at least several hours of debugging, and much suffering!<br><br>*Now that I think about it, it's probably saved as a void* because it later gets updated to a pointer, but now we're back to my original question!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12583">nickolai</a> — Wed Feb 14, 2018 6:43 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Ericpolik]]></name></author>
+		<updated>2018-01-30T00:42:23+00:00</updated>
+
+		<published>2018-01-30T00:42:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40370#p40370</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40370#p40370"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Re: How To program a physics engine]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40370#p40370"><![CDATA[
+I forgot the exact link but build new games actually published a full on guide about it. I'm sure if you Google it you'll find it.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12569">Ericpolik</a> — Tue Jan 30, 2018 12:42 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[DirtyHarry]]></name></author>
+		<updated>2017-12-14T14:10:56+00:00</updated>
+
+		<published>2017-12-14T14:10:56+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40250#p40250</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40250#p40250"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Thermal Analysis?]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40250#p40250"><![CDATA[
+Hi everyone, I was wondering if there was a way to simulate a thermal analysis experiment? To be more specific, I want to observe endothermic and exothermic transitions between aggregate states of different common metals, copper aluminium and iron. And more, depending on what funding I'll get.<br><br>Next year, I might get to do an exchange programm in Germany and do this experiment on a proper <a href="https://www.linseis.com/en/our-products/differential-scanning-calorimetry/" class="postlink">DSC PT1600</a>. Well, I might at least if I get my essay right. Yup, I have to apply for this opportunity and I have to present a convincing essay. To write that, I would like to include a theoretical approach which will be confirmed once I'm there to do the real testing. And I was just wondering if that's possible with bullet?<br><br>Sorry, bit of a newcomer here. Looking forward to your suggestions. <br><br>Best regards,<br>Harry<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12515">DirtyHarry</a> — Thu Dec 14, 2017 2:10 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[gvx22]]></name></author>
+		<updated>2017-10-24T10:57:36+00:00</updated>
+
+		<published>2017-10-24T10:57:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40078#p40078</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40078#p40078"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Re: Bullet Physics can something like this?]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40078#p40078"><![CDATA[
+The link works fine for me. Try searching the title above the link on youtube, as the result would be the same vid. Anyway, great share!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12365">gvx22</a> — Tue Oct 24, 2017 10:57 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[NikoPortoriko]]></name></author>
+		<updated>2017-09-27T10:59:55+00:00</updated>
+
+		<published>2017-09-27T10:59:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39986#p39986</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39986#p39986"/>
+		<title type="html"><![CDATA[Physics authoring tools, serialization, standards and related topics • Can Bullet simulate gears , and elastics ?]]></title>
+
+					<category term="Physics authoring tools, serialization, standards and related topics" scheme="https://pybullet.org/Bullet/phpBB3/viewforum.php?f=12" label="Physics authoring tools, serialization, standards and related topics"/>
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39986#p39986"><![CDATA[
+Hallo everybody,<br><br>I m totally new in this Forum and i couldn' t read the rules, so i offer you my apologize if i may didn t introduct myself before.<br><br>I m designing a simple machine , but i need to simulate the behavior of a system made of an elastic corp jointed to a roller chain wich is driven to the opposit direction 3 times faster than the contraction speed of the elastic corp itself.<br><br>Do you think it could be done using Bullet and 3D models from Autodesk Inventor ? <br><br><br>P.S.<br><br>Sorry if my english is not so good .<br><br>Thanks in Advise<br>NiCola<dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1565" class="postimage" alt="the broken curve is the upper path of the chain , the elastic is suppose to be plugged on the downster side of the gears , and a smoller one is suppose to be plugged upster and connected to a dart" onclick="viewableArea(this);" /></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12377">NikoPortoriko</a> — Wed Sep 27, 2017 10:59 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [solved] compound collision bug</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[solved] compound collision bug</h2>
+		<p><a href="viewtopic.php%3Ft=6127.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6127</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[solved] compound collision bug</h3>
+				<div class="date">Posted: <strong>Tue Dec 14, 2010 11:09 am</strong></div>
+				<div class="author">by <strong>O-san</strong></div>
+				<div class="content">Hello!<br>
+<br>
+I am scaling a child shape of a compound object. The scaling seems fine in debug draw but the collisions does not take place. The body should be pushed out from a nearby wall when the child gets enlarged, this does not happen. I have tried scaling the shape without a compound object and that works fine, the body gets pushed out. Here's my code for scaling the object:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6127&amp;hilit=updateChildTransform&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    if (mBody-&gt;getCollisionShape()-&gt;isCompound()){
+      btCompoundShape * comp = (btCompoundShape *)mBody-&gt;getCollisionShape();
+      btCollisionShape * child = comp-&gt;getChildShape(0);
+      if(child!=0){
+        child-&gt;setLocalScaling(btVector3(2.5,2.5,1));
+      }
+      ((btCompoundShape *)mBody-&gt;getCollisionShape())-&gt;recalculateLocalAabb();
+    }
+</code></pre></div>
+
+I have also tried updating the inertia tensor and setMassProps without any success. Any help appreciated!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: compound collision bug</h3>
+				<div class="date">Posted: <strong>Tue Dec 14, 2010 4:47 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">To fix the collision issues, try calling the
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6127&amp;hilit=updateChildTransform&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void	btCompoundShape::<span class="posthilit">updateChildTransform</span>(int childIndex, const btTransform&amp; newChildTransform)
+</code></pre></div>
+using the old transform. This should update the internal data structures.<br>
+<br>
+For the inertia tensor, make sure to remove the object from the world before making the change, and re-insert it afterwards.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: compound collision bug</h3>
+				<div class="date">Posted: <strong>Wed Dec 15, 2010 9:01 am</strong></div>
+				<div class="author">by <strong>O-san</strong></div>
+				<div class="content">Thanks, that solved it =)<br>
+<br>
+Is it necessary to update the inertia tensor if I have disabled angular factor with setAngularFactor(0)?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

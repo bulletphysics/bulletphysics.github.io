@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Dynamica Bullet for Maya Issues &amp; Wish List</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Dynamica Bullet for Maya Issues &amp; Wish List</h2>
+		<p><a href="viewtopic.php%3Ft=2643.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=2643</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Sun Sep 21, 2008 7:39 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">I'm starting this thread just for ideas... no pressure.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+Feel free to add / expand by adding your bugs / issues / wishes...<br>
+<br>
+Some things I've noticed so far:
+<ul><li>rigid bodies don't appear to work in world space, only local space (or local space is treated as world space).  If rigid bodies are grouped, and the parent moved, they are not aware of it.  Grouping of different shapes of rigid bodies together would be very useful, so that they can be moved together and positioned.</li>
+
+<li>Mare than 4K (4096) rigid bodies crashes Maya. (ex: one plane = ground + Rigid Body Array with 16x16x16 objects = 4097 rigid bodies = crash on my system)</li>
+
+<li>Saving scenes that have not been rewinded with rigid bodies tend to get messed (when re-opened).</li></ul></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Mon Sep 22, 2008 2:20 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>RBD wrote:</cite>
+<ul><li>rigid bodies don't appear to work in world space, only local space (or local space is treated as world space).  If rigid bodies are grouped, and the parent moved, they are not aware of it.  Grouping of different shapes of rigid bodies together would be very useful, so that they can be moved together and positioned.</li></ul>
+</div></blockquote>
+Rigid bodies simulation controls the world transform. A dynamic/active rigid body cannot be a child of another object, because it would become ambiguous who would be responsible for its world transform: the rigid body simulation or another system? If you want to group more than one object, it should become a single rigid body with (multiple) compound collision shapes. Is that what you want?
+<blockquote><div><cite>RBD wrote:</cite>
+[*]Over 4K rigid bodies crashes Maya.<br>
+[*]Saving scenes that have not been rewinded with rigid bodies tend to get messed (when re-opened).[/list]</div></blockquote>
+This should be tested and resolved.<br>
+<br>
+Thanks for the feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Mon Sep 22, 2008 2:45 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Rigid bodies simulation controls the world transform. A dynamic/active rigid body cannot be a child of another object, because it would become ambiguous who would be responsible for its world transform: the rigid body simulation or another system? If you want to group more than one object, it should become a single rigid body with (multiple) compound collision shapes. Is that what you want?[...]</div></blockquote>I'll give you an example: let's say you build a structure, like a collapsible building, or let's say an object shatter (an object broken into a bunch of pieces, each one a rigid body), out of a bunch of different rigid bodies, then you could very well need to move this structure / composite object, together as a whole, to another location in your scene for staging.<br>
+<br>
+This should not be a Bullet concern at all, just the way Dynamica gets and sets object pos/rot from Maya world space to Bullet.  I believe Maya's API allows to get and set object positions / orientations relative to world space (using MSpace::kWorld) <em class="text-italics">regardless</em> of parents; I think it transparently traverses the entire Maya tree (up through all of the parents) to enable you to retrieve and set an object's position relative to world space (rather than local).  I'm only familiar with Maya's API from scripting with Python, but I'll try and have a look at the Dynamica source code.  But the PhysX plugin does allow active/passive rigid bodies to be grouped together and moved around (as well as compound rigid bodies/shapes as you describe, which would be handy as well BTW  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> ), and I believe PhysX does this on the local transform simply with Maya's API MPxTransform::checkAndSetTranslation/Rotation using the MSpace::kWorld space.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Tue Sep 23, 2008 5:05 am</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Quick little code change request for a little cosmetic thing I noticed, no rush: Dynamica box primitives have gaps between them when touching.  Ex.: If you create a Box array: 4x4x4 with 1x1x1 spacing, and deposit it on the ground, zoom in, and there is a permanent gap between all of the boxes.  And a 1x1x1 Dynamica Box primitive is smaller than a 1x1x1 Maya unit cube.<br>
+<br>
+Looks like fix only requires two tiny changes in <em class="text-italics">bt_box_shape.h</em>:<br>
+line 36: btVector3 const&amp; e = box_shape-&gt;getHalfExtents<strong class="text-strong">Without</strong>Margin();<br>
+to: btVector3 const&amp; e = box_shape-&gt;getHalfExtents<strong class="text-strong">With</strong>Margin();<br>
+and<br>
+line 79: btVector3 e = 2 * box_shape-&gt;getHalfExtents<strong class="text-strong">Without</strong>Margin();<br>
+to: btVector3 e = 2 * box_shape-&gt;getHalfExtents<strong class="text-strong">With</strong>Margin();<br>
+<br>
+Tried it, and it appears to work.<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Tue Sep 23, 2008 5:44 am</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Very Nice!  It looks like Nicola has fixed the rotation issue...  Fantastic!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> <br>
+<br>
+It's working well, but I'm having a little difficulty figuring something out.  If I cut up an object, and turn the pieces into rigid bodies, they behave strangely, like the center of gravity is off?  I've tried deleting the history, centering the pivots, freezing transformations and a few other things to the pieces, but it persists... I'm sure there is something I can do to the object pieces, I'll try to figure it out tommorow.  But here is a little quick example script:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=2643&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>{
+string $pCyl[] = `polyCylinder -r 5 -h 20`;
+move -y 10;
+string $pObj = $pCyl[0];
+float $bb[] = `polyEvaluate -boundingBox ($pObj)`;
+int $i;
+for ($i = 0; $i &lt; 4; $i++) {
+    float $px = rand(($bb[0]*0.95),($bb[1]*0.95));
+    float $py = rand(($bb[2]*0.95),($bb[3]*0.95));
+    float $pz = rand(($bb[4]*0.95),($bb[5]*0.95));
+    float $rx = rand(0,180);
+    float $ry = rand(0,180);
+    float $rz = rand(0,180);
+    polyCut -pc ($px) ($py) ($pz) -ro ($rx) ($ry) ($rz) -ef 1 -eo 0 0 0 ($pObj);
+    polyCloseBorder ($pObj);
+}
+select -r ($pObj);
+polySeparate ($pObj);
+}</code></pre></div>When I turn the resulting pieces into rigid bodies (script cuts up convex pieces, so they're hulls), with the rotation fixes, it appears to work.  But when I play the simulation the pieces behave like their center of gravity is far away.  Again, I'll try to figure it out tommorow.<br>
+<br>
+Thanks Nicola!<br>
+<br>
+EDIT: Ok, looks like I figured it out... center of gravity is at world space 0,0,0, so I need to center pivots to both object pieces and world space... ok, I can work with that.  Some tests, scripts and more later...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Wed Sep 24, 2008 6:32 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi RBD,<br>
+<br>
+It looks like you have some good feedback and fixes, we'll look into them.<br>
+<br>
+If you have time, can you investigate further what is needed to support this 'MSpace::kWorld' feature? A patch for that would be welcome (unless Nicola already fixed it). There is still some occasional 'refresh' problem for some of the first objects, when creating a hull/mesh -&gt; it places it at the world origin.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Thu Sep 25, 2008 12:54 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Hi Erwin.  I started looking at the plugin code, and am trying to wrap my head around it, I think the physics engine abstraction layer is confusing me a little, but I'll get around to it... I think  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused"> .  I tried something quickly with world space, didn't quite work, was messing up the "initial" settings, so I'll have to get back to it later.<br>
+<br>
+The hull / mesh creation at world origin should be an easy fix in the dynamicaUI.mel script, I've got my own working (with original mesh attachment for easy rendering/baking).  I'll look into it, but unfortunatly I can't just right now, really sorry.<br>
+<br>
+EDIT: Hmm.. couldn't say "<em class="text-italics">easy fix</em>" without at least quickly looking at it.  Try the attachment... maybe?<br>
+<br>
+(Attachment DELETED... too old now)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamica Bullet for Maya Issues &amp; Wish List</h3>
+				<div class="date">Posted: <strong>Sat Sep 27, 2008 10:03 am</strong></div>
+				<div class="author">by <strong>bazuka</strong></div>
+				<div class="content">I think i found some bugs <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+1st, when u move array group pivot point is acting strange?<br>
+2nd, u cant rotate array group<br>
+3rd, when u freeze transform array group goes back on the start possition<br>
+<br>
+cheers</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

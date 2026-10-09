@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [SOLVED] Rigidbody in manifold became dangling pointer.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[SOLVED] Rigidbody in manifold became dangling pointer.</h2>
+		<p><a href="viewtopic.php%3Ft=13383.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13383</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[SOLVED] Rigidbody in manifold became dangling pointer.</h3>
+				<div class="date">Posted: <strong>Mon Feb 21, 2022 7:44 am</strong></div>
+				<div class="author">by <strong>douya_5200</strong></div>
+				<div class="content">When I applied the multi-threaded version of bullet. I get crashes in addManifoldsToIslands() funciton.<br>
+where the m_body0 or m_body1 in the manifold within the loop sometimes are dangling pointer,<br>
+ causing unexpected data and crashes. <br>
+It happens almost every time. <br>
+ I used to check for wrong data and ignored it but then it brought other unexpected problems. <br>
+<br>
+The assert hit is the 	btAssert(id &lt; m_lookupIslandFromId.size()); where the id is the islandTag of the corrupted rigidbody.<br>
+<br>
+Anyone has any ideas? Thanks!<br>
+<br>
+<br>
+Edit:  When I used to ignore this problem and just check for null island, it causes other unexpected strange problems (solved stability problem but the efficiency seemed problematic) which just do not appear right for me. I want to get to the root of this problem which leads me to this question. <img class="smilies" src="images/smilies/icon_neutral.gif" width="15" height="15" alt=":|" title="Neutral"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigidbody in manifold became dangling pointer.</h3>
+				<div class="date">Posted: <strong>Mon Feb 28, 2022 7:35 am</strong></div>
+				<div class="author">by <strong>douya_5200</strong></div>
+				<div class="content">I have identified the problem:<br>
+Calling singleTimeCallback ContactTest of the collisionworld would cause this problem.<br>
+I'm still trying to find what exactly went wrong.  :C</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rigidbody in manifold became dangling pointer.</h3>
+				<div class="date">Posted: <strong>Mon Feb 28, 2022 11:40 am</strong></div>
+				<div class="author">by <strong>douya_5200</strong></div>
+				<div class="content">Hey , everyone:<br>
+<br>
+I've figured out how to solve this problem and I think it's indeed a bug of Bullet.<br>
+<br>
+It's caused by btCollisionDispatcherMt::releaseManifold() being called when the m_batchUpdating boolean is true. (when collision algorithm used by contactTest deconstructs, it calls dispatcher-&gt;releaseManifold() )<br>
+<br>
+This will cause the manifold not being properly released, then it's reused for manifold pool allocation and results in corrupted data.<br>
+<br>
+The solution would be to store the manifold into a container in releaseManifold() when batch updating, then remove it after the batchUpdating finished  in the next dispatchCollisionPairs() function.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

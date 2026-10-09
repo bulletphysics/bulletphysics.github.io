@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; sweep body test in blender 3d</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>sweep body test in blender 3d</h2>
+		<p><a href="viewtopic.php%3Ft=8969.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8969</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>sweep body test in blender 3d</h3>
+				<div class="date">Posted: <strong>Mon Mar 25, 2013 3:30 pm</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Hello, I am curious if the sweep test can be done for many positions with an efficient way.<br>
+<br>
+ I am using blender to create paths for a cnc machine with a new addon for bleder:<a href="http://blendercam.blogspot.cz/" class="postlink">http://blendercam.blogspot.cz/</a> ,<br>
+  and I would love to use bullet for collision.<br>
+<br>
+ It would be mainly testing the same primitive against same mesh x thousands to millions of times. So, I would like to have a function to which I would pass an array of all positions to get tested, then get the results, or test them one by one if performance is similar. <br>
+<br>
+Can anybody hint me how to start? Blender allready uses bullet for rigidbody simulation, and I would like to make this optimally an python API function, so that it is versatile for various uses with blenderCAM.<br>
+<br>
+Thanks for any answer.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: sweep body test in blender 3d</h3>
+				<div class="date">Posted: <strong>Tue Apr 09, 2013 8:48 am</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Good news is I got it working inside blender. <br>
+Bad news is, for my purpose the performance is not stellar and I am sometimes getting inprecise results.<br>
+<br>
+My use case is - I am developing a CAM addon, where I need to check a convex primitive(Sphere, Cone, Cylinder, Capsule), against a (sometimes very complex) mesh collider. (Imagine a cutter milling a sculpture, running exactly along it's surface)<br>
+<br>
+I have two questions:<br>
+1<br>
+Is there a way to optimize such case with Bullet ? If I have now e.g. a 60000 faces mesh, and I test it with the primitive, it can now take up to 10 seconds to take 1000 tests. In Unity engine, I can get up to 10000 tests done per second on a similar case. I am quite sure bullet can run much faster, but don't know where to start...I tried to split the mesh in various ways, but so far i didn't find out any way to do it. <br>
+<br>
+2.<br>
+what is "optimal" scale for bullet - I noticed that when I run the objects in small sizes (e.g. I test a 3mm primitive against a 40cm mesh), I get imprecisions. I am curious at what sizes I would get best possible precision, which is what interests me.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: sweep body test in blender 3d</h3>
+				<div class="date">Posted: <strong>Tue Apr 09, 2013 3:13 pm</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">I decided to post the code, maybe someone can help? I am thinking if the fact that I have to create a convex shape from the collision shape can be a problem? I don't know how not to do this.<br>
+I will be glad for any help...
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8969&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void RB_body_convex_sweep_test(rbDynamicsWorld *world, rbRigidBody *object, const float loc_start[3], const float loc_end[3], float v_location[3],  float v_hitpoint[3],  float v_normal[3])
+{
+	btRigidBody *body = object-&gt;body;
+	btCollisionShape *collisionShape = body-&gt;getCollisionShape();
+	if (collisionShape-&gt;isConvex())
+	{
+		btConvexShape* convexShape = (btConvexShape*) collisionShape;		
+		btCollisionWorld::ClosestConvexResultCallback result(btVector3(loc_start[0], loc_start[1], loc_start[2]), btVector3(loc_end[0], loc_end[1], loc_end[2]));
+
+		btQuaternion obRot= body-&gt;getWorldTransform().getRotation();
+		
+		btTransform rayFromTrans;
+		rayFromTrans.setIdentity();
+		rayFromTrans.setRotation(obRot);
+		rayFromTrans.setOrigin(btVector3(loc_start[0], loc_start[1], loc_start[2]));
+
+		btTransform rayToTrans;
+		rayToTrans.setIdentity();
+		rayToTrans.setRotation(obRot);
+		
+		rayToTrans.setOrigin(btVector3(loc_end[0], loc_end[1], loc_end[2]));
+		
+		
+		world-&gt;dynamicsWorld-&gt;convexSweepTest(convexShape, rayFromTrans, rayToTrans, result);
+		if (result.hasHit())
+		{	
+			
+			v_location[0]=result.m_convexFromWorld[0]+(result.m_convexToWorld[0]-result.m_convexFromWorld[0])*result.m_closestHitFraction;
+			v_location[1]=result.m_convexFromWorld[1]+(result.m_convexToWorld[1]-result.m_convexFromWorld[1])*result.m_closestHitFraction;
+			v_location[2]=result.m_convexFromWorld[2]+(result.m_convexToWorld[2]-result.m_convexFromWorld[2])*result.m_closestHitFraction;
+			
+			v_hitpoint[0]=result.m_hitPointWorld[0];
+			v_hitpoint[1]=result.m_hitPointWorld[1];
+			v_hitpoint[2]=result.m_hitPointWorld[2];
+			
+			v_normal[0]=result.m_hitNormalWorld[0];
+			v_normal[1]=result.m_hitNormalWorld[1];
+			v_normal[2]=result.m_hitNormalWorld[2];
+
+		}
+	}
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: sweep body test in blender 3d</h3>
+				<div class="date">Posted: <strong>Tue Apr 16, 2013 1:07 pm</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">I still didn't get any answer here <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+and allraedy have a different question:<br>
+Can the convex sweep test be faster when searching just for first hit instead of all hits? I didn't find out if and how.<br>
+<br>
+but - I realized an interesting thing. Convex sweep against a btGimpactMeshShape is actually a bit faster than against  btBvhTriangleMeshShape...<br>
+and, build time for such shape is many times faster, almost nothing compared to the bvh version...<br>
+<br>
+all measurments have been done inside of blender, so it may be blender specific, I have to still find what kind of broadphase blender uses.<br>
+<br>
+I will be glad for ANY answer <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> since It seems to me I am talking to myself on this forum. Maybe I am asking wrong questions?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

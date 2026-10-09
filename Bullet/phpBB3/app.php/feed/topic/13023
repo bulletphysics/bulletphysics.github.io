@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13023" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-07-02T19:27:17+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13023</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-07-02T19:27:17+00:00</updated>
+
+		<published>2020-07-02T19:27:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43010#p43010</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43010#p43010"/>
+		<title type="html"><![CDATA[Re: When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43010#p43010"><![CDATA[
+<strong class="text-strong">(1)</strong> Your Bullet libraries (LinearMath, specifically) must be compiled with:<br><div class="codebox"><p>Code: </p><pre><code>-DBT_ENABLE_PROFILE</code></pre></div>This may mean you need to compile the libs from source and add that option.<br><br><strong class="text-strong">(2)</strong> You wouldn't want to <strong class="text-strong">dumpAll()</strong> every step because that would make your simulation much slower than it already is, and would flood your stdout.  So instead you would rig a trigger to only dump on command, or every once in a while.<br><br><strong class="text-strong">(3)</strong> You want to reset before the step, and then <strong class="text-strong">dumpAll()</strong> right after.  So the code might look something like this:<br><div class="codebox"><p>Code: </p><pre><code>CProfileManager::Reset();world-&gt;stepSimulation(deltaTime);if (dump_stats_next_step) {    CProfileManager::Increment_Frame_Counter();    CProfileManger::dumpAll();    dump_stats_next_step = false;} </code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu Jul 02, 2020 7:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[water]]></name></author>
+		<updated>2020-07-02T05:34:13+00:00</updated>
+
+		<published>2020-07-02T05:34:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43009#p43009</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43009#p43009"/>
+		<title type="html"><![CDATA[Re: When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43009#p43009"><![CDATA[
+I found that the model I imported was composed of 15000 vertices, that is, 5000 faces. I think it is because there are too many faces that make it run slowly. I reprocessed the model, set the model to collapse, and now the faces are reduced to 3000. I tried to run it, and it was a lot faster.<br><br>In addition, I saw in the user manual that "The profiling feature can be switched off by defining #define BT_NO_PROFILE 1 in <br>Bullet/src/LinearMath/btQuickProf.h  "but I still can't use cprofilemanager:: dumpall() after adding the header file btquickprof. h; <br>Did I use the wrong place? Can you point it out for me? thank you<div class="codebox"><p>Code: </p><pre><code>for (int i = 0; i &lt; numManifolds; i++){btTransform trans;btPersistentManifold * contactManifold = mp_btDynamicsWorld-&gt;getDispatcher()-&gt;getManifoldByIndexInternal(i);int numContacts = contactManifold-&gt;getNumContacts();if (numContacts &gt; 0){cerr &lt;&lt; "get" &lt;&lt; endl;}}mp_btDynamicsWorld-&gt;stepSimulation(1.f / 60.f, 10);CProfileManager::dumpAll();</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13653">water</a> — Thu Jul 02, 2020 5:34 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-07-02T03:21:40+00:00</updated>
+
+		<published>2020-07-02T03:21:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43008#p43008</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43008#p43008"/>
+		<title type="html"><![CDATA[Re: When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43008#p43008"><![CDATA[
+If you actually follow through with the <strong class="text-strong">CProfileManager</strong> stuff then you would get an idea as to where the bottlenecks are and how much time is spent in the various steps of the simulation.  This would help you solve your problem, and also help you determine if you are actually fixing it with any workarounds.<br><br>Some workarounds that occur to me:<br><br><strong class="text-strong">(1)</strong> Simplify your mesh as much as possible.  Use fewer triangles.<br><br><strong class="text-strong">(2)</strong> Break your mesh into multiple meshes.  Right now your mesh has a big bounding box and its triangles are rather sparse in that box.  Break your mesh into chunks such that each chunk's bounding box is more cube-like.  I suspect this could lead to better performance because the bounding volume hierarchies (BVH) used in the <strong class="text-strong">btBvhTriangleMeshShape</strong> (which I assume you are using) will be simpler.<br><br><strong class="text-strong">(3)</strong> Take smaller sub-steps and don't run in real-time.  Run your simulation over-night.  Dunno if this is possible for your usage case.<br><br><strong class="text-strong">(4)</strong> Change the scale of your simulation.  I don't know how small/big your mesh is, but Bullet works best when objects are on the order of 1-10 meters, so to optimize against margin/tunelling/penetration artifacts (which can also introduce CPU overhead) your balls and the mesh triangles should be in that range.<br><br><strong class="text-strong">(5)</strong> Buy a really expensive machine with lots of RAM.  Dunno how much this would help, but I'd be interested in hearing about your results.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu Jul 02, 2020 3:21 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[water]]></name></author>
+		<updated>2020-07-02T01:08:12+00:00</updated>
+
+		<published>2020-07-02T01:08:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43005#p43005</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43005#p43005"/>
+		<title type="html"><![CDATA[Re: When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43005#p43005"><![CDATA[
+In other posts, you mentioned the reason why my program will get stuck. What should I do to avoid it. Thank you very much<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13653">water</a> — Thu Jul 02, 2020 1:08 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-07-01T14:36:39+00:00</updated>
+
+		<published>2020-07-01T14:36:39+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43000#p43000</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43000#p43000"/>
+		<title type="html"><![CDATA[Re: When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43000#p43000"><![CDATA[
+You have <strong class="text-strong">#include</strong> the right header file to obtain the <strong class="text-strong">CProfileManager</strong> declarations.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Jul 01, 2020 2:36 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[water]]></name></author>
+		<updated>2020-07-01T07:01:06+00:00</updated>
+
+		<published>2020-07-01T07:01:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42998#p42998</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42998#p42998"/>
+		<title type="html"><![CDATA[Re: When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42998#p42998"><![CDATA[
+I have encountered this problem, can you tell me what I should do? thank you<div class="codebox"><p>Code: </p><pre><code>CProfileManager::dumpAll（）;</code></pre></div>Error2error C2653: 'CProfileManager' : is not a class or namespace name<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13653">water</a> — Wed Jul 01, 2020 7:01 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-07-01T04:28:42+00:00</updated>
+
+		<published>2020-07-01T04:28:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42997#p42997</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42997#p42997"/>
+		<title type="html"><![CDATA[Re: When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42997#p42997"><![CDATA[
+How many small balls are you talking about?  What are the parameters of the hardware you're using?<br><br>You might be running into the limits of Bullet on your system.  There is a way to obtain detailed stats about where time is being spent inside the <strong class="text-strong">stepSimulation()</strong> context, which would help you identify your bottleneck.  For info about how to do it: search for <strong class="text-strong">CProfileManager</strong> in these forums.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Jul 01, 2020 4:28 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[water]]></name></author>
+		<updated>2020-07-01T03:01:19+00:00</updated>
+
+		<published>2020-07-01T03:01:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42996#p42996</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42996#p42996"/>
+		<title type="html"><![CDATA[When the rigid body becomes more, the program becomes stuck]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42996#p42996"><![CDATA[
+I want to achieve the collision effect of small balls, but I found that when I increase the number of small balls, the program becomes stuck. What should I do to solve this problem? Thank you very much<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13653">water</a> — Wed Jul 01, 2020 3:01 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

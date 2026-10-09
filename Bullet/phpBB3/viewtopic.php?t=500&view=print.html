@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet on GPU</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet on GPU</h2>
+		<p><a href="viewtopic.php%3Ft=500.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=500</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>9</strong></div>
+					<div class="post">
+				<h3>Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Fri Sep 01, 2006 4:45 pm</strong></div>
+				<div class="author">by <strong>cippyboy</strong></div>
+				<div class="content">By the way, I saw an NVidia showcase that presents Physics on the GPU <a href="http://developer.download.nvidia.com/presentations/2006/siggraph/gpu_physics-siggraph-06.pdf" class="postlink">http://developer.download.nvidia.com/pr ... aph-06.pdf</a> and says that Havok can already do that.<br>
+<br>
+Are there any plans in that matter for Bullet ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 01, 2006 6:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Currently I'm working on a Playstation 3 optimized (SPU) version of parts of Bullet. This will only be available to licenced Playstation 3 developers. <br>
+<br>
+The experience in work on parallelization which is involved in this effort might help in a future GPU version. However, a lot of simplifications are needed. <br>
+<br>
+A open source parallel version is under construction. A multi-core version will be developers before a GPU version. Can you offer any help in GPU development?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 01, 2006 10:06 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>A multi-core version will be developers before a GPU version. Can you offer any help in GPU development?</div></blockquote>
+
+I've done a *ton* of shader work using GLSL and Cg on nVidia hardware for graphics - but sadly, I know very little about physics.   Maybe some cooperative investigation is needed.<br>
+<br>
+Working with shaders is a deceptive thing - at first sight, there is a lot of familiar C-like stuff and it's easy to think of this as "just another CPU - but faster" - when in fact, the parallelism and forward-only data flow with no memory from one run of the shader to the next makes it a very different proposition.<br>
+<br>
+What does the 'inner loop' look like for bullet?  Where does all the time go?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 01, 2006 10:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>A multi-core version will be developers before a GPU version. Can you offer any help in GPU development?</div></blockquote>
+
+I've done a *ton* of shader work using GLSL and Cg on nVidia hardware for graphics - but sadly, I know very little about physics.   Maybe some cooperative investigation is needed.<br>
+<br>
+Working with shaders is a deceptive thing - at first sight, there is a lot of familiar C-like stuff and it's easy to think of this as "just another CPU - but faster" - when in fact, the parallelism and forward-only data flow with no memory from one run of the shader to the next makes it a very different proposition.<br>
+<br>
+What does the 'inner loop' look like for bullet?  Where does all the time go?</div></blockquote>
+
+That sounds great.<br>
+Well, there is a couple of innerloops:<br>
+1) collision detection/GJK (too complicated as a starting point, best reserve as last step. A rough approximation/voxelization of an object into cubes/sphere would be good)<br>
+2) sequential impulse: this is a good one, but data needs to be re-arranged etc. this gives a 'texture' of new velocities.<br>
+<br>
+3) update of new positions (given this velocity-texture) and rendering of all objects<br>
+<br>
+It would be good to start with the last one, which is easiest: position update and the rendering of multiple rigidbodies on the GPU.<br>
+<br>
+The big trick is how to do such update+rendering loop ON the GPU, without sending the updated transforms back to main memory.<br>
+<br>
+So say, we have a texture that contains all world transforms, new velocities, and given a fixed(constant) timestep, for an array of rigid bodies, how can this be done? Perhaps this requires undocumented extensions? If you don't know the answer, I can try on gpgpu.org...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 12:11 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">The sort of thing we can try to do is to put all of the data for all of the objects into a bunch of texture maps down on the card.<br>
+<br>
+So you might have positions in one, velocities in another, accellerations in a third, forces, masses - and so on.  These don't take up much space and you can pack each set of data into a square texture map.   On modern GPU's, you can have floating point textures and do floating point throughout the rendering pilpeline...but double precision is not possible.<br>
+<br>
+Now you can write a shader that calculates the new velocity given the old velocity and the current accelleration - and by drawing a polygon whos area is the same as the number of objects, you generate a bunch of new velocities.  You can do rendering into a floating point texture map - so it's easy to render the new velocities into a texture - by using that texture next time around you can (in principle) keep the velocities on the card without ever having to pull them back onto the CPU.  The speed of the hardware is such that you could update millions of velocities and positions in tiny amounts of time.<br>
+<br>
+Then you could load another shader to calculate position from velocities or accellerations from forces and masses - whatever.<br>
+<br>
+The point is that so long as you avoid loops and conditionals, you can arrange to process thousands of objects in very short order.   However, if you only have a dozen or so objects, the overheads would utterly swamp the benefits.  So bulk update of fairly mindless properties of large numbers of objects is perfect for GPU accelleration.<br>
+<br>
+Collision detection is going to require some more careful thinking though it's not obvious how you map it onto the kind of architectures that GPU's have.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 12:12 am</strong></div>
+				<div class="author">by <strong>cippyboy</strong></div>
+				<div class="content">I don't think I can help with code, I don't get along too well with foreign code, I tryed once with a friend and we ended up doing separate things.<br>
+<br>
+Regarding the comment above, the textures have to be in a float-ing format, supporting GL_ARB_texture_float  (while most hardware only has RGB8 textures, and not even my GeForce 6200 has it, you'd probably need something high-end, like a GeForce6600 as a minimum).<br>
+<br>
+And... since you have textures and need to do something with them, that computation is done in the pixel shader, getting that data out might be a hard task but considering that the whole physics system would just equal the rendering process for just one object, it seems like a fair deal.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 12:22 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>The sort of thing we can try to do is to put all of the data for all of the objects into a bunch of texture maps down on the card.<br>
+<br>
+So you might have positions in one, velocities in another, accellerations in a third, forces, masses - and so on.  These don't take up much space and you can pack each set of data into a square texture map.   On modern GPU's, you can have floating point textures and do floating point throughout the rendering pilpeline...but double precision is not possible.<br>
+<br>
+Now you can write a shader that calculates the new velocity given the old velocity and the current accelleration - and by drawing a polygon whos area is the same as the number of objects, you generate a bunch of new velocities.  You can do rendering into a floating point texture map - so it's easy to render the new velocities into a texture - by using that texture next time around you can (in principle) keep the velocities on the card without ever having to pull them back onto the CPU.  The speed of the hardware is such that you could update millions of velocities and positions in tiny amounts of time.<br>
+<br>
+Then you could load another shader to calculate position from velocities or accellerations from forces and masses - whatever.<br>
+<br>
+The point is that so long as you avoid loops and conditionals, you can arrange to process thousands of objects in very short order.   However, if you only have a dozen or so objects, the overheads would utterly swamp the benefits.  So bulk update of fairly mindless properties of large numbers of objects is perfect for GPU accelleration.<br>
+<br>
+Collision detection is going to require some more careful thinking though it's not obvious how you map it onto the kind of architectures that GPU's have.</div></blockquote>
+
+We better leave complicated collision detection for later, perhaps we can start with just spheres, as a prototype.<br>
+<br>
+But the main issue I mentioned is not addressed yet:<br>
+<br>
+How can you render those objects on the GPU without sending the transforms back to main memory?<br>
+Say we have 10000 rigidbodies with update position (inside a texture), all residing in GPU memory. Is there a way to 'loop' over all objects and render them with updated worldtransform, without ever sending those transforms to main memory?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 1:42 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Regarding the comment above, the textures have to be in a float-ing format, supporting GL_ARB_texture_float  (while most hardware only has RGB8 textures, and not even my GeForce 6200 has it, you'd probably need something high-end, like a GeForce6600 as a minimum).</div></blockquote>
+
+Yes - this is all dependent on having fairly recent hardware - I have a 6800 ultra at home and a 7900 at work - they both do float textures.   I suspect you can get "half-float" out of a 6600 - but I doubt that 16 bit floating point is gonna cut it for physics code.<br>
+
+<blockquote class="uncited"><div>And... since you have textures and need to do something with them, that computation is done in the pixel shader, getting that data out might be a hard task but considering that the whole physics system would just equal the rendering process for just one object, it seems like a fair deal.</div></blockquote>
+
+The trick is to try not to get the data out.  Since you can read texture maps in the vertex shader on these later cards, you could do the graphics render of all the small 'decorative' objects using the results of the physics without even getting the positions back into the CPU end of things.  However, if collision detection can't be automated then you need positions and such like back in the CPU anyway. But reading textures back out of the card is do-able - and the CPU probably only needs the position data for a few hundred objects in most cases.<br>
+<br>
+The problem that many graphics cards can't run this stuff will solve itself eventually - and  for a middleware project like this one, it's wise to aim for hardware that's a little ahead of the curve so that by the time you get the work done, the hardware has just caught up.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 2:02 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite><blockquote class="uncited"><div>Regarding the comment above, the textures have to be in a float-ing format, supporting GL_ARB_texture_float  (while most hardware only has RGB8 textures, and not even my GeForce 6200 has it, you'd probably need something high-end, like a GeForce6600 as a minimum).</div></blockquote>
+
+Yes - this is all dependent on having fairly recent hardware - I have a 6800 ultra at home and a 7900 at work - they both do float textures.   I suspect you can get "half-float" out of a 6600 - but I doubt that 16 bit floating point is gonna cut it for physics code.<br>
+
+<blockquote class="uncited"><div>And... since you have textures and need to do something with them, that computation is done in the pixel shader, getting that data out might be a hard task but considering that the whole physics system would just equal the rendering process for just one object, it seems like a fair deal.</div></blockquote>
+
+The trick is to try not to get the data out.  Since you can read texture maps in the vertex shader on these later cards, you could do the graphics render of all the small 'decorative' objects using the results of the physics without even getting the positions back into the CPU end of things.  However, if collision detection can't be automated then you need positions and such like back in the CPU anyway. But reading textures back out of the card is do-able - and the CPU probably only needs the position data for a few hundred objects in most cases.<br>
+<br>
+The problem that many graphics cards can't run this stuff will solve itself eventually - and  for a middleware project like this one, it's wise to aim for hardware that's a little ahead of the curve so that by the time you get the work done, the hardware has just caught up.</div></blockquote>
+
+Let's assuming the collision detection is already on GPU, and ignoring it for now. Eventually, the broadphase could be done on CPU, so we need to send back the AABB information to main memory. This is fairly small datasize, even for 10k bodies less then half a megabyte.<br>
+<br>
+How would you do the rendering on the GPU? Could you work on a prototype for this? Just the velocity/position update and rendering, without sending back the transforms.  Are there any GPU samples that do this? (more complicated then just particles, preferably)<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 2:57 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+But the main issue I mentioned is not addressed yet:<br>
+<br>
+How can you render those objects on the GPU without sending the transforms back to main memory?<br>
+Say we have 10000 rigidbodies with update position (inside a texture), all residing in GPU memory. Is there a way to 'loop' over all objects and render them with updated worldtransform, without ever sending those transforms to main memory?</div></blockquote>
+
+Yes - you can.  On modern hardware, you can read texture maps from the vertex processing pipeline.  So you could (in principle) send down the untransformed vertices - and the "object identifier" (which in reality is the "texture coordinate" of the position/rotation data for that object) - then you could transform the object using the data that only the physics code down in the GPU ever knows about...but from a practical application perspective, it's hard to imagine that the CPU wouldn't want to know!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 3:36 am</strong></div>
+				<div class="author">by <strong>cippyboy</strong></div>
+				<div class="content">Heh, I don't have the WGL_ARB_render_texture either.<br>
+<br>
+I think it would go like this : First, generate texture maps with positions/velocities/etc in a square texture or not (if you have GL_ARB_texture_non_power_of_two), then render a quad in ortho mode of the exact 2D dimensions of the texture (say a 8x8 pixels quad) this will get you exact mapping, at each pixel you'll get the data you put in (no interpolation), then in the pixel shader, compute stuff, and render to a texture but...<br>
+<br>
+1) you can't write back into the textures the new positions/velocities (as far as I know, although it would be cool)<br>
+2) you'd need updated values, so rendering just to one texture won't suffice, you'll need to do that for every value you wanna save (render to a texture of updated positions, render to a texture of updated velocities,etc)<br>
+<br>
+The good thing is that you have all the data you need at each object/pixel, just by knowing the X,Y of the texture and the number of objects (presumably the square texture is not all filled) given by a shader parameter,you could even loop trough every other object (that if GLSL support a 'for' loop -I didn't worked with it,yet), if not, you'd have to dynamically generate the shader with computations for all the objects, like 64 times the same code, just different texcoords, and about texcoords, let's say you have a 8x8 texture, then at each 1/8 units there's an object. One more cool thing about that would be that you could have hardware interpolation (between texcoord 0/8 and 1/8 you can get 0.5/8 with interpolated everything).<br>
+<br>
+I'm sorry if I was wrong somewhere, just my opinion.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 3:58 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+Yes - you can. On modern hardware, you can read texture maps from the vertex processing pipeline. So you could (in principle) send down the untransformed vertices - and the "object identifier" (which in reality is the "texture coordinate" of the position/rotation data for that object) - then you could transform the object using the data that only the physics code down in the GPU ever knows about...but from a practical application perspective, it's hard to imagine that the CPU wouldn't want to know!
+</div></blockquote>
+
+You could upload a 2D texture that encodes both broa2dphase overlap, as well as wether you want feedback for that pair (compressed as bits, a 1024x1024 32 bit texture can deal with 32k objects)<br>
+Then only send feedback for those pairs. That could reduce read-back bandwidth. Without feedback, you have FX physics, with you have gameplay physics (excluding callbacks).<br>
+We could split the process in two stages on GPU.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=500&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>GPU-Pipeline:
+CPU: broadphase CD, GPU: mid/narrowphase CD, read back collision callbacks to CPU, GPU: constrains solving, GPU: integration, GPU: rendering, readback new AABB's for broadphase to main mem
+</code></pre></div>
+
+Steve, what about such rendering sample/prototype, doing the two stages (GPU integration and GPU rendering)?<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 5:46 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+You could upload a 2D texture that encodes both broa2dphase overlap, as well as wether you want feedback for that pair (compressed as bits, a 1024x1024 32 bit texture can deal with 32k objects)<br>
+Then only send feedback for those pairs. That could reduce read-back bandwidth. Without feedback, you have FX physics, with you have gameplay physics (excluding callbacks).
+</div></blockquote>
+
+Yeah - but reading back odd random pixels out of the frame buffer is really inefficient - the setup overhead to read back is high.  Conversely, once you have it set up, you can read back lots of pixels at gigabytes/second type bandwidths - so long as they are in a nice neat rectangular area of the screen.<br>
+<br>
+It would certainly be nice if the application could split "decorative" items from "important to gameplay" items so that the former don't need to be read back.<br>
+
+<blockquote class="uncited"><div>Steve, what about such rendering sample/prototype, doing the two stages (GPU integration and GPU rendering)?</div></blockquote>
+
+I'll see what I can do.   I guess you need a nice simple library where you have:<br>
+<br>
+* Compile shader source code (returns a 'handle' to the shader).<br>
+* Allocate an NxM texture (returns a handle).<br>
+* Populate some section of a specified texture with floating point data.<br>
+* Run a specified shader on a specified set of textures - leaving the results in another specified texture.<br>
+* Read back a texture into the CPU.<br>
+<br>
+Seems like that's a good starting point.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 6:25 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>cippyboy wrote:</cite>Heh, I don't have the WGL_ARB_render_texture either.</div></blockquote>
+
+You can always copy from the frame buffer into a texture without the data being returned to the CPU.  It's not as fast as render to texture - but our textures are likely to be microscopic compared to most 3D graphic textures.<br>
+
+<blockquote class="uncited"><div>I think it would go like this : First, generate texture maps with positions/velocities/etc in a square texture or not (if you have GL_ARB_texture_non_power_of_two), then render a quad in ortho mode of the exact 2D dimensions of the texture (say a 8x8 pixels quad) this will get you exact mapping, at each pixel you'll get the data you put in (no interpolation), then in the pixel shader, compute stuff, and render to a texture but...
+</div></blockquote>
+
+Yeah.<br>
+
+<blockquote class="uncited"><div>
+1) you can't write back into the textures the new positions/velocities (as far as I know, although it would be cool)
+</div></blockquote>
+
+No - you can't.  But (al least on most hardware) you can render into a texture instead of onto the screen - so you have to segment your math into simple chunks - you need to run:  velocity += accelleration * time  on all million moving objects at once - then do:  position += velocity * time  on all million objects in parallel.   Each step involves a lot of messing around switching textures, changing shaders and figuring out what polygon to draw - but since you're doing the work on a million objects at once, these overheads are negligable.   The hassle is in structuring your code this way...it's a very different way of thinking.<br>
+
+<blockquote class="uncited"><div>
+The good thing is that you have all the data you need at each object/pixel, just by knowing the X,Y of the texture and the number of objects (presumably the square texture is not all filled) given by a shader parameter,you could even loop trough every other object (that if GLSL support a 'for' loop -I didn't worked with it,yet),
+</div></blockquote>
+
+You have a deep misunderstanding of what the shaders do.   You actually load a PAIR of GLSL shader programs and draw your polygon(s).  The first shader program runs on every vertex of the polygon(s) - and is therefore of little interest to us here.  The second shader runs once from the start of 'main' until it falls off the bottom of main FOR EVERY PIXEL THAT THE POLYGON TOUCHED ON THE SCREEN.<br>
+<br>
+(The first shader is called the "Vertex Shader" - the second is called the "Fragment Shader" because technically it runs on polygon fragments - which just happen to be pixels)<br>
+<br>
+So if you have (say) a 10x10 pixel square - the Vertex shader runs four times - once for each of the four vertices.  Then the hardware chops up the resulting polygon into pixel-sized fragments and runs the Fragment Shader once for each of the 100 pixels that the polygon touched.   So there is generally no 'looping' involved in your GLSL code.  The 'main()' of the fragment shader runs from start until completion for every singly pixel!<br>
+<br>
+Furthermore, whilst you *can* have loops and if/then/else statements in your shaders, these things are HORRIBLY inefficient and must be avoided wherever possible.  The hardware of the fragment shaders consists of lots and lots of very simple CPU's.  These are all fed with the same machinecode instructions in lock-step.  So if you did write an "if (test) then_code ; else else_code ; - then what actually happens is that all of the dozens of little CPU's evaluate the 'test' code.  Those that get a "FALSE" result effectively write-protect all of their on-board memory.   Now, all of those CPU's run the "then_code" (even the ones that got a "FALSE" result from the test) - but the execution of that code has no effect on the ones for which the test failed.  When we hit the "else" clause, all of the CPU's flip their write-protect status flags - then all of the CPU's run the "else_code" - so the ones that failed the initial if test will be able to change their registers - those that already executed the 'then' code will be wasting time.<br>
+<br>
+So you can see that you should NEVER us an 'if' statement to try to skip over code you don't need to execute - because the processors will execute it anyway!<br>
+<br>
+Now - the implication for 'for' loops is that the compiler needs to unroll *all* loops so that the shaders can all execute all of the iterations.   So, if you write:<br>
+<br>
+   j = 6 ;<br>
+<br>
+   for ( i = 0 ; i &lt; 100 ; i++ )<br>
+     if ( i &gt;= j ) break ;<br>
+<br>
+...then all of your CPU's will take run a hundred loop iterations to execute this code - even though you'd think that none of them went past iteration number 6!<br>
+<br>
+The numerical effect of these restrictions is never obvious to the programmer - GLSL is just like C or C++ or whatever - everything works as you'd expect.   The problem is that if you aren't aware of the unusual hardware architecture, you can end up writing some truly, amazingly inefficient programs!<br>
+<br>
+However, the nature of the things that GLSL is useful for means that almost all programs are about 10 lines long and have no loops or conditionals in them at all.<br>
+
+<blockquote class="uncited"><div>
+ if not, you'd have to dynamically generate the shader with computations for all the objects,</div></blockquote>
+
+Dynamically generating code is painful because it has to be compiled from source code.  <br>
+<br>
+There is an ancient OpenGL machinecode language - but it's becoming obsolete so fast that you'd have to be crazy to write new code using it.   The GLSL compiler is built into the OpenGL driver - and you pass shaders to it as source code in string variables and it loads the code into the hardware and hands you back a handle to it so you can decide which pair of shaders you want to run each time you draw a bunch of polygons.<br>
+<br>
+However, you can pre-compile a bazillion little shaders on startup and select between them at runtime.   An entire shader is likely to be something like:<br>
+<br>
+void main ( sampler2D old_velocity,   // A "sampler2D" is a 2D texture map handle<br>
+                   sampler2D mass,<br>
+                   sampler2D force, <br>
+                   varying vec2 texcoord,   // A 'varying' is automatically interpolated<br>
+                                                           // across the polygon<br>
+                  uniform float delta_t )  // A 'uniform' is a variable that's<br>
+                                                     // the same for the entire polygon<br>
+{<br>
+  vec3 accelleration = texture2D ( force, texcoord ).xyz /<br>
+                                    texture2D ( mass, texcoord ).x ;<br>
+  vec3 new_velocity = texture2D (old_velocity, texcoord) + accelleration * delta_t  ;<br>
+  gl_color . r = new_velocity ;<br>
+}<br>
+<br>
+...so you can have a LOT of shaders!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 02, 2006 7:59 pm</strong></div>
+				<div class="author">by <strong>cippyboy</strong></div>
+				<div class="content">[SteveBaker] Dude, I know what shaders are, I didn't need THAT lesson. And regarding the dynamic shader, I did write such a thing, only in something like GL_ARB_fragment_program and it's not all that complicated, it's just like creating text at run-time, and it simulated all of my normal OpenGL calls.<br>
+
+<blockquote class="uncited"><div>The good thing is that you have all the data you need at each object/pixel, just by knowing the X,Y of the texture and the number of objects (presumably the square texture is not all filled) given by a shader parameter,you could even loop trough every other object (that if GLSL support a 'for' loop -I didn't worked with it,yet),</div></blockquote>
+
+To make things more clear I meant this<br>
+2D quad render calls in ortho mode :<br>
+glVertex2f(0,0);glTexCoord2f(0,0);<br>
+glVertex2f(8,0);glTexCoord2f(1,0);<br>
+glVertex2f(0,8);glTexCoord2f(0,1);<br>
+glVertex2f(8,8);glTexCoord2f(1,1); <br>
+<br>
+And the picture I did in paint <a href="http://www.relativeengine.freegsm.ro/physics_on_gpu_fp.jpg" class="postlink">http://www.relativeengine.freegsm.ro/ph ... gpu_fp.jpg</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>9</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

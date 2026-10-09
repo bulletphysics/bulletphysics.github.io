@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; collision detection between rigidbody and softbody</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>collision detection between rigidbody and softbody</h2>
+		<p><a href="viewtopic.php%3Ft=13185.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13185</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>collision detection between rigidbody and softbody</h3>
+				<div class="date">Posted: <strong>Tue Apr 06, 2021 7:19 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">I want to realize the collision between rigidbody and softbody, but the collision has not been detected. This is my code, can you tell me where I am going wrong? thank you very much.<br>
+<br>
+softbody
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13185&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	const btVector3 c[] = {
+		btVector3(-1, -1, -1),
+		btVector3(+1, -1, -1),
+		btVector3(-1, +1, -1),
+		btVector3(+1, +1, -1),
+		btVector3(-1, -1, +1),
+		btVector3(+1, -1, +1),
+		btVector3(-1, +1, +1),
+		btVector3(+1, +1, +1)
+	};
+
+	//sphere1 = btSoftBodyHelpers::CreateFromTriMesh(softBodyWorldInfo, (btScalar*)pointss, &amp;triangles[0], triangles.size()/3);
+	//sphere1 = btSoftBodyHelpers::CreateEllipsoid(softBodyWorldInfo,btVector3(0, 0, 0),btVector3(1, 1, 1) * 60,10000);
+	//m_softBodySolver = softbodySolver;
+	
+	sphere = btSoftBodyHelpers::CreateFromConvexHull(softBodyWorldInfo, c, 8, true);
+	sphere-&gt;setSoftBodySolver(softbodySolver);
+	
+
+
+	btTransform strans;
+	strans.setIdentity();
+	strans.setOrigin(btVector3(0, -10, 0));
+	sphere-&gt;transform(strans);
+	
+
+	sphere-&gt;m_cfg.kVC = 0.5;
+	btSoftBody::Material* pSpMat = sphere-&gt;appendMaterial();
+	sphere-&gt;m_cfg.kDP = 0.0;
+	sphere-&gt;m_cfg.kDF = 0.0;
+	sphere-&gt;m_cfg.kMT = 0.0;
+	sphere-&gt;m_cfg.kCHR = 0.0;
+	sphere-&gt;m_cfg.kKHR = 0.0;
+	sphere-&gt;m_cfg.kSHR = 0.0;
+	sphere-&gt;m_cfg.collisions = btSoftBody::fCollision::SDF_RS + btSoftBody::fCollision::CL_SS + btSoftBody::fCollision::CL_SELF;
+	sphere-&gt;m_cfg.piterations = 1;
+	pSpMat-&gt;m_kLST = 0.1;
+	sphere-&gt;m_cfg.collisions += btSoftBody::fCollision::CL_RS;
+	sphere-&gt;setPose(true, true);
+	sphere-&gt;generateBendingConstraints(2);
+	sphere-&gt;randomizeConstraints();
+	sphere-&gt;getCollisionShape()-&gt;setMargin(0.5);	
+	mp_btDynamicsWorld-&gt;addSoftBody(sphere);
+	cout &lt;&lt; 1;
+</code></pre></div>
+
+rigidbody
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13185&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btConvexHullShape * mp_collisionShape = new btConvexHullShape((btScalar*)points, pic.F.size() * 3);
+
+	collisionShapes.push_back(mp_collisionShape);
+	btTransform mp_ballTransform;
+	mp_ballTransform.setIdentity();
+	//ballTransform.setOrigin(btVector3(13, 10, 0)); 
+	mp_ballTransform.setOrigin(btVector3(x, y, z)); 
+	btScalar mass(01.0f);
+	btQuaternion mp_quaternion = btQuaternion(yaw * RADIANS_PER_DEGREE, pich * RADIANS_PER_DEGREE, roll* RADIANS_PER_DEGREE);
+	//btQuaternion quaternion = btQuaternion(sin(PI / 4), 0, 0, cos(PI / 4));
+	mp_ballTransform.setRotation(mp_quaternion);
+
+	btDefaultMotionState* mp_ballMotionState = new btDefaultMotionState(mp_ballTransform);
+	bool mp_isDynamic = (mass != 0.f);
+	btVector3 localInertia(0, 0, 0);
+	if (mp_isDynamic)
+		mp_collisionShape-&gt;calculateLocalInertia(mass, localInertia);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, mp_ballMotionState, mp_collisionShape, localInertia);
+	body = new btRigidBody(rbInfo);
+	body-&gt;setRestitution(01.00f);
+	body-&gt;setActivationState(DISABLE_DEACTIVATION);
+
+	body-&gt;saveKinematicState(timeStep);
+	//compound-&gt;addChildShape(ballTransform, collisionShape);
+	mp_btDynamicsWorld-&gt;addRigidBody(body);
+</code></pre></div>
+
+dispaly
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13185&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	for (int j = mp_btDynamicsWorld-&gt;getNumCollisionObjects() - 1; j &gt;= 0; j--)
+	{
+
+		btCollisionObject* obj = mp_btDynamicsWorld-&gt;getCollisionObjectArray()[j];
+		btRigidBody* body = btRigidBody::upcast(obj);
+		body-&gt;getCenterOfMassPosition();
+		btSoftBody* softBody = btSoftBody::upcast(obj);
+		btTransform trans;
+		if (body &amp;&amp; body-&gt;getMotionState())
+			body-&gt;getMotionState()-&gt;getWorldTransform(trans);
+		else
+			trans = obj-&gt;getWorldTransform();
+		printf("world pos object %d = %f,%f,%f\n"
+			, j, float(trans.getOrigin().getX()), float(trans.getOrigin().getY()), float(trans.getOrigin().getZ()));
+
+
+
+		if (j == 1)
+		{
+			glPushMatrix();
+			glTranslated(float(trans.getOrigin().getX()), float(trans.getOrigin().getY()), float(trans.getOrigin().getZ()));
+			DrawMesh();
+			glPopMatrix();
+
+
+		}
+		else if (j == 0)
+		{
+			glPushMatrix();
+			glTranslated(float(trans.getOrigin().getX()), float(trans.getOrigin().getY()), float(trans.getOrigin().getZ()));
+			DrawBulletObject();
+			glPopMatrix();
+		}
+
+
+
+
+		int numManifolds = mp_btDynamicsWorld-&gt;getDispatcher()-&gt;getNumManifolds();
+		for (int i = 0; i &lt; numManifolds; i++)
+		{
+			btTransform trans;
+			btPersistentManifold * contactManifold = mp_btDynamicsWorld-&gt;getDispatcher()-&gt;getManifoldByIndexInternal(i);
+			int numContacts = contactManifold-&gt;getNumContacts();
+			if (numContacts &gt; 0)
+			{
+				cerr &lt;&lt; "get it" &lt;&lt; endl;
+			}
+		}
+		mp_btDynamicsWorld-&gt;stepSimulation(1.f / 120.f, 10);
+		softBodyWorldInfo.m_sparsesdf.GarbageCollect();
+		update();
+	}
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

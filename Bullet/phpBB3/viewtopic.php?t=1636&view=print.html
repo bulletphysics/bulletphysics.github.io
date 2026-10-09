@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet 2.64 released: all-in-one demos, memory allocators</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet 2.64 released: all-in-one demos, memory allocators</h2>
+		<p><a href="viewtopic.php%3Ft=1636.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1636</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet 2.64 released: all-in-one demos, memory allocators</h3>
+				<div class="date">Posted: <strong>Fri Nov 02, 2007 3:03 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Bullet 2.64 is released.<br>
+<br>
+Main improvements are:<br>
+<br>
+- added all-in-one demo framework using glui, allowing all demos to run within one executable (thanks Erin Catto) <br>
+- Allow user to pass in their own memory (stack and pool) allocators, through collisionConfiguration <br>
+- All memory allocations go through btAlignedAlloc/btAlignedFree. User can override this to verify memory leaks <br>
+- Fixed various memory leaks in SDK. Some demos still need memory cleanup (next versions)<br>
+- fix for one of the constructors of btHingeConstraint Thanks Marcus Hennix<br>
+<br>
+Download: <a href="http://sourceforge.net/project/showfiles.php?group_id=147573" class="postlink">http://sourceforge.net/project/showfile ... _id=147573</a><br>
+<br>
+Enjoy,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.64 released: all-in-one demos, memory allocators</h3>
+				<div class="date">Posted: <strong>Fri Nov 02, 2007 3:24 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Looking good!<br>
+<br>
+Here's a revision for Main.cpp to help with the aspect ratio:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1636&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void Resize(int w, int h)
+{
+	width = w;
+	height = h;
+
+	GLUI_Master.get_viewport_area( &amp;tx, &amp;ty, &amp;tw, &amp;th );
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	double ratio = (double)tw / (double)th;
+
+	gluPerspective( 45.0, ratio, 10.0, 10000.0 );
+	glViewport( tx, ty, tw, th );
+
+	if (demo)
+		demo-&gt;reshape(tw, th);
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.64 released: all-in-one demos, memory allocators</h3>
+				<div class="date">Posted: <strong>Fri Nov 16, 2007 9:35 am</strong></div>
+				<div class="author">by <strong>topcomer</strong></div>
+				<div class="content">I have a small test case in which collisions cease to work after a while. If you take a virgin version of Bullet (2.63 or later), inside movingConcaveDemo replace the functions shootTrimesh() and clientMoveAndDisplay()<br>
+with:<br>
+<br>
+void ConcaveDemo::shootTrimesh(const btVector3&amp; destination)<br>
+{<br>
+if (m_dynamicsWorld)<br>
+{<br>
+float mass = 0.f;<br>
+btTransform startTransform;<br>
+startTransform.setIdentity();<br>
+btVector3 camPos = getCameraPosition();<br>
+startTransform.setOrigin(camPos);<br>
+<br>
+btRigidBody* body = this-&gt;localCreateRigidBody(mass, startTransform,m_trimeshShape);<br>
+<br>
+// Make it kinematic<br>
+body-&gt;setCollisionFlags( body-&gt;getCollisionFlags() |<br>
+btCollisionObject::CF_KINEMATIC_OBJECT );<br>
+body-&gt;setActivationState(DISABLE_DEACTIVATION);<br>
+<br>
+btVector3<br>
+linVel(destination[0]-camPos[0],destination[1]-camPos[1],destination[2]-camPos[2]);<br>
+linVel.normalize();<br>
+linVel*=m_ShootBoxInitialSpeed*0.25;<br>
+<br>
+body-&gt;getWorldTransform().setOrigin(camPos);<br>
+body-&gt;getWorldTransform().setRotation(btQuaternion(0,0,0,1));<br>
+body-&gt;setLinearVelocity(linVel);<br>
+body-&gt;setAngularVelocity(btVector3(0,0,0));<br>
+}<br>
+}<br>
+<br>
+void ConcaveDemo::clientMoveAndDisplay()<br>
+{<br>
+glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);<br>
+<br>
+float dt = float(m_clock.getTimeMicroseconds()) * 0.000001f;<br>
+m_clock.reset();<br>
+m_dynamicsWorld-&gt;stepSimulation(dt);<br>
+<br>
+// Update geometry<br>
+for( int i = 0; i &lt; NUM_VERTICES; i++ )<br>
+gVertices[3*i + 0] += .001;<br>
+<br>
+// Input updated geometry<br>
+if( m_trimeshShape != NULL )<br>
+{<br>
+m_trimeshShape-&gt;postUpdate();<br>
+m_trimeshShape-&gt;updateBound();<br>
+}<br>
+<br>
+renderme();<br>
+<br>
+glFlush();<br>
+glutSwapBuffers();<br>
+}<br>
+<br>
+<br>
+you'll also need to declare m_trimeshShape as btGImpactMeshShape inside ConcaveDemo.h and<br>
+include:<br>
+<br>
+#include "GIMPACT/Bullet/btGImpactShape.h"<br>
+#include "GIMPACT/Bullet/btGImpactCollisionAlgorithm.h"<br>
+<br>
+<br>
+Now use . to shoot 1 bunny and then right click to hit it, you'll see that collisions<br>
+work for a short time then the bunny is penetrated by blocks. Am I doing something wrong?<br>
+<br>
+Thanks,<br>
+Alessio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet 2.64 released: all-in-one demos, memory allocators</h3>
+				<div class="date">Posted: <strong>Wed Nov 28, 2007 9:50 am</strong></div>
+				<div class="author">by <strong>topcomer</strong></div>
+				<div class="content">Just in case one has the same problem, the solution is to change line 44 in btGImpactShape.h from:<br>
+<br>
+typedef btGImpactQuantizedBvh btGImpactBoxSet;<br>
+<br>
+to:<br>
+<br>
+typedef btGImpactBvh btGImpactBoxSet;</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

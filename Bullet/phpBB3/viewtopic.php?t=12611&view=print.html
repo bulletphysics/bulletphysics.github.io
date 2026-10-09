@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Undesired behaviour when dropping cube</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Undesired behaviour when dropping cube</h2>
+		<p><a href="viewtopic.php%3Ft=12611.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12611</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Undesired behaviour when dropping cube</h3>
+				<div class="date">Posted: <strong>Mon Feb 18, 2019 1:09 pm</strong></div>
+				<div class="author">by <strong>robotguy</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I recently started using PyBullet and want to thank you for this awesome piece of software. However, during some trials I found some weird behavior when dropping a simple cube from 100 meters: The velocity seems to stall asymptotically. This probably has to do with some stabilization of the simulation, but I could not find any information on this in the documentation. Could you give me a hint please? I attached the code and a plot.<br>
+<br>
+Thank you in advance.<br>
+<br>
+Best regards<br>
+<img src="https://i.imgur.com/138Oi0g.png" class="postimage" alt="Image"><br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12611&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import pybullet_data
+import numpy as np
+import matplotlib.pyplot as plt
+
+timestep = 1 / 240
+g = -10
+
+physicsClient = p.connect(p.DIRECT)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+p.setGravity(0, 0, g)
+planeId = p.loadURDF("plane.urdf")
+cubeStartPos = [0, 0, 100]
+cubeStartOrientation = p.getQuaternionFromEuler([0, 0, 0])
+boxId = p.loadURDF("cube.urdf", cubeStartPos, cubeStartOrientation)
+
+p.setTimeStep(timestep)
+simulated_velocity_list = []
+physical_velocity_list = []
+time = []
+i = 0
+while True:
+    time.append(i * timestep)
+    physical_velocity_list.append(g * i * timestep)
+    simulated_velocity_list.append(p.getBaseVelocity(boxId)[0][2])
+    if (p.getBasePositionAndOrientation(boxId)[0][2] &lt;= 0.05):
+        print(i * timestep)
+        break
+    p.stepSimulation()
+    i += 1
+
+plt.plot(time, simulated_velocity_list)
+plt.plot(time, physical_velocity_list)
+plt.grid()
+plt.xlabel("Time [s]")
+plt.ylabel("Velocity [mps]")
+plt.legend(["PyBullet", "v=a t"])
+plt.show()
+p.disconnect()
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Undesired behaviour when dropping cube</h3>
+				<div class="date">Posted: <strong>Tue Feb 19, 2019 12:08 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Yes, by default PyBullet adds some damping for stability. You can disable it like this:<br>
+p.changeDynamics(boxId,-1,linearDamping=0, angularDamping=0)<br>
+<br>
+In addition, there is a maximum velocity of 100 units (m/s for linear velocity and radians/sec for angular velocity).<br>
+If this is an issue, you can compile PyBullet from source, and increase m_maxCoordinateVelocity in Bullet/src/BulletDynamics/Featherstone/btMultiBody.cpp</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

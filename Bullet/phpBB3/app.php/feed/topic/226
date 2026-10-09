@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/226" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-01-29T09:43:42+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/226</id>
+
+		<entry>
+		<author><name><![CDATA[lolito]]></name></author>
+		<updated>2006-01-29T09:43:42+00:00</updated>
+
+		<published>2006-01-29T09:43:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=669#p669</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=669#p669"/>
+		<title type="html"><![CDATA[step after closest point detection??]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=669#p669"><![CDATA[
+thank you for your help<br><br>I ll try to do what you say<br><br> <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=417">lolito</a> — Sun Jan 29, 2006 9:43 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-01-28T17:12:54+00:00</updated>
+
+		<published>2006-01-28T17:12:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=668#p668</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=668#p668"/>
+		<title type="html"><![CDATA[step after closest point detection??]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=668#p668"><![CDATA[
+There are roughly 2 different ways you can tackle the contact manifold generation: incrementally, or at once.<br><br>For incrementally:<br>Basically you need a couple of things:<br><br>every collision step:<br><br>1) calculate a new closest point (vclip, or other algo like gjk)<br><br>2) check if this point is already in the contact cache. <br>2a) If you keep track of feature-id's, you can do this very efficient.y. <br>2b) Otherwise use the worldspace distance to check for equality (with a treshold).<br><br>3a) if the point exists do nothing<br>3b) if it is a new point, add it to the contact cache. preferably in local coordinates of both rigidbodies/shapes.<br><br>4) if the contact cache exceed some upper size, reduce.<br>4a) keep the point with the deepest penetration<br>4b) build some kind of heuristic to choose the points that approximate the 2d convex hull best.<br><br>5) after each integration, refresh the contact cache:<br>5a) calculate 2 new worldspace coordinates for each contact point, using the local coordinates in body A and body B, and the new transforms of each body.<br><br>5b) check if the contact is still valid, similar to using (2b).<br><br>You can see the sample implementation here:<br><a href="http://www.continuousphysics.com/Bullet/BulletFull/PersistentManifold_8cpp-source.html" class="postlink">http://www.continuousphysics.com/Bullet ... ource.html</a><br><br>There is some extra heuristic for step 4b and 5b in this implementation.<br>4b: quick appriximation by using triangle with biggest area<br>5b) take the projection onto the normal into account, so even when the distance between the two projections into worldspace exceed the maximum distance treshold, you keep it. This will allow to keep points that cause deeper penetrations. They still break on motion in the contact plane, orthogonal to the normal.<br><br>There is also a paper by Adam and Pierre from Novodex with some variations on this theme:<br><a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/papers/&amp;file=Fast_Contact_Reduction_for_Dynamics_Simulation012_draft9.doc" class="postlink">http://www.continuousphysics.com/ftp/pu ... draft9.doc</a><br><br>For 'at once', which only works if you got feature information like planes, vertices, edges (not for implicit shapes like sphere, cylinders etc).<br>I won't explain too much about this case. ODE uses this for box-box for example, but you can generalize this for convex-convex polyhedra.<br>You can find the two polygons that share the closest point, and that are most parallel (some heuristic here). Then clip all triangles from one polyhedron on this plane, and on the other polygons edges.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Jan 28, 2006 5:12 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lolito]]></name></author>
+		<updated>2006-01-28T09:21:36+00:00</updated>
+
+		<published>2006-01-28T09:21:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=666#p666</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=666#p666"/>
+		<title type="html"><![CDATA[step after closest point detection??]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=666#p666"><![CDATA[
+Hello (sorry for my bad english   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> )  <br><br>I m a beginner who try to make a simple simulator in physic (just with impulsion for the moment)<br><br>I ve implemented the algorithm of Vclip, it works fine and returns me the closest feature beetween two Object<br><br>With this two features i've got the closest points and the normal .<br><br>But the probem is that i ve just one contact point with this method.<br><br>So my problem is how to find all the contact point knowing the closest features??<br><br>I ve an idea but im not very sure:<br>_Compute the 2 convex hull(in 2D) of the point which are on" the separating plane"<br><br>_And Compute the intersection of this two convex hull<br><br><br>Can you tell me what to do , a paper ,an another way to do this ..<br><br><br>Thank you  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=417">lolito</a> — Sat Jan 28, 2006 9:21 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

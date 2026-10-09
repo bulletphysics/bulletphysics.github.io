@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12758" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-01-12T09:22:16+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12758</id>
+
+		<entry>
+		<author><name><![CDATA[FredP]]></name></author>
+		<updated>2022-01-12T09:22:16+00:00</updated>
+
+		<published>2022-01-12T09:22:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43803#p43803</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43803#p43803"/>
+		<title type="html"><![CDATA[Re: Dynamically attached fixed joint is not fix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43803#p43803"><![CDATA[
+It's a really old question but I had the same problem and was able to solve it by increasing the number of solver iterations and the number of substeps.<br><br>See message from Erwin<blockquote class="uncited"><div>Increasing the number of solver iterations, or using a smaller time step, or increase the number of substeps. <br>You can also improve convergence by making the masses more similar, if possible (PGS solver converges slower when large mass differences are present, such as 100 kg and 0.1 kg etc)<br><br>Another option is using a direct solver, but it may have its own issues. See <a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/switchConstraintSolver.py" class="postlink">https://github.com/bulletphysics/bullet ... tSolver.py</a></div></blockquote><a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?f=24&amp;t=12985&amp;p=42901" class="postlink">viewtopic.php?f=24&amp;t=12985&amp;p=42901</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13775">FredP</a> — Wed Jan 12, 2022 9:22 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2019-09-05T14:35:49+00:00</updated>
+
+		<published>2019-09-05T14:35:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42368#p42368</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42368#p42368"/>
+		<title type="html"><![CDATA[Re: Dynamically attached fixed joint is not fix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42368#p42368"><![CDATA[
+Mouse forces are very strong and possibly stronger than the fixed joint constraint forces. It is better to attach a fixed joint as part of the urdf instead of using a constraint.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Sep 05, 2019 2:35 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kapsl]]></name></author>
+		<updated>2019-08-28T07:28:50+00:00</updated>
+
+		<published>2019-08-28T07:28:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42355#p42355</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42355#p42355"/>
+		<title type="html"><![CDATA[Dynamically attached fixed joint is not fix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42355#p42355"><![CDATA[
+Till now we loaded our robot model through urdf. In the same urdf file we had also the gripper and a peg attached to the gripper. This worked fine, everything was rigid.<br>Now we want to change the size of the peg (the tool in the gripper) for every reset. The way we tried this by removing the thing from urdf and dynamically attaching it to the robot with this code: <br><div class="codebox"><p>Code: </p><pre><code>width = 0.025        depth = 0.025        height = 0.085        csId = self._p.createCollisionShape(shapeType=pybullet.GEOM_BOX,                                            halfExtents=[width, depth, height],                                            )        vsId = self._p.createVisualShape(shapeType=pybullet.GEOM_BOX,                                         halfExtents=[width, depth, height])        pegId = self._p.createMultiBody(baseMass=0.01,                                        baseCollisionShapeIndex=csId,                                        baseVisualShapeIndex=vsId,                                        flags=pybullet.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS,)                                        )        constId = self._p.createConstraint(parentBodyUniqueId=self.robot_uid,                                           parentLinkIndex=self._motor_indices[-1],                                           childBodyUniqueId=pegId,                                           childLinkIndex=-1,                                           jointType=pybullet.JOINT_FIXED,                                           jointAxis=[0, 0, 0],                                           parentFramePosition=[0, 0, 0],                                           childFramePosition=[0.1, 0.1, 0.3])        self._p.changeConstraint(userConstraintUniqueId=constId,                                 maxForce=9e20,                                 erp=1e-20)</code></pre></div>the problem is the peg is there but it is not rigidly/fixed connected to the robot. If i take the mouse and pull on it, it acts like a spring. The same happens if the peg e.g. colides with the floor. I played around with the changeConstraint function. But no success, so far.<br><br>Does anybody have an idea how to attacht the thing completely rigidly?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13295">kapsl</a> — Wed Aug 28, 2019 7:28 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

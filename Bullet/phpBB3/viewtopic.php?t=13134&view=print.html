@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Get rotation on Y axis from btRigidBody</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Get rotation on Y axis from btRigidBody</h2>
+		<p><a href="viewtopic.php%3Ft=13134.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13134</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Get rotation on Y axis from btRigidBody</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2021 8:20 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hello to the group,<br>
+<br>
+Is it possible to get the rotation on Y axis of a btRigidBody? I've tried the following without success:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13134&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btScalar yaw;
+btScalar pitch;
+btScalar roll;
+body-&gt;getCenterOfMassTransform().getBasis().getEulerZYX(yaw, pitch, roll, 1);
+</code></pre></div>
+
+and <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13134&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>glm::vec4 getRotation(btRigidBody* body)
+{
+	glm::vec4 Rotation;
+	btQuaternion q = body-&gt;getCenterOfMassTransform().getRotation();
+
+	btVector3 v = q.getAxis();
+	Rotation.x = v.x();
+	Rotation.y = v.y();
+	Rotation.z = v.z();
+	Rotation.w = q.getAngle();
+	
+	return Rotation;
+}
+
+float GetRotationY() {
+	glm::vec4 Rotation = getRotation(mBody);
+	return Rotation.y * Rotation.w; 
+}
+</code></pre></div>
+
+Both without success. Is there any other way of getting the rotations in degrees of the 3 different axes?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Get rotation on Y axis from btRigidBody</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2021 11:40 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Is it possible to get the rotation on Y axis of a btRigidBody?</div></blockquote>
+
+Body rotations are not necessarily about the Y-axis, and since rotations don't commute then it doesn't make sense to ask "How much of some general rotation is about the just the Y-axis?", unless you had a very clear recipe for how the general rotation is decomposed into partial rotation (e.g. the Euler angle decomposition which is (I think): yaw about local Y, X, Z in that order, unless the lib was compiled with BT_EULER_DEFAULT_ZYX defined).  This is why your question doesn't make sense in general.<br>
+<br>
+However, if you knew your rotation really was only about the Y-axis then you could ask: "How do it measure the angle of the rotation?", and for such a narrow subset of all possible rotations your question would make sense.<br>
+<br>
+Please rephrase your question, or elaborate about what you really want to do.  For example something like: "I have a character and I want to rotate it such that its local-y is parallel to world-y."</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Get rotation on Y axis from btRigidBody</h3>
+				<div class="date">Posted: <strong>Thu Jan 07, 2021 8:57 am</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">My problem is that I have a Camera that follows a spaceship and I need to feed to the Camera X,Y,Z rotations of the object to make it rotate and follow the body in every movement. So I need to retrieve the separate rotations of the body to feed them into the Camera...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Get rotation on Y axis from btRigidBody</h3>
+				<div class="date">Posted: <strong>Thu Jan 07, 2021 4:54 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">It is a Bad Idea to decompose rotations to Euler angles.  It will be source of frustration and fragility.  If you can change your Camera API then I would recommend you do so and have it accept a rotation, or better yet a transform.<br>
+<br>
+This is how I would do it.  Dunno if this will work for you but maybe someone will find it useful:<br>
+<br>
+Consider the trivial case where the Camera is always at a fixed transform behind the Spaceship in the Spaceship's local frame.  That is, the Camera is locked onto the Spaceship no matter how it moves.  In this case the Camera's world-frame transform can be computed from the Spaceship's:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13134&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>cameraTransform = spaceshipTransform * cameraTransformLocalFrame;</code></pre></div>
+Where for berevity the world-frame transforms are understood to be without a "WorldFrame" qualifier in their names.<br>
+<br>
+Note, if done with btTransforms then that math solves both the linear and angular parts.<br>
+<br>
+Consider the more interesting case where the Camera's linear transform relative to the Spaceship is fixed, but its rotation lags a little bit as if it were on a torsional spring.  This is trickier.  The pseudo code looks something like this (I did not test, it might have bugs, etc):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13134&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// Compute where the Camera is going
+cameraTargetRotation = spaceshipRotation * cameraLocalRotation;
+
+// Compute the deltaRotation between where the Camera is, and where it wants to be
+deltaRotation = cameraTargetRotation * cameraRotation.inverse();
+
+// Note: how did I know how to compute deltaRotation?
+// The trick is to imagine these rotations are operating FROM THE LEFT on a
+// hypothetical vector on the far RIGHT.  The inverse rotation operates first
+// and would rotate the vector into camera-local.  The second rotation would
+// rotate that result back into the world-frame exactly where it is targeted.
+// In other words: the end result would be deltaRotation.
+
+// We want to move the Camera toward its destination, but not the full delta.
+// This is where Quaternion's really shine.  We can calculate a "partial rotation"
+// in the right direction by interpolating on the 4D hypersphere.
+// We can either lerp (linear interpolate) which is fast or slerp (spherically interpolate)
+// which is slightly more CPU expensive.
+//
+// In any case we have to compute the the fraction of interpolation between 0 and 1.
+// Best to do this dynamically using the timestep between last frame since otherwise
+// the rate of Camera movement will be affected by the framerate of the simulation.
+// This is easy to tune by setting the natural exponential decay time.  Think of this
+// like a "half-life" however it is the time for the delta to reduce to 1/e of what
+// it was.  For fast slewing use a short timescale and for slow slewing increase the
+// timescale.
+const CAMERA_SLEW_TIMESCALE = 0.3; // seconds, tune this as necessary
+fraction = timestep / CAMERA_SLEW_TIMESCSALE;
+if (fraction &gt; 1.0) {
+    // DANGER! fractions greater than 1.0 are not stable
+    fraction = 1.0;
+}
+
+// Compute new cameraRotation
+//
+// DANGER! Quaternions have a discrepancy of two: for every valid rotation there
+// are two Quaternions on the hypersphere that map to it.  Normally this is not
+// a problem but it IS when interpolating between two Quaternions.  Always interpolate
+// between the nearest of the two.  To do this we check their dot-product and if it
+// is negative then they are on opposite hypersphers and we negate one of them
+// to the other side.
+if (deltaRotation.dot(cameraRotation) &lt; 0.0) {
+    deltaRotation *= -1.0;
+}
+partialDeltaRotaton = identityRotation.slerp(deltaRotation, fraction);
+cameraRotation = partialDeltaRotation * cameraRotation;
+
+// DANGER! When multiplying two Quaternions together the result can be slightly non-normal
+// (unit length != 1.0).  This is not a problem when the result will be discarded after
+// it is used.  However, when a result is saved and used to recompute itself, like we're
+// doing here for for cameraRotation, then eventually floating point error will creep in
+// and we'll end up with Quaternions that cause linear distortions.  Therefore, it is
+// important to nomalize cameraRotation after each fresh computation.
+cameraRotation.normalize();
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Get rotation on Y axis from btRigidBody</h3>
+				<div class="date">Posted: <strong>Thu Jan 07, 2021 7:30 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Thank you for the reply and the code. I will try your code. In the meantime this is how the camera works if you think you can make it work with bullet :<br>
+<br>
+This is for the position behind the spaceship calculation: <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13134&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float CalculateHorizontalDistance() {
+	if (!mpPlayer) return 0.f;
+
+	return distanceFromPlayer * glm::cos(glm::radians(-UpAngle));
+}
+
+float CalculateVerticalDistance() {
+	if (!mpPlayer) return 0.f;
+
+	return distanceFromPlayer * glm::sin(glm::radians(-UpAngle));
+}
+
+void calculateCameraPosition(float horizDistance, float verticDistance)
+{
+	float theta = mpPlayer-&gt;GetRotationY() + angleAroundPlayer;
+	float offsetX = horizDistance * glm::sin(glm::radians(theta));
+	float offsetZ = horizDistance * glm::cos(glm::radians(theta));
+
+	Position.x = mpPlayer-&gt;GetPosition().x - offsetX;
+	Position.y = mpPlayer-&gt;GetPosition().y + verticDistance;
+	Position.z = mpPlayer-&gt;GetPosition().z - offsetZ;
+}
+</code></pre></div>
+
+this is how the orientation and different vectors are calculated : <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13134&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void updateCameraVectors()
+{
+	// Yaw
+	glm::quat aroundY = glm::angleAxis(glm::radians(-RightAngle), glm::vec3(0, 1, 0));
+
+	// Pitch
+	glm::quat aroundX = glm::angleAxis(glm::radians(UpAngle), glm::vec3(1, 0, 0));
+
+	// Roll
+	glm::quat aroundZ = glm::angleAxis(glm::radians(RollAngle), glm::vec3(0, 0, 1));
+
+	Orientation = aroundY * aroundX * aroundZ;
+
+	glm::quat qF = Orientation * glm::quat(0, 0, 0, -1) * glm::conjugate(Orientation);
+	Front = { qF.x, qF.y, qF.z };
+	Right = glm::normalize(glm::cross(Front, WorldUp));
+	Up = glm::normalize(glm::cross(Right, Front));
+
+}
+</code></pre></div>
+
+and this is how the view matrix is calculated :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13134&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>glm::mat4 GetViewMatrix()
+{
+	// You should know the camera move reversely relative to the user input.
+	// That's the point of Graphics Camera
+
+	glm::quat reverseOrient = glm::conjugate(Orientation);
+	glm::mat4 rot = glm::mat4_cast(reverseOrient);
+	glm::mat4 translation = glm::translate(glm::mat4(1.0), -Position);
+
+	return rot * translation;
+}
+</code></pre></div>
+
+All code is C++ and I work with OpenGL. Hopefully you can understand the quaternions used in the Camera and maybe you have a few ideas on how they can be combined with bullet.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

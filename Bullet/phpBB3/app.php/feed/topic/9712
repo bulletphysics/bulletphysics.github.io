@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9712" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-02-10T21:41:16+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9712</id>
+
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2014-02-10T21:41:16+00:00</updated>
+
+		<published>2014-02-10T21:41:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32930#p32930</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32930#p32930"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32930#p32930"><![CDATA[
+Thanks Dirk. It starts off local, then I convert it to world coords per frame as you pointed out. My centroid is at the body's position anyway as it's a cube currently, will change the code later when I find the bug. It's really a minimal change in off-diagonal entries with my test case, as the box barely rotates when falling on the stack.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Mon Feb 10, 2014 9:41 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-02-10T18:59:29+00:00</updated>
+
+		<published>2014-02-10T18:59:29+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32928#p32928</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32928#p32928"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32928#p32928"><![CDATA[
+Why is your inertia tensor diagonal? Are you working with local angular velocities? You should transform your local inertia tensor to world space using I = R * I' * RT<br><br>Also make sure that inertia is relative to the mass center and not the position of the body. You usually keep those separate. You can use the Parallel Axes Theorem to shift the inertia tensor.<br><br><a href="http://en.wikipedia.org/wiki/Parallel_axis_theorem" class="postlink">http://en.wikipedia.org/wiki/Parallel_axis_theorem</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Feb 10, 2014 6:59 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2014-02-10T09:16:38+00:00</updated>
+
+		<published>2014-02-10T09:16:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32912#p32912</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32912#p32912"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32912#p32912"><![CDATA[
+Don't know if you're unlucky enough to come across this, but having an inertia tensor with diagonal entries 5.999995 as opposed to a plain 6, for a 1x1x1 cube of mass 1 causes instability for a single box on top of another with no friction. Manually setting it to 6 makes it stable, this is going to take me a while to debug but hope it helps anyone else if I fix it.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Mon Feb 10, 2014 9:16 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2014-02-10T04:25:22+00:00</updated>
+
+		<published>2014-02-10T04:25:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32910#p32910</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32910#p32910"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32910#p32910"><![CDATA[
+Thanks Randy, will do that tonight. Here is the rest of the code<br><div class="codebox"><p>Code: </p><pre><code>void AMG3DQuaternion::addScaledVector(const AMG3DVector4&amp; v, const AMG3DScalar&amp; scale){// To Do: Derive thisAMG3DQuaternion q(0, v.x*scale, v.y*scale, v.z*scale);q *= *this;w += q.w * 0.5f;x += q.x * 0.5f;y += q.y * 0.5f;z += q.z * 0.5f;}</code></pre></div><div class="codebox"><p>Code: </p><pre><code>void AMG3DQuaternion::normalize(){AMG3DScalar s = magnitude();if(s&gt;0) {w /= s;x /= s;y /= s;z /= s;}}</code></pre></div><div class="codebox"><p>Code: </p><pre><code>AMG3DScalar AMG3DQuaternion::magnitude() const{return sqrtf(w*w + x*x + y*y + z*z);}</code></pre></div><div class="codebox"><p>Code: </p><pre><code>void AMG3DRigidBody::integrateForces(const AMG3DScalar&amp; dt){if(dt&lt;=0.0f)return; // Just check if the body is dynamic, zero mass body = zero acceleration anyway// Some forces can wake the body (user added forces), some can't (gravity), leave that to the force updater//if(m_sMass&lt;=0.0f)//return;// Cannot update forces for kinematic or immovable bodiesif(m_eType!=AMG3D_PHYSICS_RIGID_BODY_TYPE_DYNAMIC)return;// Body is sleeping, do not integrate forces//if(m_eState==AMG3D_PHYSICS_RIGID_BODY_STATE_SLEEPING)//return;m_vAcceleration= m_vNetForce*m_sInvMass;m_vAngularAcceleration= m_vNetTorque*m_matInvIWorld;m_vVelocity+= m_vAcceleration*dt;m_vAngularVelocity+= m_vAngularAcceleration*dt;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Mon Feb 10, 2014 4:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[RandyGaul]]></name></author>
+		<updated>2014-02-09T20:08:29+00:00</updated>
+
+		<published>2014-02-09T20:08:29+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32902#p32902</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32902#p32902"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32902#p32902"><![CDATA[
+I'd need to see the functions<br><div class="codebox"><p>Code: </p><pre><code>m_quatOrientation.addScaledVector(m_vAngularVelocity, dt);   m_quatOrientation.normalize();</code></pre></div>Maybe we can look at your velocity update as well.<br><br>This all can also come from an incorrect calculation in radii during collision resolution. Maybe you could double check these terms specifically. I see you pasted this above but I don't have time to comb through it.<br><br>If it comes down to it maybe you can set up a very simple test case (like two boxes) and do the math by-hand and figure out what your impulses should be. If you can do this and step through your code you can easily see where the mistake(s) are in the first couple iterations.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10235">RandyGaul</a> — Sun Feb 09, 2014 8:08 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2014-02-09T08:18:22+00:00</updated>
+
+		<published>2014-02-09T08:18:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32896#p32896</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32896#p32896"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32896#p32896"><![CDATA[
+I tried a simple case, box falling on another box of equal size and slightly off-center with each other, without friction. I also disabled the angular velocity update, so then the box is stable. Once I enable angular velocity update, the box keeps sliding and eventually falls off. I would expect that if the box is stationary, this shouldn't happen.<br><br>If I enable angular velocity, the error keeps creeping slowly over time, hence this could be a problem with my integrator. Here is my code, any suggestions?<br><div class="codebox"><p>Code: </p><pre><code>void AMG3DRBCuboid::updatePosition(const AMG3DScalar&amp; dt){if(dt&lt;=0.0f)return;// May want to update the velocity of a kinematic body// e.g. Camera/player interaction//if(m_sMass&lt;=0.0f)//return;// Dynamic and kinematic bodies can moveif(m_eType==AMG3D_PHYSICS_RIGID_BODY_TYPE_STATIC)return;if(m_eState==AMG3D_PHYSICS_RIGID_BODY_STATE_SLEEPING)return;m_vPosition += m_vVelocity*dt;m_quatOrientation.addScaledVector(m_vAngularVelocity, dt);m_quatOrientation.normalize();updateWorldTransformMatrix();m_OBB.transformBy(m_matWorldTransform);if(AMG3DPhysicsWorld::g_AMG3D_bAutoClearForces) {clearNetForce();clearNetTorque();}if(AMG3DPhysicsWorld::g_AMG3D_bEnableSleeping)updateSleepState(dt);}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sun Feb 09, 2014 8:18 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2014-02-03T01:46:47+00:00</updated>
+
+		<published>2014-02-03T01:46:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32804#p32804</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32804#p32804"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32804#p32804"><![CDATA[
+Thanks a lot Randy, it still behaves the same way. Is this the approach you follow (see code)? I will attach the impulse code after as it's long.<br><div class="codebox"><p>Code: </p><pre><code>void AMG3DRigidBodyCollisionResponder::computeMasses(const AMG3DScalar&amp; dt){if(m_bSkipCollision)return;if(dt&lt;=0.0f)return;const AMG3DScalar k_allowedPenetration = 0.01f;AMG3DScalar k_biasFactor = (AMG3DPhysicsWorld::g_AMG3D_bPositionCorrection) ? 0.1f : 0.0f;for(int i=0; i&lt;m_cdContactData.iNumContacts; ++i) {AMG3DVector4 normal = m_cdContactData.contacts[i].vContactNormal;m_rap[i] = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody1-&gt;m_vPosition;m_rbp[i] = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody2-&gt;m_vPosition;m_rapcrossn[i] = m_rap[i].cross(normal);m_rbpcrossn[i] = m_rbp[i].cross(normal);// Compute the normal massAMG3DScalar Kn = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;Kn += ( m_pRigidBody1-&gt;m_matInvIWorld * m_rapcrossn[i].cross(m_rap[i]) + m_pRigidBody2-&gt;m_matInvIWorld*m_rbpcrossn[i].cross(m_rbp[i]) ).dot(normal);m_cdContactData.contacts[i].massNormal = 1.0f/Kn;// Compute the bias (prevents sinking, useful for stacking)m_cdContactData.contacts[i].bias = k_biasFactor / dt * AMG3D_MATH_MAX(0.0f, m_cdContactData.contacts[i].sPenetrationDepth - k_allowedPenetration);// Calculate the tangent vector. To Do: Research relative velocity tangent vectorAMG3DVector4 vap = m_pRigidBody1-&gt;m_vVelocity + m_pRigidBody1-&gt;m_vAngularVelocity.cross(m_rap[i]);AMG3DVector4 vbp = m_pRigidBody2-&gt;m_vVelocity + m_pRigidBody2-&gt;m_vAngularVelocity.cross(m_rbp[i]);// Relative velocityAMG3DVector4 vab = vap - vbp;AMG3DVector4 vabn = normal*(vab.dot(normal));AMG3DVector4 vabt = vab - vabn;//if(vabt.magnitude()&gt;0) {//vabt.normalize();//m_t1 = vabt;//AMG3DVector4Cross(&amp;m_t2, normal, m_t1);//}//else {normal.buildOrthoBasis(&amp;m_t1, &amp;m_t2);//}m_rapcrosst1[i] = m_rap[i].cross(m_t1);m_rbpcrosst1[i] = m_rbp[i].cross(m_t1);// Compute the tangent mass in the first directionAMG3DScalar Kt1 = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;Kt1 += ( m_pRigidBody1-&gt;m_matInvIWorld * m_rapcrosst1[i].cross(m_rap[i]) +  m_pRigidBody2-&gt;m_matInvIWorld * m_rbpcrosst1[i].cross(m_rbp[i]) ).dot(m_t1);m_cdContactData.contacts[i].massTangent1 = 1.0f/Kt1;m_rapcrosst2[i] = m_rap[i].cross(m_t2);m_rbpcrosst2[i] = m_rbp[i].cross(m_t2);// Compute the tangent mass in the second directionAMG3DScalar Kt2 = m_pRigidBody1-&gt;m_sInvMass + m_pRigidBody2-&gt;m_sInvMass;Kt2 += ( m_pRigidBody1-&gt;m_matInvIWorld * m_rapcrosst2[i].cross(m_rap[i]) +  m_pRigidBody2-&gt;m_matInvIWorld * m_rbpcrosst2[i].cross(m_rbp[i]) ).dot(m_t2);m_cdContactData.contacts[i].massTangent2 = 1.0f/Kt2;if(AMG3DPhysicsWorld::g_AMG3D_bWarmStarting) {//AMG3DVector4 P = m_cdContactData.contacts[i].Pn*normal + m_cdContactData.contacts[i].Pt1*m_t1 + m_cdContactData.contacts[i].Pt2*m_t2;// Project old friction impulse onto new tangent basisAMG3DVector4 oldt1 = m_cdContactData.contacts[i].Pt1 * m_cdContactData.contacts[i].t1; AMG3DVector4 oldt2 = m_cdContactData.contacts[i].Pt2 * m_cdContactData.contacts[i].t2;AMG3DVector4 P = m_cdContactData.contacts[i].Pn*normal + oldt1.dot(m_t1) * m_t1 + oldt2.dot(m_t2) * m_t2;// Store old tangent vectors to be used for next framem_cdContactData.contacts[i].t1 = m_t1;m_cdContactData.contacts[i].t2 = m_t2;m_pRigidBody1-&gt;m_vVelocity+= P*m_pRigidBody1-&gt;m_sInvMass;m_pRigidBody1-&gt;m_vAngularVelocity+= m_pRigidBody1-&gt;m_matInvIWorld*m_rap[i].cross(P);m_pRigidBody2-&gt;m_vVelocity-= P*m_pRigidBody2-&gt;m_sInvMass;m_pRigidBody2-&gt;m_vAngularVelocity-= m_pRigidBody2-&gt;m_matInvIWorld*m_rbp[i].cross(P);}}}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Mon Feb 03, 2014 1:46 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[RandyGaul]]></name></author>
+		<updated>2014-02-04T22:58:51+00:00</updated>
+
+		<published>2014-02-02T21:29:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32801#p32801</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32801#p32801"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32801#p32801"><![CDATA[
+At a glance the idea of what you have looks okay. Try swapping it out with a little bit of my code and see if you notice a difference, maybe this can help you isolate your bug:<br><div class="codebox"><p>Code: </p><pre><code>inline void GenerateOrthonormalBasis( const Vec3&amp; w, Vec3 *u, Vec3 *v ){  real absX = std::abs( w.x );  if(absX &gt; std::abs( w.y ) &amp;&amp;     absX &gt; std::abs( w.z ))  {    u-&gt;x = -w.y;    u-&gt;y = w.x;    u-&gt;z = 0.0f;  }  else  {    u-&gt;x = 0.0f;    u-&gt;y = w.z;    u-&gt;z = -w.y;  }  u-&gt;NormalizeThis( );  *v = Cross( w, *u );  v-&gt;NormalizeThis( );}</code></pre></div>Edit: And then Erin posted something better:<br><a href="http://box2d.org/2014/02/computing-a-basis/" class="postlink">http://box2d.org/2014/02/computing-a-basis/</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10235">RandyGaul</a> — Sun Feb 02, 2014 9:29 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2014-02-02T09:52:49+00:00</updated>
+
+		<published>2014-02-02T09:52:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32794#p32794</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32794#p32794"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32794#p32794"><![CDATA[
+Ran another test, I zero'd the velocities (6 box stack), then unzero'd them and they started up again. So I disabled the bias and the impulses converged at 10 iterations. <br><br>Another test, disabled friction, stepped through, and the bias &amp; penetration depths were uniform on all 4 contacts for the first few frames until the boxes slipped off each other. It now appears that the problem lies in the friction computation, maybe a creeping error in the alignment of the tangent vectors, will investigate further.<br><br>Here is my code to compute the two tangents from the normal vector:<br><div class="codebox"><p>Code: </p><pre><code>if (fabsf(x)&gt;=fabsf(y)){// x or z is the largest magnitude component, swap themAMG3DScalar sInvLength = 1 / (x*x + z*z);(*pTangent1).x = -z * sInvLength;(*pTangent1).y = 0.0f;(*pTangent1).z = x * sInvLength;(*pTangent2).x = y * (*pTangent1).z;(*pTangent2).y = z*(*pTangent1).x - x*(*pTangent1).z;(*pTangent2).z = -y * (*pTangent1).x;}else{// y or z is the largest magnitude component, swap themAMG3DScalar sInvLength = 1 / (y*y + z*z);(*pTangent1).x = 0.0f;(*pTangent1).y = z * sInvLength;(*pTangent1).z = -y * sInvLength;(*pTangent2).x = y*(*pTangent1).z - z*(*pTangent1).y;(*pTangent2).y = -x * (*pTangent1).z;(*pTangent2).z = x * (*pTangent1).y;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sun Feb 02, 2014 9:52 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2014-02-02T07:14:20+00:00</updated>
+
+		<published>2014-02-02T07:14:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32792#p32792</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32792#p32792"/>
+		<title type="html"><![CDATA[Re: Rigid body box stacking]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32792#p32792"><![CDATA[
+Thanks alot. I reverted back to what Dirk said, which is the correct way I had before. What's really weird is that when I have 10 iterations, a stack of 5 is almost instantly stable, but when I increase iterations to 15, energy gets introduced into the system. Something seriously wrong here. I don't really think it's the clipping anymore because I toggled a breakpoint when the number of contacts become 1, and this happens after a bit of jiggling among the boxes causes them to be uneven. It's just some really weird problem that makes no logical sense.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sun Feb 02, 2014 7:14 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

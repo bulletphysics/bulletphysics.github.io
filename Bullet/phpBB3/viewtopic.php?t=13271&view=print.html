@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Simple model not working, please help</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Simple model not working, please help</h2>
+		<p><a href="viewtopic.php%3Ft=13271.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13271</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Simple model not working, please help</h3>
+				<div class="date">Posted: <strong>Tue Sep 07, 2021 1:50 am</strong></div>
+				<div class="author">by <strong>allan</strong></div>
+				<div class="content">I have created an extremely simple model of a rotor rotating around the z-axis. The base link is a heavy rectangular box, the rotor is a single link representing two opposing rotor blades, and there is a continuous joint with a vertical axis between the links. When I use velocity control of the joint motor, calculating the acceleration and velocity myself based on the applied torque, it works nicely. When I use torque control for the motor, the results seem ridiculous. With a moment of inertia of 0.1512 and an applied torque of 0.0001 Nm, starting from rest, the initial angular acceleration is 150 radians/s^2. This decreases over the first 0.22 seconds to 113 rad/s^2. Then I reverse the torque, resulting in an initial acceleration of -187 rad/s^2, gradually decreasing to -112 rad/s^2 over the next 0.4 seconds. Obviously I must be doing something wrong, but what?<br>
+<br>
+Here is the code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13271&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code># disable default velocity control of rotor hub joint
+p.setJointMotorControl2(gyro, rotor_joint_index,
+                     controlMode=p.VELOCITY_CONTROL, force=0)
+# set maximum velocity of joint                              
+p.changeDynamics(gyro, rotor_joint_index, maxJointVelocity=1000)
+
+#initialize simulation state
+istep = 0
+dt = 1.0/250.0    # time step = 4 ms
+p.setTimeStep(dt) 
+torque = 0.0001   
+last_v = 0
+while True:
+    info = p.getJointState(gyro, rotor_joint_index)
+    v = info[1] # angular velocity from bullet
+    dv = v - last_v
+    a = dv/dt 
+    last_v = v
+    rpm = v*60/(2*math.pi)    # rpm from angular velocity
+    print("time=%.3f(s)," % (istep*dt), "applied torque=%8.5f(Nm)," % (torque), \
+            "v=%7.3f(rad/s)" % (v), "a=%9.3f(rad/s^2)" % (a))
+    if v &gt; 30:
+      torque = -0.0001
+    elif v &lt; -30:
+      torque = 0.0001
+    p.setJointMotorControl2(gyro, rotor_joint_index,
+                                controlMode=p.TORQUE_CONTROL, 
+                                force=torque)				
+    p.stepSimulation()
+    istep = istep + 1
+    sleep(1/10)
+</code></pre></div>
+
+Here is my URDF model:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13271&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    &lt;link name="base_link"&gt;
+        &lt;visual&gt; 
+            &lt;geometry&gt; 
+                &lt;box size="0.5 0.3 0.1"/&gt;
+            &lt;/geometry&gt;
+            &lt;origin xyz = "0 0 0" rpy="0 0 0"/&gt; 
+            &lt;material name="blue"/&gt;
+        &lt;/visual&gt;
+         &lt;collision&gt; 
+            &lt;geometry&gt; 
+                &lt;box size="0.5 0.3 0.1"/&gt;
+            &lt;/geometry&gt;
+            &lt;origin xyz = "0 0 0" rpy="0 0 0"/&gt;
+       &lt;/collision&gt; 
+       &lt;inertial&gt; 
+            &lt;origin xyz = "0 0 0" rpy="0 0 0"/&gt;
+            &lt;mass value="100"/&gt;
+            &lt;inertia ixx="100" ixy="0" ixz="0" iyy="100" iyz="0.0" izz="100"/&gt;
+        &lt;/inertial&gt; 
+    &lt;/link&gt; 
+    
+    &lt;link name="rotor"&gt;
+        &lt;visual&gt; 
+            &lt;geometry&gt; 
+                &lt;box size="2 0.05 0.01"/&gt;
+            &lt;/geometry&gt;
+            &lt;origin xyz="0 0 0.0" rpy="0 0 0"/&gt;  &lt;!-- offset of child frame from the joint --&gt;
+            &lt;material name="black"/&gt;
+        &lt;/visual&gt;
+        &lt;inertial&gt; 
+            &lt;origin xyz="0 0 0.0" rpy="0 0 0"/&gt;
+            &lt;mass value="1"/&gt;
+            &lt;inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.1512"/&gt;
+        &lt;/inertial&gt; 
+    &lt;/link&gt; 
+    &lt;joint name="base_to_hub" type="continuous"&gt;
+        &lt;parent link="base_link"/&gt;
+        &lt;child link="rotor"/&gt; 
+        &lt;axis xyz="0 0 1"/&gt;     &lt;!-- vector of the axis of rotation --&gt;
+        &lt;origin xyz="0 0 0.2" rpy="0 0 0"/&gt;  &lt;!-- transform from parent frame to child frame --&gt;
+    &lt;/joint&gt;</code></pre></div>
+
+Any help would be appreciated. Thx.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simple model not working, please help</h3>
+				<div class="date">Posted: <strong>Wed Sep 08, 2021 6:16 pm</strong></div>
+				<div class="author">by <strong>allan</strong></div>
+				<div class="content">Problem partly solved. I had not used the URDF_USE_INERTIA_FROM_FILE flag in loadURDF, so PyBullet was defaulting to an inertia tensor of zero. When I included the flag, I got an error message "Bad inertia tensor properties, setting inertia to zero for link", apparently because in my URDF model Izz was larger than the sum of Ixx and Iyy. Fixed that and now the rotor starts accelerating correctly, but as the velocity increases the acceleration gradually decreases and eventually reaches zero, although the applied torque remains the same. Joint damping and friction are both reported as zero.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simple model not working, please help</h3>
+				<div class="date">Posted: <strong>Wed Sep 08, 2021 8:49 pm</strong></div>
+				<div class="author">by <strong>allan</strong></div>
+				<div class="content">Since torque control of the motor is not working, as a workaround I can calculate the expected acceleration from the torque, integrate for the velocity, and use velocity control of the rotor. I am using this in another application (not the one I posted above), where I calculate the torque from aerodynamic forces, including lift and drag. This works, and the rotor reaches a terminal velocity of about 290 RPM where the torque drops to zero, which is what I would expect. However, in this condition getJointState() reports an applied torque of about 1 N. Why is this needed for a constant velocity?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

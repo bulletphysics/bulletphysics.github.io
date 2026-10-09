@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Collision between meshes</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Collision between meshes</h2>
+		<p><a href="viewtopic.php%3Ft=12939.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12939</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Collision between meshes</h3>
+				<div class="date">Posted: <strong>Fri Apr 24, 2020 8:20 am</strong></div>
+				<div class="author">by <strong>AlTerz93</strong></div>
+				<div class="content">Hello everyone!<br>
+<br>
+I'm trying to create a simulation where I need to check the collision between two meshes. I'm using BulletSharp.<br>
+For the moment I tried to insert the mesh both as BvhTriangleMeshShape:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12939&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>var localScaling = new Vector3((float)scale);
+var _triangleMesh = CreateTriangleMesh(wavefrontModel.Indices, wavefrontModel.Vertices, localScaling);
+
+var concaveShape = new BvhTriangleMeshShape(_triangleMesh, true);
+</code></pre></div>
+
+and as GImpactMeshShape, which is more suitable for dynamic objects (true?):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12939&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>var tri = new TriangleIndexVertexArray(wavefrontModel.Indices, wavefrontModel.Vertices);
+var g_tri = new GImpactMeshShape(tri);
+g_tri.Margin = 0;
+g_tri.UpdateBound();
+g_tri.LocalScaling = new Vector3((float)scale);
+</code></pre></div>
+
+One of the objects is a container and the other one is an object which falls into it. So the first one is static and the second one dynamic.<br>
+<br>
+No collision is currently detected. I tried to vary the scale and increase the stepSimulation but nothing has changed.<br>
+<br>
+I know that collisions among meshes are not optimal but I don't need speed but precision and also I don't have to consider many objects.<br>
+<br>
+How can I solve this problem?<br>
+<br>
+Thanks in advance</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision between meshes</h3>
+				<div class="date">Posted: <strong>Fri Apr 24, 2020 10:01 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">You are right: two BvhTriangleMeshShape's do not collide.  The fact of the matter is: the mesh-vs-mesh collision algorithm is not written.<br>
+<br>
+Options that might work:<br>
+<br>
+(1) Use a CompoundShape approximation, which is a collection of convex parts, for the dynamic object.  If your approximate shape is very close to the original then perhaps your collision information will suit your purposes.  If you truly don't care about performance, and your dynamic shape doesn't have too many triangles (what is "too many"?  maybe more than a few 100k triangles), then you could just make your convex parts be the triangles themselves -- might work.<br>
+<br>
+(2) Supposedly concave meshes can mutually collide using the GImpactShapes.  Dunno if they are supported in BulletSharp.  So maybe you could move to C++ to take this path.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision between meshes</h3>
+				<div class="date">Posted: <strong>Sat Apr 25, 2020 1:16 pm</strong></div>
+				<div class="author">by <strong>AlTerz93</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42801#p42801"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=42801.html#p42801" data-post-id="42801" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Fri Apr 24, 2020 10:01 pm</span></cite>
+You are right: two BvhTriangleMeshShape's do not collide. The fact of the matter is: the mesh-vs-mesh collision algorithm is not written.
+</div></blockquote>
+Ok there was a reason. Thanks.<br>
+<br>
+I also tried with GImpactShapes but nothing changes: no collision detected. But a question arose: looking at the GImpactTestDemo, the bunnies are created as GImpactShape and collisions among them are detected. I've tried to use bunnies also in my simulation but there was no collision among them. Could be (but I don't think so) a problem related to the solver in multithreading? <br>
+This is my configuration:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12939&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>CreateSchedulers();
+NextTaskScheduler();
+using (var collisionConfigurationInfo = new DefaultCollisionConstructionInfo
+{
+	DefaultMaxPersistentManifoldPoolSize = 80000,
+        DefaultMaxCollisionAlgorithmPoolSize = 80000
+})
+{
+	colConfiguration = new DefaultCollisionConfiguration(collisionConfigurationInfo);
+};
+        colDispatcher = new CollisionDispatcherMultiThreaded(colConfiguration);
+        broadphase = new DbvtBroadphase();
+	_solverPool = new ConstraintSolverPoolMultiThreaded(MaxThreadCount);
+        _parallelSolver = new SequentialImpulseConstraintSolverMultiThreaded();
+
+	colWorld = new DiscreteDynamicsWorldMultiThreaded(colDispatcher, broadphase, _solverPool, _parallelSolver, colConfiguration);
+        colWorld.SolverInfo.SolverMode = SolverModes.Simd | SolverModes.UseWarmStarting;
+
+        debugDrawer = new elBulletDebugDrawer(application, this);
+        colWorld.DebugDrawer = debugDrawer;
+
+        colWorld.Gravity = new Vector3(0, 0, -9.81f);
+</code></pre></div>
+
+I also thought of another way: use a softBody and in some way make the object as rigid as possible. I tried but I had some problems with the pose update: is the WorldTransform different wrt the one for rigidBodies?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision between meshes</h3>
+				<div class="date">Posted: <strong>Mon Jul 06, 2020 8:28 pm</strong></div>
+				<div class="author">by <strong>anthrax11</strong></div>
+				<div class="content">The GImpact algorithm needs to be explicitly registered:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12939&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>var collisionDispatcher = new CollisionDispatcher(collisionConfiguration);
+GImpactCollisionAlgorithm.RegisterAlgorithm(collisionDispatcher);
+</code></pre></div>
+
+Just to confirm what everyone said <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> :<br>
+BvhTriangleMeshShapes work well as static concave or convex shapes. But since they are meant to be static, there is no algorithm to make them collide with each other.<br>
+ConvexTriangleMeshShapes are efficient as dynamic convex shapes.<br>
+GImpact shapes are well optimized for when you need dynamic concave shapes.<br>
+Convex decomposition can be used to decompose concave shapes into convex shapes. The resulting convex shapes can then be combined into a CompoundShape, which is also an efficient way to model dynamic concave shapes.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

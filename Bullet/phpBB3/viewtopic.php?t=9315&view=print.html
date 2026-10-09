@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; cppyy and template instantiation errors</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>cppyy and template instantiation errors</h2>
+		<p><a href="viewtopic.php%3Ft=9315.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9315</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>cppyy and template instantiation errors</h3>
+				<div class="date">Posted: <strong>Wed Jul 31, 2013 10:00 pm</strong></div>
+				<div class="author">by <strong>Foogod</strong></div>
+				<div class="content">Hi all,<br>
+<br>
+I'm currently working on using cppyy (<a href="http://doc.pypy.org/en/latest/cppyy.html" class="postlink">http://doc.pypy.org/en/latest/cppyy.html</a>) to generate bindings for calling Bullet from within pypy.  So far everything has gone fairly smoothly (I've even successfully written a Python version of the "hello world" program and have proceeded to cover a majority of the rest of the Bullet API as well), but there is one issue I've encountered on a few classes:<br>
+<br>
+It appears that if some classes (specifically, mostly those that use HashMaps) are instantiated directly, the compiler really doesn't like it.  An example can be demonstrated by simply attempting to compile the following:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include &lt;btBulletDynamicsCommon.h&gt;
+
+int main (void) {
+    btDefaultSerializer s = btDefaultSerializer();
+}
+</code></pre></div>
+Compiling this (with GCC 4.7.3, against bullet-2.81-rev2613) produces the following errors:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>$ g++ test.cpp -o test -I/usr/local/include/bullet
+In file included from /usr/local/include/bullet/BulletCollision/CollisionDispatch/btCollisionObject.h:33:0,
+                 from /usr/local/include/bullet/BulletCollision/CollisionDispatch/btCollisionWorld.h:76,
+                 from /usr/local/include/bullet/btBulletCollisionCommon.h:22,
+                 from /usr/local/include/bullet/btBulletDynamicsCommon.h:20,
+                 from test.cpp:1:
+/usr/local/include/bullet/LinearMath/btAlignedObjectArray.h: In instantiation of ‘btAlignedObjectArray&lt;T&gt;::btAlignedObjectArray(const btAlignedObjectArray&lt;T&gt;&amp;) [with T = btHashInt; btAlignedObjectArray&lt;T&gt; = btAlignedObjectArray&lt;btHashInt&gt;]’:
+/usr/local/include/bullet/LinearMath/btHashMap.h:220:7:   required from here
+/usr/local/include/bullet/LinearMath/btAlignedObjectArray.h:142:4: error: no matching function for call to ‘btHashInt::btHashInt()’
+/usr/local/include/bullet/LinearMath/btAlignedObjectArray.h:142:4: note: candidates are:
+In file included from /usr/local/include/bullet/BulletCollision/CollisionShapes/btTriangleInfoMap.h:20:0,
+                 from /usr/local/include/bullet/BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h:22,
+                 from /usr/local/include/bullet/btBulletCollisionCommon.h:35,
+                 from /usr/local/include/bullet/btBulletDynamicsCommon.h:20,
+                 from test.cpp:1:
+/usr/local/include/bullet/LinearMath/btHashMap.h:82:2: note: btHashInt::btHashInt(int)
+/usr/local/include/bullet/LinearMath/btHashMap.h:82:2: note:   candidate expects 1 argument, 0 provided
+/usr/local/include/bullet/LinearMath/btHashMap.h:78:7: note: btHashInt::btHashInt(const btHashInt&amp;)
+/usr/local/include/bullet/LinearMath/btHashMap.h:78:7: note:   candidate expects 1 argument, 0 provided
+</code></pre></div>
+(...plus similar errors for btHashString and btHashPtr)<br>
+<br>
+Now, I will admit it's been a while since I've done anything really in-depth in C++, but digging around it does appear to me that the compiler may have a valid point:  btDefaultSerializer contains several btHashMaps (which use btHashInts/etc as keys).  The btHashMap&lt;Key, Value&gt; declaration includes members of type btAlignedObjectArray&lt;Key&gt; (and &lt;Value&gt;), which expands to btAlignedObjectArray&lt;btHashInt&gt;, etc.  However, the way the copy constructor (and copyFromArray) of btAlignedObjectArray&lt;T&gt; is written, it calls "resize(otherSize)", not specifying a second parameter.  This results in an implicit reference to "T()", which means that any type which is to be used in a btAlignedObjectArray (and by extension, any type used as a key or value to btHashMap) needs to have a zero-argument constructor (which btHashInt and friends don't have) or the template instantiation will bomb out..<br>
+<br>
+However, given that my C++ is a little rusty, and I'm not really familiar with the Bullet internals at all, I wanted to post a general query:  Is this a genuine bug, or am I missing something, or is this deliberate for a non-obvious reason?<br>
+<br>
+If it's a bug, it seems to me it would be fairly easy to fix (by just changing "btHashInt::btHashInt(int uid)" to btHashInt::btHashInt(int uid = 0)" (and similar for btHashString, btHashPtr, btHashKeyPtr, and btHashKey)).  I'd be happy to submit a patch, if this is indeed a reasonable change to make..<br>
+<br>
+Thanks,<br>
+--Alex</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

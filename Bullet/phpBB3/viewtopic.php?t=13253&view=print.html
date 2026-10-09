@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Testing a specific RB?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Testing a specific RB?</h2>
+		<p><a href="viewtopic.php%3Ft=13253.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13253</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2021 1:13 pm</strong></div>
+				<div class="author">by <strong>Brian Beuken</strong></div>
+				<div class="content">I have enclosed some of my RB's in what I term proximity sphere's. Essentially ghost objects which works really well to provide info on close proximity collision tests without triggering any actual reactions. I use this for object avoidance systems its very effective.<br>
+<br>
+But when I do a mouse pick, raycasting to the object to ID it, I am of course detecting the sphere... ok, well thats fine, since the sphere has info on the RB and object its protecting... but what I would like to do is refine things and double test the ray against the RB alone... But I'm finding that a bit tricky, as I only have vec3 to and from, the RB* and the raycallback struct... and none of the individual tests can use those...<br>
+<br>
+any advice?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2021 2:30 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The <strong class="text-strong">btCollisionWorld::RayResultCallback</strong> has collision group and mask data members.  By setting the collision group and mask bits of your RB, proximity sphere, and RayResultCallback correctly you could configure the ray to hit the RB but not the proximity sphere.<br>
+<br>
+Perhaps read <a href="viewtopic.php%3Ff=9&amp;t=13250&amp;p=43530.html#p43530" class="postlink">this thread</a> for more info.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2021 2:39 pm</strong></div>
+				<div class="author">by <strong>Brian Beuken</strong></div>
+				<div class="content">thanks, this might be what I'm looking for, I'll try to digest it and see if I can impliment it</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Thu Aug 19, 2021 12:30 pm</strong></div>
+				<div class="author">by <strong>Brian Beuken</strong></div>
+				<div class="content">This was a great help thank you, and led me to other uses for the filters.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Sat Aug 28, 2021 6:08 pm</strong></div>
+				<div class="author">by <strong>Brian Beuken</strong></div>
+				<div class="content">edit sorry <br>
+my mistake i was doing it right I made a small edit that stopped it working, fine now...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Sat Aug 28, 2021 7:20 pm</strong></div>
+				<div class="author">by <strong>Brian Beuken</strong></div>
+				<div class="content">But.... I do have a question that is still relevent to this.<br>
+<br>
+Once I have the RB's group and mask set, is there a way to change it in game? For example to exclude a particular object from the ray cast? I'm thinking that when I have an object selected already, and another object is projected quite close to it, I'd like to exclude the current object from the cast?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Sat Aug 28, 2021 9:30 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">If you change the collision group/mask then you must remove it from the world and re-add it.  This is because the group/mask information does not live at the <strong class="text-strong">btRigidBody</strong> but at its axis aligned bounding box (AABB) in the broadphase data structure which computes potential overlaps which are then passed to the narrowphase which computes the details of the collision.<br>
+<br>
+An alternative way to exclude selected objects at runtime is to derive your own custom <strong class="text-strong">AvoidSelectionRayResultCallback</strong> from <strong class="text-strong">ClosestRayResultCallback</strong> and override the implementation of <strong class="text-strong">addSingleResult()</strong> to NOT update its data members when a selected object is encountered.  In other words the method might look something like this (in pseudo-code):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13253&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btScalar AvoidSelectionRayResultCallback::addSingleResult(LocalRayResult&amp; rayResult, bool normalInWorldSpace) {
+	if (!isSelected(rayResult.m_collisionObject) {
+	        // not selected --&gt; fallback to ClosestRayResultCallback behavior
+		return ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
+	} else {
+		// is selected --&gt; skip
+	}
+	return m_closestHitFraction;
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Testing a specific RB?</h3>
+				<div class="date">Posted: <strong>Mon Aug 30, 2021 11:20 pm</strong></div>
+				<div class="author">by <strong>Brian Beuken</strong></div>
+				<div class="content">Thanks that sounds plausable, I'll see what I can do.<br>
+<br>
+Appreciate the help</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

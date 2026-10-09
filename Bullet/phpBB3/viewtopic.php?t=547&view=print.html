@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Cleanup.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Cleanup.</h2>
+		<p><a href="viewtopic.php%3Ft=547.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=547</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Cleanup.</h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 7:58 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">I see there are a bazillion compile warnings when I build under Linux/g++/gcc. I'm of the "treat all warnings as errors" school of programming!  Is there any problem with me cleaning them up so Bullet bulds cleanly?<br>
+<br>
+Many of them are trivial things like missing newlines on the ends of files, unused variables, switch statements without defaults, variables that might not be initialised.<br>
+<br>
+Some are more serious - virtual classes without virtual destructor functions, order of initialisations of member variables, use of 'char' variables (which, remember may or may not be unsigned) to index into 0..255 arrays.   There are some 'static' variables declared in a header file.<br>
+<br>
+Lots and lots and *LOTS* of junk.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Cleanup.</h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 10:47 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>I see there are a bazillion compile warnings when I build under Linux/g++/gcc. I'm of the "treat all warnings as errors" school of programming!  Is there any problem with me cleaning them up so Bullet bulds cleanly?<br>
+<br>
+Many of them are trivial things like missing newlines on the ends of files, unused variables, switch statements without defaults, variables that might not be initialised.<br>
+<br>
+Some are more serious - virtual classes without virtual destructor functions, order of initialisations of member variables, use of 'char' variables (which, remember may or may not be unsigned) to index into 0..255 arrays.   There are some 'static' variables declared in a header file.<br>
+<br>
+Lots and lots and *LOTS* of junk.</div></blockquote>
+
+Hi Steve,<br>
+<br>
+Thanks for offering. It would be good to deal with that indeed. If you can keep the changes fairly minimum, to what you mentioned, please give it a go. Just to avoid potential conflicts etc.<br>
+<br>
+Please leave the interfaces, methods and names and other coding style issues as they are <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+Also, it's better not to touch most of the 'Extras' folder. Especially COLLADA_DOM and libxml, but also quickstep and Solid are external, and I prefer not to touch them if not strictly necessary. COLLADA_DOM and libxml give a lot of warnings unfortunately, but they are not really part of the core libraries. Core is Bullet/Bullet and Bullet/BulletDynamics and Bullet/LinearMath.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Cleanup.</h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 2:26 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Thanks for offering. It would be good to deal with that indeed. If you can keep the changes fairly minimum, to what you mentioned, please give it a go. Just to avoid potential conflicts etc.
+</div></blockquote>
+The changes are individually very simple - but there are a heck of a lot of them!
+<blockquote class="uncited"><div>
+Please leave the interfaces, methods and names and other coding style issues as they are ;-)
+</div></blockquote>
+Sure - I'm not trying to improve clarity or style or anything - just to get rid of the dumbest of the warnings so the thing mostly compiles clean.
+<blockquote class="uncited"><div>
+Also, it's better not to touch most of the 'Extras' folder. Especially COLLADA_DOM and libxml,
+</div></blockquote>
+Those two actually compile fairly cleanly already.  LibXML is horrible inside - really ugly coding - but the only warnings I get about it are complaints about pointer aliassing problems that are not at all easy to fix.  In fact, those are probably the only warnings that aren't trivial to fix.<br>
+<br>
+I'll try to commit something later tonight.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 2:42 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks a lot Steve!<br>
+<br>
+On a side note, I just fixed 2 bugs in latest version related to removing objects. Introduced by some recent optimizations. Bullet 2.0f bugfix release is uploaded.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 3:03 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">OK - I've committed that set of changes.<br>
+<br>
+There are still a few warnings, in Extras/LibXML there are about a dozen occurrances of:
+<blockquote class="uncited"><div>
+    warning: dereferencing type-punned pointer will break strict-aliasing rules
+</div></blockquote>
+...it's not easy to see how to fix these - the code in libXML is really ugly - employing every nasty coding trick in the book, there are also files with 20,000 lines of source code in one file!!<br>
+<br>
+The other problem I couldn't see how to fix is that most of the demos link with a cryptic message:
+<blockquote class="uncited"><div>
+  /usr/lib/gcc-lib/i586-suse-linux/3.3.5/../../../../i586-suse-linux/bin/ld: `.L244' referenced in section `.rodata' of ./out/linuxx86/optimize/libs/libbullet.a(BoxShape.o): defined in discarded section `.gnu.linkonce.t._ZNK8BoxShape16GetPlaneEquationER11SimdVector4i' of ./out/linuxx86/optimize/libs/libbullet.a(BoxShape.o)
+</div></blockquote>
+
+Anyway - I got rid of over 500 warning messages - so this is much better than it was.<br>
+<br>
+There were quite a few cases where unused variables were initialised from external function calls - the compiler can't optimise those out because it doesn't know whether they have side-effects or not.  In terms of realtime performance, it's quite important to clear these out as you work.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 3:18 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks a lot Steve,<br>
+<br>
+Please ignore libxml and collada. Every time a new version comes out, we might need to copy that over. Unless you want to contribute those changes back to COLLADA-DOM and libxml repositories <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+I will check out that linker warning,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 3:24 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">I didn't have to touch any of the COLLADA files - they all compiled 100% clean out of the box. <br>
+<br>
+There was just two changes I made to LibXML.  schematron.c contains two unused static functions that I commented out.  It's not the end of the world if that gets overwritten in a subsequent release...but I'll fling a complaint to the libXML guys.<br>
+<br>
+All of the other changes were in Bullet files.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 3:31 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">by the way, on the libxml thing, I think I removed some files that I considered not useful, perhaps that caused the warning.<br>
+<br>
+I wanted an easy compile-out-of-the-box libxml, working under Linux, windows, Mac etc. I had to cheat, and run 'configure' and provide a config_win32.h and a config.h for non win32. For other exotic platforms, you can still re-run configure in the libxml folder.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

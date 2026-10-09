@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Connect LCP equation and Physics</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Connect LCP equation and Physics</h2>
+		<p><a href="viewtopic.php%3Ft=9956.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9956</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Connect LCP equation and Physics</h3>
+				<div class="date">Posted: <strong>Mon May 19, 2014 8:33 pm</strong></div>
+				<div class="author">by <strong>Barabas</strong></div>
+				<div class="content">I've recently been reading up on how to solve for collisions and constraints. But it is a bit difficult for me to grasp what represents what. The papers either don't explain how it is connected to a LCP or they only treat the mathematical side and confuse me with all the math notations and letters that are introduced without explaining what it is they are about.<br>
+<br>
+However the other day I found this presentation (<a href="http://goo.gl/84N71q" class="postlink">http://goo.gl/84N71q</a>) from Erwin, which does connect the math to the physics. Thank you for that! But still I have a little trouble understanding what the A, lambda and b contain exactly. I understand that A represents the effective mass, lambda the impulses and b the desired velocity change. I do not understand how many lambdas and velocities changes we have. One for each constraints at each contact point? <br>
+I've looked at the sequential impulse solver in bullet and from what I understand it updates the velocity of each body for each constraint, which is then again used to determine the needed impulse for the next constraint. But where is this body velocity represented in the LCP equation?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Connect LCP equation and Physics</h3>
+				<div class="date">Posted: <strong>Tue May 20, 2014 3:01 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div> I do not understand how many lambdas and velocities changes we have. One for each constraints at each contact point? 
+</div></blockquote>
+You have one lambda for each degree of freedom involved in the constraint. For example, a contact constraint without friction would involve only a single degree of freedom, hence a single lamda (impulse). For a contact constraint with two friction directions, both orthogonal/90 degrees angle to eachother and the contact normal, we would have 1 normal DOF and 2 friction DOFs = 3 DOFs, so 3 lambdas. For a 'fixed' constraint that removes all 6 DOFs between two bodies, we have 6 lambdas.<br>
+
+<blockquote class="uncited"><div>
+ But where is this body velocity represented in the LCP equation?
+</div></blockquote>
+The body velocity is represented in the b vector (or right-hand-side) of the LCP equation, which would be constant during the PGS or sequential impulse solver iterations.<br>
+<br>
+However, in the sequential impulse solver, we  keep track of the change in body velocity by applying a special impulse directly to the body. This is the same as computing the 'delta' in the PGS algorithm. So this 'change' in body velocity is not part of the LCP equation, but part of the PGS numerical method.<br>
+See also <a href="https://github.com/bulletphysics/bullet3/blob/master/src/BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h#L58" class="postlink">https://github.com/bulletphysics/bullet ... idel.h#L58</a> <br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Connect LCP equation and Physics</h3>
+				<div class="date">Posted: <strong>Wed May 21, 2014 8:12 pm</strong></div>
+				<div class="author">by <strong>Barabas</strong></div>
+				<div class="content">Thanks, it definitely helps!<br>
+<br>
+I still have a bit of difficulty imagining how it works with multiple constraints on the same body.<br>
+<br>
+Suppose we construct the A matrix with the K matrix and leave out rotation for now, to keep it simple.<br>
+Then for one constraint between two bodies (a and b) it is like on slide 32, we have 1/(m_a + m_b) on the diagonal entries. And then we have n, which is the normal direction along which the constraint works. We can construct A by A = nAn^t, which is just a scalar when we have one constraint. But what if we have another constraint, this time between bodies a and c? Obviously this one will also be influenced by the first constraint, but we have a different K matrix and a different n vector for this constraint. K has to be square (and symmetric?), so I guess we'll append the second K matrix along the diagonal to get a 6x6 matrix. And the n vectors together will make a 6x2 matrix.<br>
+<br>
+Thus I think we have, using m1 = 1/(m_a + m_b) and m2 = 1/(m_a + m_c):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9956&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>K = 
+m1 0 0 0 0 0
+0 m1 0 0 0 0 
+0 0 m1 0 0 0 
+0 0 0 m2 0 0 
+0 0 0 0 m2 0 
+0 0 0 0 0 m2
+
+n = 
+n1_x n1_y n1_z 0    0    0 
+0    0    0    n2_x n2_y n2_z
+</code></pre></div>
+
+This produces:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9956&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>A = 
+m1 0
+0  m2
+</code></pre></div>
+
+Which would mean that there is no interdependency between the two degrees of freedom here. But if for example n1 = {0.7, 0.7, 0} and n2 = {1, 0, 0}, then there should be some interdependency, right?<br>
+<br>
+With multiple constraints between the same bodies (without rotation) we can just keep the same A and stack the n's, like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9956&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>n = 
+n1_x n1_y n1_z
+n2_x n2_y n2_z
+</code></pre></div>
+
+which produces (assuming unit length ns):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9956&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>A = 
+m1             m1*dot(n1, n2)
+m1*dot(n1, n2) m1
+</code></pre></div>
+
+This looks alright to me, because it has off-diagonal elements and thus the equations are not independent. However with the first case with two constraints, one between a and b and another between a and c I don't understand how the interdependency should be represented.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

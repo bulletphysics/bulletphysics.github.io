@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12512" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2018-12-03T10:43:49+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12512</id>
+
+		<entry>
+		<author><name><![CDATA[jochemspek]]></name></author>
+		<updated>2018-12-03T10:43:49+00:00</updated>
+
+		<published>2018-12-03T10:43:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41657#p41657</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41657#p41657"/>
+		<title type="html"><![CDATA[Re: generic 6DOF constraint in pyBullet]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41657#p41657"><![CDATA[
+My goal is to create accurate and fast drop simulations of arbitrary mechanically complex assemblies of rigid objects like this bracelet consisting of 43 interlocking parts. <a href="https://postimg.cc/Jsxd0M1j" class="postlink">https://postimg.cc/Jsxd0M1j</a>)<br><br>In order to do proper physical simulation I had to split the shells or segments of the model(s) into combinations of convex shapes which I did using VHACD (see my previous post at <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?f=9&amp;t=12009&amp;p=40395#p40395" class="postlink">viewtopic.php?f=9&amp;t=12009&amp;p=40395#p40395</a>). Unfortunately for more complex objects like the bracelet, this is not sufficient and because of the cyclic nature of the physical relations (triplets of segments connected to each other via mechanical connection) the simulation suffers from instabilities and becomes prohibitively slow.<br><br>Simulating single pairs of mechanically connected segments works fine however, even in realtime. Hence the idea arose to simulate all the pairs in the assembly and then analyse the DOF between each pair and encode this in a generic6DOF constraint. Finding the basis frame for the constraint works quite well for the bracelet: <a href="https://giphy.com/gifs/xj1cCQzz7MiW6OFXsI" class="postlink">https://giphy.com/gifs/xj1cCQzz7MiW6OFXsI</a> -you see two reference frames, one fixed representing the original position and orientation, the other representing the iteratively calculated pivot point between the segments.<br><br>The next step is to do the simulation of the entire assembly using just constraints without collision between the mechanically connected pairs, and using collision of convex hulls between non-connected pairs. This should be much much faster.<br><br>I noticed however that the btGeneric6DOFConstraint is unfortunately not exposed in pybullet, hence my question. I know I could do the entire project in C++ and have access to the btGeneric6DOF, but this does not fit our production pipeline very well which is entirely python based. I am now thinking to use the Blender python module, as this does seem to expose btGeneric6DOF and can run (and render) the simulation. However, if there is another way (by generating Urdf files perhaps?) I would love to hear that!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12576">jochemspek</a> — Mon Dec 03, 2018 10:43 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2018-11-30T18:03:14+00:00</updated>
+
+		<published>2018-11-30T18:03:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41654#p41654</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41654#p41654"/>
+		<title type="html"><![CDATA[Re: generic 6DOF constraint in pyBullet]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41654#p41654"><![CDATA[
+PyBullet doesn't use constraints by default, it uses btMultiBody primarily. So joints are not represented by constraints internally.<br><div class="codebox"><p>Code: </p><pre><code>then create a constraint that encapsulates those DOFs without having to do collision detection/simulation</code></pre></div>Why? Can you explain more in detail what you try to do with PyBullet on a higher level?<br><br>There is a UrdfEditor, that let's you build more complex constructions in Python and then instantiate it in PyBullet.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Nov 30, 2018 6:03 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jochemspek]]></name></author>
+		<updated>2018-11-29T23:29:19+00:00</updated>
+
+		<published>2018-11-29T23:29:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41653#p41653</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41653#p41653"/>
+		<title type="html"><![CDATA[generic 6DOF constraint in pyBullet]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41653#p41653"><![CDATA[
+Hi, I'm looking for a way to create (or emulate) a btGeneric6DofConstraint with user constraints in pybullet but i'm struggling to see how to do this. I thought I was brave by trying to add a generic constraint type in pyBullet, but that's too deep a rabbithole for me. The reason I need the btGeneric6DofConstraint is that I'm analysing the DOFs of two objects relative to eachother and then create a constraint that encapsulates those DOFs without having to do collision detection/simulation. I know I could use the btGeneric6DofConstraint in C(++) context or use the blender python interface, but is it possible to use pyBullet for this directly?<br><br>thanks,<br><br>Jochem van der Spek<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12576">jochemspek</a> — Thu Nov 29, 2018 11:29 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; 3D Axis Sweep and Prune added to CVS</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>3D Axis Sweep and Prune added to CVS</h2>
+		<p><a href="viewtopic.php%3Ft=261.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=261</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>3D Axis Sweep and Prune added to CVS</h3>
+				<div class="date">Posted: <strong>Mon Mar 13, 2006 9:19 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Simon Hobbs contributed a 3D Sweep and prune implementation, which has been added to Bullet CVS.<br>
+<br>
+It required a bit of cleanup in Bullet, so some of the interfaces/code has been shuffled around.<br>
+<br>
+Please let me know if this helps performance. SimpleBroadphase and AxisSweep3 both use the same interface now, so can be exchanged.<br>
+AxisSweep3 takes as input the world boundaries, because of internal storage (quantized integers), as well as optional maximum number of objects and overlap (both set to some arbitrary default).<br>
+<br>
+Erwin<br>
+<br>
+PS: Simon also contributed Win32 SIMD optimized classes and SAT (separating axis test) based convex hull code. But this requires more work to integrate, I'll post a message as soon as this is added to CVS.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Mar 18, 2006 1:01 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">AxisSweep3 looks compact and efficient.<br>
+<br>
+I'm curious though, why doesn't it use stabbing numbers for fast insertion, removal, and queries?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Mar 18, 2006 8:42 pm</strong></div>
+				<div class="author">by <strong>omicron</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>AxisSweep3 looks compact and efficient.<br>
+<br>
+I'm curious though, why doesn't it use stabbing numbers for fast insertion, removal, and queries?</div></blockquote>
+
+Using the stabbing numbers it wouldn't be necessary to add/remove overlapping pairs when sorting the endpoints of each AABB. As it is now overlapping pairs are being added and removed for nothing in cases where one AABB completely passes others.<br>
+<br>
+So, it should be, sort endpoints normally but just without adding/removing overlapping pairs ( updating stabbing numbers only ), and in the end ( when the AABB is sorted ), stabbing numbers can be used to figure out what overlaps occured due to that AABB update. Am I right ? I already implemented this but didn't test it yet, however, it seems to make sense to me. Correct me if I'm wrong.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Bye!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Mar 18, 2006 8:58 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>AxisSweep3 looks compact and efficient.<br>
+<br>
+I'm curious though, why doesn't it use stabbing numbers for fast insertion, removal, and queries?</div></blockquote>
+
+There are several solutions for fast insertion and removal, and stabbing numbers is just one. Perhaps it can be added, but I plan to use a method that is better in my opinion:<br>
+<br>
+1) adding/removing objects in larger batches, and presort this batch in advance<br>
+2) for single queries and single add/removal: using marker objects<br>
+<br>
+Add marker objects in the broadphase, and just search for the closest marker object, and insert from there.<br>
+<br>
+Stabbing numbers are fine too, but the approach easily breaks if there are large objects in the broadphase.<br>
+<br>
+I can ask the original author of this implementation, but likely it is on the todolist, or not a bottleneck in his applications.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Mar 25, 2006 7:04 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I noticed this code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=261&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool AxisSweep3::TestOverlap(const Handle* pHandleA, const Handle* pHandleB)
+{
+	for (int axis = 0; axis &lt; 3; axis++)
+	{
+		if (m_pEdges[axis][pHandleA-&gt;m_maxEdges[axis]].m_pos &lt; m_pEdges[axis][pHandleB-&gt;m_minEdges[axis]].m_pos ||
+			m_pEdges[axis][pHandleB-&gt;m_maxEdges[axis]].m_pos &lt; m_pEdges[axis][pHandleA-&gt;m_minEdges[axis]].m_pos)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+</code></pre></div>
+
+Since indices sort the same as positions, couldn't this be optimized as (you mentioned this before):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=261&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool AxisSweep3::TestOverlap(const Handle* pHandleA, const Handle* pHandleB)
+{
+	for (int axis = 0; axis &lt; 3; axis++)
+	{
+		if (pHandleA-&gt;m_maxEdges[axis] &lt; pHandleB-&gt;m_minEdges[axis] ||
+			pHandleB-&gt;m_maxEdges[axis] &lt; pHandleA-&gt;m_minEdges[axis])
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+</code></pre></div>
+
+I think some of the calling code would have to be re-organized for this to work correctly.<br>
+<br>
+BTW, this optimization never came up in my SAP because I (redundantly) store the Vector3 min, max in my Handle structure.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 27, 2006 8:05 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I noticed this code:<br>
+<br>
+<br>
+Since indices sort the same as positions, couldn't this be optimized as (you mentioned this before):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=261&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool AxisSweep3::TestOverlap(const Handle* pHandleA, const Handle* pHandleB)
+{
+	for (int axis = 0; axis &lt; 3; axis++)
+	{
+		if (pHandleA-&gt;m_maxEdges[axis] &lt; pHandleB-&gt;m_minEdges[axis] ||
+			pHandleB-&gt;m_maxEdges[axis] &lt; pHandleA-&gt;m_minEdges[axis])
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+</code></pre></div>
+
+I think some of the calling code would have to be re-organized for this to work correctly.<br>
+<br>
+BTW, this optimization never came up in my SAP because I (redundantly) store the Vector3 min, max in my Handle structure.</div></blockquote>
+
+Thanks for the reminder, the version in CVS has your update. The only change in calling code was to pass the current axis index into TestOverlap, so it can be ignored: You only need to check the other two axis, not the current one.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

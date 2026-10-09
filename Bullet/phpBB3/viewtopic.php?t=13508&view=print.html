@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btTriangleMeshShape Read Access Violation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btTriangleMeshShape Read Access Violation</h2>
+		<p><a href="viewtopic.php%3Ft=13508.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13508</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btTriangleMeshShape Read Access Violation</h3>
+				<div class="date">Posted: <strong>Thu Dec 15, 2022 5:47 am</strong></div>
+				<div class="author">by <strong>ahzeke</strong></div>
+				<div class="content">Recently implemented the btTriangleMeshShape into a game engine I've been working on. For some reason I get this error:<br>
+<br>
+"Exception thrown: read access violation.<br>
+graphicsbase was 0x23176382370."<br>
+<br>
+But not on start up/creation rather when a dynamic body collides with it. Looking through the docs "graphicsbase" seems to have something to do with indexing the triangle array. Line 133 of btBvhTriangleMeshShape.cpp:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13508&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for (int j = 2; j &gt;= 0; j--)
+		{
+			int graphicsindex = indicestype == PHY_SHORT ? ((unsigned short*)gfxbase)[j] : gfxbase[j];
+			
+			if (type == PHY_FLOAT)
+			{
+				float* graphicsbase = (float*)(vertexbase + graphicsindex * stride);
+			
+				m_triangle[j] = btVector3(graphicsbase[0] * meshScaling.getX(), graphicsbase[1] * meshScaling.getY(), graphicsbase[2] * meshScaling.getZ());
+			}
+			else
+			{
+				double* graphicsbase = (double*)(vertexbase + graphicsindex * stride);
+			
+			    m_triangle[j] = btVector3(btScalar(graphicsbase[0]) * meshScaling.getX(), btScalar(graphicsbase[1]) * meshScaling.getY(), btScalar(graphicsbase[2]) * meshScaling.getZ());
+			}
+		}
+</code></pre></div>
+
+My guess would that it has something to do with the striding but I don't think I'm doing anything wrong. Here's how I create the shape:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13508&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// btTrangleIndexVertexArray constructor arguments
+		int triangleCount = (meshComponent.vertexData.indices[1] - meshComponent.vertexData.indices[0]) / 3.0f; //  Triangle stored as 3 indices, so num of indices / 3
+		int* indexData = (int*)const_cast&lt;INDEX_TYPE*&gt;(meshComponent.vertexData.pIndexData + meshComponent.vertexData.indices[0]); // The offset of the index data into the global index buffer
+		int triangleSize = sizeof(INDEX_TYPE) * 3;
+		int vertexCount = meshComponent.vertexData.vertexCount;
+		btScalar* vertexData = (btScalar*)const_cast&lt;Vertex*&gt;(meshComponent.vertexData.pVertexData); // pointer magic to remove const
+		int vertexSize = sizeof(Vertex);
+
+		meshComponent.pTriangleArray = new btTriangleIndexVertexArray(triangleCount, indexData, triangleSize, vertexCount, vertexData, vertexSize);
+
+		// Create the collision shape using the loaded triangle array
+		meshComponent.pTriangleMeshShape = new btBvhTriangleMeshShape(meshComponent.pTriangleArray, true, true);
+</code></pre></div>
+
+Any help is greatly apprectiated.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

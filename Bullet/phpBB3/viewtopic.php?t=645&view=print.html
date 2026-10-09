@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Newbie Question</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Newbie Question</h2>
+		<p><a href="viewtopic.php%3Ft=645.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=645</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Newbie Question</h3>
+				<div class="date">Posted: <strong>Mon Oct 30, 2006 3:56 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I am very new to bullet, and I want to use bullet for a kart game (see <a href="http://supertuxkart.berlios.de" class="postlink">http://supertuxkart.berlios.de</a>). So first an apology for asking stupid questions.<br>
+<br>
+I've started by using a simple boxe for each kart, and without any collision detection (e.g. track) am just letting them fall down (a very simple first test <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> ). I expected that only the z (gravity) coordinate would change. But I see that the other coordinates are changing as well, e.g. :<br>
+(format  body 0: &lt;x&gt; &lt;y&gt; &lt;z&gt; dt &lt;delta t&gt;)<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=645&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body 0: 1.500000 -1.500000 -0.018948 dt 0.000000
+body 0: 1.500000 -1.500000 -0.018948 dt 0.014394
+body 0: 1.554279 -1.449197 -0.238790 dt 0.006532
+body 0: 1.554279 -1.449197 -0.238790 dt 0.006405
+body 0: 1.608559 -1.398393 -0.461356 dt 0.006611
+body 0: 1.608559 -1.398393 -0.461356 dt 0.006349
+</code></pre></div>
+1.5/-1.5/-0.018948 are the start coordinates, and the falling appears to be working as expected (quadratic behaviour). But the x/y coordinates change linearly as well.<br>
+<br>
+If I set the kart start coordinates to 0/0/0, everything works as expected - x/y remain (nearly) 0 (rounding errors only), and the box is falling. So I guess I must be forgetting to reset the velocity(?) somewhere, or some functions are not doing what I expect them to do.<br>
+<br>
+Secondly, if I use a 2nd kart (starting at -1.500000 -3.000000 -0.018948 ), this kart will first raise before starting to fall, and it is showing the same linear behaviour in the x/y coordinates but in the opposite direction compared with the kart above, e.g.:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=645&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body 1: -1.500000 -3.000000 -0.018948 dt 0.000000
+body 1: -1.500000 -3.000000 -0.018948 dt 0.014394
+body 1: -1.554279 -3.050803 0.195446 dt 0.006532
+body 1: -1.554279 -3.050803 0.195446 dt 0.006405
+body 1: -1.608559 -3.101606 0.407115 dt 0.006611
+</code></pre></div>
+
+Any hints appreciated  - I am sure it is something stupid <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">   (I will of course be using a more complex kart model, but I first wanted to get my head around how to get started - btw, thanks to Erwin for updateing the vehicle demo!!!):<br>
+<br>
+Cheers,<br>
+   Joerg<br>
+<br>
+This is all the code using the bullet physics, nothing else (bullet related) happens in between.<br>
+<br>
+World creation:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=645&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    m_dynamics_world = new btDiscreteDynamicsWorld();
+    m_dynamics_world-&gt;setGravity(btVector3(0.0f, 0.0f, -gravity));
+</code></pre></div>
+Adding a kart:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=645&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    //x_* and y* are the minimum/maximum coordinates of the kart model
+    // resuling in a size of approx 3.5 x 2.2 (x/y direction)
+    btCollisionShape *box = new btBoxShape(btVector3(x_max-x_min, 
+                                                     y_max-y_min, 
+                                                     1.0f)       );
+    sgCoord *pos=kart-&gt;getCoord();
+    btTransform trans;
+    trans.setIdentity();
+    trans.setOrigin(btVector3(pos-&gt;xyz[0], pos-&gt;xyz[1], pos-&gt;xyz[2]));
+    // it works as expected if I use:    
+    // trans.setOrigin(btVector3(0.0f,0.0f,0.0f));
+
+    float mass=kart-&gt;getMass();
+    btVector3 inertia;
+    box-&gt;calculateLocalInertia(mass, inertia);
+    btRigidBody* kart_body = new btRigidBody(mass, trans, box, inertia);
+    kart_body-&gt;m_worldTransform.setRotation(btQuaternion(0,0,0,1));
+    kart_body-&gt;setLinearVelocity(btVector3(0.0f,0.0f,0.0f));
+    kart_body-&gt;setAngularVelocity(btVector3(0,0,0));
+    m_dynamics_world-&gt;addRigidBody(kart_body);
+</code></pre></div>
+and during a time step:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=645&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    int max_sim_sub_steps = 1;
+    int numSimSteps = m_dynamics_world-&gt;stepSimulation(dt,max_sim_sub_steps);
+
+    int numObjects = m_dynamics_world-&gt;getNumCollisionObjects();
+    for(int i=0; i&lt;numObjects; i++) 
+    {
+        btCollisionObject *obj = m_dynamics_world-&gt;getCollisionObjectArray()[i];
+        btRigidBody* body = btRigidBody::upcast(obj);
+        if(!body) continue;
+        const btVector3 &amp;pos=body-&gt;getCenterOfMassPosition();
+        printf("body %d: %f %f %f dt %f\n",i, pos.x(), pos.y(), pos.z(),dt);
+        
+    }
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 30, 2006 4:22 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Can you try this with only 1 single object added to Bullet? What is the distance between the objects? It looks like the objects are overlapping initially. One good help would be to hookup the debugDrawer. The btBoxShape takes half extents, not the full length of the sides.<br>
+<br>
+Also, it is recommended to use the btMotionState to synchronize the graphics/physics transforms. The other constructor of btRigidBody will probably disappear soon/made obsolete.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 30, 2006 4:52 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+The btBoxShape takes half extents, not the full length of the sides.
+</div></blockquote>
+Ah - I checked for overlapping before posting, but wasn't aware that half extents are used. A quick test shows that this solves the problem <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Thanks!<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Also, it is recommended to use the btMotionState to synchronize the graphics/physics transforms. The other constructor of btRigidBody will probably disappear soon/made obsolete.
+</div></blockquote>
+btDefault MotionState was not declared in bullet-2.-18a, but it works now with the latest snapshot - great, thanks.<br>
+<br>
+BTW, there is a 'no newline at end of file' warning for btDefaultMotionState.h <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Thanks a lot!<br>
+   Joerg</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 01, 2006 3:57 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote class="uncited"><div>BTW, there is a 'no newline at end of file' warning for btDefaultMotionState.h :)</div></blockquote>
+
+Erwin has a real problem 'habit' with creating these!  I fix 'em up as fast as I can - but it's an uphill battle!<br>
+<br>
+  :-)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 01, 2006 4:01 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Woah! I just noticed!<br>
+<br>
+TuxKart with Bullet physics!   Now that's a weird experience...I wrote the original TuxKart (upon which SuperTuxKart is built) - it's very strange to see one's own ancient offspring popping up in places like this!<br>
+<br>
+TuxKart with physics....WOW!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 01, 2006 4:41 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>
+TuxKart with Bullet physics!   Now that's a weird experience...
+</div></blockquote>
+*grin* You shouldn't be surprised, you were the one who recommended bullet to me <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> 
+<blockquote><div><cite>SteveBaker wrote:</cite>
+I wrote the original TuxKart (upon which SuperTuxKart is built) - it's very strange to see one's own ancient offspring popping up in places like this!<br>
+TuxKart with physics....WOW!</div></blockquote>
+
+Well, I hope that we get (what's now) supertuxkart to a really nice state - using a ready-to-go physics engine (hopefully) simplifies the task.<br>
+<br>
+Cheers,<br>
+   Joerg</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

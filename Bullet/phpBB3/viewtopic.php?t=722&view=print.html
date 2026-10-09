@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Johnsons's / Voroni simplex solver</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Johnsons's / Voroni simplex solver</h2>
+		<p><a href="viewtopic.php%3Ft=722.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=722</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Johnsons's / Voroni simplex solver</h3>
+				<div class="date">Posted: <strong>Thu Nov 23, 2006 2:38 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Im making progress on my physics engine, but im stuck on which of the two simplex solvers to use. I sort of understand how the voroni solver works from studying bullets code, but im lost on the other one. <br>
+<br>
+Before I go figure out how the other one works, what are your opinions on the speed of each one? <br>
+I want to use the fastest one (I assume they are both equally accurate)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Johnsons's / Voroni simplex solver</h3>
+				<div class="date">Posted: <strong>Thu Nov 23, 2006 3:03 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>Im making progress on my physics engine, but im stuck on which of the two simplex solvers to use. I sort of understand how the voroni solver works from studying bullets code, but im lost on the other one. <br>
+<br>
+Before I go figure out how the other one works, what are your opinions on the speed of each one? <br>
+I want to use the fastest one (I assume they are both equally accurate)</div></blockquote>
+
+They are not equally accurate., but the speed is very similar.<br>
+<br>
+I added some degeneracy check in the Voronoi Simplex solver, which get's picked up by the GJK mainloop. Degenate cases happen occasionally, when the simplex is almost affine. Then it will try to do a penetration check, and if this gives a 'deeper' result, it will use that. This helps solve some degenerate cases. See Pierre Terdiman's posting about 'reliable' penetration depth, it was actually such case, caused by GJK, not penetration depth. Due to degeneracy, GJK would terminate and report a small positive distance, although it should have gone into penetration depth solving. So that should be fixed using the Voronoi solver.<br>
+<br>
+I plan on optimizing the 'Voronoi' simplex solver: someone contributed a more optimal version, which works better on 'next-gen' platforms.<br>
+<br>
+Hope this helps,<br>
+Erwin<br>
+<br>
+PS: I think Gino van den Bergen added a similar degeneracy check in his Johnson solver implementation in Solid 3.5.x, so you could add this too (not sure if I added this already). Also, Gino's Johnson implementation has some higher accuracy mode, which favors the shortest triangle-edges (to calculate a better normal).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 25, 2006 2:56 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Thanks for the help, Its so close to being complete, but im having a bit of a problem, and Im not sure if its because of GJK itself or somthing else. Here is a picture showing the problem<br>
+<br>
+<a href="http://img221.imageshack.us/my.php?image=proofje1.jpg" class="postlink">[img=http://img221.imageshack.us/img221/9305/proofje1.th.jpg]</a><br>
+<br>
+The blue and red shapes are the two object being checked.<br>
+The yellow shape is the minkowski difference without margins.<br>
+The grayish pink shape is the minkowski difference with margins added.<br>
+The purple is the last simplex used in GJK.<br>
+<br>
+The red line *is supposed* to go from the origin to the nearest point on the minkowski difference, and it is not. That is the bug. It works by finding the distance to the last simplex used by GJK, so im guessing since the last simplex does not contain the whole edge of the minkowski difference, it must be a bug with my GJK implementation, or it could be that 'degeneracy' you talked about in your previous post.<br>
+<br>
+Does this look like a bug with my GJK or is this the degeneracy?<br>
+<br>
+Here is my GJK code as well:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=722&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static Vec2[] Collide(Shape s1, Shape s2)
+	{
+		Vec2 d = s2.position.Subtract(s1.position);
+		d.Normalise();
+
+		//GJK initialise
+		Vec2 s = Support(s1,s2,d);
+		Vec2 simplex[] = new Vec2[3];
+		byte simpSize = 1;
+		simplex[0] = new Vec2(s);
+		d = s.Negate();
+		Vec2 a;
+		boolean collide = true;
+			
+		//4 iterations
+		for (int i=0;i&lt;numIterations;i++)
+		{
+			a = Support(s1, s2, d);
+			//Potential non - collide
+			if (collide &amp;&amp; Vec2.Dot(a,d) &lt; 0)
+				collide = false;
+			simplex[simpSize] = new Vec2(a);
+			simpSize ++;
+	
+			//simplex has two points
+			if (simpSize == 2)
+			{
+				Vec2 o = simplex[1].Negate();
+				Vec2 ab = simplex[0].Subtract(simplex[1]);
+				if (Vec2.Dot(ab, o) &gt; 0)
+				{
+					d = Vec2.Cross( Vec2.Cross(ab, o), ab);
+					//d.Normalise();
+					Vec2 temp = new Vec2(simplex[1]);
+					simplex[1] = new Vec2(simplex[0]);
+					simplex[0] = temp;
+				}
+				else
+				{
+					simplex[0] = new Vec2(simplex[1]);
+					simpSize --;
+					d = new Vec2(o);
+					//d.Normalise();
+				}
+			}
+			//simplex has three points
+			else if (simpSize == 3)
+			{
+				Vec2 o = simplex[2].Negate();
+				Vec2 ab = simplex[1].Subtract(simplex[2]);
+				Vec2 ac = simplex[0].Subtract(simplex[2]);
+				float abc = Vec2.Cross(ab, ac);
+				
+				if (Vec2.Dot(Vec2.Cross(abc, ac), o) &gt; 0)
+				{
+					if (Vec2.Dot(ac, o) &gt; 0)
+					{
+						simplex[1] = new Vec2(simplex[0]);
+						simplex[0] = new Vec2(simplex[2]);
+						simpSize --;
+						d = Vec2.Cross(abc, ac);
+						//d.Normalise();
+					}
+					else if (Vec2.Dot(ab, o) &gt; 0)
+					{
+						simplex[0] = new Vec2(simplex[2]);
+						simpSize --;
+						d = Vec2.Cross(abc, ab);
+						//d.Normalise();
+					}
+					else
+					{
+						simplex[0] = new Vec2(simplex[2]);
+						simpSize = 1;
+						d = new Vec2(o);
+						//d.Normalise();
+					}
+				}
+				else
+				{
+					if (Vec2.Dot(Vec2.Cross(ab, abc), o) &gt; 0)
+					{
+						if (Vec2.Dot(ab, o) &gt; 0)
+						{
+							simplex[0] = new Vec2(simplex[2]);
+							simpSize --;
+							d = Vec2.Cross(ab, abc);
+							//d.Normalise();
+						}
+						else
+						{
+							simplex[0] = new Vec2(simplex[2]);
+							simpSize = 1;
+							d = new Vec2(o);
+							//d.Normalise();
+						}
+					}
+					else
+					{
+						lastSimplex = simplex;
+						if (collide)
+							return simplex;
+						return null;
+					}
+				}
+			}
+		}
+		
+		lastSimplex = simplex;
+		return null;
+	}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 25, 2006 4:53 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Please compare with Bullet's implementation, or just port Bullet's code.<br>
+<br>
+Hope that helps,<br>
+Erwin<br>
+
+<blockquote><div><cite>coderchris wrote:</cite>Thanks for the help, Its so close to being complete, but im having a bit of a problem, and Im not sure if its because of GJK itself or somthing else. Here is a picture showing the problem
+</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 25, 2006 5:20 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">I guess that means its a degeneracy issue. Ill try to look at bullets code some more but i cant seem to find where you check for this degeneracy</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 25, 2006 5:37 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>I guess that means its a degeneracy issue. Ill try to look at bullets code some more but i cant seem to find where you check for this degeneracy</div></blockquote>
+
+Before assuming a rare and unlikely degeneracy, I would first reproduce your setup in Bullet. If you use the Demos/EPAPenDepthDemo, it will tell you which path it took (degeneracy etc).<br>
+<br>
+One degeneracy check in Bullet happens in line 438:<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/btVoronoiSimplexSolver_8cpp-source.html#l00430" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00430</a><br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 25, 2006 5:39 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">ah I see, thanks I got it fixed, was a bug with my vononoi solver</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

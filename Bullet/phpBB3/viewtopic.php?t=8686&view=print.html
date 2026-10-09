@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Hinge constraint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Hinge constraint</h2>
+		<p><a href="viewtopic.php%3Ft=8686.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8686</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Dec 21, 2012 12:52 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I am having trouble implementing this restricted angle inequality constraint about an arbitrary axis.<br>
+<br>
+I am imposing a revolute joint constraint separately to this, to form a hinge constraint<br>
+<br>
+The procedure I am following is shown in the code below:<br>
+1) Convert the restricted axis to local coords<br>
+2) Rotate this axis according to the world orientation of each body once at every frame<br>
+3) Project the current difference in angle onto this axis and check if it's within the angle limits<br>
+4) If it's within the bounds, skip the constraint<br>
+<br>
+When the constraint limits are reached, the joint locks and no force or impulse can bring it back. I would like to keep following the same process, as I have a good visualization of it.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8686&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>AMG3DAngleJoint::AMG3DAngleJoint(AMG3DRigidBody *pRigidBody1, AMG3DRigidBody *pRigidBody2, AMG3DVector4 vAxis, 
+								 AMG3DScalar sLowerLimit, AMG3DScalar sUpperLimit)
+{
+	m_pRigidBody1	= pRigidBody1;
+	m_pRigidBody2	= pRigidBody2;
+
+	AMG3DMatrix4x4 Rot1, Rot1T, Rot2, Rot2T;
+	AMG3DQuaternion q1 = m_pRigidBody1-&gt;quatOrientation;
+	AMG3DQuaternion q2 = m_pRigidBody2-&gt;quatOrientation;
+
+	q1.toMatrix(&amp;Rot1);
+	Rot1T.transposeOf(Rot1);
+	q2.toMatrix(&amp;Rot2);
+	Rot2T.transposeOf(Rot2);
+
+        // Convert arbitrary axis to local coords
+	localAxis1 =  Rot1T*vAxis;
+	localAxis2 =  Rot2T*vAxis;
+
+	lowerLimit = sLowerLimit;
+	upperLimit = sUpperLimit;
+}
+
+void AMG3DAngleJoint::preStep(AMG3DScalar dt)
+{
+	if(dt&lt;=0.0f)
+		return;
+
+	AMG3DScalar k_biasFactor = (AMG3DPhysicsWorld::g_AMG3D_PositionCorrection) ? 0.2f : 0.0f;
+
+	AMG3DMatrix4x4 Rot1, Rot2;
+	AMG3DQuaternion q1 = m_pRigidBody1-&gt;quatOrientation;
+	AMG3DQuaternion q2 = m_pRigidBody2-&gt;quatOrientation;
+
+	q1.toMatrix(&amp;Rot1);
+	q2.toMatrix(&amp;Rot2);
+
+	AMG3DVector4 worldAxis1 = Rot1*localAxis1;
+	AMG3DVector4 worldAxis2 = Rot2*localAxis2;
+
+	// The angle joint derivation
+	// General equation derived for constraints:
+	// JM^-1JT = -Jvi - beta/h*C
+	//
+	// C = ta - tb - ti = 0 where ta, and tb are the initial orientations of each body and ti is the initial difference in angle
+	//
+	// dC/dt = wa - wb
+	// The Jacobian J = [ 0 1 0 -1 ] by inspection
+	// JM^-1JT =  Ia^-1 + Ib^-1	   
+
+	skipConstraint = false;
+
+	AMG3DVector4 ta = m_pRigidBody1-&gt;orientation;
+	AMG3DVector4 tb = m_pRigidBody2-&gt;orientation;
+
+	AMG3DVector4 currAngleDiff = ta - tb;
+
+	AMG3DScalar dtdotaxis = currAngleDiff.dot(worldAxis1);
+
+	if(dtdotaxis&gt;=lowerLimit &amp;&amp; dtdotaxis&lt;=upperLimit) {
+		skipConstraint = true;
+		return;
+	}
+
+	// Compute the bias factor to prevent drift
+	AMG3DVector4 C = ta - tb - worldAxis1*dtdotaxis;
+	bias = k_biasFactor / dt * C;
+
+	AMG3DMatrix3x3 InvIa = m_pRigidBody1-&gt;invIWorld; // Ia^-1
+	AMG3DMatrix3x3 InvIb = m_pRigidBody2-&gt;invIWorld; // Ib^-1
+
+	// A = JM^-1JT
+	A = InvIa + InvIb; // A = Ia^-1 + Ib^-1
+	InvA.inverseOf(A); // A^-1
+}
+
+void AMG3DAngleJoint::applyImpulse()
+{
+	if(skipConstraint)
+		return;
+
+	AMG3DVector4 va = m_pRigidBody1-&gt;velocity;
+	AMG3DVector4 wa = m_pRigidBody1-&gt;angularVelocity;
+	AMG3DVector4 vb = m_pRigidBody2-&gt;velocity;
+	AMG3DVector4 wb = m_pRigidBody2-&gt;angularVelocity;
+
+	// -Jvi = wb - wa
+	// b = -Jvi - beta/h*C
+	AMG3DVector4 b = wb - wa - bias;
+
+	// x = lambda (corrective impulse)
+	lambda = b*InvA;
+
+	P += lambda; // Accumulate impulse for warm starting (To Do: Add warm starting)
+
+	// vfa = via + Ma^-1 * 0  * lambda = via + 0 = via
+	// wfa = wia + Ia^-1 * 1  * lambda
+	// vfb = vib + Mb^-1 * 0  * lambda = vib + 0 = vib
+	// wfb = wib + Ib^-1 * -1 * lambda
+	// m_pRigidBody1-&gt;velocity		+= 0;
+	m_pRigidBody1-&gt;angularVelocity	+= m_pRigidBody1-&gt;invIWorld*lambda;
+	// m_pRigidBody2-&gt;velocity		-= 0;
+	m_pRigidBody2-&gt;angularVelocity	-= m_pRigidBody2-&gt;invIWorld*lambda;
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Thu Dec 27, 2012 9:07 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">I have built a hinge constraint with a 5x5 K matrix. My problem is when the bodies rotate about a constrained axis, the solver blows up. If I initialise the constraint to allow rotation about the Z axis of body1, it works fine provided that the bodies do not have a velocity about the other two axes. <br>
+<br>
+How would you determine the axis of rotation that is allowed between two bodies?<br>
+<br>
+Initially I have the following conditions for the free axis given the AXIS_X ... are body 1's local axis and localAxis1 and localAxis2 are body one and two's respective axes which are later converted into world coords that transform with each body:<br>
+<br>
+	if(iFreeAxis==AXIS_X) {<br>
+		localAxis1 = Vector4(0,1,0);<br>
+		localAxis2 = Vector4(0,0,1);<br>
+	}<br>
+	else if(iFreeAxis==AXIS_Y) {<br>
+		localAxis1 = AMG3DVector4(1,0,0);<br>
+		localAxis2 = AMG3DVector4(0,0,1);<br>
+	}<br>
+	else if(iFreeAxis==AXIS_Z) {<br>
+		localAxis1 = Vector4(1,0,0);<br>
+		localAxis2 = Vector4(0,1,0);<br>
+	}<br>
+<br>
+Can anyone please point me in the right direction?<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Sat Dec 29, 2012 8:51 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Talking to myself here again ...<br>
+<br>
+I have managed to implement the hinge joint properly and test it with success. Also,  chain of 3 bodies connected with revolute joints works well.<br>
+<br>
+I am now trying to test the following and am having erratic velocities:<br>
+<br>
+Body1 is anchored to an immovable body3 using a revolute joint<br>
+Body1 is anchored to body2 using a hinge joint and both bodies have the same mass<br>
+<br>
+If I initialise body1 with a velocity about the hinge axis, the simulation is stable, however if i initialise body1 with a velocity about the x axis, the simulation becomes unstable after 10 seconds, however the joint remains in tact.<br>
+<br>
+The hinge axis initially is (1,0,0) and the restricted tangent axes are (1,0,0) and (0,1,0) and both bodies have an initial orientation aligned with these basis vectors<br>
+<br>
+Has anyone had this problem and possibly identify the cause? The simulation seems stable when debugging for the hinge joint but the revolute joint is computing a large bias. Even disabling position correction eventually leads to an unstable simulation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Wed Jan 02, 2013 7:01 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">This appears like an error in your angular constraints. You block the angular motion using so called orthogonality conditions. Say you have a joint frame u,v,w on both bodies. The w axis on body 1 defines your hinge.  <br>
+<br>
+// 1. Define the position constraints<br>
+C1 = u2 * w1 <br>
+C2 = v2 * w1<br>
+<br>
+// 2. Build the time derivative<br>
+dC1/dt = J1 * v = cross( u2, w1 ) * ( omega2 - omega1 )<br>
+dC2/dt = J2 * v = cross( v2, w1 ) * ( omega2 - omega1 )<br>
+<br>
+// 3. Identify the Jacobian by inspection<br>
+J1 = [ 0 | -cross( u2, w1 ) | 0 | cross( u2, w1 ) ]<br>
+J2 = [ 0 | -cross( v2, w1 ) | 0 | cross( v2, w1 ) ]<br>
+<br>
+// 4. Build inverse effective mass K = J * M^-1 * JT (the first '*' is a dot product and the second '*' is a matrix times vector multiplication -&gt; the result is a scalar)<br>
+K1 = cross( u2, w1 ) * [ ( invI1 + invI2 ) * cross( u2, w1 ) ] <br>
+K2 = cross( v2, w1 ) * [ ( invI1 + invI2 ) * cross( v2, w1 ) ] <br>
+<br>
+// 5. Solve (use 2. to compute J*v and choose beta between 0.1 - 0.2)<br>
+DeltaLambda1 = -( J1 * v + beta * C1 / dt ) / K1 <br>
+DeltaLambda2 = -( J2 * v + beta * C2 / dt ) / K2<br>
+<br>
+<br>
+<br>
+Note that for solving this you handle each constraint separately. So for a hinge I would suggest solving C1 followed by C2 and finally solve a 3x3 point-to-point constraint. For learning purposes I recommend trying to derive this yourself and ask questions here. Take small steps and try not to combine too many steps into one!<br>
+<br>
+Also note that there is a tiny gotcha with this formulation. The initial constraint is bi-stable. Note that C = a * b = 0 also holds true for C = -a * b = 0. When this happens the Jacobian flips and the error will be exaggerated. Usually this is a not problem but you see this happen sometimes in some AAA games when e.g. a knee of a ragdoll gets twisted and jitters. Once you are more familiar with the techniques you can look e.g. into quaternion constraints which solve this problem elegantly. Don't let us get ahead of things here. I just mentioned this so you can identify this error if it occurs in your simulation <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Good luck!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Jan 04, 2013 10:44 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks Dirk! That makes alot more sense<br>
+<br>
+The way I am following your process is as follows:<br>
+<br>
+dC1/dt = u2.w1<br>
+dC1/dt = u2.d/dt(w1) + d(u2)/dt.w1 (Product rule)<br>
+dC1/dt = u2.Cross(omegaB, w1) + Cross(omegaA, u2).w1 (Since w1 varies with frame B and u2 changes wrt to frame A)<br>
+dC1/dt = omegaB.Cross(w1, u2) + omegaA.Cross(u2, w1) (Commutativity of the dot product and cross product identities)<br>
+<br>
+dC1/dt = omegaA.Cross(u2,w1) - omegaB.(Cross(u2,w1)<br>
+dC1/dt = Cross(u2,w1).(omegaA - omegaB)<br>
+<br>
+Jv = [ 0 Cross(u2,w1)T 0 -Cross(u2,w1)T ] [ va wa vb wb ]T<br>
+<br>
+My simulation works well, except when I introduce the bias into it, it becomes erratic.<br>
+<br>
+My final effective mass matrix after splitting it up and combining it as you suggested as follows:<br>
+<br>
+Row 1 (Col 1 to 5)	<br>
+Ma^-1 + [~ra]TIa^-1[~ra] + Mb^-1 + [~rb]TIb^-1[~rb]			<br>
+[~ra]TIa^-1(t2xu1) + [~rb]TIb^-1(t2xu1)				 <br>
+[~ra]TIa^-1(v2xu1) + [~rb]TIb^-1(v2xu1)     <br>
+	<br>
+Row 2 (Col 1 to 5)<br>
+(t2xu1)Ia^-1[~ra] + (t2xu1)Ib^-1[~rb]				<br>
+(t2xu1)Ia^-1(t2xu1) + (t2xu1)Ib^-1(t2xu1)			 <br>
+(t2xu1)Ia^-1(v2xu1) + (t2xu1)Ib^-1(v2xu1) ]<br>
+<br>
+Row 3 ( Col 1 to 5)<br>
+(v2xu1)Ia^-1[~ra] + (v2xu1)Ib^-1[~rb]				<br>
+(v2xu1)Ia^-1(t2xu1) + (v2xu1)Ib^-1(t2xu1)			 <br>
+(v2xu1)Ia^-1(v2xu1) + (v2xu1)Ib^-1(v2xu1) ]<br>
+<br>
+This corresponds to 5 D.O.F removed. The simulation only becomes erratic if I introduce the bias and an angular velocity in the free axis and restricted axis. Any idea why? It seems our Jacobians are backwards in the derivations</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Jan 04, 2013 5:03 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>dC1/dt = u2.Cross(omegaB, w1) + Cross(omegaA, u2).w1</div></blockquote>'<br>
+Vice versa: w1 varies with frame A and u2 varies with frame B. So I think my Jacobian is correct.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Jan 04, 2013 11:11 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks a lot Dirk. I transformed my tangent axes with the frame they vary with and it still works both ways, regardless of our Jacobians being different, it was a good mistake on my part to learn from.<br>
+<br>
+Thanks for the tips on quaternion constraints, you are most helpful.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Mon May 27, 2013 9:57 pm</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Note that for solving this you handle each constraint separately. So for a hinge I would suggest solving C1 followed by C2 and finally solve a 3x3 point-to-point constraint.</div></blockquote>
+Why is it better to solve the two constraints separately and not at the same time where K would be a 2x2 matrix ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Tue May 28, 2013 7:21 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You can do this as well. It is slightly more expensive and I doubt it will make any noticelable difference. The usual problem is that the linear and angular constraints are fighting each other.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Tue May 28, 2013 9:46 pm</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content">Thanks for your answer Dirk !<br>
+<br>
+When you say :<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>The usual problem is that the linear and angular constraints are fighting each other.</div></blockquote>
+We have this issue in both situations (solving the constraints by block or individually) right ?<br>
+<br>
+I have read that in some situations, it is better to solve the constraints by block. What do you suggest ? When is it better to solve the constraints by block and when is it better to solve then individually ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Wed May 29, 2013 3:19 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Well, you still have this problem when you solve a block of 3x3 for the linear and a block of 2x2 for the angular constraints. But you can also solve a 5x5 block. If you are fancy you can even add the limit and solve a 6x6 system. Note that this would be a small LCP now which you can solve e.g. with direct enumeration. This gets expensive , but the limit gets stiffer.<br>
+<br>
+I did the 5x5 block solves years ago and want to try it again at some point. At that time it helped since we used 30 gravity and simulated at 15-20 Hz. It helped to keep things together. I am not sure how much it helps if you have a good setup and simulate at 60 Hz. <br>
+<br>
+If you run a block solver on a mechanic system like a ragdoll I somewhere read years ago that this improves convergence rate by sqrt( 2 ). Please don't ask where this number comes from, sorry <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Hinge constraint</h3>
+				<div class="date">Posted: <strong>Wed May 29, 2013 6:33 am</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content">Ok thanks. For the moment I solve a block for the linear constraints and another block for the angular constraints. So at most, I have to solve a 3x3 system. I handle the limits and motor separately.<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>If you run a block solver on a mechanic system like a ragdoll I somewhere read years ago that this improves convergence rate by sqrt( 2 ). Please don't ask where this number comes from, sorry <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">.</div></blockquote>
+Yeah, I have seen that you mentioned that value in other threads in the forum already <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

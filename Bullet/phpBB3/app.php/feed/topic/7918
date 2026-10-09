@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7918" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2012-06-25T10:05:53+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7918</id>
+
+		<entry>
+		<author><name><![CDATA[mikeshafer]]></name></author>
+		<updated>2012-06-25T10:05:53+00:00</updated>
+
+		<published>2012-06-25T10:05:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28166#p28166</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28166#p28166"/>
+		<title type="html"><![CDATA[Re: Effective Mass Question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28166#p28166"><![CDATA[
+1) It does!  Heavy thanks to Mr. Erin Catto's paper Iterative Dynamics with Temporal Coherence, I finally got it to work.  I'm able to plop boxes on the ground and there is minimal jiggle which is quite impressive to me given that I'm getting one closest point per frame from GJK and building a manifold that sometimes is only 2 or 3 points (where as box clipping would give you the expected 4).  The key seems to be something I learned from Bullet called penetration velocity.  Basically the penetration distance divided by frame time.  It helps you build a manifold.  Really neat stuff.<br>2) Yeah I threw it away.  I took it out.  It was never getting hit anyway, hahaha.<br>3) Yeah I figured as much.  I have the following code for soft constraints:<div class="codebox"><p>Code: </p><pre><code>      if (m_constraints[i].NeedsDampingCalculation())      {         scalar w = m_constraints[i].GetDampingFrequency();         scalar w2 = w*w;         scalar k = totalEffectiveMass * w2;         scalar c = (scalar)2.0 * totalEffectiveMass * m_constraints[i].GetDampingRatio() * w;         scalar gamma = (scalar)1.0 / (c + elapsedSecs * k);         scalar beta0 = k / (c + elapsedSecs * k);         C = beta0 * m_constraints[i].GetConstraintValue() + gamma * m_lastImpulses[i];      }      else      {         C = m_constraints[i].GetERP() * oneOverDT * m_constraints[i].GetConstraintValue() +               m_constraints[i].GetCFM() * m_lastImpulses[i];      }</code></pre></div>which kind of gives you an option to use a designer-fill-in-the-values approach or go with your own ERP/CFM values.<br><br>Anyway, I am now working on friction constraints and after that I will be doing rag doll stuff (with polygonal boxes as the limbs).  I am cutting bodies in half with a samurai sword in this game and they are to separate and fall realistically on the ground.  I have the cutting code working and it creates stubs and everything--it's just incredibly slow.  I'm going to put it into its own thread and have the bodies freeze after you slice them and then slowly fall apart.  Wish me luck!!<br><br>I'll post a demo of the game when it gets closer to something I want to be associated with hahahaha. Thanks for all your help Dirk.<br><br>Mike<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9133">mikeshafer</a> — Mon Jun 25, 2012 10:05 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2012-06-24T17:15:03+00:00</updated>
+
+		<published>2012-06-24T17:15:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28164#p28164</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28164#p28164"/>
+		<title type="html"><![CDATA[Re: Effective Mass Question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28164#p28164"><![CDATA[
+Somethings I noticed:<br><br>1) It seems that you found your bug, but the solver should converge. E.g. 100 iterations should behave better than 10 and the solution should improve every iteration. <br>2) I would not exit the velocity solver early if the error falls below some threshold<br>3) Don't use CFM until you want soft constraints<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Jun 24, 2012 5:15 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mikeshafer]]></name></author>
+		<updated>2012-06-24T08:54:17+00:00</updated>
+
+		<published>2012-06-24T08:54:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28161#p28161</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28161#p28161"/>
+		<title type="html"><![CDATA[Re: Effective Mass Question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=28161#p28161"><![CDATA[
+So I found out what was causing my problem was improper damping.  Furthermore there is only so much accuracy you can get with a non-box-clipping algorithm like GJK.  Boxes are good candidates for box clipping, but alas I have to handle any polygonal shape and so GJK will have to suffice.  So far it's working good, again thanks for the help.<br><br>Mike<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9133">mikeshafer</a> — Sun Jun 24, 2012 8:54 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mikeshafer]]></name></author>
+		<updated>2012-04-01T08:46:10+00:00</updated>
+
+		<published>2012-04-01T08:46:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27529#p27529</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27529#p27529"/>
+		<title type="html"><![CDATA[Re: Effective Mass Question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27529#p27529"><![CDATA[
+Helps a lot, thanks!  My block solver now has an optional use ERP/CFM or damp ratio/damp frequency via a boolean flag.  It seems to work okay, but here is what gets me.  With projected Guass-Seidel, the more iterations you do, the more accurate the results (stacking works better, etc, etc).  With my implementation, it doesn't seem to work correctly.  The problem may be in a myriad of places, but basically I have a box that comes to rest via a motor constraint--it's actually what Bullet is doing too, it uses a motor constraint as described in Game Programming Gems 4.  I coded the contact constraints and stupidly realized that my box won't move at all.  I guess the constraint scalar (the motor variable) is what drives a box to come to rest.  The problem I'm having is that my box comes to rest then flips out once in a while--it perturbs itself from being on all 4 of its contact points and then comes back to rest.  It's as if an external impulse gets applied, but I'm obviously not applying an external impulse.  Below is my code.  I was wondering if you see anything wrong with it.  Thank you so much for taking a look!<br><div class="codebox"><p>Code: </p><pre><code>   // now we solve for x (lambda) ((impulses)) using Projected Gauss-Seidel (basically Gauss-Seidel with a clamp)   scalar error;   u32 k;   for (k = 0; k &lt; NUM_SOLVE_ITERATIONS; k++)   {      error = 0.0;         for (u32 i = 0; i &lt; m_numConstraints; i++)      {         scalar AxSum = 0;         for (u32 j = 0; j &lt; m_numConstraints; j++)         {            AxSum += A[i][j] * m_lastImpulses[j];         }               scalar rowDiff = b[i] - AxSum;         scalar deltaX;                  if (A[i][i] == 0.0)            deltaX = 0.0;         else            deltaX = rowDiff / A[i][i];                  error += rowDiff*rowDiff;                  m_lastImpulses[i] = MEHMAX(0, MEHMIN(m_lastImpulses[i] + deltaX, (scalar)1e10));      }            if (error &lt; (scalar)0.01*(scalar)0.01)         break;   }</code></pre></div>The funny thing is that when NUM_SOLVE_ITERATIONS = 10 it works better than when NUM_SOLVE_ITERATIONS = 100 which is backwards.  Maybe it's just luck with floating point error, but I'm stumped.  But if you could tell me if my projected gauss-seidel looks okay, I would be much appreciative.  Thanks!<br><br>Mike<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9133">mikeshafer</a> — Sun Apr 01, 2012 8:46 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2012-03-04T22:17:12+00:00</updated>
+
+		<published>2012-03-04T22:17:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27258#p27258</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27258#p27258"/>
+		<title type="html"><![CDATA[Re: Effective Mass Question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27258#p27258"><![CDATA[
+The effective mass can become a matrix if you solve some constraints as a block. This is sometimes called a block solver. A typical example is the 3x3 point to point constraint which is used to model all kinds of joints like e.g. spherical or revolute joints. <br><br>There might be a better solution, but you could solve all three equations individually to make them soft. Usually you use a 1D distance constraint and use the soft parameter to make it behave springy if you want to model a spring.<br><br>HTH,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Mar 04, 2012 10:17 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mikeshafer]]></name></author>
+		<updated>2012-02-27T19:41:56+00:00</updated>
+
+		<published>2012-02-27T19:41:56+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27201#p27201</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27201#p27201"/>
+		<title type="html"><![CDATA[Effective Mass Question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=27201#p27201"><![CDATA[
+Hi there,<br><br>This is sort of a dumb question I think, but I don't understand something and I was hoping one of you could help me out.  In a constraint solver, we end up solving the standard Ax=b linear system where A = JM^-1J^T (that is, the Jacobian multiplied by the inverse mass matrix multiplied by the transpose of the Jacobian).<br><br>Now the effective mass seen by a soft constraint is 1 / A (Erin Catto's GDC presentation tells me this), but for a pairwise system with, say 3 constraints, A is a 3x3 matrix that is not diagonal.  I guess I'm looking to just plug in numbers, but I don't understand how the effective mass can be a matrix (not a scalar) and further, I don't see how you can calculate an effective "spring constant" using effective mass multiplied by frequency-squared when effective mass is a matrix.<br><br>Sorry about my lack of mathematical understanding.  I hope someone can point me in the right direction.<br><br>Thanks!<br>Mike<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9133">mikeshafer</a> — Mon Feb 27, 2012 7:41 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

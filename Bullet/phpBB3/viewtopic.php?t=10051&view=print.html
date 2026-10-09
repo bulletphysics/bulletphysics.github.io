@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Regarding concave collision detection (Chap 10 RTCD)[SOLVED]</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Regarding concave collision detection (Chap 10 RTCD)[SOLVED]</h2>
+		<p><a href="viewtopic.php%3Ft=10051.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10051</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Regarding concave collision detection (Chap 10 RTCD)[SOLVED]</h3>
+				<div class="date">Posted: <strong>Tue Aug 12, 2014 8:05 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi all,<br>
+<br>
+I am reading chapter 10 of book (realtime collision detection by Christer Ericson). The GPU collision chapter first gives Convex collision detection code snippet. I implemented it in OpenGL as given in Table 10.1 and it works as advertised. I then followed suit with the concave collision detection based on the information given on page 422 in Table 10.2. But since the information about hardware occlusion query is not detailed enough, I could not get it to work. So far I have implemented it as follows.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10051&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>...check the reply below
+</code></pre></div>
+
+I colour my objects green on collision to see if it works. for this demo, as soon as the two objects collide, i get flickering since we might have even and odd number of occlusion samples. My question is has anybody implemented this code snippet as given in Table 10.2 before? <br>
+<br>
+   Please don't suggest me to look out for alternative solutions (I know there are better solutions) rather than trying this. I am really surprised at why the book does not include workable demos. It only contains code snippets which one can easily copy from the book. <br>
+<br>
+Thanks,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding concave collision detection (Chap 10 RTCD)</h3>
+				<div class="date">Posted: <strong>Tue Aug 12, 2014 8:22 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">OK guys as usual. After posting question on the forum I get an answer. The following code works for me and I get the correct results now.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10051&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool ConcaveCollision() {
+
+	//clear depth and stencil buffers
+	glClearDepth(1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	//disable color writes
+	glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); 
+
+	//enable depth buffer writes and set depth test to always pass
+	glDepthFunc(GL_ALWAYS);
+	glDepthMask(GL_TRUE);
+
+	//render the first object edges
+	glDisable(GL_STENCIL_TEST);
+	 
+	//draw edges of object B
+	glDisable(GL_CULL_FACE);
+	glPushAttrib(GL_POLYGON_BIT);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	 	DrawObjectB(false); 
+	glPopAttrib();
+
+	//set the depth function to less and disable depth buffer writes
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_FALSE);
+	  
+	glEnable(GL_STENCIL_TEST);
+	glEnable(GL_CULL_FACE); 	 	 
+	
+	//set stencil test to increment the value and cull the back faces to render front faces only
+	glStencilOp(GL_KEEP, GL_KEEP, GL_INCR); 
+
+	glCullFace(GL_BACK);
+
+		//draw object A
+		DrawObjectA(false);
+	
+	//set stencil test to decrement the value and cull the front faces to render back faces only
+	glStencilOp(GL_KEEP, GL_KEEP, GL_DECR);
+	glCullFace(GL_FRONT); 
+	  
+	glDepthFunc(GL_GREATER);
+
+	//issue a hardware query to see how many samples passed
+	glBeginQuery(GL_SAMPLES_PASSED, query);
+
+		//draw object A
+		DrawObjectA(false);
+
+	glEndQuery(GL_SAMPLES_PASSED);  
+	glGetQueryObjectuiv(query,  GL_QUERY_RESULT, &amp;numSamplesRendered);
+
+	s.str("");
+	s &lt;&lt; "Samples occluding: " &lt;&lt; numSamplesRendered ;
+	
+	if(numSamplesRendered==0 )
+		return false; 
+
+	return true;
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Regarding concave collision detection (Chap 10 RTCD)[SOL</h3>
+				<div class="date">Posted: <strong>Wed Aug 20, 2014 7:37 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">"Real-Time Collision Detection" is one of my favorite books in this field.<br>
+Do some one know other books like this one ?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

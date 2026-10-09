@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11218" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2016-07-01T19:43:13+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11218</id>
+
+		<entry>
+		<author><name><![CDATA[sebjf]]></name></author>
+		<updated>2016-07-01T19:43:13+00:00</updated>
+
+		<published>2016-07-01T19:43:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37827#p37827</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37827#p37827"/>
+		<title type="html"><![CDATA[Re: How does the Strain Based Dynamics material transform wo]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37827#p37827"><![CDATA[
+Hi mobeen,<br><br>My thinking for the tangents went like this:<br><br>The authors placed no constraints on the UVs, so we could say that uv1 = [1,0] and uv2 = [0,1]. This case would lead to the tangents being the edges of the triangle.<br><br>The appendix says <blockquote class="uncited"><div>To make sure tu and tv are normal to each other, the latter can alternatively be computed as the cross product of tu with the triangle normal.</div></blockquote>So in principle you could also say:<br><br>tu = e1<br><br>and<br><br>tv = normalise(cross(triangle_normal, tu))<br><br>I have tried this and it works for recovering the strain tensor (though I have not yet done the corrections with it!). However, I was too general saying any orthogonal vectors, I tried a few more examples and found the vectors had to be co-planar with the edges, otherwise there are consistent, but odd, offsets in the resulting tensor.<br><br><blockquote class="uncited"><div>When multiplying by the inverse of a similar matrix for a deformed point, the result is deformation of the extents of each edge, in each tangent.</div></blockquote>I think I oversimplified a bit here as well and this doesn't really hold as I look closer. I am still wondering if this works based on the relationship between edge lengths. I noted that the inner product P'P, is essentially a 2x2 matrix of dot products of the triangle edges (and should be invariant to any translation/rotation in the global frame). I tried to write down and expand the operation Q^-1'P'PQ^-1 to see what the relationship between these were, but the terms became too unwieldly and I gave up! In any case, I think I would have to understand a lot more about strain tensors before I saw how the aforementioned equation would assemble one.<br><br>I am glad I understand what Q is doing now though, since that was originally the bit I wanted to get before going any further.<br><br>Thanks again,<br><br>Sj<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11737">sebjf</a> — Fri Jul 01, 2016 7:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mobeen]]></name></author>
+		<updated>2016-07-01T05:03:45+00:00</updated>
+
+		<published>2016-07-01T05:03:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37825#p37825</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37825#p37825"/>
+		<title type="html"><![CDATA[Re: How does the Strain Based Dynamics material transform wo]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37825#p37825"><![CDATA[
+<blockquote class="uncited"><div>any two tangets could be chosen, so long as they are orthogonal.</div></blockquote>Hmm I dont think so. We used the uv coordinates of our triangle to get the tangents. I dont think the orthogonality is necessary here between tu and tv. From what I see, we are multiplying here ( [n1,n2]'*(x1-x0,x2-x0) ) to get a square matrix so that we may get the inverse of it which is stored as Qinv<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8124">mobeen</a> — Fri Jul 01, 2016 5:03 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sebjf]]></name></author>
+		<updated>2016-06-30T21:28:22+00:00</updated>
+
+		<published>2016-06-30T21:28:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37823#p37823</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37823#p37823"/>
+		<title type="html"><![CDATA[Re: How does the Strain Based Dynamics material transform wo]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37823#p37823"><![CDATA[
+Thank you mobeen,<br><br>That was helpful again!<br><blockquote class="uncited"><div>Now from our knowledge of triangles, we know that we can use a set of parameters (u,v or s,t) texture coordinates to linearly interpolate an attribute in the u,s (weft) and v,t(warp) direction on the triangle.</div></blockquote>OK I think I have this. So rather than thinking of [n1,n2] as a set of basis vectors that transform between two similar coordinate systems, we should consider it like a transform that performs a projection. The transform takes the edges and projects them into the basis, expressing the coordinates as a set of extents.<br><br>That is, [n1,n2]'*(x1-x0,x2-x0) is essentially using the dot product to project each edge into each tangent, forming a 2x2 matrix indicating the extents of each edge, along n1 and n2. When multiplying by the inverse of a similar matrix for a deformed point, the result is deformation of the extents of each edge, in each tangent.<br><br>Using UV coordinates allows the weft and warp directions to be easily controlled by the designer, but this is actually separate from how [n1,n2] functions - any two tangets could be chosen, so long as they are orthogonal.<br><br>Is that right? I have done a quick example and it seems to hold, but it was only one!<br><br>Sj<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11737">sebjf</a> — Thu Jun 30, 2016 9:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mobeen]]></name></author>
+		<updated>2016-06-28T23:42:36+00:00</updated>
+
+		<published>2016-06-28T23:42:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37804#p37804</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37804#p37804"/>
+		<title type="html"><![CDATA[Re: How does the Strain Based Dynamics material transform wo]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37804#p37804"><![CDATA[
+<blockquote class="uncited"><div>Have I understood that correctly?</div></blockquote>Yes <br><blockquote class="uncited"><div>Though this still leaves me wondering how the transformation by the tangents works.</div></blockquote>OK. Let me elaborate from what I understand. For the triangular element, we are trying to come up with a material frame (a basis) so that we could covert a given attribute in the triangles coordinate system with x0 being the origin. For this paragraph, we are dealing with material coordinates. The idea behind doing P=[x1-x0, x2-x0] is to assume that x0 is the origin of the triangle material frame. Now from our knowledge of triangles, we know that we can use a set of parameters (u,v or s,t) texture coordinates to linearly interpolate an attribute in the u,s (weft) and v,t(warp) direction on the triangle. We calculate U=[uv1-uv0, uv2-uv0] again assuming the first value (uv0) as origin. If we wanted to interpolate an attribute on triangle, we would multiply it with U matrix. To get any attribute in the uv parameterization frame, we would multiply it with Uinv. We get the inverse matrix of U and then obtain our tangent matrix by multiplying P with Uinv. This is essentially finding the relative change between the triangles material coordinates with respect to the uv parametrization frame. This is what introduces the anisotropicity in the model that is the force distribution is not symmetric but it varies in the u and v directions subject to how the uv coordinates and material coordinates vary. The tangent matrix is then multiplied with the material coordinates (P matrix) to obtain the Qinv matrix. <br><br>Now the good thing with this is that all required matrices are fixed so we can precalculate the Qinv matrix once at initialization. At runtime, we just obtain the new P matrix by using current positions, and then simply multiply with Qinv matrix to get the strain values for a given triangle element. <br><br>Hope it helps. I had a hard time figuring things out but after a couple of reads and some help from these forums, I managed to finally understand how it works. I do hope the accompanying demo and book chapter helps you in your understanding of SBD.<br><br>Regards,<br>Mobeen<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8124">mobeen</a> — Tue Jun 28, 2016 11:42 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sebjf]]></name></author>
+		<updated>2016-06-28T22:27:50+00:00</updated>
+
+		<published>2016-06-28T22:27:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37801#p37801</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37801#p37801"/>
+		<title type="html"><![CDATA[Re: How does the Strain Based Dynamics material transform wo]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37801#p37801"><![CDATA[
+Hi mobeen,<br><br>Thank you very much, that was quite helpful.<br><blockquote class="uncited"><div>I have written an implementation of strain based dynamics chapter 12 in a new book Game Engine Gems 3</div></blockquote>Yes I have a copy thank you <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> - it was actually that book that helped me get this far!<br><br>I have looked at others' source code, and it has helped (especially where there are unfamiliar notations). In this case though I just lost the 'link' between the operations and what was happening to the geometry conceptually.<br><blockquote class="uncited"><div>=Qinv'P'PQinv (using property of transpose (AB)' = B'A')</div></blockquote>Of course! That is me being stupid. I forgot that you had to invert the terms when taking the transpose of a bracketed statement.<br><blockquote class="uncited"><div>we are essentially transforming our coordinates in the triangles material frame. We do this for both current positions (P) as well as for material coordinates (Q)</div></blockquote>I think this is beginning to make sense. So instead of the transformation by the tangents forming some 'magic matrix' which both converts into texture space and provides the deformation gradient, we could look at it more as a convenience transformation into a coordinate system that makes the solution numerically viable:<br><br>So in fact you could say that:<br><br>N = [n1,n2]'<br>Q &amp; P = [x1-x0,x2-x0]<br><br>and<br><br>= (N*Q)^-1'*P'*P*(N*Q)^-1<br>= (Q^-1*N^-1)'*P'*P*(Q^-1*N^-1)<br>= N^-1'*Q^-1'*P'*P*Q^-1*N^-1<br><br>(Obviously you can't *actually* say that because N and Q are noninvertible, but it illustrates the thought process... the transformation by the tangents just wraps the original formulation.)<br><br>Have I understood that correctly?<br><br>Though this still leaves me wondering how the transformation by the tangents works. I think my difficulties with this are because I'm trying to draw analogies between this operation and the use of basis vectors I am familiar with (where a matrix of basis vectors is the same as a transform from Basis-&gt;Global, so the inverse of the same matrix converts from Global-&gt;Basis).<br><br>I at first imagined that eqn. 38 is doing something similar, but I should probably work through an example to see what really happens to the points during this operation.<br><br>Thanks again!<br><br>Sj<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11737">sebjf</a> — Tue Jun 28, 2016 10:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mobeen]]></name></author>
+		<updated>2016-06-28T03:59:40+00:00</updated>
+
+		<published>2016-06-28T03:59:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37792#p37792</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37792#p37792"/>
+		<title type="html"><![CDATA[Re: How does the Strain Based Dynamics material transform wo]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37792#p37792"><![CDATA[
+<blockquote class="uncited"><div>I am working on an implementation of strain based dynamics, but am stuck understanding how one part of it operates.</div></blockquote>I have written an implementation of strain based dynamics chapter 12 in a new book Game Engine Gems 3 (<a href="http://www.gameenginegems.com/geg3.php" class="postlink">http://www.gameenginegems.com/geg3.php</a>). Complete source code is given with it which you may checkout. Also read up details in the book chapter that may also help with your understanding.<br><br>Let me address your concerns.<blockquote class="uncited"><div>I think most of the confusion arises from not understanding what 'Q' is now. </div></blockquote>OK let me clarify it for you what I understood. Basically you have you two sets of positions. One initial positions (stored in Q also known as material coordinates) and another current positions (which are your corrected current positions stored in P). <blockquote class="uncited"><div>What does this technique do: [n1,n2]'*(x1-x0,x2-x0) </div></blockquote>n1 and n2 are two unit vectors that are obtained from two world space tangent vectors (tu and tv) which are themselves obtained from the texture coordinates (uv). When we calculate [(x1-x0),(x2-x0)], we are essentially transforming our coordinates in the triangles material frame. We do this for  both current positions (P) as well as for material coordinates (Q) so that <br>1) We can identify the relative change. Any new positions can then be given in the local frame of triangle by simply multiplying with the resulting matrix.<br>2) We can then get the inverse of Q and P because in 2D P and Q are non-square and their inverses are not well defined. <br><blockquote class="uncited"><div>Further, the tensor is now defined as Q^-1'*P'*P*Q^1, whereas before (for untransformed coordinates) it was (P*Q^-1)'*(P*Q^-1).</div></blockquote>I think you are not understanding it correctly. Read pages 3 and 4 of paper. For 2D case, the tensor is defined as Qinv'P'PQinv (' is transpose) this you can derive yourself from <br>eq. 7 which says<br>F=PQinv<br>G=F'F-I<br>S=F'F (see page 4 first para where S is given in the form of rest stretches)<br>S=(PQinv)'(PQinv)<br>  =Qinv'P'PQinv (using property of transpose (AB)' = B'A')<br><br>Once again you may lookup the complete source code for both 2D as well as 3D cases in the GEG3 chapter I wrote. In addition, <a href="https://github.com/InteractiveComputerGraphics/PositionBasedDynamics" class="postlink">Jan Bender's Position based Dynamics library</a>  also contains an implementation of strain based dynamics that was done largely at the same time when I wrote mine. That can also help with your understanding.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8124">mobeen</a> — Tue Jun 28, 2016 3:59 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sebjf]]></name></author>
+		<updated>2016-06-27T21:59:24+00:00</updated>
+
+		<published>2016-06-27T21:59:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37791#p37791</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37791#p37791"/>
+		<title type="html"><![CDATA[How does the Strain Based Dynamics material transform work?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37791#p37791"><![CDATA[
+Hi,<br><br>I am working on an implementation of strain based dynamics, but am stuck understanding how one part of it operates.<br><br>In <a href="http://matthias-mueller-fischer.ch/publications/strainBasedDynamics.pdf" class="postlink">Strain Based Dynamics</a> a constraint is derived so that Green's Strain Tensor is a function of the relative locations of the points of a tetrahedron or triangle, and this then drives the position corrections for the points. For triangles, the formulation requires that the relative points be converted into a 2D coordinate system local to the triangle.<br><br>This transform is provided as:<br><br>Q = [n1,n2]'*(x1-x0,x2-x0)<br><br>Where n1 and n2 are normal tangent vectors, to the triangle defined by points x0, x1 &amp; x2.  <br><br>The strain tensor is then computed as S = Q^-1'*P'*P*Q^-1, Where P is the edges of the triangle ([x1-x0,x2-x0])<br><br><br><br>I know that this *does* work, as I have worked through an example and can see the resulting tensor and its rotation invariance in 3D, but I can't see *how*.<br><br>I think most of the confusion arises from not understanding what 'Q' is now. What does this technique do: [n1,n2]'*(x1-x0,x2-x0) ? I am supposing its something like forming a set of basis vectors, but I've not seen anything like it.<br><br>Further, the tensor is now defined as Q^-1'*P'*P*Q^1, whereas before (for untransformed coordinates) it was (P*Q^-1)'*(P*Q^-1). <br><br><br>Has anyone been looking at this who can explain geometrically what is going on?<br><br>Sj<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11737">sebjf</a> — Mon Jun 27, 2016 9:59 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

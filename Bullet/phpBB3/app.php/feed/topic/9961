@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9961" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-05-25T18:28:59+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9961</id>
+
+		<entry>
+		<author><name><![CDATA[EruFeanor]]></name></author>
+		<updated>2014-05-25T18:28:59+00:00</updated>
+
+		<published>2014-05-25T18:28:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33498#p33498</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33498#p33498"/>
+		<title type="html"><![CDATA[Problems with internal types / collision masks]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33498#p33498"><![CDATA[
+Hallo im new to bullet so my problem may be my current understanding of bit-masks in bullet.<br><br>The Problem:<br>I created a class, btFractureBody, which inherits from the btRigidbody class and defines a mask for these kind of rigidbodys as internal type.<div class="codebox"><p>Code: </p><pre><code>[btFractureBody]#define CUSTOM_FRACTURE_TYPE (btRigidBody::CO_USER_TYPE | btRigidBody::CO_RIGID_BODY | btRigidBody::CO_COLLISION_OBJECT)</code></pre></div>When a btFractureBody is initialized i set the internal type to my custom mask.<div class="codebox"><p>Code: </p><pre><code>[btFractureBody]btFractureBody(const btRigidBodyConstructionInfo&amp; constructionInfo, btDynamicsWorld* world):btRigidBody(constructionInfo),m_world(world),m_principalAxis(btTransform::getIdentity()){m_masses.push_back(constructionInfo.m_mass);m_internalType  = m_internalType | CUSTOM_FRACTURE_TYPE;m_collisionFlags = m_collisionFlags | CollisionFlags::CF_CUSTOM_MATERIAL_CALLBACK;}</code></pre></div>in the same class (btFractureBody) i have added a static collision callback method which i set to be a a in the demo.<div class="codebox"><p>Code: </p><pre><code>[btFractureBody]bool btFractureBody::collisionCallback(btManifoldPoint&amp; cp,const btCollisionObject* colObj0,int partId0,int index0,const btCollisionObject* colObj1,int partId1,int index1){bool isFractureObject0 = (colObj0-&gt;getInternalType() &amp; CUSTOM_FRACTURE_TYPE) == CUSTOM_FRACTURE_TYPE;bool isFractureObject1 = (colObj1-&gt;getInternalType() &amp; CUSTOM_FRACTURE_TYPE) == CUSTOM_FRACTURE_TYPE;if(isFractureObject0 || isFractureObject1)printf("obj0: %d idx0: %d\nobj1: %d idx1: %d\n\n", isFractureObject0, index0, isFractureObject1, index1);if(isFractureObject0 &amp;&amp; cp.m_appliedImpulse &gt; BREAK_THRESHOLD){btFractureBody* fb = (btFractureBody*)upcast(colObj0);btScalar radius = cp.m_appliedImpulse/20.f;btVector3 hitPos= cp.getPositionWorldOnA();btCompoundShape* compoundShape = (btCompoundShape*)colObj0-&gt;getCollisionShape();int size = compoundShape-&gt;getNumChildShapes();                printf("num childs: %d\n", size);for(int i=1; i&lt;size; i++){if( (compoundShape-&gt;getChildTransform(i).getOrigin()-hitPos).length2() &lt; pow(radius,2) )fb-&gt;removeChildBodyByIndex(i);}fb-&gt;shiftToCenterOfMass();}return false;}[Demo:initPhysics]gContactAddedCallback = (ContactAddedCallback)btFractureBody::collisionCallback;</code></pre></div>The programm prints for the number of childeren unrealistic values e.g. minus values, which indicates that given collision object does not contain a compound shape, but every btFracturBody must contains a compound shape, only childs are added.<br><br>The collision callback as it is does not work, can you tell me why, every kind of advice is appriciated, thanks.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10848">EruFeanor</a> — Sun May 25, 2014 6:28 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

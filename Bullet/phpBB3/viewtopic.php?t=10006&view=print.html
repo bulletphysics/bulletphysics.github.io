@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Synchronizing Client Server Physics</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Synchronizing Client Server Physics</h2>
+		<p><a href="viewtopic.php%3Ft=10006.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10006</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Synchronizing Client Server Physics</h3>
+				<div class="date">Posted: <strong>Sat Jul 12, 2014 10:07 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">In a client server environment the server would run physics and periodically update clients with new object positions and rotations. Adding in some interpolation would remove most of the jerkiness resulting from net lag, however clients with moderate to high pings would see a delay before actions occurred.<br>
+A remedy for this issue would be to have clients also running physics so they could do predictions on actions they take which modify the physics environment receiving frequent updates from the server which has the final say on what an objects position and rotation are. Again adding interpolation and smoothing when prediction errors occurred would remove jerkiness in this situation.<br>
+<br>
+I figure there are 4 values which need to be sent from the server during updates<br>
+Position, Rotation, Velocity, and Angular Velocity<br>
+<br>
+I've done a lot of research on this topic and I've came across multiple posts where people say "It's not a good idea to manually set positions and rotations of rigid bodies". Is this truly the case and does anyone see any faults in my logic?<br>
+<br>
+Thank you all very much for your time.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing Client Server Physics</h3>
+				<div class="date">Posted: <strong>Mon Sep 05, 2022 3:06 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">8 years later, much learning, abandoned projects, some success, many failures. Here we are once again. I have gotten client/server physics running, but with some issues which I hope others can give me guidance on. Let me start with a video..<br>
+<a href="https://youtu.be/NzFPlARgWZ0" class="postlink">https://youtu.be/NzFPlARgWZ0</a><br>
+<br>
+I have a simulation running on both the client and the server, the server sends updates to the client about rigid bodies once every 333ms. You can see from the video that things like to bounce around when they collide. The client simulation is fighting the updates from the server simulation.<br>
+<br>
+Here is what gets sent over from the server to clients:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10006&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void MeshSceneNode::Tick(std::chrono::time_point&lt;std::chrono::steady_clock&gt; CurTime)
+{
+    if (LastUpdate + std::chrono::milliseconds(333) &lt; CurTime)
+    {
+        btTransform Trans = _RigidBody-&gt;getWorldTransform();
+        btVector3 Origin = Trans.getOrigin();
+        btVector3 LinearVelocity = _RigidBody-&gt;getLinearVelocity();
+        btVector3 AngularVelocity = _RigidBody-&gt;getAngularVelocity();
+        
+        for (auto&amp; Client : WorldEngine::NetCode::ConnectedClients)
+        {
+            KNet::NetPacket_Send* Pkt = Client.first-&gt;GetFreePacket((uint8_t)WorldEngine::NetCode::OPID::Update_SceneNode);
+            if (Pkt)
+            {
+                Pkt-&gt;write&lt;uintmax_t&gt;(GetNodeID());         //  SceneNode ID
+                Pkt-&gt;write&lt;float&gt;(Origin.x());              //  Position - X
+                Pkt-&gt;write&lt;float&gt;(Origin.y());              //  Position - Y
+                Pkt-&gt;write&lt;float&gt;(Origin.z());              //  Position - Z
+                Pkt-&gt;write&lt;float&gt;(Origin.w());              //  Position - W
+                Pkt-&gt;write&lt;float&gt;(Trans.getRotation().getX());            //  Rotation - X
+                Pkt-&gt;write&lt;float&gt;(Trans.getRotation().getY());            //  Rotation - Y
+                Pkt-&gt;write&lt;float&gt;(Trans.getRotation().getZ());            //  Rotation - Z
+                Pkt-&gt;write&lt;float&gt;(Trans.getRotation().getW());            //  Rotation - W
+                Pkt-&gt;write&lt;float&gt;(LinearVelocity.x());      //  LinearVelocity - X
+                Pkt-&gt;write&lt;float&gt;(LinearVelocity.y());      //  LinearVelocity - Y
+                Pkt-&gt;write&lt;float&gt;(LinearVelocity.z());      //  LinearVelocity - Z
+                Pkt-&gt;write&lt;float&gt;(LinearVelocity.w());      //  LinearVelocity - W
+                Pkt-&gt;write&lt;float&gt;(AngularVelocity.x());     //  AngularVelocity - X
+                Pkt-&gt;write&lt;float&gt;(AngularVelocity.y());     //  AngularVelocity - Y
+                Pkt-&gt;write&lt;float&gt;(AngularVelocity.z());     //  AngularVelocity - Z
+                Pkt-&gt;write&lt;float&gt;(AngularVelocity.w());     //  AngularVelocity - W
+                //
+                //
+                //  TODO: This will work for now.. But if clients connect in on a different NetPoint then this will not suffice..
+                WorldEngine::NetCode::Point-&gt;SendPacket(Pkt);
+            }
+        }
+        LastUpdate = CurTime;
+    }
+}</code></pre></div>
+We're sending the Origin, Rotation, Linear Velocity, and Angular Velocity. <strong class="text-strong"><span style="text-decoration:underline">Perhaps this is not the best way to grab these values? Perhaps I'm grabbing the wrong values or there are more values that I need to grab aside from these?</span></strong><br>
+<br>
+On the client side, we update the values immediately when we receive them:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10006&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>					//
+					//	Update SceneNode
+					else if (OperationID == WorldEngine::NetCode::OPID::Update_SceneNode)
+					{
+						uintmax_t NodeID;
+						_Packet-&gt;read&lt;uintmax_t&gt;(NodeID);
+						TriangleMeshSceneNode* Node = static_cast&lt;TriangleMeshSceneNode*&gt;(WorldEngine::SceneGraph::SceneNodes[NodeID]);
+						//
+						if (Node)
+						{
+							btTransform Trans = Node-&gt;GetWorldTransform();;
+							//
+							btVector3 Origin;
+							_Packet-&gt;read&lt;float&gt;(Origin.m_floats[0]);
+							_Packet-&gt;read&lt;float&gt;(Origin.m_floats[1]);
+							_Packet-&gt;read&lt;float&gt;(Origin.m_floats[2]);
+							_Packet-&gt;read&lt;float&gt;(Origin.m_floats[3]);
+							Trans.setOrigin(Origin);
+							//
+							float RotX, RotY, RotZ, RotW;
+							_Packet-&gt;read&lt;float&gt;(RotX);
+							_Packet-&gt;read&lt;float&gt;(RotY);
+							_Packet-&gt;read&lt;float&gt;(RotZ);
+							_Packet-&gt;read&lt;float&gt;(RotW);
+							Trans.setRotation(btQuaternion(RotX, RotY, RotZ, RotW));
+							//
+							btVector3 LinearVelocity;
+							_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[0]);
+							_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[1]);
+							_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[2]);
+							_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[3]);
+							btVector3 AngularVelocity;
+							_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[0]);
+							_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[1]);
+							_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[2]);
+							_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[3]);
+							//
+							Node-&gt;NetUpdate(Trans);
+							//Node-&gt;NetUpdate(Origin, Rotation, LinearVelocity, AngularVelocity);
+						}
+					}</code></pre></div>
+The NetUpdate functions from the end of the previous code block are as follows:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10006&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	void NetUpdate(btVector3 Origin, btVector3 Rotation, btVector3 LinearVelocity, btVector3 AngularVelocity)
+	{
+		btTransform Trans = _RigidBody-&gt;getWorldTransform();
+		Trans.setOrigin(Origin);
+		Trans.setRotation(btQuaternion(Rotation.x(), Rotation.y(), Rotation.z()));
+		_RigidBody-&gt;setWorldTransform(Trans);
+		_RigidBody-&gt;setLinearVelocity(LinearVelocity);
+		_RigidBody-&gt;setAngularVelocity(AngularVelocity);
+
+		bNeedsUpdate[0] = true;
+		bNeedsUpdate[1] = true;
+		bNeedsUpdate[2] = true;
+	}
+	void NetUpdate(btTransform Trans)
+	{
+		_RigidBody-&gt;setWorldTransform(Trans);
+		bNeedsUpdate[0] = true;
+		bNeedsUpdate[1] = true;
+		bNeedsUpdate[2] = true;
+	}</code></pre></div>
+
+So you can see, we directly update the rigid body via its setWorldTransform() function. If I could cache this updated btTransform inside the object, and use it with the btMotionState then I would prefer to do it there, but if I'm correct, the motion state is only for receiving updates when a rigid body moves, not the other way around? Nonetheless, <strong class="text-strong"><span style="text-decoration:underline">perhaps I'm updating these values incorrectly, or at the wrong time?</span></strong><br>
+<br>
+The other thought is that I'm simply snapping to the updated values, and it might be better to smoothly interpolate into the updated values? I don't think this accounts for how jumpy/explodey the rigid bodies are when they come in contact..<br>
+<br>
+And maybe none of my ideas are going in the right direction, someone else might know of a better way to synchronize things?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing Client Server Physics</h3>
+				<div class="date">Posted: <strong>Mon Sep 05, 2022 5:59 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Some other forum posts I found about this same topic:<br>
+<a href="viewtopic.php%3Fp=33699.html" class="postlink">viewtopic.php?p=33699</a><br>
+<a href="viewtopic.php%3Ft=11075.html" class="postlink">viewtopic.php?t=11075</a><br>
+<a href="viewtopic.php%3Ft=2370.html" class="postlink">viewtopic.php?t=2370</a><br>
+<a href="viewtopic.php%3Ft=9023.html" class="postlink">viewtopic.php?t=9023</a><br>
+<a href="viewtopic.php%3Ft=3002.html" class="postlink">viewtopic.php?t=3002</a><br>
+<a href="viewtopic.php%3Ft=6231.html" class="postlink">viewtopic.php?t=6231</a><br>
+<a href="viewtopic.php%3Ft=3435.html" class="postlink">viewtopic.php?t=3435</a><br>
+<br>
+Basically, others looking for solutions to the same problem, some arguing determinism being the main issue. The problem is:<br>
+#1 - Authoritative updates from the server, while sent in the present, once received by the client are effectively updates about the past. (however long it takes the server to write the packet, send it, travel across the network/internet, be read by the client, and finally applied to the simulation). A local network could be 5ms, across the country could be 120ms, across the world 300ms+. How to account for this is the primary problem, and can't be avoided, but can be mitigated.<br>
+<br>
+#2 - Determinism, your client/server simulations are going to drift apart faster as determinism goes down. This too can't be avoided. Bullet could be designed in such a way that it is 100% deterministic, however, running the same simulation on a different subset of hardware and you will get different results.<br>
+<br>
+#1 and #2 compound each other. So, the techniques used to hide or mitigate this is extremely important.<br>
+<br>
+I feel like there was a #3 but lost my train of thought... Anyways... I'm here asking for what techniques I can use to synchronize the client/server simulation..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing Client Server Physics</h3>
+				<div class="date">Posted: <strong>Mon Sep 05, 2022 9:30 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">So some progress.. This video demonstrates two clients:<br>
+<a href="https://youtu.be/47fuT13mAjw" class="postlink">https://youtu.be/47fuT13mAjw</a><br>
+I tried to line each client up as close as possible, each client does appear to be synchronized. Rigid bodies are instantly snapped/teleported to it's new location when receiving an update from the server, so some blending/interpolation here would go a long way to 'smooth things out'. Not sure how this will look with higher latencies.<br>
+<br>
+Nonetheless here is the changed code:<br>
+<br>
+Client receives update packet from server:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10006&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>					else if (OperationID == WorldEngine::NetCode::OPID::Update_SceneNode)
+					{
+						uintmax_t NodeID;
+						_Packet-&gt;read&lt;uintmax_t&gt;(NodeID);
+						TriangleMeshSceneNode* Node = static_cast&lt;TriangleMeshSceneNode*&gt;(WorldEngine::SceneGraph::SceneNodes[NodeID]);
+						//
+						if (Node)
+						{
+							//
+							//	Only update if this packet UniqueID is greater than the most recent update
+							if (Node-&gt;Net_ShouldUpdate(_Packet-&gt;GetUID()))
+							{
+								btTransform Trans;// = Node-&gt;GetWorldTransform();
+								Trans.setIdentity();
+								//
+								btVector3 Origin;
+								_Packet-&gt;read&lt;float&gt;(Origin.m_floats[0]);
+								_Packet-&gt;read&lt;float&gt;(Origin.m_floats[1]);
+								_Packet-&gt;read&lt;float&gt;(Origin.m_floats[2]);
+								_Packet-&gt;read&lt;float&gt;(Origin.m_floats[3]);
+								Trans.setOrigin(Origin);
+								//
+								float RotX, RotY, RotZ, RotW;
+								_Packet-&gt;read&lt;float&gt;(RotX);
+								_Packet-&gt;read&lt;float&gt;(RotY);
+								_Packet-&gt;read&lt;float&gt;(RotZ);
+								_Packet-&gt;read&lt;float&gt;(RotW);
+								Trans.setRotation(btQuaternion(RotX, RotY, RotZ, RotW));
+								//
+								btVector3 LinearVelocity;
+								_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[0]);
+								_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[1]);
+								_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[2]);
+								_Packet-&gt;read&lt;float&gt;(LinearVelocity.m_floats[3]);
+								btVector3 AngularVelocity;
+								_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[0]);
+								_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[1]);
+								_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[2]);
+								_Packet-&gt;read&lt;float&gt;(AngularVelocity.m_floats[3]);
+								//
+								Node-&gt;NetUpdate(Trans, LinearVelocity, AngularVelocity);
+							}
+						}
+					}</code></pre></div>
+
+Node-&gt;NetUpdate( Trans, LinearVelocity, AngularVelocity);
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10006&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	void NetUpdate(btTransform Trans, btVector3 LinearVelocity, btVector3 AngularVelocity)
+	{
+		_RigidBody-&gt;activate(true);
+		_RigidBody-&gt;setWorldTransform(Trans);
+		_RigidBody-&gt;setLinearVelocity(LinearVelocity);
+		_RigidBody-&gt;setAngularVelocity(AngularVelocity);
+		_RigidBody-&gt;clearForces();
+		bNeedsUpdate[0] = true;
+		bNeedsUpdate[1] = true;
+		bNeedsUpdate[2] = true;
+	}</code></pre></div>
+
+The last code block is where the updates are actually applied.<br>
+<br>
+I tried using _RigidBody-&gt;GetMotionState()-&gt;setWorldTransform() but the scene nodes did not move.<br>
+There are some functions like -&gt;SetInterpolatedWorldTransform(), these don't appear to do anything either..?<br>
+<br>
+I'll post an update when I get smoothing/interpolation added.<br>
+Also, if bodies are sleeping I will slow down the rate of updates, as well as bodies farther away from the client will update to the client at a slower rate..<br>
+<br>
+If anyone has more ideas/advice on how to more effectively synchronize clients to the server then I am all ears!!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing Client Server Physics</h3>
+				<div class="date">Posted: <strong>Sun Sep 11, 2022 8:01 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Well I got the simulation to stop exploding. Was an issue with my net library sending garbage/corrupted packets. So now it's just down to smoothing/interpolation.<br>
+<a href="https://youtu.be/gdiuOsqK8yQ" class="postlink">https://youtu.be/gdiuOsqK8yQ</a><br>
+<br>
+So I'm curious about these functions:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10006&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		_RigidBody-&gt;setInterpolationAngularVelocity();
+		_RigidBody-&gt;setInterpolationLinearVelocity();
+		_RigidBody-&gt;setInterpolationWorldTransform();</code></pre></div>
+
+What do these do exactly? Using them seem to do nothing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing Client Server Physics</h3>
+				<div class="date">Posted: <strong>Sun Sep 11, 2022 2:38 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The code comments offer some hints:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10006&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   ·///m_interpolationWorldTransform is used for CCD and interpolation
+   ·///it can be either previous or future (predicted) transform
+   ·btTransform m_interpolationWorldTransform;
+   ·//those two are experimental: just added for bullet time effect, so you can still apply impulses (directly modifying velocities)
+   ·//without destroying the continuous interpolated motion (which uses this interpolation velocities)
+   ·btVector3 m_interpolationLinearVelocity; 
+   ·btVector3 m_interpolationAngularVelocity;
+</code></pre></div>
+How they are used also supplies some info:  <strong class="text-strong">btCollisionBody::getInterpolationWorldTransform()</strong> is used in<strong class="text-strong"> btDiscreteDynamicsWorld::synchronizeSingleMotionState()</strong> to feed the <strong class="text-strong">MotionState</strong> the interpolated transform which includes any remainder time between fixedSubSteps.  It is also used in <strong class="text-strong">btDiscreteDynamicsWorld::internalSingleStepSimulation()</strong> before calling  <strong class="text-strong">btDiscreteDynamicsWorld::createPredictiveContacts()</strong>.<br>
+<br>
+At one time I was working on a distributed physics simulation where clients would perform local simulation within a limited area but could see moving objects outside of it because other clients would be performing simulation over there and would send updates to the server which would broadcast to other clients.  The client would represent other-simulated objects in the physics engine, but would move them kinematically.  To reduce drift the KinematicMotionState would use the same integration logic as Bullet, to supply interpolated transforms between updates.  When two clients got close and their local athoritative simulations overlapped there would be a negotiation logic as to who was authoritative for the simulation of various objects, arbitrated by the server.  Needless to say the overlapped objects would drift in the multiple simulations, would be corrected when authoritative updates arrived through the server, and this would cause problems.  The visual snaps could be reduced by interpolating the render object toward the physical one, however interpolating the physical body toward its updated position (rather than just teleporting it) was more difficult and we never got around to actually tackling that problem in a way that could avoid or significantly reduce interpenetration.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing Client Server Physics</h3>
+				<div class="date">Posted: <strong>Sun Sep 11, 2022 4:34 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Yeah my thought process is going towards something similar, server would be authoritative, sending updates at a dramatically slower rate than clients. Clients would be semi-authoritative in the sense that they were responsible for broadcasting out updates about objects they had ownership on.<br>
+The issue is indeed interpenetration. Outside updates coming into the client cause rigid bodies to penetrate and physics does not like this..<br>
+<br>
+Even for a rigid body that has stopped motion and gone to sleep, if the position of the rigid body matches exactly on the client and server, if this rigid body receives an update, it causes it to 'twitch slightly'. Not sure how else to describe it. Will need to check this I suppose, if a rigid body position/location is within 1% of the servers then don't apply the update maybe.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

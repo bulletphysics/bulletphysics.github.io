@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Ogre + Bullet rotation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Ogre + Bullet rotation</h2>
+		<p><a href="viewtopic.php%3Ft=9365.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9365</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Ogre + Bullet rotation</h3>
+				<div class="date">Posted: <strong>Sun Aug 25, 2013 10:46 pm</strong></div>
+				<div class="author">by <strong>konri100</strong></div>
+				<div class="content">I'm trying to make a character controlller and i've got problem with rotation. If i do it this way:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9365&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for(list&lt;btRigidBody*&gt;::iterator It = Objects.begin(); It != Objects.end(); ++It)
+{
+        Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;((*It)-&gt;getUserPointer());
+
+        btVector3 Point = (*It)-&gt;getCenterOfMassPosition();
+        node-&gt;setPosition(Ogre::Vector3((float)Point[0], (float)Point[1], (float)Point[2]));
+
+        btQuaternion btq = (*It)-&gt;getOrientation();
+        Ogre::Quaternion quart = Ogre::Quaternion(btq.w(),btq.x(),btq.y(),btq.z());
+        node-&gt;setOrientation(quart);
+}
+</code></pre></div>
+
+then it looks like rotation of the mesh is kinda inverted, i mean forward is forward, backward is backward, but left is right and right is left.<br>
+<br>
+If i do it this way:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9365&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if(left || right)
+{
+        xform.setRotation(btQuaternion(btVector3(0.0, 1.0, 0.0), turnAngle));
+
+        Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;(body-&gt;getUserPointer());
+        node-&gt;setOrientation(Ogre::Quaternion(-(Ogre::Radian)turnAngle, Ogre::Vector3(0.0, 1.0, 0.0)));
+}
+</code></pre></div>
+
+then it works, but i'm not sure if it's supposed to be like this<br>
+<br>
+some more code if it is necessery:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9365&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void KinematicCharacterControl::playerStep(btScalar delta, bool forward, bool backward, bool left, bool right, bool jump)
+{
+    preStep();
+	btTransform xform;
+	xform = body-&gt;getWorldTransform();
+
+    body-&gt;activate(true);
+
+	/* Handle turning */
+	if(left)
+    {std::cout &lt;&lt; "left" &lt;&lt; std::endl;
+		turnAngle += delta * turnVelocity;
+    }
+	if(right)
+    {std::cout &lt;&lt; "right" &lt;&lt; std::endl;
+		turnAngle -= delta * turnVelocity;
+    }
+
+    if(left || right)
+    {
+        xform.setRotation(btQuaternion(btVector3(0.0, 1.0, 0.0), turnAngle));
+
+        Ogre::SceneNode* node = static_cast&lt;Ogre::SceneNode*&gt;(body-&gt;getUserPointer());
+        node-&gt;setOrientation(Ogre::Quaternion(-(Ogre::Radian)turnAngle, Ogre::Vector3(0.0, 1.0, 0.0)));
+    }
+
+    body-&gt;setWorldTransform(xform);
+	body-&gt;setCenterOfMassTransform(xform);
+
+	btVector3 linearVelocity = body-&gt;getLinearVelocity();
+	btScalar speed = body-&gt;getLinearVelocity().length();
+
+	btVector3 forwardDir = xform.getBasis()[2];
+	forwardDir.normalize();
+	btVector3 walkDirection = btVector3(0.0, 0.0, 0.0);
+	btScalar walkSpeed = walkVelocity * delta;
+
+
+
+	if(forward)
+    {
+		walkDirection += forwardDir;
+    }
+	if(backward)
+    {
+		walkDirection -= forwardDir;
+    }
+    if(jump)
+    {
+		this-&gt;jump();
+    }
+	if(!forward &amp;&amp; !backward &amp;&amp; onGround())
+	{
+		linearVelocity *= btScalar(0.2);
+		body-&gt;setLinearVelocity(linearVelocity);
+	}
+	else
+	{
+		if(speed &lt; maxLinearVelocity)
+		{
+			btVector3 velocity = linearVelocity + walkDirection * walkSpeed;
+			body-&gt;applyCentralImpulse(velocity*10);
+		}
+	}
+}
+
+//update:
+Character-&gt;playerStep(DeltaTime* 0.001, forward, backward, left, right, jump);
+
+    btTransform xform;
+	characterBody-&gt;getMotionState()-&gt;getWorldTransform(xform);
+
+    btVector3 pos = xform.getOrigin();
+    btQuaternion btq = xform.getRotation();
+
+//first way
+    characterNode-&gt;setOrientation(btq.w(),btq.x(),btq.y(),btq.z());
+    characterNode-&gt;setPosition(Ogre::Vector3(pos[0], pos[1], pos[2]));
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

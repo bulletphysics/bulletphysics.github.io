@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Reset an environment to an arbitrary state</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Reset an environment to an arbitrary state</h2>
+		<p><a href="viewtopic.php%3Ft=12855.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12855</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Reset an environment to an arbitrary state</h3>
+				<div class="date">Posted: <strong>Wed Jan 29, 2020 2:48 am</strong></div>
+				<div class="author">by <strong>abef</strong></div>
+				<div class="content">Pardon if this question has been answered before -- I searched an could not find what I'm looking for.<br>
+<br>
+I would like to be able to reset a pybullet environment to a given state. <br>
+As a concrete example, suppose I have two instances of the same environment (e.g. HopperBulletEnv), call them env1 and env2.<br>
+I want to be able to reset env2 to the same state that env1 is in.<br>
+Just using saveState and restoreState won't work (as far as I can tell), since that limits me to only those states that the environment instance has already traversed.<br>
+<br>
+In principle, this seems possible using saveBullet, which should allow me to dump the state of env1 to disk, and then restore that state from disk to env2. However, I'd like to avoid disk IO operations as this would be too slow.<br>
+<br>
+Is there a way to return the state of env1 as a python dict, and then pass that dict to env2 and just reset all the values? What are the values that I need to pass in order to fully recreate the state? (From what I gather, I need at least the joint angles and velocities, but possibly much else besides).<br>
+<br>
+Thanks,<br>
+Abe</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Reset an environment to an arbitrary state</h3>
+				<div class="date">Posted: <strong>Wed Jan 29, 2020 2:57 am</strong></div>
+				<div class="author">by <strong>abef</strong></div>
+				<div class="content">Ah, so this question has indeed been asked before here: <a href="viewtopic.php%3Ft=12460.html" class="postlink">viewtopic.php?t=12460</a><br>
+The response was
+<blockquote cite="./viewtopic.php?p=41566#p41566"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=2.html">Erwin Coumans</a> wrote: <a href="viewtopic.php%3Fp=41566.html#p41566" data-post-id="41566" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Tue Nov 06, 2018 4:59 am</span></cite>
+You will have to manually reset the state for all objects. See resetJointState and resetBasePositionAndOrientation, resetBaseVelocity in the <a href="https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.2ye70wns7io3" class="postlink">PyBullet Quickstart Guide</a>.
+</div></blockquote>
+Could I get a bit more detail here? Does this mean the state is fully defined by the joint states, base position and orientation, and base velocity?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Reset an environment to an arbitrary state</h3>
+				<div class="date">Posted: <strong>Wed Jan 29, 2020 3:54 pm</strong></div>
+				<div class="author">by <strong>abef</strong></div>
+				<div class="content">Ok, so it turns out Erwin's response that I linked above is sufficient, I just actually had to try it out  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br>
+Instead of deleting this thread, I'll go ahead and post my solution in case others find it useful.<br>
+Here is a basic way to extract and reset the state of a pybullet environment without using the saveState and restoreState APIs<br>
+(at least for the locomotion envs).<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12855&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import gym
+import pybullet_envs
+import numpy as np
+
+env1 = gym.make("HopperBulletEnv-v0")
+env2 = gym.make("HopperBulletEnv-v0")
+env1.reset()
+env2.reset()
+
+# get the pybullet connections
+p1 = env1.env._p
+p2 = env2.env._p
+
+# step the envs randomly for a bit
+for _ in range(5):
+    env1.step(np.random.uniform(low=-1,high=1,size=3))
+    env2.step(np.random.uniform(low=-1,high=1,size=3))
+    
+# get the state of env1
+base_po = [] # position and orientation of base for each body
+base_v = [] # velocity of base for each body
+joint_states = [] # joint states for each body
+for i in range(p1.getNumBodies()):
+    base_po.append(p1.getBasePositionAndOrientation(i))
+    base_v.append(p1.getBaseVelocity(i))
+    joint_states.append([p1.getJointState(i,j) for j in range(p1.getNumJoints(i))])
+
+# reset env2 to the current state of env1
+for i in range(p2.getNumBodies()):
+    p2.resetBasePositionAndOrientation(i,*base_po[i])
+    p2.resetBaseVelocity(i,*base_v[i])
+    for j in range(p2.getNumJoints(i)):
+        p2.resetJointState(i,j,*joint_states[i][j][:2])
+
+# check that they now follow the same trajectory
+for _ in range(5):
+    act = np.random.uniform(low=-1,high=1,size=3)
+    out1 = env1.step(act)
+    out2 = env2.step(act)
+    print(np.allclose(out1[0],out2[0]))
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

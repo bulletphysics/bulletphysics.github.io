@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13275" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-09-16T14:34:08+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13275</id>
+
+		<entry>
+		<author><name><![CDATA[justjayel]]></name></author>
+		<updated>2021-09-16T14:34:08+00:00</updated>
+
+		<published>2021-09-16T14:34:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43611#p43611</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43611#p43611"/>
+		<title type="html"><![CDATA[Re: Rigid body with child sensors]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43611#p43611"><![CDATA[
+Fixed the broken ghost object; my issue was due to:<div class="codebox"><p>Code: </p><pre><code>this-&gt;dynamicsWorld-&gt;getSimulationIslandManager()-&gt;setSplitIslands(false);</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14076">justjayel</a> — Thu Sep 16, 2021 2:34 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[justjayel]]></name></author>
+		<updated>2021-09-15T23:49:32+00:00</updated>
+
+		<published>2021-09-15T23:49:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43610#p43610</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43610#p43610"/>
+		<title type="html"><![CDATA[Re: Rigid body with child sensors]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43610#p43610"><![CDATA[
+This is what I got but the rigid body is moving up when it starts off at the same position as the ghost object.<div class="codebox"><p>Code: </p><pre><code>dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);dynamicsWorld -&gt;getBroadphase()-&gt;getOverlappingPairCache()-&gt;setInternalGhostPairCallback(new btGhostPairCallback());btCollisionShape* sensorShape = new btSphereShape(2);btTransform sensorTf(btQuaternion(0, 0, 0, 1), btVector3(0, 2, 0));btGhostObject* groundSensor = new btPairCachingGhostObject();groundSensor-&gt;setCollisionShape(sensorShape);groundSensor-&gt;setWorldTransform(sensorTf);groundSensor-&gt;setCollisionFlags(groundSensor-&gt;getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);dynamicsWorld-&gt;addCollisionObject(groundSensor);</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14076">justjayel</a> — Wed Sep 15, 2021 11:49 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-09-15T16:01:41+00:00</updated>
+
+		<published>2021-09-15T16:01:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43609#p43609</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43609#p43609"/>
+		<title type="html"><![CDATA[Re: Rigid body with child sensors]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43609#p43609"><![CDATA[
+Those collision filter groups are  there for your convenience; they are completely optional.  If you examine the Bullet source code you'll find they are declared in a header but never actually used anywhere except in an example.<br><br>To get what you want I think you need to something like this before you add <strong class="text-strong">ghost</strong> to the <strong class="text-strong">world</strong>:<div class="codebox"><p>Code: </p><pre><code>ghost-&gt;setCollisionFlags(ghost-&gt;getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Sep 15, 2021 4:01 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[justjayel]]></name></author>
+		<updated>2021-09-15T15:19:09+00:00</updated>
+
+		<published>2021-09-15T15:19:09+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43608#p43608</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43608#p43608"/>
+		<title type="html"><![CDATA[Re: Rigid body with child sensors]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43608#p43608"><![CDATA[
+Thanks for the reply. <br><br>I have been looking at creating a btGhostObject or btPairCachingGhostObject, but other rigid bodies seem to collide with them unless I set the below; is that correct?<br><div class="codebox"><p>Code: </p><pre><code>dynamicWorld-&gt;addCollisionObject(groundSensor, btBroadphaseProxy::SensorTrigger, btBroadphaseProxy::StaticFilter);</code></pre></div>I found the above code from: <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10855" class="postlink">viewtopic.php?t=10855</a><br>But majority of my code is based on this (just setup, no motorPreTickCallback or manifold checks): <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7468" class="postlink">viewtopic.php?t=7468</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14076">justjayel</a> — Wed Sep 15, 2021 3:19 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-09-15T14:32:28+00:00</updated>
+
+		<published>2021-09-15T14:32:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43607#p43607</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43607#p43607"/>
+		<title type="html"><![CDATA[Re: Rigid body with child sensors]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43607#p43607"><![CDATA[
+To make a ghost object that follows a body I use an action.  I derive <strong class="text-strong">GhostFollowsBody</strong> from the pure virtual base class <strong class="text-strong">btActionInterface</strong> and implement its <strong class="text-strong">updateAction()</strong> method like so:<div class="codebox"><p>Code: </p><pre><code>class GhostFollowsBody : public btActionInterface {    btRigidBody* m_body;    btGhostObject* m_ghost;    public:    void GhostFollowsBody(btRigidBody* body, btGhostObject* ghost) : m_body(body), m_ghost(ghost) {}         void updateAction(btCollisionWorld* collisionWorld, btScalar deltaTimeStep) override {        if (m_body-&gt;isActive()) {            btTransform t;            t.setIdentity();            t.setOrigin(m_body-&gt;getWorldTransform().getOrigin());            m_ghost-&gt;setWorldTransform(t);        }    }    };</code></pre></div>When you add a <strong class="text-strong">ghostFollowsBody</strong> instance to the <strong class="text-strong">World</strong> Bullet will call its <strong class="text-strong">updateAction()</strong> method every substep.<br><br>I believe the order of operations inside the substep where the actions are updated is closer to the end, after collisions have been computed and final velocities known, but before recomputing object activations.  So if you ever teleport the <strong class="text-strong">body</strong> to an arbitrary location you should probably manually call <strong class="text-strong">ghostFollowsBody-&gt;updateAction(world, 0.0f)</strong> if <strong class="text-strong">body</strong> is active, else update the <strong class="text-strong">ghost</strong> through more explicit manual logic.  Otherwise you may get all of the way through the important parts of the next substep before the <strong class="text-strong">ghost</strong> is moved to where the <strong class="text-strong">body</strong> is.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Sep 15, 2021 2:32 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[justjayel]]></name></author>
+		<updated>2021-09-14T23:51:43+00:00</updated>
+
+		<published>2021-09-14T23:51:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43606#p43606</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43606#p43606"/>
+		<title type="html"><![CDATA[Rigid body with child sensors]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43606#p43606"><![CDATA[
+Hiya<br><br>I am curious what is the best way to create a rigid body linked with a sensor object such as a ghost object? I want the sensor object to move with the parent rigid body and detect collisions.<br><br>I don't think btCompoubdShape is correct since I believe that only affects the shape of the rigid body. Also I have read constraints aren't absolute since the constraint slowly deteriorates.<br><br>Thanks.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14076">justjayel</a> — Tue Sep 14, 2021 11:51 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

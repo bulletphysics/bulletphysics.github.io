@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Ageia paper on position based physics</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Ageia paper on position based physics</h2>
+		<p><a href="viewtopic.php%3Ft=577.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=577</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>5</strong></div>
+					<div class="post">
+				<h3>Ageia paper on position based physics</h3>
+				<div class="date">Posted: <strong>Wed Oct 04, 2006 6:53 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Some of Ageia's engineers published a new paper on position based dynamics. A quote from the paper:
+<blockquote class="uncited"><div>
+Jakobsen built his Fysix engine on a position based approach. His central idea was to use a Verlet integrator and manipulate positions directly. Because velocities are implicitly stored by current and the previous positions, the velocities are implicitly updated by the position manipulation. While he focused mainly on distance constraints, he only gave vague hints on how more general constraints could be handled.<br>
+In this paper we present a fully general approach which handles general constraints. We also focus on the important issue of conservation of linear and angular momenta by position projection. We work with explicit velocities instead of storing previous positions which makes damping and friction simulation much easier.
+</div></blockquote>
+<a href="http://graphics.ethz.ch/~mattmuel/publications/posBasedDyn.pdf" class="postlink">http://graphics.ethz.ch/~mattmuel/publi ... sedDyn.pdf</a><br>
+<br>
+According to that paper, position-based dynamics helps the two-way interaction between rigidbodies and cloth (for example).<br>
+This is something which has already been discussed on this forum before:<br>
+<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=404" class="postlink">http://www.continuousphysics.com/Bullet ... .php?t=404</a><br>
+<br>
+An older demo by Meqon (acquired by Ageia) showing cloth-rigidbody interaction:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/demos/&amp;file=Meqon%20Demo%20GDC%202005.zip" class="postlink">http://www.continuousphysics.com/ftp/pu ... 202005.zip</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 9:31 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Nice paper, Erwin. Thanks for bringing it up here.<br>
+<br>
+I read through the paper and there are a lot of interessting ideas. Anyway I can't understand one thing. Under "5. Results" they write:<br>
+
+<blockquote class="uncited"><div>
+Real Time Self Collision:<br>
+[...]The simulation runs at 30 FPS on average...
+</div></blockquote>
+
+I wonder how anybody can assume an algorithm that runs at 30FPS for a single rectangular cloth piece being of any practical use for realtime simulations. What does AGEIA expect from a game producer he is willing to spend for a simple eye candy like cloth? This is so far from reality in my opinion that I hardly can put it in words. It would have been nice to have results when self collision is ignored so I could see how much the performance is affected because of considering self collision.<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 6:55 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">This positional based physics has interesting application in two-way interfaction between all kind of physics systems. Being able to handle distance, planar and volume preservation in a stable way allows you to do very good quality deformable objects. So it might very well be a fast and stable alternative to FEM. People used verlet for years now in cloth and rigidbody context, and this new paper describes a more general application. Volume preservation, bending etc fit in the same framework.<br>
+<br>
+Position based derivation/solution provides a much simpler formulation and implementation for deformable objects.<br>
+Another interesting paper by the same author / Ageia engineer Matthias Muller: <a href="http://graphics.ethz.ch/~mattmuel/publications/deformationCGI2004.pdf" class="postlink">http://graphics.ethz.ch/~mattmuel/publi ... GI2004.pdf</a><br>
+<br>
+So we can expect some more destructable physics systems soon, I suppose.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 1:01 am</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">The two-way interaction stuff is nice.  <br>
+<br>
+I have a problem with the treatment of collision constraints, though.  Since you're moving the positions of the verticies around each iteration, the collision constraints that you detected outside of the constraint solver quickly become invalid.  I believe you will see many artifacts on curved surfaces while fast motion is occuring.  I tried this scheme before, but had to abandon it in favour of doing collision detection each iteration of the solver ( yes, very expensive ).  <br>
+<br>
+I'm still hoping someone will come up with a stable and efficient velocity-based character cloth solution!  Then all those per-iteration collision checks can be removed.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 8:49 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I agree with your collision concerns, but it might be that the CCD helps here a little. They also adjust the velocity at the very end of the solver to account for friction and restitution which also might help a little. <br>
+<br>
+What I really like is the bending model. I tried the Bridson stuff and it really looked amazing. On the other side it much more expensive then a simple unilateral distance constraint across the shared edge which does work as well.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 9:30 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">I am already very interested in the presentation of the paper about position based dynamics on the VRIPHYS conference in november. I will present my newest paper in the same session and directly after Matthias Mueller-Fischer, so I will be able to listen to his presentation  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"><br>
+<br>
+He also has an invited talk about "Physically Based Simulation - Academic Research and What Works in Games". <br>
+<br>
+So, is anybody interested to visit the VRIPHYS?<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 10:34 am</strong></div>
+				<div class="author">by <strong>clanzotti</strong></div>
+				<div class="content"><blockquote><div><cite>mewert wrote:</cite>The two-way interaction stuff is nice.  <br>
+<br>
+I have a problem with the treatment of collision constraints, though.  Since you're moving the positions of the verticies around each iteration, the collision constraints that you detected outside of the constraint solver quickly become invalid.  I believe you will see many artifacts on curved surfaces while fast motion is occuring.  I tried this scheme before, but had to abandon it in favour of doing collision detection each iteration of the solver ( yes, very expensive ).  <br>
+<br>
+I'm still hoping someone will come up with a stable and efficient velocity-based character cloth solution!  Then all those per-iteration collision checks can be removed.</div></blockquote>
+
+I've used this approach for years too and i had the same problem with those collision artifacts.<br>
+<br>
+Actually to solve the problem i've used a mix of various tecniques but still some artifacts are difficult to remove.<br>
+<br>
+Anyway, in the field of realtime simulation, where accuracy is not the main concern, it adapt very well.<br>
+<br>
+Another limitation that forced me to not use this method over the years is the dependency of the stiffness constant with the timestep size, a nightmare to deal with if an adaptive step size is required. <br>
+<br>
+Regards,<br>
+<br>
+Carlo Lanzotti</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 11:49 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+Another limitation that forced me to not use this method over the years is the dependency of the stiffness constant with the timestep size, a nightmare to deal with if an adaptive step size is required. 
+</div></blockquote>
+
+Actually not only for situations where adaptive timesteps are required, since I personally find it very difficult to establish fixed timesteps in a game as opposed to simple demos.<br>
+<br>
+Anyway, how could such a dependency be removed? Actually I would like to understand where the dependency actually exists, how it effects the system and how to deal with it? Any hints?<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 5:20 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I don't suppose anyone could explain how you'd go about determining the gradiant of a constraint function?<br>
+<br>
+I wish they'd extended the method to deal with rigid bodies..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 5:30 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The gradient of the Constraint function is actually the Jacobian. The relation is:<br>
+<br>
+C(x) = 0<br>
+<br>
+dC/dt = dC/dx * dx/dt = J * v <br>
+<br>
+The first is the position constraint (non-linear) and the second is the (hidden) velocity constraint (linear). You find the Jacobian by building all partial derivates and collect them in a matrix. See Kenny's thesis and book for an in depth explanation. Also see Wikepedia.<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 8:12 pm</strong></div>
+				<div class="author">by <strong>John Schultz</strong></div>
+				<div class="content">Regarding section 7 of the paper, Future Work and rigid bodies:<br>
+<br>
+1. Load track Colline Verdi II in my demo here: <a href="http://www.brightland.com/ac/" class="postlink">http://www.brightland.com/ac/</a><br>
+2. Run into/shoot the box stacks.<br>
+<br>
+The rigid bodies are implemented using the methods described here: <a href="http://www.brightland.com/Physics/index.htm" class="postlink">http://www.brightland.com/Physics/index.htm</a><br>
+<br>
+In simple terms, tetrahedrons are deformed as per Jakobsen's suggestions giving new positions and orientations. The particles making up the vertices are tracked so that the kinetic energy change resulting from the movement can be corrected (performed pairwise for object-object collisions). The new momenta are used to integrate the rigid bodies (momentum based integrator as opposed to velocity based). Standard impulse-momentum calculations are also used for collisions. To my knowledge, this method has not been published before, nor have any demos been shown using such a method in operation. Seems kind of obvious to me now, not sure why no one tried this method before (perhaps they have, and did not publish their results?). This method can be extended to allow blending between deformable rigid bodies and hard rigidbodies (don't reset the tetrahedrons every iteration: iterate them as with cloth).<br>
+<br>
+<img src="http://www.brightland.com/ac/AC_Networked_Physics.jpg" class="postimage" alt="Image"><br>
+At 100Hz, <strong class="text-strong">no iteration is required for stacks as shown in the demo</strong>. The most expensive element in my game is dealing with real-time bicubic patch collisions and flexible tire simulation. Constraints use the same position deformation along with impulses.<br>
+<br>
+What I like about this method is it's based on constrained particle physics as opposed to optimization methods, which IMO looks much more realistic, and so far runs fast (have not spent any time optimizing the final system yet). Since it's possible to switch between a tetrahedral-particle based integrator and rigidbody momentum-based integrator, one can validate motion for accuracy (rigidbodies being a simplification/averaging approximation to particle systems).<br>
+<br>
+John</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 10:49 pm</strong></div>
+				<div class="author">by <strong>clanzotti</strong></div>
+				<div class="content"><blockquote><div><cite>John Schultz wrote:</cite>Regarding section 7 of the paper, Future Work and rigid bodies:<br>
+<br>
+[snip]<br>
+<br>
+What I like about this method is it's based on constrained particle physics as opposed to optimization methods, which IMO looks much more realistic, and so far runs fast (have not spent any time optimizing the final system yet). Since it's possible to switch between a tetrahedral-particle based integrator and rigidbody momentum-based integrator, one can validate motion for accuracy (rigidbodies being a simplification/averaging approximation to particle systems).<br>
+<br>
+John</div></blockquote>
+
+Well, as already mentioned i used this method years ago. I've published no papers about it for some reasons.<br>
+<br>
+The anims below where all made using a method similar to the proposed  'position based physic' (Circa 2003) :<br>
+<br>
+Cloth samples:<br>
+<br>
+<a href="http://win.dynadream.com/cloth/anims/cloth_cloth_self.avi" class="postlink">http://win.dynadream.com/cloth/anims/cl ... h_self.avi</a><br>
+<a href="http://win.dynadream.com/cloth/anims/da_cloth_hard_border.avi" class="postlink">http://win.dynadream.com/cloth/anims/da ... border.avi</a><br>
+<a href="http://win.dynadream.com/cloth/anims/real_pattern_simul.avi" class="postlink">http://win.dynadream.com/cloth/anims/re ... _simul.avi</a><br>
+<a href="http://win.dynadream.com/cloth/anims/skirt_test.avi" class="postlink">http://win.dynadream.com/cloth/anims/skirt_test.avi</a><br>
+<a href="http://win.dynadream.com/cloth/anims/teddy_dance_ne.avi" class="postlink">http://win.dynadream.com/cloth/anims/teddy_dance_ne.avi</a><br>
+<a href="http://win.dynadream.com/dynatomic/anims/da_100_meters_cloth.avi" class="postlink">http://win.dynadream.com/dynatomic/anim ... _cloth.avi</a><br>
+<a href="http://win.dynadream.com/dynatomic/anims/da_c_coll.avi" class="postlink">http://win.dynadream.com/dynatomic/anims/da_c_coll.avi</a><br>
+<br>
+Rigid-Soft-Samples:<br>
+<br>
+<a href="http://win.dynadream.com/wobble/anims/da_animated_magnet.avi" class="postlink">http://win.dynadream.com/wobble/anims/d ... magnet.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_animated_magnet.avi" class="postlink">http://win.dynadream.com/wobble/anims/d ... magnet.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_diff_mass.avi" class="postlink">http://win.dynadream.com/wobble/anims/da_diff_mass.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_face.avi" class="postlink">http://win.dynadream.com/wobble/anims/da_face.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_glue_constraint.avi" class="postlink">http://win.dynadream.com/wobble/anims/d ... traint.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_motor.avi" class="postlink">http://win.dynadream.com/wobble/anims/da_motor.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_motor_back.avi" class="postlink">http://win.dynadream.com/wobble/anims/da_motor_back.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_multi_obj.avi" class="postlink">http://win.dynadream.com/wobble/anims/da_multi_obj.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/da_ropes.avi" class="postlink">http://win.dynadream.com/wobble/anims/da_ropes.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_dominos.avi" class="postlink">http://win.dynadream.com/wobble/anims/rw_dominos.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_ell_blocks.avi" class="postlink">http://win.dynadream.com/wobble/anims/rw_ell_blocks.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_links.avi" class="postlink">http://win.dynadream.com/wobble/anims/rw_links.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_ell_blocks.avi" class="postlink">http://win.dynadream.com/wobble/anims/rw_ell_blocks.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_mad_machine.avi" class="postlink">http://win.dynadream.com/wobble/anims/r ... achine.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_multiobj.avi" class="postlink">http://win.dynadream.com/wobble/anims/rw_multiobj.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_tentacle.avi" class="postlink">http://win.dynadream.com/wobble/anims/rw_tentacle.avi</a><br>
+<a href="http://win.dynadream.com/wobble/anims/rw_wobble_torus.avi" class="postlink">http://win.dynadream.com/wobble/anims/r ... _torus.avi</a><br>
+<br>
+I used CCD from the beginning <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+Somethings that let me think about... <img class="smilies" src="images/smilies/icon_neutral.gif" width="15" height="15" alt=":-|" title="Neutral"><br>
+<br>
+Regards,<br>
+<br>
+Carlo Lanzotti</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 07, 2006 8:55 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">I have a problem with the algorithm described in the "position based dynamics" paper. Maybe anybody can help me.<br>
+<br>
+In line 5 of the algorithm the new velocities of the vertices are computed. And then in line 7 the new positions p_i are determined by<br>
+<br>
+p_i = x_i + h * v_i<br>
+<br>
+where h is the time step size. So the external force is treated as an impulse but why? If a force is used the position of a vertex after integrating the acceleration should be <br>
+<br>
+p_i = x_i + v_i*h + 0.5 * (F_ext/m) * t^2<br>
+<br>
+If the equation of the paper is used, a vertex has the correct velocity but the position p_i is wrong. <br>
+<br>
+Could anybody explain to me why the factor 0.5 is missing in the equation of the paper?<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 07, 2006 12:47 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The equations of motion are (omitting non-holonome constraints for simplicity):<br>
+<br>
+dx/dt = v<br>
+dv/dt = W * (f_ext - JT * lambda)<br>
+<br>
+C(x) = 0<br>
+<br>
+This is what you have to solve. Several strategies exist here, e.g. for rigid bodies we use the following discretization:<br>
+<br>
+x(t + dt) = x(t) + v(t + dt) * dt<br>
+v(t + dt) = v(t) + W * (f_ext - JT * lambda) * dt<br>
+<br>
+and use the (hidden) velocity constraints with Baumgarte stabilization. You get:<br>
+<br>
+J * v = -tau * C(x) / dt <br>
+<br>
+You can combine the equations and end up with:<br>
+<br>
+J*W*JT * lambda * dt =  -tau * C(x) / dt  - J * ( v(t) + W * f_ext * dt )<br>
+<br>
+This is a linear system for equality constraints or a LCP in the presents of inequality constraints (e.g. contacts or limits). Erin Catto showed that solving this using a PGS algorithm is equivalent to applying sequentiel impulses where each delta impulse is basically computed as:<br>
+<br>
+J*W*JT * impulse = -tau * C(x) / dt - dv<br>
+<br>
+<br>
+Instead of solving on the velocity level you can also try to solve the following system.<br>
+<br>
+x(t + dt) = x(t) + v(t + dt) * dt<br>
+v(t + dt) = v(t) + W * (f_ext - JT * lambda) * dt<br>
+<br>
+C(x) = 0<br>
+dC/dt = J * v = 0<br>
+<br>
+I suggest looking at Hairer "Solving ordinary differential equations II" VII.1 The index and Various examples - Mechanical systems (GGL) and VII.2 Index Reduction Methods - Stabilization by projection <br>
+<br>
+I think the idea is to solve the following system:<br>
+<br>
+M(x')(x - x') + JT * lambda = 0<br>
+C(x) = 0<br>
+<br>
+and<br>
+<br>
+M(x')(v - v') + JT * lambda = 0<br>
+J*v = 0<br>
+<br>
+<br>
+So there is nothing new to these ideas I guess. The outcome is for my understanding that solving the position constraints using simplified Newton iterations is equivalent to sequentiel projections (Jacobsen) and an iterative solution for the second system using a Gauss - Seidel like scheme is equivalent to sequentiel impulses (Catto). <br>
+<br>
+I think your method is (intentionally) more decoupled from this abstract mathematical formulation. The advantage might be that it is maybe physical more plausible, on the other hand the above methods can more easily prove convergence.<br>
+<br>
+@clanzotti<br>
+Where did you use the methods before? Which projects did you work on? The examples look very nice - do you have any timing informations for the examples? Do they run in realtime?<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 07, 2006 1:29 pm</strong></div>
+				<div class="author">by <strong>clanzotti</strong></div>
+				<div class="content">Hi Dirk,<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>The equations of motion are (omitting <br>
+@clanzotti<br>
+Where did you use the methods before? Which projects did you work on? The examples look very nice - do you have any timing informations for the examples? Do they run in realtime?<br>
+Cheers,<br>
+-Dirk</div></blockquote>
+
+Yes, sorry for not included before such informations.<br>
+<br>
+The method was used in a very early version of my cloth dynamic simulation system (Called RealCloth at the time). The project started in 2000~ targeted to become a plugin for Realsoft3D (<a href="http://www.realsoft.com" class="postlink">http://www.realsoft.com</a>).<br>
+<br>
+The simulations where not realtime, but most of them ran at an average speed of 2-3 seconds per frame on a P3 800Mhz. (1-2~ minutes for the 100 meters cloth).<br>
+<br>
+The system was designed for offline simulations.<br>
+<br>
+Then it evolved until today, major rewrite and a new name: DynAtomic (<a href="http://www.dynadream.com" class="postlink">http://www.dynadream.com</a>). It will be released for the forthcoming Realsoft3D V6.<br>
+<br>
+Actually the system is capable of simulating clothes and soft objects as well as rigid body dynamic, all interacting togheter.<br>
+<br>
+More informations can be found on the forthcoming web site i mentioned above. (Planned launch November/December).<br>
+<br>
+Regards,<br>
+<br>
+Carlo Lanzotti</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>5</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

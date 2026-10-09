@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9788" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-02-22T21:12:11+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9788</id>
+
+		<entry>
+		<author><name><![CDATA[rraallvv]]></name></author>
+		<updated>2014-02-22T21:12:11+00:00</updated>
+
+		<published>2014-02-22T21:12:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33016#p33016</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33016#p33016"/>
+		<title type="html"><![CDATA[issue: Serialisation, child shapes are doubled!]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33016#p33016"><![CDATA[
+I'm trying a simple searilization/deserialization of a tree like object like this:<br><br>btRigidBody contains btCompoundShape<br>btCompountShape contains btBoxShape and btSphereShape<br><br>The problem is that when I print the number of collision shapes deserialized, it differs from the number of collision shapes actually in use  y all the collision objects.<br><br>It seems that either one or the other, btDefaultSeralizer or btBulletWorldImporter, are saving or restoring twice the number of child shapes.<br><br>To reproduce the issue just download bullet v 2.82 and add this code to the App_SerializeDemo application in the SerializeDemo.cpp file:<br><br>Before the serialisation take place<br><div class="codebox"><p>Code: </p><pre><code>// create a simple tree like object{btCompoundShape *comp = new btCompoundShape;btBoxShape *box = new btBoxShape(btVector3(2,2,2));btSphereShape *sphere = new btSphereShape(2);btTransform tbox, tsphere;tbox.setIdentity();tsphere.setIdentity();tbox.setOrigin(btVector3(-2,0,0));tsphere.setOrigin(btVector3(2,0,0));comp-&gt;addChildShape(tbox, box);comp-&gt;addChildShape(tsphere, sphere);btTransform tbody;tbody.setIdentity();tbody.setOrigin(btVector3(0,10,-10));btScalar mass(1);bool isDynamic = (mass != 0.f);btVector3 localInertia(0,0,0);if (isDynamic)groundShape-&gt;calculateLocalInertia(mass,localInertia);btRigidBody *body = new btRigidBody(mass,new btDefaultMotionState(tbody),comp,localInertia);m_dynamicsWorld-&gt;addRigidBody(body);}// count the number of collision shapes actually in useint count = 0;btHashMap&lt;btHashPtr, btCollisionShape*&gt; shapes;for (int i=0; i&lt;m_dynamicsWorld-&gt;getNumCollisionObjects(); i++) {btCollisionShape *shape = m_dynamicsWorld-&gt;getCollisionObjectArray()[i]-&gt;getCollisionShape();if (!shapes.find(shape)) {count++;shapes.insert(shape, shape);}if (shape-&gt;isCompound()) {btCompoundShape *comp = (btCompoundShape*) shape;for (int j=0; j&lt;comp-&gt;getNumChildShapes(); j++) {btCollisionShape *child = comp-&gt;getChildShape(j);if (!shapes.find(child)) {count++;shapes.insert(child, child);}}}}// logging information: print the the number of objects that should be serialised printf("serialization\n");printf("# constraints: %d\n", m_dynamicsWorld-&gt;getNumConstraints());printf("# collision objects: %d\n", m_dynamicsWorld-&gt;getNumCollisionObjects());printf("# collision shapes: %d\n", count);</code></pre></div>else sentence in case that m_fileLoader actually do the deserialisation<div class="codebox"><p>Code: </p><pre><code>if (!m_fileLoader-&gt;loadFile("testFile.bullet")){//....}else{// count the collision shapes that are actually in use int count = 0;btHashMap&lt;btHashPtr, btCollisionShape*&gt; shapes;for (int i=0; i&lt;m_fileLoader-&gt;getNumRigidBodies(); i++) {btCollisionShape *shape = m_fileLoader-&gt;getRigidBodyByIndex(i)-&gt;getCollisionShape();if (!shapes.find(shape)) {count++;shapes.insert(shape, shape);}if (shape-&gt;isCompound()) {btCompoundShape *comp = (btCompoundShape*) shape;for (int j=0; j&lt;comp-&gt;getNumChildShapes(); j++) {btCollisionShape *child = comp-&gt;getChildShape(j);if (!shapes.find(child)) {count++;shapes.insert(child, child);}}}}// logging information: print the the number of objects that where deserialised printf("deserialization\n");printf("# constraints: %d\n", m_fileLoader-&gt;getNumConstraints());printf("# collision objects: %d\n", m_fileLoader-&gt;getNumRigidBodies());printf("# collision shapes: %d actually in use, %d loaded\n", count, m_fileLoader-&gt;getNumCollisionShapes()); //&lt;------discrepancy here!!!!!!}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9097">rraallvv</a> — Sat Feb 22, 2014 9:12 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

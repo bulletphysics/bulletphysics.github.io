@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Support Mapping Function for Triangles with MPR</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Support Mapping Function for Triangles with MPR</h2>
+		<p><a href="viewtopic.php%3Ft=8937.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8937</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Support Mapping Function for Triangles with MPR</h3>
+				<div class="date">Posted: <strong>Wed Mar 13, 2013 3:46 pm</strong></div>
+				<div class="author">by <strong>jason.ngai</strong></div>
+				<div class="content">Hello Folks,<br>
+<br>
+I am currently implementing a physics engine for a game project, modelling after XenoCollide by Gary Snethen. (Games Programming Gems 7)<br>
+<br>
+I have a simple question with regards to support mapping function for triangles in 3D space.<br>
+<br>
+Currently, this is what I have:<br>
+<br>
+- Suppose the Triangle stores an array of 3 vertices.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8937&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void Triangle::GetSupportPoint(Vector3&amp; point, const Vector3&amp; normal)
+{
+    f32 maxDist = FLT_MIN;
+    s32 maxIndex = -1;
+
+    for (s32 i = 0; i &lt; 3; ++i)
+    {
+        f32 result = vertices_[i].Dot(normal);
+        if (result &gt; maxDist)
+        {
+             maxIndex = i;
+             maxDist = result;
+        }
+    }
+    return vertices_[maxIndex];
+}
+</code></pre></div>
+
+I have tested this against a working box collider. (working on box-box etc.)<br>
+<br>
+If I lay the triangle on the XZ plane, and have my camera looking down -Y at the triangle, it seems okay.<br>
+But in actual fact, if I were to look at it on the XY plane, there seem to be a "tetrahedron effect" on the triangle. It registers a false positive on the +Y side of the plane that slopes upwards until it converges above the centroid. Also, the contact normal were going +Y but sloped towards the outer vertex for some reason.<br>
+<br>
+I believe my derivation is wrong.<br>
+<br>
+I seek you professional people's advice if there's any way that I can do to "flatten" the collision area.<br>
+<br>
+Thanks!<br>
+Jason</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Support Mapping Function for Triangles with MPR</h3>
+				<div class="date">Posted: <strong>Thu Mar 14, 2013 3:38 pm</strong></div>
+				<div class="author">by <strong>jason.ngai</strong></div>
+				<div class="content">Hello again,<br>
+<br>
+**Edit 15th March 2013**<br>
+**Added a case for when the 2 centers are perfectly on-line to the origin ray.<br>
+<br>
+I have found a solution that seems to work:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8937&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>        Vector3 Triangle::GetSupportPoint(const Vector3&amp; normal) const
+        {
+            f32 maxDist = FLT_MIN;
+            s32 maxIndex = -1;
+
+            Sphere sphere(EPSILON); //Sphere collider
+
+            for (s32 i = 0; i &lt; 3; ++i)
+            {
+                f32 result = vertices_[i].Dot(normal);
+                if (result &gt; maxDist)
+                {
+                    maxIndex = i;
+                    maxDist = result;
+                }
+            }
+            
+            // Slap an epsilon value against the normal of the triangle plane as "volume"
+            // So that MPR may terminate before it tries to construct the tetrahedron
+            Vector3 point = sphere.GetSupportPoint(normal);
+
+            // EDIT: Singularity when 2 centers are perfectly on-line to the normal from the origin
+            if (maxDist &gt; EPSILON)
+                point += vertices_[maxIndex]; // Standard cases
+            else
+                point += (vertices_[0] + vertices_[1] + vertices_[2])/3; // Returns centroid instead
+
+            return point;
+        }
+</code></pre></div>
+
+Basically, the main issues here is this:<br>
+Unlike rectangles, triangles does not come in a standard form, i.e., obtuse, acute, etc.<br>
+I attach a tiny value to the depth of the plane so that MPR could terminate earlier, allowing the triangle to behave as it should in 2D space.<br>
+<br>
+The result I have achieved seems okay visually, I have yet to stress test it.<br>
+<br>
+If anyone could verify or offer a better suggestion, please let us know!<br>
+<br>
+Regards,<br>
+Jason</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Support Mapping Function for Triangles with MPR</h3>
+				<div class="date">Posted: <strong>Tue Apr 30, 2013 11:00 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">What is MPR?  I use a triangle support function for GJK collision.  You shouldn't need to do anything special for your triangle mapping function for GJK.  There are degenerate cases (i.e. your triangle is a line or your tetrahedron is a triangle), but you can handle them pretty easily.  Let me know if you've got it all figured out.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

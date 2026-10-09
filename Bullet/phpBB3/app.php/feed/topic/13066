@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13066" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-09-08T02:32:57+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13066</id>
+
+		<entry>
+		<author><name><![CDATA[r9dyt]]></name></author>
+		<updated>2020-09-08T02:32:57+00:00</updated>
+
+		<published>2020-09-08T02:32:57+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43097#p43097</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43097#p43097"/>
+		<title type="html"><![CDATA[Torque contorl doesn't work for hand loaded from MPL/MPL.xml?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43097#p43097"><![CDATA[
+I'm trying to change joint states by using torque control, but it gives me really wired behavior. However position control is totally fine. I am not sure if this is because MPL/MPL.xml is not URDF format. It will be really appreciated if somebody can provide me some info.<br><br>The following is a toy example, joint 17 is a joint from index finger based on the kinematic hand. So I simply applied a torque on joint 17 for a different hand mesh, but it seems like the torque is applied to somewhere entirely different.<br><div class="codebox"><p>Code: </p><pre><code>import numpy as npimport pybullet as pimport timeimport pybullet_dataimport mathphysicsClient = p.connect(p.GUI)#or p.DIRECT for non-graphical versionp.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionallytimeStep = 1./240.p.setPhysicsEngineParameter(fixedTimeStep=timeStep)planeId = p.loadURDF("plane.urdf")target_objects = p.loadMJCF("MPL/MPL.xml")target_hand = target_objects[0]pd_objects = p.loadMJCF("MPL/MPL.xml")pd_hand = pd_objects[0]p.resetBasePositionAndOrientation(target_hand, [2.7, -2.2, 2.4], [0, 0, 0, 1])p.resetBasePositionAndOrientation(pd_hand, [2.7, -2.2, 2.6], [0, 0, 0, 1])p.createConstraint(pd_hand, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], #[-0.05, 0, 0.02]                              [2.7, -2.2, 2.6], [0, 0, 0, 1])jointsCount = p.getNumJoints(pd_hand)indices = []targetPositions = []maxForces = []kps = []kds = []for i in range(jointsCount):  indices.append(i)  targetPositions.append(0.0)  maxForces.append(2000000000)  kps.append(1) #1000000000  kds.append(10)#500000#p.setJointMotorControl2(pd_hand, 17, p.POSITION_CONTROL, 1, 0)from pdControllerStable_customized import PDControllerStable#stablePD = PDControllerStable(p)pi = 3.141592while(1):    #p.setJointMotorControl2(hand, 11, p.POSITION_CONTROL, pi / 4.)    #rot = p.getQuaternionFromEuler([math.sin(time.time()*3), 0, 0])    rot1 = math.sin(time.time() * 3)    rot2 = math.cos(time.time() * 3)    #kinematic    p.resetJointState(target_hand, 17, rot1)    p.resetJointState(target_hand, 19, rot2)    p.resetJointState(target_hand, 21, rot1)    #pd    # p.setJointMotorControl2(pd_hand, 17, p.POSITION_CONTROL, targetPosition=rot1)    # p.setJointMotorControl2(pd_hand, 19, p.POSITION_CONTROL, targetPosition=rot2)    # p.setJointMotorControl2(pd_hand, 21, p.POSITION_CONTROL, targetPosition=rot1)    targetPositions[17] = rot1    targetPositions[19] = rot2    targetPositions[21] = rot1    #PD control    jointStates = p.getJointStates(pd_hand, indices)    q1 = []    qdot1 = []    for i in range(jointsCount):        q1.append(jointStates[i][0])        qdot1.append(jointStates[i][1])    q = np.array(q1)    qdot = np.array(qdot1)    qdes = np.array(targetPositions)    qError = qdes - q    Kp = np.diagflat(kps)    Kd = np.diagflat(kds)    P = Kp.dot(qError)    D = Kd.dot(qdot)    taus = P - D    p.setJointMotorControl2(        pd_hand,        17,        controlMode=p.TORQUE_CONTROL,        force=2    )    # for index in range(jointsCount):    #     p.setJointMotorControl2(    #         pd_hand,    #         index,    #         controlMode=p.TORQUE_CONTROL,    #         force=taus[index]    #     )    p.stepSimulation()    time.sleep(timeStep)p.disconnect()</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13632">r9dyt</a> — Tue Sep 08, 2020 2:32 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

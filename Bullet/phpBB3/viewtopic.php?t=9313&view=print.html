@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Why use m_linearVelocity in solveGroupCacheFriendlySetup?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Why use m_linearVelocity in solveGroupCacheFriendlySetup?</h2>
+		<p><a href="viewtopic.php%3Ft=9313.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9313</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Why use m_linearVelocity in solveGroupCacheFriendlySetup?</h3>
+				<div class="date">Posted: <strong>Wed Jul 31, 2013 10:58 am</strong></div>
+				<div class="author">by <strong>Gabor Puhr</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Based on Erin Catto: Iterative Dynamics with Temporal Coherence, in btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup<br>
+this:<br>
+<br>
+solverBody.m_linearVelocity += body-&gt;getTotalForce()*body-&gt;getInvMass()*infoGlobal.m_timeStep;<br>
+solverBody.m_angularVelocity += (body-&gt;getTotalTorque()-gyroForce)*body-&gt;getInvInertiaTensorWorld()*infoGlobal.m_timeStep;<br>
+<br>
+should be this:<br>
+<br>
+solverBody.m_deltaLinearVelocity += body-&gt;getTotalForce()*body-&gt;getInvMass()*infoGlobal.m_timeStep;<br>
+solverBody.m_deltaAngularVelocity += (body-&gt;getTotalTorque()-gyroForce)*body-&gt;getInvInertiaTensorWorld()*infoGlobal.m_timeStep;<br>
+<br>
+I made a quick test and the latter was much better. (both the visual and the aggregated error at the end of the frame)<br>
+Is it a typo or you could find a few cases where the original was more stable?<br>
+<br>
+Thanks<br>
+Gabor</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why use m_linearVelocity in solveGroupCacheFriendlySetup</h3>
+				<div class="date">Posted: <strong>Thu Aug 08, 2013 4:13 am</strong></div>
+				<div class="author">by <strong>Basroil</strong></div>
+				<div class="content">Well, for one, gravity no longer has the proper effect on joint chains  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused"> <br>
+<br>
+I can't seem to get it to work properly with anything but the simplest of setups, perhaps you've made changes to the joint solvers?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why use m_linearVelocity in solveGroupCacheFriendlySetup</h3>
+				<div class="date">Posted: <strong>Fri Aug 09, 2013 9:19 am</strong></div>
+				<div class="author">by <strong>Gabor Puhr</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Though you are right that I made several (successful) changes in the solver to make it more stable, I tested this particular change also with the original solver.<br>
+I couldn't see any problem with the factory Ragdoll demo regarding the gravity. <br>
+In the other hand when I changed the picking constraint to simple force pull the new version became much better, as with the old you can tear down the hand of the demo ragdoll independently how much iteration you set for the solver.<br>
+<br>
+With my extended solver I can handle a ragdoll with 84 joints without problem and this change solve the same problem there that arise when I pull it with force.<br>
+Also my ragdoll became calm much faster when lying on to floor.<br>
+<br>
+Would you be so kind to describe me a simple case when it fails so I can test that?<br>
+<br>
+Thanks<br>
+Gabor</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why use m_linearVelocity in solveGroupCacheFriendlySetup</h3>
+				<div class="date">Posted: <strong>Sun Aug 18, 2013 7:24 am</strong></div>
+				<div class="author">by <strong>Basroil</strong></div>
+				<div class="content"><blockquote><div><cite>Gabor Puhr wrote:</cite>Hi,<br>
+Would you be so kind to describe me a simple case when it fails so I can test that?
+</div></blockquote>
+
+Make six bodies and connect them by six hinge joints. Enable motors on those hinges but make the motor weaker than what it needs to be to keep the hinge up (i.e. if it needs 2 units to stay still, put only 1.5, then 1.0, etc until it falls). The system just fails to include gravity into calculations (just like the current system messes with joint strength and can cause joints to fall out of place)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why use m_linearVelocity in solveGroupCacheFriendlySetup</h3>
+				<div class="date">Posted: <strong>Wed Aug 21, 2013 3:27 pm</strong></div>
+				<div class="author">by <strong>Gabor Puhr</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Something like this?:<br>
+<br>
+	btRigidBody* rbs[6];<br>
+	for(int i=0;i&lt;6;++i) <br>
+	{<br>
+		btCollisionShape* shape = new btBoxShape(btVector3(btScalar(0.1),btScalar(0.1),btScalar(0.1)));<br>
+		btTransform transform;<br>
+		transform.setIdentity();<br>
+		transform.setOrigin(btVector3(-1-i*0.2,3,0));<br>
+		rbs<em class="text-italics"> = localCreateRigidBody(i ? 1 : 0,transform,shape);<br>
+	}<br>
+<br>
+	for(int i=0;i&lt;5;++i) <br>
+	{<br>
+		btTransform localA,localB;<br>
+		localA.setIdentity(); localB.setIdentity();<br>
+		localA.setOrigin(btVector3(btScalar(-0.1), btScalar(0), btScalar(0.)));<br>
+		localB.setOrigin(btVector3(btScalar(0.1), btScalar(0), btScalar(0.)));<br>
+		btHingeConstraint* con = new btHingeConstraint(*rbs<em class="text-italics">,*rbs[i+1], localA, localB);<br>
+<br>
+		const float d = 1.2;<br>
+		if(i==0) con-&gt;enableAngularMotor(true,4.8f /d,100000000);<br>
+		if(i==1) con-&gt;enableAngularMotor(true,0.1f /d,100000000);<br>
+		if(i==2) con-&gt;enableAngularMotor(true,3.0f /d,100000000);<br>
+		if(i==3) con-&gt;enableAngularMotor(true,1.9f /d,100000000);<br>
+		if(i==4) con-&gt;enableAngularMotor(true,0.05f/d,100000000);<br>
+<br>
+		m_dynamicsWorld-&gt;addConstraint(con, true);<br>
+	}<br>
+<br>
+With this I couldn't see any differences between the two versions.<br>
+<br>
+Is this the case that you described?<br>
+<br>
+Best Regards<br>
+Gabor</em></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why use m_linearVelocity in solveGroupCacheFriendlySetup</h3>
+				<div class="date">Posted: <strong>Wed Aug 21, 2013 11:08 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It should be fixed by now, I introduced this bug a while ago.<br>
+<br>
+Can you try latest SVN trunk?<br>
+<a href="http://code.google.com/p/bullet/source/detail?r=2645" class="postlink">http://code.google.com/p/bullet/source/detail?r=2645</a><br>
+<br>
+Thanks for the report!<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why use m_linearVelocity in solveGroupCacheFriendlySetup</h3>
+				<div class="date">Posted: <strong>Fri Aug 23, 2013 9:29 am</strong></div>
+				<div class="author">by <strong>Gabor Puhr</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I tried and it seems it works well now.<br>
+<br>
+Thanks<br>
+Gabor</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

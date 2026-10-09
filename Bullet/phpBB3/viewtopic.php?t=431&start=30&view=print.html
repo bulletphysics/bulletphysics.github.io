@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Differences between velocity and position contact constraint - Page 3</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Differences between velocity and position contact constraint</h2>
+		<p><a href="viewtopic.php%3Ft=431.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=431</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>3</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 7:07 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">As I told you before, I don't have any intention to denounce any methods.<br>
+<br>
+If you read my posts clearly, what I want to say is CCD&amp;TOI need some assumptions (about in-between motions) to work. I didn't say that's bad.<br>
+<br>
+What I really want to say is: there are different methods that have different requirements/performance/usages/accuracy. In this case, what I want to emphasize is ST need different kind of CD.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 7:13 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+I think you should focus on making your method better, rather then talking about the 'problems' of TOI/CCD, because the problems in your method seems to be substantial to the point that it is not usable.
+</div></blockquote>
+
+That's not a constructive comment! What's that substantial problem?<br>
+
+<blockquote class="uncited"><div>
+As I explained before, CCD+stepping is used in practice. Has your method proved itself in actual applications?
+</div></blockquote>
+I've never said anything implied CCD+stepping is unusable. And yes,our method has been used in mechanical/automated motion planning/industry design applications, in which prevent penetration is more important.<br>
+<br>
+Last, I really don't mean to denounce anything. I've just tried to indentify the differences between many methods. <br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 7:23 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>
+I think you should focus on making your method better, rather then talking about the 'problems' of TOI/CCD, because the problems in your method seems to be substantial to the point that it is not usable.
+</div></blockquote>
+
+That's not a constructive comment! What's that substantial problem?
+</div></blockquote>
+
+I got the impression, not dealing with in-between discontinuities like bounce, and recursive collisions can become a problem in applications. <br>
+As I understand so far, the ST approach doesn't proceed the simulation completely due to lack of 'bounce' and multiple collisions. Also, basing the method on feature-pairs might cause a high overhead (how do you determine which pairs are important?)<br>
+<br>
+One of the challenges in time of impact calculations is dealing with multi-body systems and complicated surfaces. Using half-spaces might be overly simplified, but if it can be relaxed when using NCP that's cool.<br>
+<br>
+Perhaps I just need to dive deeper into this method, so I will read more on this topic and get back to this. I'm intrigued by using LCP/NCP assisting in finding penetration-free motion, so thanks for bringing it up!<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 7:36 pm</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content">I'm a little confused where this discussion is going, or what else can be gained from it.  It seems it has turned into a Stewart-Trinkle LCP versus Mirtich's (and variants of) impulse based methods.  I know that isn't what I intended when I wrote that simple little demo java application.  The point I was trying to make with that demo is to illustrate the importance of choosing the correct model for the task at hand; by illustrating large differences in outcomes with small changes in model formulation.  The small difference in ST versus AP is at what level the non-penetration constraint is modeled at: position versus velocity.<br>
+<br>
+Now, if we really want to compare ST to TOI/CCD methods we can try, but I'm not sure what the end goal is.  I'll do my best with a start, and others can comment on it.  Let's assume frictionless systems first:<br>
+<br>
+ST:<br>
+Pros: Fixed time step.  Interpentration prevented without calculating time of impact.<br>
+Cons: How to determine the active set of contacts?  The force required to prevent the inter-pentration is "smeared" across the time step and returned as an impulse.  The impulse is not a restituitive force, and only inellastic collisions are possible.  It is impossible to determine the TOI from the method, hence to get a bounce other approaches are needed (calculate TOI, apply impulse law at end of step, etc)<br>
+<br>
+TOI/CCD<br>
+Pros: With TOI calculations, applying impact laws become natural and scenes appear more realistic since people expect a bounce.<br>
+Cons: Can become collision intensive and suffer from lack of progress (can be overcome by allowing a-physical situations like small penetrations).<br>
+<br>
+The above interpretations are for frictionless systems only.  Let me ask a question about frictional systems where the dynamics play a key role in the motion of the part. Imagine instead of dropping the sphere onto the halfplane, sliding it on the plane.  How would TOI/CCD methods handle the case of persistant contact?  In this problem, the work done from friction plays a dramatic role in the motion of the sphere.  Also, the transition from sliding to rolling may occur during the time step.  It is possible to determine this switch automatically using complementarity based methods, but I don't see how any other methods can determine this.<br>
+<br>
+My final paragraph isn't mean to be interpreted as one method is better than another.  I really am interested to hear how TOI/CCD methods handle steady contact and to emphasize the importance of selecting the correct method for the job at hand.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 7:59 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Thanks Steve to make it clear (after I seem to fail to do so).<br>
+<br>
+I want to point out some important references related to Stweart-Trinkle method (plus my short review) to help anyone who want to read about it.<br>
+<br>
+1. D.E. Stewart and J.C. Trinkle, "An Implicit Time-Stepping Scheme for Rigid Body Dynamics with Inelastic Collisions and Coulomb Friction,"  Int'l Jrnl. of Numerical Methods in Engineering, 39:2673-2691, 1996.<br>
+Link: <a href="http://www.cs.rpi.edu/~trink/Papers/STijnme.pdf" class="postlink">http://www.cs.rpi.edu/~trink/Papers/STijnme.pdf</a><br>
+<br>
+Comment: This is the first paper that can describe ST. It also mention about NCP. You should read this paper for sure.<br>
+<br>
+2. Mihai Anitescu: Constraint Stabilization For Time-Stepping Approaches For Rigid Multibody Dynamics With Joints, Contact, And Friction (2003)<br>
+<br>
+In this paper, Mihai Anitescu represent the same approach as ST. He also mention some differences between the two methods. This paper is easier to read in my view because it doesn't mess up with NCP. Also, in this paper, he presented a way to get bouncing effect with ST and also a simple heuristic to choose active set.<br>
+<br>
+Link: Google for it. I found a copy in CiteSeer.<br>
+<br>
+3. Mihai Anitescu: A Fixed Time Step Approach for Multi-Body Dynamics with Contact and Friction (2003) <br>
+<br>
+In this paper, Mihai even stated that: "We do not perform collision detection. Instead, a noninterpenetration constraint is replaced by its linearization" and he emphasize on the fact that ST always step forward a time step.<br>
+<br>
+Hope that help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 8:07 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Looks like a good start of PRO and CONS. Comparing your method with methods that use CCD/TOI is very relevant in this forum.<br>
+
+<blockquote class="uncited"><div>
+The above interpretations are for frictionless systems only. Let me ask a question about frictional systems where the dynamics play a key role in the motion of the part. Imagine instead of dropping the sphere onto the halfplane, sliding it on the plane. How would TOI/CCD methods handle the case of persistant contact? In this problem, the work done from friction plays a dramatic role in the motion of the sphere.</div></blockquote>
+Contact constraints including friction can be dealt with just by applying lateral impulses/forces, based on the normal force/impulse (depends wether the method is impulse based or force based)<br>
+
+<blockquote class="uncited"><div>
+Also, the transition from sliding to rolling may occur during the time step. <br>
+It is possible to determine this switch automatically using complementarity based methods, but I don't see how any other methods can determine this. 
+</div></blockquote>
+
+Not sure how others deal with this, but when using a Sequential Impulse (this is what Bullet uses, it can be described as an intuitive version of Iterative LCP solver known as Projected Gauss Siedel, see the ODE quickstep), the change between rolling and sliding, dynamic and static friction, can be integrated inside the constraint solving.<br>
+
+<blockquote class="uncited"><div>
+My final paragraph isn't mean to be interpreted as one method is better than another. I really am interested to hear how TOI/CCD methods handle steady contact and to emphasize the importance of selecting the correct method for the job at hand.
+</div></blockquote>
+Talking to Jan Paul van Waveren, who implemented this TOI/CCD for Doom3, the contact constraint prevents any motion that causes penetration, but it allows all motion that doesn't cause penetration, including sliding. He has done a great deal handling all kind of numerical issues.<br>
+<br>
+A while back, Stephane Redon also discussed resting contact (need to look up the forum topic), I think he uses some collision tolerance (maintaining a very small distance) that deals with the numerical issues of root finding (toi).<br>
+<br>
+I'll try to get some feedback from them.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 25, 2006 8:10 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+I got the impression, not dealing with in-between discontinuities like bounce, and recursive collisions can become a problem in applications. <br>
+As I understand so far, the ST approach doesn't proceed the simulation completely due to lack of 'bounce' and multiple collisions.
+</div></blockquote>
+Right ST is based on the assumption of inelastic contact. But in one of Mihai paper I mention (#2). He mentioned a way to get bounciness. So you will end up at the same position as CCD at T1.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+ Also, basing the method on feature-pairs might cause a high overhead (how do you determine which pairs are important?)
+</div></blockquote>
+I think the cost of adding some more pairs can trade with the cost of getting CCD. Also, if we use CCD with ST, then we know for sure which pair should be added and that number of pairs is the same as in CCD&amp;TOI. So whether include more pairs but using onshot distance computation or exact number of pair with CCD. You can choose what way to go depending on application.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+One of the challenges in time of impact calculations is dealing with multi-body systems and complicated surfaces. Using half-spaces might be overly simplified, but if it can be relaxed when using NCP that's cool.
+</div></blockquote>
+You can also stay with LCP using trapezoidal ST timestepper.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 9:27 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>It will happen exactly as you describe if you use naive LCP-ST. Trapezoidal can help by approximate contact "surface" as a paraboloid. So the curve of parabol can help. But the only way to make sure that the ball will pass through is by using fully implicit ST (require NCP).<br>
+<br>
+As for the case of TOI. Yes, if we can get the right TOI then it's definitely helpful. But there is no way to get the right TOI without doing dynamics. Currently, CCD have to make assumption about the motion of bodies to predict future position. So I can always come up with the case where CCD prediction is wrong.</div></blockquote>
+i have the impression that approximating a triangle by a paraboloid is not a good enough approximation. We wouldn't be able to stack properly  even simple boxes as the surface wouldn't be flat anymore.<br>
+<br>
+if LCP ST isn't able to solve cases like the ones described earlier, where potential contacts are obstructing valid motion, i think we are not talking about a minor approximation. The method not just prevents penetration but also prevents valid motion in the most common cases. there is an endless list of very common cases similar to the one mentioned earlier. So if there is no reliable way of finding valid potential contacts LCP ST is just not usable. <br>
+<br>
+CCD+TOI is usable and used in real-time simulations.In the Redon's case there is the inconsistency that the screwing motion is not consistent with numerical integration. But i think this problem doesn't exist in Bullet and possibly other packages.<br>
+<br>
+Comparisons are very useful, however before getting into that, i thinkyou should at least show that LCP ST, in the form you present it, actually works in general. I dont think we are at that point yet, unless i have missed something.<br>
+<br>
+could the following modification to your algorithm help to solve the problem of unwanted active non penetration constraints?<br>
+<br>
+roughly:<br>
+<br>
+1. collect potential contacts <br>
+<br>
+2. solve LCP ST<br>
+<br>
+3. if there are active contacts that violate the features boundaries(eg point-triangle contact where point is outside triangle boundaries etc... ), remove them from the  potential contacts set, reset state to t0 and goto step 2.<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 10:00 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>I think the cost of adding some more pairs can trade with the cost of getting CCD. Also, if we use CCD with ST, then we know for sure which pair should be added and that number of pairs is the same as in CCD&amp;TOI. </div></blockquote>
+
+on CCD+ST:<br>
+if a sphere O is at t0 and then O,t1  CCD will give you plane 2, however if you add bouncing, after impact against plane 2 the sphere may end up in O,t2. In order to prevent penetration with plane 1 you would need to add it too from the start. But CCD from the starting configuration t0 and estimated t1 will not return plane 1 as potential contact but only plane 2:<br>
+<br>
+O,t0........................................O,t2<br>
+.................. ____________________________________1<br>
+<br>
+<br>
+___________O,tc_________________________________2<br>
+...........................O,t1<br>
+<br>
+<br>
+CCD+TOI would return plane 2 first, and plane 1 after bouncing off plane 2. CCD+ST would see only plane 2 and miss plane 1.<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 1:59 pm</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite>
+i have the impression that approximating a triangle by a paraboloid is not a good enough approximation. We wouldn't be able to stack properly  even simple boxes as the surface wouldn't be flat anymore.<br>
+<br>
+if LCP ST isn't able to solve cases like the ones described earlier, where potential contacts are obstructing valid motion, i think we are not talking about a minor approximation. The method not just prevents penetration but also prevents valid motion in the most common cases. there is an endless list of very common cases similar to the one mentioned earlier. So if there is no reliable way of finding valid potential contacts LCP ST is just not usable. </div></blockquote>
+
+I think everyone is missing the big point here, use the right model for the right job!!  The biggest problem with ST is that you don't get a bounce naturally, since there is no TOI calculations.  Therefore, games probably won't like it since people "expect" a bounce and games are all about looking real.  That said, there are many situtations (my research included) where bouncing doesn't happen.  Because modeling impact is so difficult, many industirial applications go out of there way design applications with low velocity and no bouncing, basically quasistatic systems.  In quasistatic systems ST works great, since we can easily replace the Newton-Euler equations with a set of equilibrium equations, and thats it.<br>
+<br>
+To answer your more specific questions, there are many cases where heuristics can prune the set of potential contacts and remove the cases in invalid motion.  They don't work all the time however, especially with non-convex geometry where yes, due to the linearization of the contstraints artifacts can be found.  Lets analyze your examples more carefully.<br>
+<br>
+O,t0........................................O,t2<br>
+.................. ____________________________________1<br>
+<br>
+<br>
+___________O,tc_________________________________2<br>
+...........................O,t1 <br>
+<br>
+Using an unmodified ST,  We would recognize a potential contact with plane 2, then we would make contact with plane 2 and stick, not bounce.  This is by design!!  If you want bounce, you will have to modify ST to include it.   <br>
+<br>
+Now, let me modify your example slightly:<br>
+_______________________________________________1<br>
+O,t0<br>
+_______________________________________________2<br>
+<br>
+Assume the planes are grippers on a hand, trying to squeeze the sphere.  Now there can be an infinite number of bounces/collisions in a finite time.  ST won't have a problem, but CCD&amp;TOI will behave very badly.  Again, choose the right model for the task at hand.<br>
+<br>
+<br>
+Your other example presented earlier in the forum is an issue caused from the linearization of the constraints:<br>
+...O (T0)<br>
+<br>
+_____.........O(ST,T1)........______________..............._______________<br>
+<br>
+...........................O(CCD/TOI,T1) <br>
+<br>
+This happens because linearizing the constraint caused line segments in the workspace to become half-plane constraints in configuration space.  So yes,  ST will stop on a non-existant edge, because we modeled that edge has a half plane.  Smaller time-steps help with this situation because with smaller time steps eventually the sphere will be over the gap, instead of the edge.   <br>
+<br>
+However, there are other more difficult situations that we have to deal with that that.  What if the obstacle is non-convex, what do we add as constraints?  What about the following situation of a sphere falling on a triangle:<br>
+  O<br>
+  /\      <br>
+<br>
+<br>
+There is no well defined normal in this situation, so what do we do?  We have a non-convex formulation that we are working on to try and better handle these cases.<br>
+<br>
+As for stacking boxes, yes we can do that.  We can even have different coefficients of friction between the boxes and correctly handle the maintain/separate stick/slip conditions that may occur.  If you want boxes bouncing into each other, then no, an unmodified ST won't do it.<br>
+<br>
+There are very few cases where we can't prune away (boundary tests, normal cone tests, etc) the potential contacts that cause invalid motion, but yes they do exist and it is a limitation.<br>
+<br>
+As far as ST being usable, it is very usable and has been used.  Again, use the right model for the right job.  If I needed bouncing, I wouldn't use ST.  I would use a complementarity formulation by <a href="http://cronos.rutgers.edu/~pengsong/publications/SPKijnme.pdf" class="postlink">Song-Pang-Kumar</a> which adds local compliance at the contact locations.  Instead of ad-hoc analytical methods, the displacements of the contact patch are used to determine the rebound behavior.  This is a more physical interpretation of what is actually happening.  Also, because it is also an LCP formulation we can use the well defined mathematics to prove that in the limit, this formuation matches the actual trajectory!!  That is something no other method has been able to do.  Using differential equations, you can't say anything about convergence.  The drawback of this method is that it is very slow.<br>
+<br>
+Sorry for the long rant, but I was getting frustrated at people forgetting that there is more than one formuation, be it complementarity, DAE, or CCD/TOI.  Choose the right one for the job at hand.  I doubt there will ever be a single formulation used by everyone, as different tasks have different goals.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 2:14 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>sberard wrote:</cite>Using an unmodified ST,  We would recognize a potential contact with plane 2, then we would make contact with plane 2 and stick, not bounce.  This is by design!!  If you want bounce, you will have to modify ST to include it.   
+</div></blockquote>
+that specific example was based on a modified ST which includes bouncing. In a previous post it was mentioned a version of ST which includes bouncing...<br>
+<br>
+ngbinh wrote:<br>
+"Right ST is based on the assumption of inelastic contact. But in one of Mihai paper I mention (#2). He mentioned a way to get bounciness. So you will end up at the same position as CCD at T1. "<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 2:37 pm</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite>
+that specific example was based on a modified ST which includes bouncing. In a previous post it was mentioned a version of ST which includes bouncing...<br>
+
+</div></blockquote>
+
+Sorry about that, I should have read the previous posts more carefully.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 3:25 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite><blockquote><div><cite>ngbinh wrote:</cite>I think the cost of adding some more pairs can trade with the cost of getting CCD. Also, if we use CCD with ST, then we know for sure which pair should be added and that number of pairs is the same as in CCD&amp;TOI. </div></blockquote>
+
+on CCD+ST:<br>
+if a sphere O is at t0 and then O,t1  CCD will give you plane 2, however if you add bouncing, after impact against plane 2 the sphere may end up in O,t2. In order to prevent penetration with plane 1 you would need to add it too from the start. But CCD from the starting configuration t0 and estimated t1 will not return plane 1 as potential contact but only plane 2:<br>
+<br>
+O,t0........................................O,t2<br>
+.................. ____________________________________1<br>
+<br>
+<br>
+___________O,tc_________________________________2<br>
+...........................O,t1<br>
+<br>
+<br>
+CCD+TOI would return plane 2 first, and plane 1 after bouncing off plane 2. CCD+ST would see only plane 2 and miss plane 1.<br>
+<br>
+cheers,<br>
+Antonio</div></blockquote>
+
+Right! Modified ST + CCD will work like what you described. That's why the ST is not consider to be able to deal with bouncing inherently. One important property of ST is it always advance one time step. It can be treated as advantage or limitation depend on applications and how we select our parameters(If timestep is small enough, we should not have this problem).<br>
+
+<blockquote class="uncited"><div>
+i have the impression that approximating a triangle by a paraboloid is not a good enough approximation. We wouldn't be able to stack properly even simple boxes as the surface wouldn't be flat anymore. 
+</div></blockquote>
+Actually, trapezoidal ST approximates a contact as the top of a paraboloid instead of a halfplane. It basically means that it will take care of the fact that contact normal will change during the time step (original ST don't consider this so contact normal = constant, thus we had hlaf plane). So trapezoidal ST won't have any problem with box stacking.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 3:35 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite>
+could the following modification to your algorithm help to solve the problem of unwanted active non penetration constraints?<br>
+<br>
+roughly:<br>
+<br>
+1. collect potential contacts <br>
+<br>
+2. solve LCP ST<br>
+<br>
+3. if there are active contacts that violate the features boundaries(eg point-triangle contact where point is outside triangle boundaries etc... ), remove them from the  potential contacts set, reset state to t0 and goto step 2.<br>
+<br>
+cheers,<br>
+Antonio</div></blockquote>
+
+This would help:<br>
+0. Initial consition should be valid<br>
+1. Integrate ahead<br>
+2. Find interpenetrate features<br>
+3. Reset to t0 and add those features as potential contact<br>
+<br>
+If you want to see how ST work grab Windows demo here:<br>
+<a href="http://www.cs.rpi.edu/~sberard/dvc/" class="postlink">http://www.cs.rpi.edu/~sberard/dvc/</a><br>
+<br>
+Binh Nguyen.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 3:44 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>
+0. Initial consition should be valid<br>
+1. Integrate ahead<br>
+2. Find interpenetrate features<br>
+3. Reset to t0 and add those features as potential contact</div></blockquote>
+i had put it in the other form as if we integrate ahead at high speed we could completely skip objects(tunneling). So it seemed safer to start with a higher set of potential contacts and then remove the unuseful ones.  <br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>3</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Line constraint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Line constraint</h2>
+		<p><a href="viewtopic.php%3Ft=8728.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8728</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Line constraint</h3>
+				<div class="date">Posted: <strong>Sat Jan 05, 2013 11:50 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Hi all,<br>
+<br>
+What is the best way to impose a limit on a line constraint? Currently, I have a distance constraint running alongside it but don't know if that's the best way. Should I add another Jacobian and combine it with the line joint?<br>
+<br>
+Thanks for your help</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Line constraint</h3>
+				<div class="date">Posted: <strong>Mon Jan 07, 2013 11:33 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">// Start with position constraint (u is the axis along you measure the separation)<br>
+C = ( x2 + r2 - x1 - r1 ) * u1 &gt; min_distance<br>
+<br>
+// Time derivative <br>
+dC/dt = ( v2 + w2 x r2 - v1 - w1 x r1 ) * u1 + ( x2 + r2 - x1 - r1 ) * ( w1 x u1 ) <br>
+<br>
+// Define s = ( x2 + r2 - x1 - r1 ). This is the vector from anchor 1 to anchor 2<br>
+<br>
+// This yields<br>
+dC/dt = [ v2 + w2 x r2 - v1 - w1 x (r1 + s) ] * u1<br>
+<br>
+// Identify Jacobian by inspection<br>
+J = ( -u1 | -(r1 + s) x u1 | u1 | r2 x u1 ) <br>
+<br>
+This is for a lower limit. For an upper limit simple change the constraint to: C = ( x2 + r2 - x1 - r1 ) * u1 &lt; max_distance</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Line constraint</h3>
+				<div class="date">Posted: <strong>Thu Jan 10, 2013 1:26 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks Dirk. I have the original line constraint working without limits, however I have a question about the behaviour.<br>
+<br>
+Say that body 2 is at the anchor point and body 1 is the fixed body that the line moves with.<br>
+<br>
+Is the anchor point supposed to move with body 2 and that r2 stays fixed while r1 changes?<br>
+<br>
+Given that the definition for one of the constraints is:<br>
+<br>
+C1 = t.u = 0 where u = x1 + r1 - x2 - r2 and t is the illegal axis of movement<br>
+<br>
+Performing the time derivate leaves r1 and r2 fixed while x1, x2 and t are changing with time? Thanks for your help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Line constraint</h3>
+				<div class="date">Posted: <strong>Thu Jan 10, 2013 9:43 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The limits are essentially two (upper and lower) more new constraints along the free axis. You are essentially measuring the *signed* separation of the anchors along this axis. The first two line constraints block the movement entirely while the linear limit allows for some movement. <br>
+<br>
+Hope that makes sense,<br>
+-Dirk<br>
+<br>
+PS<br>
+The local levers (r1' and r2') are fixed, but r1 = R1 * r1' and r2 = R2 * r2' indeed vary in time since the body can change its orientation.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

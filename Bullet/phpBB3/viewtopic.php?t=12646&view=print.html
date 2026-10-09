@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rotate a btConvexHullShape via btCompoundShape problem.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rotate a btConvexHullShape via btCompoundShape problem.</h2>
+		<p><a href="viewtopic.php%3Ft=12646.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12646</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rotate a btConvexHullShape via btCompoundShape problem.</h3>
+				<div class="date">Posted: <strong>Thu Apr 04, 2019 4:13 pm</strong></div>
+				<div class="author">by <strong>Dox</strong></div>
+				<div class="content">Hello,<br>
+<br>
+Normally, I build a btConvexHullShape from an HACD generated model like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12646&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  
+   //...Retrieve a geometry list from OpenSceneGraph....
+   .....
+   .....
+   for(unsigned int i = 0; i &lt; l_GeometryList.size(); i++) {
+    osg::Vec3Array* l_GfxVertices = dynamic_cast&lt;osg::Vec3Array*&gt;(l_GeometryList[i]-&gt;getVertexArray());
+    if(!l_GfxVertices) {
+      continue;
+    }
+
+    btAlignedObjectArray&lt;btVector3&gt; l_PhyVertices;
+
+    //Calc centroid
+    btVector3 l_Centroid = btVector3(0,0,0);
+    for(unsigned int i = 0; i &lt; l_GfxVertices-&gt;size(); i++) {
+      btVector3 l_Vertex((*l_GfxVertices)[i].x(), (*l_GfxVertices)[i].y(), (*l_GfxVertices)[i].z());
+      l_Centroid += l_Vertex;
+    }
+    l_Centroid *= 1.f/(double(l_GfxVertices-&gt;size()));
+
+    //Shift vertices around centroid
+    for(unsigned int i = 0; i &lt; l_GfxVertices-&gt;size(); i++) {
+      btVector3 l_Vertex((*l_GfxVertices)[i].x(), (*l_GfxVertices)[i].y(), (*l_GfxVertices)[i].z());
+      l_Vertex -= l_Centroid;
+      l_PhyVertices.push_back(l_Vertex);
+    }
+
+    //Create the convex hull shape
+    btConvexHullShape* l_ConvexHullShape = new btConvexHullShape(&amp;(l_PhyVertices[0].getX()), l_PhyVertices.size());
+    l_ConvexHullShape-&gt;setMargin(0.001f);
+
+    btTransform l_PhyTransform;
+    l_PhyTransform.setIdentity();
+    l_PhyTransform.setOrigin(l_Centroid);
+    
+    btCompoundShape* l_PhyCompoundShape = new btCompoundShape();
+    l_PhyCompoundShape-&gt;addChildShape(l_PhyTransform, l_ConvexHullShape);  
+  }</code></pre></div>
+
+This code basically works and place the convex hull in the correct position. <br>
+<br>
+Now I need a rotation, so I have simple added the rotation to the l_PhyTransform (for example, after the l_PhyTransform.setOrigin(l_Centroid) line):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12646&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>      PhyQuaternion l_quat;
+      l_quat.setEulerZYX(0, 0, M_PI_2);
+      l_PhyTransform.setRotation(l_quat);
+</code></pre></div>
+
+This code doesn't works as expected (for me): a simple convex shape rotation of 90° (on X). Instead, the rotation there is, but I can see a sort of "degenerated" mesh: some polygons are corrects, some others are like "deformed" and moved in weird position.<br>
+<br>
+Can you tell me where is my silly error?<br>
+<br>
+Many thanks!<br>
+<br>
+Bye</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

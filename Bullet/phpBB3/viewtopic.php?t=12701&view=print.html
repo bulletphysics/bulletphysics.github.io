@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btPersistentManifold::getNumContacts always returns zero</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btPersistentManifold::getNumContacts always returns zero</h2>
+		<p><a href="viewtopic.php%3Ft=12701.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12701</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btPersistentManifold::getNumContacts always returns zero</h3>
+				<div class="date">Posted: <strong>Sat Jun 15, 2019 4:36 pm</strong></div>
+				<div class="author">by <strong>s_kohan</strong></div>
+				<div class="content">I want to get access to the contact point details for a collision.  The problem is, whenever I try to get the number of contacts from a manifold, via btPersistentManifold::getNumContacts, the result is always zero.  Here's how I'm getting the contacts:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12701&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  
+        // these methods are part of a C wrapper so I can use bullet using the C FFI
+
+	int btDynamicsWorldGetCollisionCount(btDynamicsWorldRef* world) {
+		return ((btDynamicsWorld*)world)-&gt;getDispatcher()-&gt;getNumManifolds();
+	}
+	
+	btContact btDynamicsWorldGetCollision(btDynamicsWorldRef* world, int index) {
+	
+		btPersistentManifold* contactManifold = ((btDynamicsWorld*)world)-&gt;getDispatcher()-&gt;getManifoldByIndexInternal(index);
+		
+		btContact contact; // this is a struct defined to expose contact info to this C wrapper
+		contact.objectA = contactManifold-&gt;getBody0()-&gt;getUserPointer();
+		contact.objectB = contactManifold-&gt;getBody1()-&gt;getUserPointer();
+		contact.manifoldRef = (btContactManifoldRef*)contactManifold;
+		return contact;
+		
+	}
+	
+     int btContactManifordGetContactCount(btContactManifoldRef* manifold) {
+        btPersistentManifold* contactManifold = (btPersistentManifold*) manifold;
+        int count = contactManifold-&gt;getNumContacts();
+        return count;
+    }
+
+</code></pre></div>
+
+The strange thing is, when I debug, I can see that there are 4 btManifoldPoint records inside contactManifold-&gt;m_pointCache.  What am I missing here?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btPersistentManifold::getNumContacts always returns zero</h3>
+				<div class="date">Posted: <strong>Mon Jun 17, 2019 3:06 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I would like to help, however I don't have any good hypothesises.  I looked at some working code that harvests contacts details from the contact manifolds and AFAICT your code should work.  Perhaps you could supply enough source to actually build and reproduce your problem?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btPersistentManifold::getNumContacts always returns zero</h3>
+				<div class="date">Posted: <strong>Wed Jul 03, 2019 6:10 pm</strong></div>
+				<div class="author">by <strong>s_kohan</strong></div>
+				<div class="content">Thank you, I actually ended up solving the problem myself.  It turns out the problem was a false assumption I had about the contact manifolds: I thought they would only be created when there were already points of contact, but it turns out those "collisions" are already registered when the bodies are just close (broad-phase detection I think?) - so I just had to make my collision handling logic a bit smarter and wait until the collision manifolds already had contacts before handling it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btPersistentManifold::getNumContacts always returns zero</h3>
+				<div class="date">Posted: <strong>Thu Mar 25, 2021 3:57 am</strong></div>
+				<div class="author">by <strong>acu192</strong></div>
+				<div class="content">Yep, I'm seeing the same behavior as @s_kohan. Even if there is a <strong class="text-strong">btPersistentManifold</strong>, you still have to check <strong class="text-strong">getNumContacts() &gt; 0</strong> to actually know if the collision is for-realz.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

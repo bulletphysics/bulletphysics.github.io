@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11950" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2017-12-13T16:44:19+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11950</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2017-12-13T16:44:19+00:00</updated>
+
+		<published>2017-12-13T16:44:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40241#p40241</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40241#p40241"/>
+		<title type="html"><![CDATA[Re: Collision response filtering]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40241#p40241"><![CDATA[
+I think maybe the strengths (max force/torque?) of btGenetic6DofConstraint can be tuned to make the constraint "weaker".  Even if that works you wouldn't be able to make one setting to get the gradual increase of pressure it sounds like you want, unless you dynamically update the constraint's parameters.  Also, the parameters of the constraint are many and not necessarily intuitive.<br><br>There is another way to do what you want.  This article talks about it:<br><br><a href="http://www.vrinflux.com/newton-vr-physics-based-interaction-on-the-vive/" class="postlink">http://www.vrinflux.com/newton-vr-physi ... -the-vive/</a><br><br>In short: you slam the velocity of boxA toward its target position and allow that push boxB.  You may need to tweak the mass of boxA (make it less massive) while it is pushing to get the exact feel that you want.<br><br>In Bullet you would do this by deriving an Action from btActionInterface.  Something like this "critically damped spring with zero history" that can be tuned with a simple "timescale".  To tune: figure out how fast you want the spring to be able to move the object to its target position when unimpeded.  1 second?  2 seconds? half a second?  Whatever, the longer the time the weaker the spring, the shorter the timescale the stronger.  Once you know how much time for the spring to be able to reposition the object, divide that number by about three and use that as  the action's "timescale".  Why 3?  Because the action will reduce the object's offset by about 1/e every substep and e^-3 is a pretty small number.<br><div class="codebox"><p>Code: </p><pre><code>class TractorAction : public btActionInterface {public:    TractorAction(btRigidBody* body, btScalar timescalel) : m_timescale(timescale), m_body(body) {        m_targetPosition = body-&gt;getPosition();    }    void setTargetPosition(const btVector3&amp; position) { m_targetPosition = position; };    void setTimescale(btScalar) {        // DANGER: timescale should NEVER be smaller than the largest possible substep, else instability        const btScalar MIN_TRACTOR_TIMESCALE(2 * MAX_SUBSTEP_PERIOD);        m_timescale = btMax(timescale, MIN_TRACTOR_TIMESCALE);    }    void updateAction(btCollisionWorld* world, btScalar timeStep) {        // this is a "critically damped spring with zero history":        // every frame it slams the velocity of m_body to approach m_targetPosition with exponential decay        const btScalar MIN_ACTIVATION_OFFSET_SQUARED = 0.0001f; // 1cm^2        btVector3 offset = m_targetPosition - m_body-&gt;getPosition();        if (m_body-&gt;isActive()) {            m_body-&gt;setLinearVelocity((timeStep / m_timescale) * offset);        } else if (offset.length2() &gt; MIN_ACTIVATION_OFFSET_SQUARED) {            m_body-&gt;activate();            m_body-&gt;setLinearVelocity((timeStep / m_timescale) * offset);        }    }private:    btVector3 m_targetPosition;    btScalar m_timescale;    btRigidBody* m_body;};</code></pre></div>Some notes:<br><br>I'm typing this example code from scratch and memory.  Dunno if this actually compiles or is bug-free.<br><br>This action doesn't care about the object's mass.  It just computes a velocity that always pushes the object toward its target. When the object gets close to its target it will set the velocity to a small value (the object will come to a stop).<br><br>You might want to temporarily reduce the sprung object's mass to tune how hard it "hits" any dynamic obstacles as it moves toward its target.  When the sprung object is light it will tend to be stopped by the obstacle: it makes the "friction" effect you're looking for more noticeable.  That is, you could keep the action responsive by setting its timescale small (1/10 a second for example) but make its strength weak by setting the sprung object's mass artificially small.<br><br>You might also want to temporarily reduce the sprung object's restitution so that it doesn't "bounce" off of heavy obstacles and static objects.<br><br>You might also want to temporarily increase the sprung object's angular damping (or to modulate its angular velocity inside the updateAction()) to prevent it from swinging about fast when clipping an obstacle.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Dec 13, 2017 4:44 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[forsslund]]></name></author>
+		<updated>2017-12-12T14:18:15+00:00</updated>
+
+		<published>2017-12-12T14:18:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40229#p40229</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40229#p40229"/>
+		<title type="html"><![CDATA[Re: Collision response filtering]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40229#p40229"><![CDATA[
+Thanks for the quick reply! I will try to explain better. Here is a screenshot of the full environment, showing our avatar (green sphere) which is indeed controlled by a btGeneric6DofConstraint, whose A frame offset is updated with the device position at each step.<div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1585" class="postimage" alt="all.PNG" onclick="viewableArea(this);" /></dt></dl></div><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1586" class="postimage" alt="push.PNG" onclick="viewableArea(this);" /></dt></dl></div>Here box A is picked up with another btGeneric6DofConstraint and both avatar and box A can be moved about, however A very easily pushes box B. In reality we would at least have friction. I assume that the constraint simply has higher priority(?), making both boxes move without effort. (I have tried various friction values)<br><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1587" class="postimage" alt="push2.PNG" onclick="viewableArea(this);" /></dt></dl></div>If we push B to the static wall the "spring" of the btGeneric6DofConstraint is enlarged, illustrated by showing the device position (user intent) in yellow vs the avatar (green). I would like something similar, as a way to model friction, for situations above as well. If friction is set very high, I think it would make boxes semi-static without breaking newtons laws..(?)<br><br>To clarify further, I am using the difference between the device position and avatar position as the real force feedback to be output to the haptic device. This way the user would be able to feel objects before they are pushed away, and feel if box B is pushed by the held Box A.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12507">forsslund</a> — Tue Dec 12, 2017 2:18 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2017-12-11T19:32:30+00:00</updated>
+
+		<published>2017-12-11T19:32:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40220#p40220</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40220#p40220"/>
+		<title type="html"><![CDATA[Re: Collision response filtering]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40220#p40220"><![CDATA[
+There is no such thing as one-way collision response, since Newton laws action force = - reaction force.<br><br>It is not clear what you try to achieve, and why this requires a non-physical interaction. Usually you let the user control some object (sphere) using some constraint that follows the user intention (such as a VR gripper etc).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Dec 11, 2017 7:32 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[forsslund]]></name></author>
+		<updated>2017-12-11T16:25:07+00:00</updated>
+
+		<published>2017-12-11T16:25:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40215#p40215</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40215#p40215"/>
+		<title type="html"><![CDATA[Collision response filtering]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40215#p40215"><![CDATA[
+Hello,<br>I am making an application where the user control a sphere, moving it freely in a confined space with a 3D haptic device (a kind of joystick) using a generic 6dof constraint. In the space there a number of boxes the user can pick up with the sphere (using additional 6dof constraints) and move about. However, as a first step, I would like the other boxes to remain static visavi the picked up box. Any other motion is ok, like gravity, affecting all boxes. <br><br>I have tried with collision filtering, but obviously then there is no collision response at all. I would still like collision response but only one-way, that is my picked up box should be constrained from moving into the other boxes in the environment, but the boxes should otherwise be free to move. I have tried setting mass to 0 when in contact and then back to some non-zero mass after release but some energy is still added. Is there a proper way to handle this scenario?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12507">forsslund</a> — Mon Dec 11, 2017 4:25 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

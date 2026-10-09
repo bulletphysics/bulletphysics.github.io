@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; tuning the number of iterations</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>tuning the number of iterations</h2>
+		<p><a href="viewtopic.php%3Ft=36.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=36</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>tuning the number of iterations</h3>
+				<div class="date">Posted: <strong>Tue Jul 19, 2005 7:48 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Kenny Erleben wrote:</cite>
+So, yes you can get a accurate TOI within some pre-scribed epsilon, but can you make a guarantee to always deliver the result within say 5 iterations? <br>
+<br>
+Sure you can make more internal iterations. However, you need to control how many iterations you are willing to take. You have the same problems and tradeoffs as in every iterative root search algorithm. <br>
+
+</div></blockquote>
+I agree, but that is the nature of iterative methods. GJK suffers from this, SOR/Gauss Siedel does. Still I think those 2 are the best basis for rigidbody simulation in my experience (in realtime games).<br>
+<br>
+Also please note that conservative advancement really does find the time of impact, unlike other root finding methods, like bisection. And the performance usually is sub linear, typically 3 or 4 iterations. Indeed there is the long-thin fast rotating object problem, but a bit of tuning of the envelope/tolerance can help this case a lot. Or asking the artist of not adding too long thin dynamic objects  <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"> <br>
+<br>
+<br>
+It would be nice to have a physics engine without tuning parameters, but so far I think this is utopia. Kenny, do you actively avoid tuning paramters in OpenTissue ? That's something I would be interested in. What about the number of iterations in the iterative solver. Or convergence epsilon in GJK ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: tuning the number of iterations</h3>
+				<div class="date">Posted: <strong>Tue Jul 19, 2005 9:24 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+It would be nice to have a physics engine without tuning parameters, but so far I think this is utopia. Kenny, do you actively avoid tuning paramters in OpenTissue ? That's something I would be interested in. What about the number of iterations in the iterative solver. Or convergence epsilon in GJK ?</div></blockquote>
+
+There is more than one type of MBD simulator in OpenTissue. If you refer to the one I presented in my phd thesis (nearly one year old stuff by now:-) then I effectively have one parameter that requres some tuning: ``the weight-feeling'' parameter. It controls the quality of your simulation, so (in my opinion) it is a bit easier to tweak than for instance springs in a penalty method. <br>
+<br>
+Regarding number of iterations in PGS, I always use 10 for a dynamics update and 5 for a first order world update.  The total cost of the scheme in my thesis is roughly equal to 30 iterations. You shold note that this scheme works regardless of the mass-ratios and magnitude of external forces!!! No tweaking there:-)<br>
+<br>
+I did some comparision of my approach against Novodex, ODE and Maya. I presented these at a talk some time ago, you can see the slides here:<br>
+<br>
+<a href="http://www.diku.dk/~kenny/visionday05.pdf" class="postlink">http://www.diku.dk/~kenny/visionday05.pdf</a><br>
+<br>
+My recent work (and unpublished, so it is still a bit secret:-) I have eliminated the weight-feeling problem, as  soon as I complete the papers I am working on right now, I'll will write a paper on the new stuff:-)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 19, 2005 10:55 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Kenny Erleben wrote:</cite>
+I did some comparision of my approach against Novodex, ODE and Maya. I presented these at a talk some time ago, you can see the slides here: <br>
+<br>
+<a href="http://www.diku.dk/~kenny/visionday05.pdf" class="postlink">http://www.diku.dk/~kenny/visionday05.pdf</a> 
+</div></blockquote>
+
+I really like the cows, much more interesting model then the stanford bunny !<br>
+Do you have a testbed and data for the tests ? I'm interested in running comparing Bullet too.  Do you have them available as OpenTissue demos ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 19, 2005 12:01 pm</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+I really like the cows, much more interesting model then the stanford bunny !<br>
+Do you have a testbed and data for the tests ? I'm interested in running comparing Bullet too.  Do you have them available as OpenTissue demos ?</div></blockquote>
+
+The cow configuration is a very challenging configuration to animate:<br>
+<br>
+It is basically ellipsoidal objects with long thin tentackles. The cows are dropped from a high height (several hundred meters as I recall). Once the cows hit the surface they are moving so fast that inbetween frames they move more than half their own size. Thereby causing extreme penetrations with the surface and other cows. Once the first bounce with the surface is handled the cows gain a large angular velocity, causing them to spin violently. Meaning that the thin legs and tails can move completely inside other cows during a single time-step.<br>
+<br>
+I did this simulation to show that correction by projection is robust in extreme cases, but not perfect (notice you get popcorn cows). Large penetrations is a natural consequence of explicit fixed time-stepping schemes (unless somesort of continuous collision detection is applied:-)<br>
+<br>
+All the test-configurations from my thesis and on the slides are available in the OpenTissue demo named ``multibody''. The signed distance map and mesh data of the cow is available from DataTissue.<br>
+<br>
+Another interesting simulation is this one<br>
+<br>
+<a href="http://www.diku.dk/~kenny/why_norton_sucks.avi" class="postlink">http://www.diku.dk/~kenny/why_norton_sucks.avi</a><br>
+<br>
+It is 2 minute simulation of 10.000 objects at 100fps. It took 30 hours to do with the method from my thesis.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: tuning the number of iterations</h3>
+				<div class="date">Posted: <strong>Tue Jul 19, 2005 12:16 pm</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Also please note that conservative advancement really does find the time of impact, unlike other root finding methods, like bisection. And the performance usually is sub linear, typically 3 or 4 iterations. Indeed there is the long-thin fast rotating object problem, but a bit of tuning of the envelope/tolerance can help this case a lot. Or asking the artist of not adding too long thin dynamic objects  <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"> 
+</div></blockquote>
+
+The long-thin fast rotating object is only a problem if the contact point lies close to the axis of rotation. But in that case you could reduce the range of the long-thin object to the area that can actually be hit. For instance if the query object is small and does not move a lot with respect to the long object, then the bound due to the angular velocity can be safely reduced, enabling larger steps. It's just a wild thought. I haven't tried this out, and it of course it breaks if you have two long spinning objects.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

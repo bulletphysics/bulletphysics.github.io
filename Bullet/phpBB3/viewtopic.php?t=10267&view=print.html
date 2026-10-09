@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Continuous GJK for spherically extended objects</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Continuous GJK for spherically extended objects</h2>
+		<p><a href="viewtopic.php%3Ft=10267.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10267</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Continuous GJK for spherically extended objects</h3>
+				<div class="date">Posted: <strong>Wed Dec 03, 2014 4:42 pm</strong></div>
+				<div class="author">by <strong>Adrian Lopez</strong></div>
+				<div class="content">Is there a way to perform a ray cast as described in Gino Van Den Bergen's <a href="http://www.continuousphysics.com/ftp/pub/test/files/physics/papers/jgt04raycast.pdf" class="postlink">Ray Casting against General Convex Objects</a>, against spherically extended objects without having to calculate support points for the enlarged objects? With GJK you can adjust the termination condition to account for the slightly expanded objects, but what about Gino's ray cast algorithm?<br>
+<br>
+Specifically, would adjusting this (from page 11):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10267&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>while (v.squaredMagnitude() &gt; epsilon*epsilon) {...}</code></pre></div>
+To read like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10267&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>while (v.squaredMagnitude() &gt; epsilon*epsilon + margin) {...}</code></pre></div>
+... be enough to produce results equivalent to a ray cast against the CSO of a pair of spherically extended objects?<br>
+<br>
+The goal is to use Gino's ray cast algorithm to determine collision time, and regular GJK (without EPA) to determine witness points and collision normals for the [near] collision. I'd rather avoid computing support points for the expanded objects if possible.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK for spherically extended objects</h3>
+				<div class="date">Posted: <strong>Sun Dec 07, 2014 11:02 pm</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content"><blockquote><div><cite>Adrian Lopez wrote:</cite>Is there a way to perform a ray cast as described in Gino Van Den Bergen's <a href="http://www.continuousphysics.com/ftp/pub/test/files/physics/papers/jgt04raycast.pdf" class="postlink">Ray Casting against General Convex Objects</a>, against spherically extended objects without having to calculate support points for the enlarged objects? With GJK you can adjust the termination condition to account for the slightly expanded objects, but what about Gino's ray cast algorithm?<br>
+<br>
+Specifically, would adjusting this (from page 11):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10267&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>while (v.squaredMagnitude() &gt; epsilon*epsilon) {...}</code></pre></div>
+To read like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10267&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>while (v.squaredMagnitude() &gt; epsilon*epsilon + margin) {...}</code></pre></div>
+... be enough to produce results equivalent to a ray cast against the CSO of a pair of spherically extended objects?<br>
+<br>
+The goal is to use Gino's ray cast algorithm to determine collision time, and regular GJK (without EPA) to determine witness points and collision normals for the [near] collision. I'd rather avoid computing support points for the expanded objects if possible.</div></blockquote>
+
+Hi Adrian,<br>
+<br>
+It would be enough if you only need to know whether the ray hits the convex or not. However, most of the time you need to have the earliest time the ray hits the object as well as the normal at the hit point. By performing GJK on the "bone" objects (without dilation) you will step into the dilated object before you trigger termination, which means that both your time of impact and your contact normal are wrong. In order to advance conservatively, the best thing I can think of right now is to generate support points on the dilated object. This means that you'll need to compute the reciprocal of a square root in each iteration, which is a pity. I recall having given this issue some thought a while back and this was the best I could come up with.<br>
+<br>
+If you find something better, I'd be happy to discuss it with you.<br>
+<br>
+Regards,<br>
+<br>
+Gino</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

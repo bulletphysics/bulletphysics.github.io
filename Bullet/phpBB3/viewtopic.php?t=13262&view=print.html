@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Object falls a third of its height through the ground</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Object falls a third of its height through the ground</h2>
+		<p><a href="viewtopic.php%3Ft=13262.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13262</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Sat Aug 28, 2021 4:27 pm</strong></div>
+				<div class="author">by <strong>justjayel</strong></div>
+				<div class="content">Hiya,<br>
+<br>
+I have set up a very simple demo using Bullet where an object moves along the ground using linear velocity which is constantly set to the same value over 200 frames and then the object falls through the ground but only up to a third of its height. E.g.: If I have a RidgidBody with a box collision of size x: 2, y: 8, z: 2 (half extents x: 1, y: 4, z: 1) after 200 or so frames the object falls from position 4 to 1 (ground's top is at zero). <br>
+<br>
+<br>
+I have set it up with the following:
+<ul><li>Time step and fixed time step set to 0.0167f (so 60hz)</li> </ul>
+<ul><li>Added a ground with box collision, zero mass.</li></ul>
+<ul><li>The dynamic object has a box collision.</li></ul>
+
+I also get a similar issue when a dynamic object is falling with the collision half extents of x: 0.2, y: 1, z: 0.2 <br>
+<br>
+Any ideas why this is happening?<br>
+<br>
+<br>
+My code is all wrapped up with custom code, so I have pulled out all the Bullet Physics specific code and placed it below:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13262&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float timeStep = 0.0167f;
+btDiscreteDynamicsWorld* dynamicsWorld = // Standard set up of btDiscreteDynamicsWorld
+dynamicsWorld-&gt;setGravity(btVector3(0, -5, 0));
+dynamicsWorld-&gt;getSimulationIslandManager()-&gt;setSplitIslands(false);
+{
+	btCollisionShape* groundShape = new btBoxShape(btVector3(40, 5, 40));
+	btVector3 localInertia(0, 0, 0);
+	
+	btTransform initialTransform;
+	initialTransform.setIdentity();
+	initialTransform.setOrigin(btVector3(0, -5, 0));
+	
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(initialTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(0, myMotionState, groundShape, localInertia);
+	
+	btRigidBody* rb = new btRigidBody(rbInfo);
+	rb-&gt;setActivationState(DISABLE_DEACTIVATION);
+	rb-&gt;setSleepingThresholds(0,0);
+	dynamicsWorld-&gt;addRigidBody(rb, 1, 1);
+}
+
+{
+	float mass = 1;
+	btCollisionShape* playerShape = new btBoxShape(btVector3(1, 4, 1));
+	btVector3 localInertia(0, 0, 0);
+	playerShape -&gt;calculateLocalInertia(mass, localInertia);
+	
+	btTransform initialTransform;
+	initialTransform.setIdentity();
+	initialTransform.setOrigin(btVector3(0, 4, 0));
+	
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(initialTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, playerShape, localInertia);
+	
+	btRigidBody* rb = new btRigidBody(rbInfo);
+	rb-&gt;setActivationState(DISABLE_DEACTIVATION);
+	rb-&gt;setSleepingThresholds(0,0);
+	dynamicsWorld-&gt;addRigidBody(rb, 1, 1);
+}
+
+for (int i = 0; i &lt; 1000; i++)
+{
+	dynamicsWorld-&gt;stepSimulation(timeStep , 10, timeStep);
+	
+	btRigidBody* playerRb = //get the player object. 
+	
+	// Simulate a constant velocity
+	if(i &gt; 50 &amp;&amp; i &lt; 200)
+	{
+		btVector3 newVelocity = btVector3(2.0f, 0, 0);
+		playerRb-&gt;setLinearVelocity(newVelocity);
+	}
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Sun Aug 29, 2021 10:32 am</strong></div>
+				<div class="author">by <strong>ed_welch</strong></div>
+				<div class="content">Try setting a small amount of margin on both objects:<br>
+pCollisionShape-&gt;setMargin(0.05f);</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Sun Aug 29, 2021 12:11 pm</strong></div>
+				<div class="author">by <strong>justjayel</strong></div>
+				<div class="content">I've tried setting the margin (at 0.05f and higher) after creating the collision shape and before adding it into the btDiscreteDynamicsWorld and it doesn't work. <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13262&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btCollisionShape* colliderShape = new btBoxShape(btVector3(inputs[0], inputs[1], inputs[2]));
+colliderShape-&gt;setMargin(0.5f);
+
+btRigidBody* rb = // create the rigid body
+dynamicsWorld-&gt;addRigidBody(rb, 1, 1);
+</code></pre></div>
+
+<br>
+For the main issue it doesn't occur if I am setting the linear velocity constantly for less than 60 frames. But I don't think that a viable workaround. 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13262&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if(i &gt; 50 &amp;&amp; i &lt; 110)
+{
+	btVector3 newVelocity = btVector3(2.0f, 0, 0);
+	playerRb-&gt;setLinearVelocity(newVelocity);
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Sun Aug 29, 2021 3:59 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Slamming the linear velocity of a dynamic object to an arbitrary value is a Bad Idea in general because it could override velocities from collisions that would otherwise help resolve interpenetration.<br>
+<br>
+One way to avoid breaking the simulation is to use <strong class="text-strong">applyForce()</strong> instead of<strong class="text-strong"> setLinearVelocity()</strong> because the force will be accumulated until the substep and then introduced during the constraint solver step, which allows collisions to negate forces that would violate their constraint parameters.  However forces are difficult to tune and compute for obtaining the effect you want which is why I usually do it a different way.<br>
+<br>
+Blend toward the <strong class="text-strong">target_velocity</strong> every substep like so:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13262&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// blend_timescale is the exponential timescale time it takes for the object to change its velocity
+// toward the target.  After one period the object will decrease the delta to 1/e of what it was.
+// The shorter the timescale the faster it adjusts, for very long timescales the
+// object takes forever to respond.  It cannot be shorter than the substep_period (else instability).
+// For best results it should be not less than two or three substep_periods, but typically for human
+// interaction timescales you can allow the period to be something closer to half a second.
+// This is your easy one-knob tuning adjustment to make the object's responsiveness just right.
+btScalar blend_timescale = 2.0; // seconds
+
+// blend
+btScalar del = substep_period / blend_timescale;
+btVector3 new_velocity = (1.0 - del) * current_velocity + del * target_velocity;
+
+// slam
+body-&gt;setLinearVelocity(new_velocity);</code></pre></div>
+If you set the <strong class="text-strong">blend_timescale</strong> to a reasonable value then you give the collision constraints time to successfully push the object out of penetration.<br>
+<br>
+Note, this method is mass agnostic.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Sun Aug 29, 2021 11:47 pm</strong></div>
+				<div class="author">by <strong>justjayel</strong></div>
+				<div class="content">Hi drleviathan, <br>
+Can substep_period and blend_timescale be any static values within your description? I'll try this a bit later when I have more time. <br>
+<br>
+<br>
+I quickly checked my issue again on the HelloWorld demo and it seems like the issue is somewhat related to the ratio of the collision shape; seems like tall slim objects will fall through the ground and stay there. Ratios less than a 0.3 between X and Y seems to run into this issue. E.g.:
+<ul><li>X: 1, Y: 4 - fails</li></ul>
+<ul><li>X: 1.2, Y: 4 - works</li> </ul></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Mon Aug 30, 2021 2:54 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">For stability your <strong class="text-strong">substep_period</strong> should be fixed.  I believe the default behavior in Bullet is fixed <strong class="text-strong">step_period = 1/60</strong> sec with 1 substep per step.<br>
+<br>
+Yes, for most applications the <strong class="text-strong">blend_timescale</strong> would be a constant.  You would tweak it to get the responsiveness you want and then nail it down as a compile time constant.<br>
+<br>
+I wonder if the X/Y ratio threshold is actually caused by the tall box starting to tip over because of friction at the contacts.  For curiosity's sake maybe try setting all frictions (floor and dynamic object) to be zero to see if the the transition between behaviors goes away.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Wed Sep 01, 2021 2:38 pm</strong></div>
+				<div class="author">by <strong>justjayel</strong></div>
+				<div class="content">Hi drleviathan,<br>
+<br>
+Seems you were right, the setFriction() method worked! Stops my character object from sinking. Thanks!!<br>
+<br>
+The gradual incremental velocity I don't think helped, but its great for simulating a bit of realism, I will definitely look into using it!<br>
+<br>
+Thanks again!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Wed Sep 01, 2021 3:06 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">If you're trying to make a tall think character always stand up maybe you should use the "zero inverse inertia tensor diagonal" trick.  This would allow you to use whatever friction you want.  In other words, if your character should only ever rotate about its local vertical Y-axis, then you can set the X- and Z-components of its local inverse inertia tensor diagonal to zero like so:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13262&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 inv_inertia = body-&gt;getInvInertiaDiagLocal();
+inv_inertia.setX(0.0f);
+inv_inertia.setZ(0.0f);
+body-&gt;setInvInertiaDiagLocal(inv_inertia);</code></pre></div>
+Effectively this is like setting its local angular mass to infinity on those two axes --&gt; torques will never be able to budge it except around its one pivot axis.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Sat Sep 11, 2021 3:20 pm</strong></div>
+				<div class="author">by <strong>justjayel</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=43582#p43582"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=43582.html#p43582" data-post-id="43582" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed Sep 01, 2021 3:06 pm</span></cite>
+If you're trying to make a tall think character always stand up maybe you should use the "zero inverse inertia tensor diagonal" trick.  This would allow you to use whatever friction you want.  In other words, if your character should only ever rotate about its local vertical Y-axis, then you can set the X- and Z-components of its local inverse inertia tensor diagonal to zero like so:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13262&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 inv_inertia = body-&gt;getInvInertiaDiagLocal();
+inv_inertia.setX(0.0f);
+inv_inertia.setZ(0.0f);
+body-&gt;setInvInertiaDiagLocal(inv_inertia);</code></pre></div>
+Effectively this is like setting its local angular mass to infinity on those two axes --&gt; torques will never be able to budge it except around its one pivot axis.
+</div></blockquote>
+
+Your solution worked.<br>
+<br>
+Now if I set the friction on both objects to non-zero and apply a little velocity to the player in either X or Z direction it spins slowly in a circle around the Y axis. Would anyone know why?<br>
+<br>
+On a different note, is there anywhere with a bit more in depth tutorials or documentation? Is it just the examples?<br>
+<br>
+<br>
+EDIT: <br>
+I fixed the spinning by setting the inverse inertia on the Y axis to zero as well. Not sure if that is the correct way. But I guess that is fine for a character rather than an actual object?
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13262&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>inv_inertia.setY(0.0f);</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Sat Sep 11, 2021 6:34 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Setting the inverse inertia diagonal to zeros is fine: it produces an object that will never ever rotate from external forces, which is often what you want for a character.  With dynamic characters I typically push them around with velocity adjustments, allow them to rotate about the vertical axis, but slam their rotation and zero their angular velocity every step, which is effectively the same thing.  Another way to put it is: my characters are dynamic in the linear dimensions but kinematic in the angular.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Object falls a third of its height through the ground</h3>
+				<div class="date">Posted: <strong>Tue Feb 14, 2023 8:23 am</strong></div>
+				<div class="author">by <strong>lorde</strong></div>
+				<div class="content">I am also interested in this!<br>
+<a href="https://melonplayground.co/" class="postlink"><span style="color:#FFFFFF"><span style="font-size:1%;line-height:116%">melon playground</span></span></a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

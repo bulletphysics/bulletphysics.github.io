@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Applying a torque to a sphere around a given axis</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Applying a torque to a sphere around a given axis</h2>
+		<p><a href="viewtopic.php%3Ft=13097.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13097</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Applying a torque to a sphere around a given axis</h3>
+				<div class="date">Posted: <strong>Mon Oct 26, 2020 4:22 pm</strong></div>
+				<div class="author">by <strong>nero1402</strong></div>
+				<div class="content">Hi there<br>
+<br>
+I'm new to bullet and making a 3d game where you control a rolling ball on a heightmap terrain. I have the collisions all working with a <strong class="text-strong">btHeightfieldTerrainShape</strong>. The ball (a <strong class="text-strong">btSphereShape</strong>) rolls and bounces nicely around the terrain.<br>
+<br>
+I have a 'camera' that is placed just above the ball and can be moved to face any direction with the mouse.<br>
+<br>
+Now I want to apply a torque that causes the ball to move in the direction the camera is facing eg. <strong class="text-strong">(1, 1, 0)</strong>. <br>
+<br>
+By this I mean I take the x and z part of the camera's direction vector (from the player's perspective this is the direction they are 'facing' without the up/down part) which would be <strong class="text-strong">(1, 0, 0)</strong><br>
+<br>
+I then want to create a vector that lies horizontally, perpendicular to the y axis and the 'xz' vector I mentioned above:<br>
+<br>
+A clockwise rotation makes it <strong class="text-strong">(0, 0, -1).</strong> Relative to the view on the screen this vector would lie horizontally left to right across the screen.<br>
+<br>
+Now the bit I can't do.  <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> <br>
+<br>
+Can I apply a torque to the sphere clockwise around the vector I've calculated <strong class="text-strong">(0, 0, -1)</strong> through centre of the sphere? Is this possible and what is the best way to do it with bullet?<br>
+<br>
+I hope that made sense, it's sort of like the torque applied to a car wheel if you are facing in the direction the wheel is rolling.<br>
+<br>
+Thanks for your help  <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Applying a torque to a sphere around a given axis</h3>
+				<div class="date">Posted: <strong>Mon Oct 26, 2020 5:47 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">As per <a href="../BulletFull/classbtRigidBody.html" class="postlink">the documentation</a> these methods are available for <strong class="text-strong">btRigidBody</strong> and can apply torque directly:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13097&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void 	applyTorque (const btVector3 &amp;torque)
+void 	applyTorqueImpulse (const btVector3 &amp;torque)
+void 	applyImpulse (const btVector3 &amp;impulse, const btVector3 &amp;rel_pos)</code></pre></div>
+
+However, those only apply once (for the simulation step, I think, rather than just for the first substep when there are multiple substeps on the step, but I'm not 100% sure about that).  In any case, to gradually control the ball with torque you'd have to re-apply before each step.<br>
+<br>
+The units of torque to achieve the results you want are tricky, whether you're using torque proper or torque impulse.  This is ok if your ball is always a finite set of masses: you can tune by trial and error and not care about the units.  An alternative way to do it with simpler units (and possibly mass-agnostic) is to just compute an adjustment to the sphere's angular velocity and slam it:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13097&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>old_angular_velocity = body-&gt;getAngularVelocity();
+new_angular_velocity = old_angular_velocity + adjustment;
+body-&gt;setAngularVelocity(new_angular_velocity);</code></pre></div>
+If you're applying little torques/impulses/velocities all the time then an easy way to fit your torque calculation/application into the flow of the physics simulation is to implement a <strong class="text-strong">CustomAction</strong> from <strong class="text-strong">btActionInterface</strong> and override its pure virtual <strong class="text-strong">updateAction()</strong> method to do what you want.  If you add that Action to the simulation then Bullet will call its <strong class="text-strong">updateAction()</strong> every substep.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Applying a torque to a sphere around a given axis</h3>
+				<div class="date">Posted: <strong>Mon Oct 26, 2020 8:22 pm</strong></div>
+				<div class="author">by <strong>nero1402</strong></div>
+				<div class="content">Thanks for your help drleviathan. I need to understand how applyTorque works. Perhaps I'm going about this the wrong way by thinking of torque as rotation around an axis. <br>
+<br>
+I'll experiment a bit and see what works best. Thanks again.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

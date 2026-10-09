@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/648" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-11-02T12:57:24+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/648</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-11-02T12:57:24+00:00</updated>
+
+		<published>2006-11-02T12:57:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2314#p2314</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2314#p2314"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2314#p2314"><![CDATA[
+Thanks for the link.<br><br>The idea with the inner and outer iteration is more an observation and I will give it a try in order to see how this will influence the simulation. So maybe this is more a learning experience.<br><br>I am not so sure if the constant Jacobian is the major issue with contacts. When you satisfy the distance constraints you can create new penetrations that will not be considered during further relaxation. I tried the idea in the Muller paper and it works nice for banners, but didn't work at all for me with the skirt.<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Thu Nov 02, 2006 12:57 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Oscar Civit Flores]]></name></author>
+		<updated>2006-11-02T12:10:27+00:00</updated>
+
+		<published>2006-11-02T12:10:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2313#p2313</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2313#p2313"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2313#p2313"><![CDATA[
+Hi Dirk,<br><br>Baraff's paper on Partitioned Dynamics (cloth-rigid is just an example near the end)<br><br><a href="http://www.cs.cmu.edu/~baraff/papers/partition-tr.pdf" class="postlink">http://www.cs.cmu.edu/~baraff/papers/partition-tr.pdf</a><br><br>About NR (outer) and GS (inner) iterations, now I start to understand what you mean... so in a cloth with only edge-stretch constraints, having 1 outer and 2 inner iterations would mean computing the edge constraint jacobians (something like the vector between the 2 points for the distance constraint) only once and use it for 2 GS iterations, instead of recomputing the jacobians 2 times. But in any case you have to compute the constraint deviation in each GS iteration, don't you? <br><br>It seems worth a try if the jacobian computation is expensive (like the sqrt that appears in the distance constraints), but I don't know how would it affect the cloth behaviour... it's similar to "computing the collision constraints at the beginning and assuming them fixed during relaxation" as they say in Muller's paper. I can't foresee how would distributing the inner/outer iterations differently would affect the constraint stiffness.<br><br>I'll think more about it, thanks for the explanation <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>    Oscar<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=412">Oscar Civit Flores</a> — Thu Nov 02, 2006 12:10 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-11-02T10:03:07+00:00</updated>
+
+		<published>2006-11-02T10:03:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2312#p2312</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2312#p2312"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2312#p2312"><![CDATA[
+&gt;&gt; Variable timistep<br>I tried this as well, but also got so different behaviour all over the place that I skipped this. This system will behave differently dependent on the frame rate of each level. I have now a fixed step and a maximum number of substeps. This way the simulation gets a little slower in extreme cases what is a good trade off in my opinion.<br><br>&gt;&gt; Cloth - rigid body interaction<br>Can you give the name of the Baraff paper you are refering to?<br><br>&gt;&gt; Damping<br>I only damp the relative velocity and don't apply global damping. So far I had no need for this, but I am considering it.<br><br>&gt;&gt; Self-collision - untangling<br>I try to preven situations where the cloth can tangle. For the skirt I have a "rescue" capsule between the legs which prevents the skirt from tunneling quite nicely. As long as I come away with tricks like this I will not implement untangling and self collision. Honestly even in the normal version the cloth takes quite some computation time. <br><br>&gt;&gt; Newton Raphson<br>The iterative scheme for the multi-dimensional Newton Raphson is:<br><br>1) x(n + 1) = x(n) + dx<br>2) J( x(n) ) * dx = -f( x(n) )<br><br>where J is the Jacobian of the vector field f. You see that in order to find dx you have to solve the linear system 2) in each Newton iteration. You can solve this linear system using CG, SVD or an iterative GS method. If you use an iterative GS you get a nested inner iteration loop. In the outer Newton Raphson loop you build the gradient (Jacobian) matrix and in the inner loop you iteratively solve the linear system. In the Jacobsen scheme we use basically n outer iteration and one inner iteration. Maybe it makes sense to do more inner iterations (that is keeping the gradients fixed) and perform some more inner GS iterations. <br><br>You can look at the formulas here (sorry this is in German, but the English version is not so complete here) . Look at "Das Newton-Verfahren im Mehrdimensionalen":<br><a href="http://de.wikipedia.org/wiki/Newton-Verfahren" class="postlink">http://de.wikipedia.org/wiki/Newton-Verfahren</a><br><br>Was this understandable?<br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Thu Nov 02, 2006 10:03 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Oscar Civit Flores]]></name></author>
+		<updated>2006-11-02T00:46:52+00:00</updated>
+
+		<published>2006-11-02T00:46:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2309#p2309</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2309#p2309"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2309#p2309"><![CDATA[
+Hi,<blockquote class="uncited"><div>I tried the modified stiffness paprameter, but didn't find it usefull. You get so small values when getting above 4 iterations that I simply allow tweaking this value independently for edge and bend constraints in a range from 0 to 2. Technical artists are quite experienced with tweaking so I don't want to hide something from them.</div></blockquote>Yes, that's an option, and probably having a physically meaningful parameter (like a spring constant) wouldn't be more artist-friendly than that, but anyhow I'd feel more comfortable with this method if some physical meaning could be given to the SUR parameter. I'm using a variable timestep with an upper-bound to 0.03s by now, and this gives quite different results in different machines, so I'll have to fall back to a fixed DT just because of this artifact :_)<br><br><blockquote class="uncited"><div>Did you try their combination for rigid bodies and cloth? I doubt that there impulse method works. I think you need a constraint here and solve this in the same iteration loop together.</div></blockquote>I'm not handling two-way collisions with rigid bodies yet but I'll implement it in a couple of weeks for the game I'm currently working on. The impulse method they describe appears also in Baraff's Partitioned Dynamics, and looks reasonable and fast but inaccurate... I guess there is a certain lag in the mutual effects rigid-cloth but seems to work fine in the screenshots. <br><br><blockquote class="uncited"><div>I use a constant timestep. But the system behaviour varys if you a fixed timestep of 1/30 hz or 1/60 Hz. As an explanation I would argue like this: We solve a non-linear system of equations. The larger the timestep the greater the violation of the linearization I guess. For cloth simulation you never want to come to the point where convergence enters the "region" where the system becomes stiff. Convergences is mostly effected by the timestep you take and the iteration count. I don't know if you notices that (it is actually mentioned in the paper as well) we have a nested system here. The outer iterations are the Newton iterations for solving the non-linear system and the inner iterations are a Gauss-Seidel method for solving the (inner) linear system. We take here n outer iteration and exactly 1 inner iteration. I want to try 2 outer and 4 inner iteration as opposed to 8 outer iterations. Maybe this resolves some stiffness and if yes it will actually be faster... </div></blockquote><br>I'm not completely sure of understanding the Newton-Rapson / nonlinear equation part of you explanation... do you mean the time iterations as the "outer" loop? It it's this, then I agree with your reasoning, and it could be said that the important parameter is iterations/second, more than timestep and iterations per timestep separatedly. Reducing the timestep would improve collision treatment at the expense of more cpu, incrementing the iteration count per timestep is not that expensive but not that useful when you pass a certain threshold... <br><blockquote class="uncited"><div>The damping method in the paper is quite usefull and can easily be translated to the Verlet integrator. It  helps for cloth that itis attached to charcters since it doesn't damp the global movement. It also let's you<br>make the cloth a little stiffer - so it adds some tweaking possibility</div></blockquote>I'm not using it, only global viscous-drag damping in the verlet integrator as Jakobsen suggests. Didn't consider damping only the local velocities but leave momentum unchanged... do you model any air-drag separatedly that actually stops the clothes, then?<br><blockquote class="uncited"><div>&gt;&gt; Self collisions<br>I only have a skirt currently and self collision is not a problem here. Why do you relate on-characters cloth and self-collision? Did you get problems through implementing it or did this solve some problems. I wanted to implemented self-collision for completeness, so is there anything I need to look into?</div></blockquote>No no, just curiosity. But it's quite clear that having self collisions and attachments to an articulated character that may move quite fast is going to be problematic... clothes can get tangled between the arms an the torso if animations are not designed with this in mind, for example, and self-collision and cloth-character collision can interact in nasty ways. There's a paper from Baraff &amp; Witkin about untangling clothes, I'd have a look at it if I really had to implement this. And I'd also have a "plan B" for irrecoverable situations (something like moving the particles to their original positions relative to character bones...)<br><blockquote class="uncited"><div>&gt;&gt; Golub<br>This is indeed a book. Actually it is quite standard for matrix computations. There is also the online book &gt;called "Templates for ..." (sorry forgot the complete name) which gives a reference for this topic. Looking in &gt;the SOR chapter. If you can't find I will have a look for you...</div></blockquote>Got it, it's called "Templates for the solution of linear systems", I'll have a look when I have some spare time. Thanks.<br><br>    Oscar<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=412">Oscar Civit Flores</a> — Thu Nov 02, 2006 12:46 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-11-01T12:31:58+00:00</updated>
+
+		<published>2006-11-01T12:31:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2303#p2303</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2303#p2303"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2303#p2303"><![CDATA[
+&gt;&gt;AGEIA paper:<br>I tried the modified stiffness paprameter, but didn't find it usefull. You get so small values when getting above 4 iterations that I simply allow tweaking this value independently for edge and bend constraints in a range from 0 to 2. Technical artists are quite experienced with tweaking so I don't want to hide something from them.<br><br>Did you try their combination for rigid bodies and cloth? I doubt that there impulse method works. I think you need a constraint here and solve this in the same iteration loop together.<br><br>I use a constant timestep. But the system behaviour varys if you a fixed timestep of 1/30 hz or 1/60 Hz. As an explanation I would argue like this: We solve a non-linear system of equations. The larger the timestep the greater the violation of the linearization I guess. For cloth simulation you never want to come to the point where convergence enters the "region" where the system becomes stiff. Convergences is mostly effected by the timestep you take and the iteration count. I don't know if you notices that (it is actually mentioned in the paper as well) we have a nested system here. The outer iterations are the Newton iterations for solving the non-linear system and the inner iterations are a Gauss-Seidel method for solving the (inner) linear system. We take here n outer iteration and exactly 1 inner iteration. I want to try 2 outer and 4 inner iteration as opposed to 8 outer iterations. Maybe this resolves some stiffness and if yes it will actually be faster... <br><br>The damping method in the paper is quite usefull and can easily be translated to the Verlet integrator. It helps for cloth that itis attached to charcters since it doesn't damp the global movement. It also let's you make the cloth a little stiffer - so it adds some tweaking possibility<br><br>&gt;&gt; Self collisions <br>I only have a skirt currently and self collision is not a problem here. Why do you relate on-characters cloth and self-collision? Did you get problems through implementing it or did this solve some problems. I wanted to implemented self-collision for completeness, so is there anything I need to look into?<br><br>&gt;&gt; Golub<br>This is indeed a book. Actually it is quite standard for matrix computations. There is also the online book called "Templates for ..." (sorry forgot the complete name) which gives a reference for this topic. Looking in the SOR chapter. If you can't find I will have a look for you...<br><br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Wed Nov 01, 2006 12:31 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Oscar Civit Flores]]></name></author>
+		<updated>2006-10-31T20:06:23+00:00</updated>
+
+		<published>2006-10-31T20:06:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2295#p2295</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2295#p2295"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2295#p2295"><![CDATA[
+Hi again <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>I think that the "qualitative" change of behaviour depending on timestep and number of relaxation iterations is the biggest drawback of this method, as you suggest. Too much iterations or too high fps makes constraints too rigid even if you're using SUR because it is supposed to converge to the rigid solution.<br><br>In AGEIA's M?ller et al paper you mention they try to remove the dependency on the number of relaxation iterations by computing a modified stiffnes parameter K_n ( K == w_sor if I get it right), so that any number of iterations achieves the same error reduction, but I can't see this applied to a particle network, because it interacts with propagation and that definitely depends on the iteration count. I tried a similar approach and it's worth it because the dependency on iteration count is not so noticeable as with an arbitrary K, but it's still there.<br><br>The dependency on the timestep seems harder to remove, in the cited paper they just assume a constant timestep, but if you want to offer the stiffness parameter in an authoring tool then the cloth models build with it will be timestep-dependent, which is quite annoying.<br><br>On the whole, I think that this hack of "using the relaxation SUR parameter as a material property" lacks a well founded physical meaning, or at least I'm not able to find it. We should work it out or accept the physical incorrectness and don't tell anybody else  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"><br><br>Self collisions are another challenge too... specially for on-character clothes... are you planning to implement them?<br><br>I can't find any "free" link about "Golub, Matrix computations", just a book in amazon... do you have any link to pdf I can check?<br><br>This is getting very interesting...<br><br>    Oscar<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=412">Oscar Civit Flores</a> — Tue Oct 31, 2006 8:06 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-10-31T17:32:05+00:00</updated>
+
+		<published>2006-10-31T17:32:05+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2293#p2293</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2293#p2293"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2293#p2293"><![CDATA[
+What time step do you use? I just found out that when I use a fixed time-step of 30 Hz (instead of 60 Hz) everything works fine. I can get the same behaviour using SUR I guess. I think the irregular mesh simply needs some more tweaking until it looks good. This matches with your idea that the system is overconstrained, so I simply "relax" a little bit. Regarding the constraint order: the constraints are only shuffled once during export from Maya.<br><br>Did you try some kind of damping for the constraint (not global damping)? IMO the cloth has two major drawbacks it looks too light and too thin. Basically most cloth with this method looks/behaves like rubbery silk. I use the gloabl damping similiar to the method described in the AGEIA paper and this helps a bit. Also the SUR let's you add some flexibility. Besides this I haven't found any usefull tweaking parameters? This method is not very well suited for modelling different materials I guess...<br><br><br>&gt;&gt; Chebyshev acceleration<br>There seems to be a way to compute the new paramter during each iteration on the fly, since computing the spectral radius is simply inpractical IMO. Look at "Golub, Matrix computations". I haven't found the time to look into this, so I can't tell if it worse the effort. I agree with your considerations regarding SOR<br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Tue Oct 31, 2006 5:32 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Oscar Civit Flores]]></name></author>
+		<updated>2006-10-31T15:10:08+00:00</updated>
+
+		<published>2006-10-31T15:10:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2289#p2289</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2289#p2289"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2289#p2289"><![CDATA[
+Hi Dirk,<br><br>I see some differences on our systems, but I don't know if they may cause the artifacts you encounter or even if they may appear in mine <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>My single constraint correction step is the same as yours, but I do not use the same w_sor for all constraints. My edge constraints use no SOR, Shear (I use quads) and Bend use independent w_sor values always in (0,1], to allow for some interactive tunning of material parameters.<br><br>I haven't tried over relaxation in the sense of w_sor &gt; 1, I don't feel very comfortable with my littl particles gaining speed because of the solver internals, but maybe I'm too cautious about it. Also scary is what the NRecipes link you sent says about SOR making "the error grow in a factor of 20 before convergence sets in"... my intuition says that this can be more critical if you use overrelaxation than underrelaxation, which is a sort of "slowing down things", but I don't have any proof.<br><br>Chebyshev acceleration looks cool, didn't know about it, but if I understand it correctly you need the spectral radius of the Jacobi matrix to compute it, which sounds far too expensive to me.<br><br>I'm not reordering the constraints to start from the attachment points as Maggs suggests, that may be the key difference between our systems. I'm traversing the particle mesh in a "rows x cols" way, but using some biasing to make particles closer to attachment points a bit heavier than the far ones.<br><br>About decoupling stretch and bending constraints, I planned on trying it but it looked quite expensive (you have to compute an atan2() I think)... I thought of some optimization but in the end I didn't have time to try it at all.<br><br>I use projection for collision constraints too, with no tangential friction yet. I tried the velocity modification you mention but particles seemed to bounce too much on the character due to the interaction with length constraints, so in the end I'm performing some interleaved collision and strecth/bend constraint iterations that look better (collision response gets propagated to neighbours faster). Maybe it's not the best way but works for me. In any case, the last step should be a collision step to ensure visual correctness.<br><br>I imagine that your "rigid cloth" problem comes from some kind of overconstraining, maybe too high w_sor, or because the constraint ordering... when you try the random order, is it always the same order or you recompute it every iteration?<br><br>Regards,<br><br>   Oscar<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=412">Oscar Civit Flores</a> — Tue Oct 31, 2006 3:10 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-10-31T13:01:24+00:00</updated>
+
+		<published>2006-10-31T13:01:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2281#p2281</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2281#p2281"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2281#p2281"><![CDATA[
+Hi Oscar,<br><br>thanks for the reply. I don't use the bias idea like Meggs. Instead I compute the mass for each particle through assigning one third of the area of each incident triangle times some "density". Then I scale the correction by the inverse masses. I also have a relaxation/damping factor. So basically my correction looks like this:<br><br>dp = (|p1 - p2| - L0) * (p1 - p2) / |p1 - p2| ;<br>p1 += w_sor * w1 / (w1 + w2) * dp<br>p2 -=  w_sor * w2 / (w1 + w2) * dp<br><br>I tried over- and underelaxation, but it didn't help. Do you use one global SOR/SUR parameter or one for distance and one for bending (maybe you want the beding to be softer), or is it derived for each individual constraint? What did you use as SUR parameter? Another method is to reduce the relaxation parameter each iteration. This is called Chebyshev acceleration. Actually I find it to cumbersome to compute the factors, but maybe there is some clever way to do this. I read that Golub has written about this, but haven't found the time to look into this. See here for an example:<br><br><a href="http://www.nrbook.com/a/bookcpdf/c19-5.pdf" class="postlink">http://www.nrbook.com/a/bookcpdf/c19-5.pdf</a><br><br>Regarding the bending constraint I treat them already as unilateral constraints. Though this helps a bit the bending still depends on the stretch of the cloth. I wanted to try a constraint that depends on the dihedral angle like in M?ller or Bridson/Fedkiw to decouble this behaviour. Did you try this in your simulation? For my feeling it looks quite computational expensive?<br><br>May I ask how you treat collisions and friction? Currently I only project penetrating vertices onto the surface and the rest is handled by the Verlet integrator. I wonder if need to adjust the last-position in order to match the velocity of the surface point of the collision primitive and also integrate some kind of friction this way.<br><br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Tue Oct 31, 2006 1:01 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Oscar Civit Flores]]></name></author>
+		<updated>2006-10-31T10:43:15+00:00</updated>
+
+		<published>2006-10-31T10:43:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2278#p2278</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2278#p2278"/>
+		<title type="html"><![CDATA[Jacobsen cloth - weird stiffness and twisting]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2278#p2278"><![CDATA[
+Hi Dirk,<br>I implemented a system similar to Meggs' but on regular meshes instead of triangle meshes and didn't notice the artifacts you mention... are you enforcing all the constraints to be met in a single step? or in Maggs' words, what are your "bias" values for length and bending constraints? Do they always add up 1?<br><br>That would be too strict and make the cloth too rigid if you give it enough iterations to relax, and the cloth would behave more like a chainmail. That may explain the change of behaviour you experience when iterations &gt; 4 (actually, it could also depend on the longest edge distance between two vertices of the cloth-mesh)<br><br>In my system I have an "overrelaxation factor" that, in fact, I use to achieve underrelaxation, that is, at each relaxation iteration each individual constraint corrects ORFactor * Deviation with ORFactor in (0,1] instead of the whole Deviation. It makes the cloth move smoothly but may require more iterations to converge. I use a default iteration count of 1/3 of the longest edge distance and everything works fine, but you can also tweak it for each cloth-patch.<br><br>There is also another important observation in Maggs' presentation: Treating bending constraints as inequalities, so that they only prevent opposed particles from neighbour triangles to become too close, but do not constrain their separation (edge-constraints already do that). Treating them as equalities could also make the cloth too rigid.<br><br>I Hope it helped  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br><br>    Oscar<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=412">Oscar Civit Flores</a> — Tue Oct 31, 2006 10:43 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

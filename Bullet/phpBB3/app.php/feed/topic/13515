@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13515" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-01-10T22:40:01+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13515</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-01-10T22:40:01+00:00</updated>
+
+		<published>2023-01-10T22:40:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44198#p44198</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44198#p44198"/>
+		<title type="html"><![CDATA[Re: Is it safe to retrieve objects transforms from one thread while stepSimulation is in other thread?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44198#p44198"><![CDATA[
+Actually <strong class="text-strong">body-&gt;getWorldTransform()</strong> is not necessarily the best way to do it.<br><br>When your render rate is NOT the same as your simulation step rate you can get aliased results from <strong class="text-strong">body-&gt;getWorldTransform()</strong> which can sometimes produce a visible jitter in the motion of otherwise smoothly moving objects.  What you want is a predicted transform of the object that includes an extrapolation for any not-yet-sub-stepped time between your render time and the physics world's simulation time.  The typical way to do this is to use a <strong class="text-strong">btMotionState</strong> for each physical body that also has a render component.<br><br><strong class="text-strong">btMotionState</strong> is a pure virtual class with two methods that must be overridden:<br><div class="codebox"><p>Code: </p><pre><code>    // simulation requests outside context for new world transform    // called once per substep for active kinematic objects, but also once for all objects when body is first added to the world   ·virtual void getWorldTransform(btTransform&amp; worldTrans) const = 0;    // simulation stores the extrapolated world transform    // called once per substep for active dynamic objects   ·virtual void setWorldTransform(const btTransform&amp; worldTrans) = 0;</code></pre></div>I added the extra comments above in an attempt to summarize how the Bullet simulation uses the <strong class="text-strong">btMotionState</strong> API.<br><br>Bullet provides one non-virtual class derived from <strong class="text-strong">btMotionState</strong> for you called <strong class="text-strong">btDefaultMotionState</strong>.  That may suit your needs, or you can write your own if you need special behavior.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Jan 10, 2023 10:40 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[graphene9932]]></name></author>
+		<updated>2023-01-09T06:53:21+00:00</updated>
+
+		<published>2023-01-09T06:53:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44193#p44193</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44193#p44193"/>
+		<title type="html"><![CDATA[Is it safe to retrieve objects transforms from one thread while stepSimulation is in other thread?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44193#p44193"><![CDATA[
+I do physical simulation and rendering in my program.<br>People recommend using fixed step simulation independently of rendering thread and framerate.<br><br>So I decided to call stepSimulation in, let's say, thread 0 and rendering in thread 1.<br>To render btRigidBody objects I need their transforms. As far as I know body-&gt;getWorldTransform() is the best way of doing it.<br><br>So, the question is following:<br>Is it safe to call getWorldTransform() while simulation is ongoing in other thread?<br><br>I heard that modifying state of rigid bodies is not thread safe, but I haven't seen anything about reading their states.<br><br>Sorry for my bad English<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14497">graphene9932</a> — Mon Jan 09, 2023 6:53 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; My explicit euler cloth code - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>My explicit euler cloth code</h2>
+		<p><a href="viewtopic.php%3Ft=7013.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7013</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2011 2:15 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">HI DevO,<br>
+  Thanks for the reply once again. Are these special cases discussed in the pos based dynamics paper? Atleast, I could not find it. I will read through the other paper to see if it has something to offer. What do u suggest how to handle these cases?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2011 2:57 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content"><blockquote><div><cite>mobeen wrote:</cite>HI DevO,<br>
+  Thanks for the reply once again. Are these special cases discussed in the pos based dynamics paper? Atleast, I could not find it. I will read through the other paper to see if it has something to offer. What do u suggest how to handle these cases?</div></blockquote>
+
+No the special cases are usually ignored in the parers.<br>
+First test if it work if you just ignore (return;) this cases.<br>
+The case d == 1.0 is the common case for you simulation because you start with the plane and all angles are 180° at the beginning.<br>
+So probably you phi0 is 0.0 (180°) too, in this case this code will be correct.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   if(d == 1.0){ //180° case, the triangles are planar
+        phi = 0.0;  //acos(1.0) == 0.0
+        if(phi == phi0[index]) return; //nothing to do 
+   }
+</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   if(d == -1.0){ //0° case, the triangles are facing in the opposite direction, folded together.
+       phi = PI;  //acos(-1.0) == PI
+       if(phi == phi0[index]) return; //nothing to do 
+      //in this case one just need to push vertices 1 and 2 in n1 and n2 directions, so the constrain will do the work in second iterations.
+   }
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2011 3:14 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The bending constraint using the dihedral angle is not really useful for games. It is much more expensive without improving the simulation quality significantly. Even PhysX is either not using it anymore or at least recommending to use the method I suggested earlier. You can check their manual.<br>
+<br>
+Here are some other links related to position based dynamics:<br>
+<a href="http://www.matthiasmueller.info/publications/hpbd.pdf" class="postlink">http://www.matthiasmueller.info/publications/hpbd.pdf</a><br>
+<a href="http://www.matthiasmueller.info/publications/wrinkleMeshes.pdf" class="postlink">http://www.matthiasmueller.info/publica ... Meshes.pdf</a><br>
+<a href="http://www.matthiasmueller.info/publications/orientedParticles.pdf" class="postlink">http://www.matthiasmueller.info/publica ... ticles.pdf</a><br>
+<a href="http://web.archive.org/web/20070610223835/http://www.teknikus.dk/tj/gdc2001.htm" class="postlink">http://web.archive.org/web/200706102238 ... dc2001.htm</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2011 3:30 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">The method presented in this paper is probably only a bit slower as a simple distance constraint.<br>
+<a href="http://image.diku.dk/kenny/download/kelager.niebe.ea10.pdf" class="postlink">A Triangle Bending Constraint Model for Position-Based Dynamics</a><br>
+Probably one could use the same optimisation to remove Sqrt() as in distance constraint too.<br>
+One problem is if the angle is 0° then it does not work.<br>
+<br>
+For simple distance constraint 180° case will not work, because the vertices will be moved in the plane.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2011 4:35 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">This is all very theoretical. I will be convinced if I see a *significant* improvement on a game character using a special bending constraint which justifies the extra cycles.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2011 3:31 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">HI DevO and Dirk,<br>
+   Thanks for the responses.<br>
+<br>
+Since I am doing the code exactly as in the original paper, the triangle order is given in a form where the first triangle is CCW and the second is CW winded. This will turn the direction of normals to 180 degrees. So my initial phi are all PI. The first and second vertex are forming the shared edge. For d==-1 special case in the condition when I need to move vertex 1 and 2, are these the shared vertices that I move or the other non-shared vertices? My intuition says it has to be the shared vertices.<br>
+<br>
+Doing these changes, now i see some vertices popping up and down. I am currently only using the bending constraints, I have slowed the simulation speed and the resulting mesh looks like a crumpled piece of paper. Is this how it should look with only the bending constraints? Note that the alternating normals are flipped.<br>
+<img src="http://www3.ntu.edu.sg/home2007/mova0002/test/snap.PNG" class="postimage" alt="Image"><br>
+<br>
+Dirk I will go through those links thanks for letting me know.<br>
+<br>
+EDIT: I just added in the distance constraints however, the cloth seems very stiff and rigid as if it is inside a viscous fluid. It converges pretty quickly though. On rapid movements, it explodes? Any ideas? I could attach the code if u would want to have a look?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2011 11:21 am</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi mobeen,<br>
+<br>
+I think that you triangle order is the source of you problems.<br>
+This bending constraint will only work if all triangles have the same orientation, ether all CW or all CCW.<br>
+The phi0 should be 0.0 for the plane.<br>
+
+<blockquote class="uncited"><div>For d==-1 special case in the condition when I need to move vertex 1 and 2, are these the shared vertices that I move or the other non-shared vertices?</div></blockquote>
+Shared vertices are vertices that form the edge ? If so then you need to move another 2 vertices in opposite direction so the triangles will be unfolded again.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2011 2:10 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi DevO,<br>
+  Changing both triangle order to same, makes the cloth to crumpled even more. I have double checked the phi0 values and they are all 0.<br>
+<br>
+My current code makes cloth triangles from a quad. Lets say using v0 v1 v5 v6 now the common edge that is shared by the triangles is v0v6 and the non shared (apex vertices are v5 and v1). This is how they are arranged exactly as in the position based dynamics paper. (I m using ASCII fig here so bare with me)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   v0                 v1              v2... 
+      +-----------+-----------+ ...
+     /  \             /               /
+    /       \        /               /
+   /            \   /               /
+ +-----------+-----------+ ...
+v5              v6
+</code></pre></div>
+
+I am attaching the code if u think it may help. See if you can spot the problem/s.<br>
+<br>
+Thanks for your help DevO.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Sun Jul 24, 2011 4:24 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi mobeen,<br>
+<br>
+I have mode some changes to you code, so it locks more like PBD.<br>
+Unfortunately it is still not not fully correct.<br>
+For example you "center of mass's damping" seems to be broken.<br>
+<br>
+New array W is to store inverse particle mass if this is zero then particle is fixed and will not move but the constrains need to know this!<br>
+<br>
+regards,<br>
+DevO</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 5:38 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi DevO,<br>
+   Thanks for the corrections DevO. Yeah the handling of mass weights like this should have been done from the start.<br>
+
+<blockquote class="uncited"><div>
+Unfortunately it is still not not fully correct. For example you "center of mass's damping" seems to be broken.
+</div></blockquote>
+Thanks for the fast feedback DevO u r a life saver <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+I will update you with another version soon and once u signal me that it is fine, I will commit it to SVN.<br>
+<br>
+EDIT: I tried to isolate the update of distance constraints only but on setting the ks=1 value, the simulation explodes. I cannot figure out why this is so when I am pretty sure the equations are correct. I am trying to see if I could solve this issue. I think I will do the COM damping after this Ks=1 issue is solved.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 8:11 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">OK DevO I think I know what was causing the explosion. IN the distance update function, I was checking the original positions each iteration when instead I should check the predicted positions (as mentioned in the pseudocode in the original paper). Specifically, I changed this
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> glm::vec3 dir = X[c.p1] - X[c.p2];</code></pre></div> to this <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>glm::vec3 dir = tmp_X[c.p1] - tmp_X[c.p2];</code></pre></div> in the UpdateDistanceConstraint func. and now the explosion is gone (atleast in the distance constraint case).<br>
+<br>
+Now I am working on the center of mass damping. <br>
+<br>
+EDIT: Ok I think I have got something working now. <br>
+I think the original paper has some typo in the center of mass damping calculation. The algorithm line 7 in section 3.5 page 5  <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>delVi = Vcm + cross(w,Ri[i])-V[i]</code></pre></div> should be <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>delVi = Vcm + cross(Ri[i],w)-V[i]</code></pre></div> because the second term is probably calculating the angular torque which should be the cross product of vector ( ri=Xi-Xcm) to the angular velocity (omega). My reference for this is <a href="http://en.wikipedia.org/wiki/Torque" class="postlink">http://en.wikipedia.org/wiki/Torque</a> . what's ur say DevO am I correct? <br>
+<br>
+Now for Kdamp value 0.5, I get the cloth falling down but then as soon as it is about to bend, it undergoes excessive damping. I tried Kdamp value of 1 but then the simulation explodes. I am still working on this to make it stable.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 10:25 am</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi,<br>
+<br>
+the parer equation should be correct!<br>
+I was using it and it was working for me.<br>
+<br>
+This should work.
+<blockquote class="uncited"><div>delVi = Vcm + cross(w,Ri<em class="text-italics">)-V<em class="text-italics"></em></em></div></blockquote><em class="text-italics"><em class="text-italics"><br>
+<br>
+This line appears to be wrong.</em></em>
+<blockquote class="uncited"><div>
+<em class="text-italics"><em class="text-italics">I += glm::outerProduct(ri, ri)*mass;</em></em>
+</div></blockquote><em class="text-italics"><em class="text-italics"><br>
+<a href="http://en.wikipedia.org/wiki/Cross_product#Conversion_to_matrix_multiplication" class="postlink">Cross product Matrix</a><br>
+<br>
+There could also be  numerical problems because of accumulation.<br>
+<br>
+Kdamp =1.0 actually should work, and the plane should move then like rigid body.<br>
+<br>
+regards,<br>
+Devid</em></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 11:06 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi DevO,<br>
+   Thanks for the update. Well I tried to run the code but the cloth rotates and then explodes. Anyways,<br>
+why do u recalculate the mass each iteration when it is a constant? and why do u say this
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const glm::vec3 delVi = Vcm + glm::cross(ri,w) - V[i];</code></pre></div>
+ is wrong? I checked the definition of torque it is the cross product of ri with w. <br>
+
+<blockquote class="uncited"><div>This line appears to be wrong.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>I += glm::outerProduct(ri, ri)*mass;</code></pre></div>
+</div></blockquote>
+Is this correct?
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>glm::mat3 tmp = glm::mat3(0,-Ri[i].z,  Ri[i].y, 
+  		      Ri[i].z,       0,-Ri[i].x,
+		     -Ri[i].y,Ri[i].x,      0);
+I += (tmp*Ri[i])*mass;
+</code></pre></div>
+
+Could u recheck your old pbd implementation to see where I am wrong?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 12:37 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Ok DevO,<br>
+  Thanks I think I have got it. The actual calculation of this
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> 
+glm::mat3 tmp = glm::mat3(0,-Ri[i].z,  Ri[i].y, 
+              Ri[i].z,       0,-Ri[i].x,
+           -Ri[i].y,Ri[i].x,      0);
+I += (tmp*Ri[i])*mass;
+
+</code></pre></div> should be this <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>I += (tmp*glm::transpose(tmp))*mass;
+</code></pre></div>
+
+And the rest is all fine. I got this from <a href="http://www.sccg.sk/~onderik/phd/ca2010/ca10_lesson11.pdf" class="postlink">http://www.sccg.sk/~onderik/phd/ca2010/ ... sson11.pdf</a><br>
+<br>
+DevO could u check this final version for me. I have corrected the triangle based bending constraint as well. You can undefine USE_TRIANGLE_BENDING_CONSTRAINT if u want to use it.<br>
+<br>
+One more thing, what is your real name and affiliation, I will add in your name and affiliation in the code.<br>
+<br>
+Thanks for the help man. You rock.<br>
+<br>
+Cheers,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 1:26 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Anyways,<br>
+why do u recalculate the mass each iteration when it is a constant?</div></blockquote>
+Because this calculation is really cheap, to store and the query need more time and memory as to recalculate it.<br>
+<br>
+Yes now witch transpose() it should be correct.<br>
+<br>
+In you code you still use constant mass but this is not correct because fixed point should actually have infinite mass, that can be replaced in real implementation by the big number. (1000?)<br>
+
+<blockquote class="uncited"><div>Meanwhile, I am working on the other triangle based bending constraint u told me about.</div></blockquote>
+This should be 3 point constrain only.<br>
+The only tricky part is actually properly creating this constrains.<br>
+The should be just like distance constrains that are used to replace bending constrains but are using middle point too.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>0-----1-----2
+|     |     |
+3-----4-----5
+|     |     |
+6-----7-----8
+</code></pre></div>
+In this simple case you should have 6 bend constrains.<br>
+C(0,1,2), C(3,4,5), C(6,7,8), C(0,3,6), C(1,4,7), C(2,5,8).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

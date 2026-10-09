@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Trying to implement Gino's GJK-based ray-cast</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Trying to implement Gino's GJK-based ray-cast</h2>
+		<p><a href="viewtopic.php%3Ft=8029.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8029</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Trying to implement Gino's GJK-based ray-cast</h3>
+				<div class="date">Posted: <strong>Wed Apr 04, 2012 5:52 pm</strong></div>
+				<div class="author">by <strong>concubicycle</strong></div>
+				<div class="content">Hi! Sorry if this has been posted before (tried a few searches), but I need help implementing Gino Van Bergen's "Ray Casting against General Convex Objects with Application to Continuous Collision Detection". I've read through the paper, and tried to take everything in to the best of my ability, but I'm still new to game physics and I'd like to get much better at it. I also went through some Bullet code, but I found a lot of it somewhat difficult to understand. <br>
+<br>
+I'm trying to implement this approach in C# for a 2D xna game. It currently works about 3/4 of the time. I was wondering if anyone would be kind enough to tell me if I'm on the right track, and to point me to helpful resources that would help me master (to a reasonable extent) collision detection.<br>
+<br>
+Here is the method. I'm not sure that all the methods I've used are working completely, but I assume for now that they are. The objects are in world space.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8029&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>public bool generalGJK(BoundingVolume objA, BoundingVolume objB, Vector2 velA, Vector2 velB, out GJKOutputForm form)
+        {
+            maxIter = 1000;
+            Vector2 r = velB - velA; //r - this is my assumption based on obseving behavior of minkowski difference
+
+            //This is not an intersection test, for now. We can run an axis of separation if vel = 0 HERE later.
+            if (r.Length() == 0)
+            {
+                form.TOI = 2;
+                form.collisionNormal = Vector2.Zero;
+                return false;
+            }
+            
+            float hitParam = 0; //lambda
+            Vector2 s = Vector2.Zero; //s, which is the origin I think...
+            Vector2 hitSpot = s; //x
+            Vector2 normal = Vector2.Zero; //n
+            Vector2 nOriginToHitSpot; //w 
+            VoronoiSimplex simplex = new VoronoiSimplex(); //P
+            Vector2 convergingNormal; //V
+            Vector2 tempMinkVert;
+
+            float epsilon = float.Epsilon;
+            //epsilon *= epsilon;
+
+            GeometryUtilities.minkDiffSupportMap(objA, objB, Vector2.One, out tempMinkVert); //get arbitrary point in C (which I assume is the
+                                                                                             //minkowski difference).
+            convergingNormal = hitSpot - tempMinkVert; //v = x − "arbitrary point in C"
+
+            while (Vector2.Dot(convergingNormal, convergingNormal) &gt; epsilon &amp;&amp; (maxIter--) &gt; 0)
+            {
+                GeometryUtilities.minkDiffSupportMap(objA, objB, convergingNormal, out tempMinkVert); // p &lt;- Sc(v). v is a normal of C at p
+                nOriginToHitSpot = hitSpot - tempMinkVert;
+
+                float VdotW = Vector2.Dot(nOriginToHitSpot, convergingNormal);
+
+                if (hitParam &gt; 1.0f)
+                {
+                    form.TOI = 2;
+                    form.collisionNormal = Vector2.Zero;
+                    return false;
+                }
+
+                if (VdotW &gt; 0)
+                {
+                    float VdotR = Vector2.Dot(r, convergingNormal);
+
+                    if (VdotR &gt;= -1.0f*epsilon)
+                    {
+                        form.TOI = 2;
+                        form.collisionNormal = Vector2.Zero;
+                        return false;
+                    }
+                    else
+                    {
+                        hitParam = hitParam - VdotW / VdotR;
+                        hitSpot = s+hitSpot+hitParam * r;
+                        normal = convergingNormal;
+                    }
+                }
+                simplex.addVertex(new Vector3(tempMinkVert.X, tempMinkVert.Y, 0.0f));
+                simplex.resetUsedVerts();
+                //simplex.deformAccordingToHitParam(new Vector3(hitSpot.X, hitSpot.Y, 0.0f));
+                simplex.findClosestPointOnSimplexTo(Vector3.Zero);
+                convergingNormal.X = simplex.PointOfMinNorm.X;
+                convergingNormal.Y = simplex.PointOfMinNorm.Y;
+                simplex.reduceSimplex();
+            }
+
+            float time = hitParam;
+            if (time &gt; 1)
+            {
+                form.TOI = 2;
+                form.collisionNormal = Vector2.Zero;
+                return false;
+            }
+            else
+            {
+                form.TOI = time;
+                form.collisionNormal = normal;
+                return true;
+            }
+        }</code></pre></div>
+
+Thanks,<br>
+concubicycle</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

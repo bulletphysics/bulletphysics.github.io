@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to convert from world coordinate</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to convert from world coordinate</h2>
+		<p><a href="viewtopic.php%3Ft=8881.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8881</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to convert from world coordinate</h3>
+				<div class="date">Posted: <strong>Wed Feb 20, 2013 6:18 am</strong></div>
+				<div class="author">by <strong>henokyen</strong></div>
+				<div class="content">I have some objects in the physics simulation and i want to know the local coordinates of these objects ?<br>
+How can i do that ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to convert from world coordinate</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 1:39 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Converting from world to local just involves multiplying the world transform matrix of the object by the inverse to get the identity matrix. <br>
+<br>
+Normally you want to transform a different object B into the local frame of object A, which just involves multiplying B's world transform matrix by A's inverse world transform matrix, meaning that A will now be at the origin and B's position will be relative to this origin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to convert from world coordinate</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 4:20 am</strong></div>
+				<div class="author">by <strong>henokyen</strong></div>
+				<div class="content">Thanks ,<br>
+basically i want to create a joint between two legs for my robot.<br>
+and i am using the hinge constraint. and this class requires the local coordinates of the legs to be joined. <br>
+I do not know who to get the local coordinated now.<br>
+can just provide a piece of codes that do this ?<br>
+thank<br>
+you</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to convert from world coordinate</h3>
+				<div class="date">Posted: <strong>Thu Feb 21, 2013 4:54 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">For my hinge joint, I have one anchor given in world coords and a world hinge axis.<br>
+<br>
+From the world anchor, you build two local anchors as follows for each body<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8881&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	wt1T.transposeOf(m_pRigidBody1-&gt;m_matWorldTransform);
+	wt2T.transposeOf(m_pRigidBody2-&gt;m_matWorldTransform);
+
+	m_vLocalAnchor1 = (vAnchor - m_pRigidBody1-&gt;m_vPosition)*wt1T;
+	m_vLocalAnchor2 = (vAnchor - m_pRigidBody2-&gt;m_vPosition)*wt2T;</code></pre></div>
+
+Basically these are vectors ra and rb (of the relative position) in local coords of each body. Perhaps you can paste some code or show your approach</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to convert from world coordinate</h3>
+				<div class="date">Posted: <strong>Wed Oct 02, 2013 10:22 am</strong></div>
+				<div class="author">by <strong>shogun22</strong></div>
+				<div class="content">I am sorry for reviving this thread but I am completely lost and already wasted countless hours on this simple function.<br>
+So I know I have to provide the HingeConstraint constructor with local coordinates for axis and anchor point. So I wanted to create two little helper functions to translate a vector from world to local and to translate a point from world to local (since both of them are needed for the axis and the anchor).<br>
+What I came up with so far is this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8881&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 pointWorldToLocal(int bodyIndex, btVector3 point)
+{
+	btVector3 localPoint;
+	btTransform xform = arrayOfBtRigBodies[bodyIndex]-&gt;getCenterOfMassTransform();
+	
+	// The local coordinates should be [(worldCoords - localOrigin) * inverse(localRotation)] or am I wrong?
+	localPoint = (point - xform.getOrigin()) * xform.getBasis().inverse();
+	return localPoint;
+}
+
+
+btVector3 axisWorldToLocal(int bodyIndex, btVector3 axis)
+{
+	btTransform xform = arrayOfBtRigBodies[bodyIndex]-&gt;getCenterOfMassTransform();
+	// This works quite well but only if I do not inverse the result of getBasis()... ?
+	btVector3 localAxis = axis * xform.getBasis();
+	return localAxis;
+}
+</code></pre></div>
+
+Which should be equivalent to c0der's suggestion:<br>
+
+<blockquote class="uncited"><div>
+wt1T.transposeOf(arrayOfBtRigBodies[bodyIndex]-&gt;m_matWorldTransform);<br>
+m_vLocalAnchor1 = (point - arrayOfBtRigBodies[bodyIndex]-&gt;m_vPosition)*wt1T;<br>
+return m_vLocalAnchor1
+</div></blockquote>
+
+But when I run it, the axis is translated from world to local correctly while pointWorldToLocal produces strange results.<br>
+I basically wasted two complete days of my life on this so please release me from my pain <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"> <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to convert from world coordinate</h3>
+				<div class="date">Posted: <strong>Thu Oct 17, 2013 9:00 am</strong></div>
+				<div class="author">by <strong>shogun22</strong></div>
+				<div class="content">Alright folks,<br>
+<br>
+after I froze my project for a week I finally found the solution for my coordinate translation problem today. Might be trivial for most of you but for those who are stuck like I was, this is my final function:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8881&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 RagdollDemo::pointWorldToLocal(int bodyIndex, btVector3 worldPoint)
+{
+        return body[bodyIndex]-&gt;getCenterOfMassTransform().inverse()(worldPoint);
+}
+</code></pre></div>
+
+yes guys it's that easy. Don't know why it took me so long to understand how getCenterOfMassTransform can be used to translate points. Maybe it's not in the manual or I completely overlooked it. Hope this helps someone else.<br>
+<br>
+Best</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to convert from world coordinate</h3>
+				<div class="date">Posted: <strong>Thu Dec 26, 2013 8:20 am</strong></div>
+				<div class="author">by <strong>benfocus55</strong></div>
+				<div class="content">Shogun! Thank you! Saved me countless hours and actually clarified these concepts.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

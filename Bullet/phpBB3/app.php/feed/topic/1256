@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1256" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-07-02T19:57:41+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1256</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2007-07-02T19:57:41+00:00</updated>
+
+		<published>2007-07-02T19:57:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4665#p4665</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4665#p4665"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4665#p4665"><![CDATA[
+The major difference is that instead of computing the projection of the origin onto a searched subsimplex, Casey determines a search direction perpendicular to the subsimplex in the direction of the origin without having the projected point.<br><br>This means when your simplex is e.g. a segment you  compute the closest point on this segement to the origin. This is your search direction. In the SAT-GJK there is no simplex in this form. Also when you compute the closest points to the segment (or triangle, tetrahedron) you find baraycentric coordinates (look at Christer's book please!!!). <br><br>So your simplex has basically the following structure:<br><br>struct Simplex<br>{<br>int mSize;  // Current number of vertices (1 - 4)<br>Vec3 mW[4], mP[4], mQ[4];  <br>float mLambda[4]; // Barcentric coordinates<br>}<br><br>1) Compute u, v, w (SupportPoints - see Bullet)<br>2) Add support points to simplex (if not already contained)<br>3) Compute the closest point on the simplex to the origin (FindPoint OfMinimumNorm). Since the simplex is either a point, segment, triangle or tetrahedron this breaks down to the computations of (as I have already told you twice)<br><br>ClosestPointToPoint<br>ClosestPointToSegement<br>ClosestPointToTriangle<br>ClosestPointToTetrahedron<br><br>Your new search direction is the vector from the origin O to this closest point. Thats it! Even though there is quite some heavy math involved it is conceptually relatively easy.<br><br>So I suggest the following. <br><br>a) Clear your mind from Casey implemention for now<br>b) Look at Solid and Bullets implementation and learn form it!<br>c) Understand what Johnson's sub-algorithm is and how Bullet replaces it<br>b) Implement your own simplex solver based on Voronoi regions. That is implement functions like AddPoint() which should return false if the new point is already in the simplex or better is linear dependent on the current points. Also compute a function PointOfMinimumNorm() which falls back onto the four function mentionend above based on the current size of the simplex.<br><br>The major gotcha is the reduction of the simplex. (Steps 2 and 4 in Christers book). As pointed out earlier these steps belong together. So when you compute the closest point and find the barycentric coordinates those vertices that have barycentric coordinates of zero are removed. (E.g. you current simplex is a triangle ABC and you find the closest point on the edge BC all you need to do is to remove vertex A from your current simplex). <br><br><br>HTH,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Jul 02, 2007 7:57 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lonestar]]></name></author>
+		<updated>2007-07-02T19:07:23+00:00</updated>
+
+		<published>2007-07-02T19:07:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4664#p4664</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4664#p4664"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4664#p4664"><![CDATA[
+<blockquote class="uncited"><div>Please read the material we provided here more sorrowly. All this is explained e.g. beginning from slide 20 in Erin Catto's slides.<br><br>From the slides:<br><br>- The support points are scaled up by a small margin to detect contact.<br>- Compute the closest points (no margin).<br>- This gives the position and normal.<br>- The penetration is the margin minus the true distance.<br><br>The next two slides have two nice sketches...<br><br><br>Also something that might help is to setup a nice simple example that you can follow easily using the debugger, e.g. two unit spheres with distance 1.<br><br><br>Cheers,<br>-Dirk</div></blockquote><br>my question resides here:<br>Compute the closest points (no margin). <br><br>how would i compute the closest points, that is what i am not able to make.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1810">lonestar</a> — Mon Jul 02, 2007 7:07 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2007-07-02T08:25:14+00:00</updated>
+
+		<published>2007-07-02T08:25:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4656#p4656</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4656#p4656"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4656#p4656"><![CDATA[
+Please read the material we provided here more sorrowly. All this is explained e.g. beginning from slide 20 in Erin Catto's slides.<br><br>From the slides:<br><br>- The support points are scaled up by a small margin to detect contact.<br>- Compute the closest points (no margin).<br>- This gives the position and normal.<br>- The penetration is the margin minus the true distance.<br><br>The next two slides have two nice sketches...<br><br><br>Also something that might help is to setup a nice simple example that you can follow easily using the debugger, e.g. two unit spheres with distance 1.<br><br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Jul 02, 2007 8:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lonestar]]></name></author>
+		<updated>2007-07-02T02:01:13+00:00</updated>
+
+		<published>2007-07-02T02:01:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4651#p4651</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4651#p4651"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4651#p4651"><![CDATA[
+<blockquote class="uncited"><div>I recommend just learning from Bullet's GJK and EPA implementation.<br><br>Otherwise, please read those forums more thoroughly, read Christer Ericson and Gino van den Bergen's books on this topic. For further info check:<br><a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?=&amp;p=2247" class="postlink">http://www.continuousphysics.com/Bullet ... p?=&amp;p=2247</a><br><br>Thanks,<br>Erwin</div></blockquote><br><br>i thought i would go for the shallow penetration first, <br>how would i go?<br><br>i know that i should add some margin to the support function, i did that, <br>but how to get the distance and the points of intersection?<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1810">lonestar</a> — Mon Jul 02, 2007 2:01 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lonestar]]></name></author>
+		<updated>2007-07-01T21:35:46+00:00</updated>
+
+		<published>2007-07-01T21:35:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4649#p4649</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4649#p4649"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4649#p4649"><![CDATA[
+i have a question about doing the shallow penetration,<br>if you have a sphere, in the support function we are adding a certain margin, <br>so it is like we are testing 2 spheres with slightly bigger radius.<br><br>shouldn't it be smaller radius? so when there is collision we have the penetrating depth?<br><br>can someone explain it in some details please?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1810">lonestar</a> — Sun Jul 01, 2007 9:35 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lonestar]]></name></author>
+		<updated>2007-06-30T21:12:39+00:00</updated>
+
+		<published>2007-06-30T21:12:39+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4646#p4646</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4646#p4646"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4646#p4646"><![CDATA[
+so the approach i gave is wrong?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1810">lonestar</a> — Sat Jun 30, 2007 9:12 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-06-30T16:51:38+00:00</updated>
+
+		<published>2007-06-30T16:51:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4639#p4639</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4639#p4639"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4639#p4639"><![CDATA[
+There is no motion involved. It would help if you familiarize yourself with sampling the penetration depth, given a certain direction using the minkowski sum of the two objects. This is implemented in Bullet in Bullet/src/BulletCollision/NarrowPhaseCollision/btMinkowskiPenetrationDepthSolver.cpp<br><br>The search directions are based on the current triangle/face normals in the (expanding) polytope.<br><br>The ending criterium is more complex then 'hits the minkowski surface', I should have be more clear, perhaps some pictures help: imagine a triangle (simplex/polytope) inside a convex polyhedron. You can split the triangle and project the vertex onto the surface. The new simplex that includes the new projected vertex might be concave, so this needs to be made convex.<br><br>The ending criterium is when the new penetration distance is 'not decreasing' anymore (or as safety gap for degenerate cases terminate if the total number of iterations is exceeded).<br><br>EPA loop from btGjkEpa.cpp<div class="codebox"><p>Code: </p><pre><code>/* Expand hull*/for(;iterations&lt;EPA_maxiterations;++iterations){Face*bf = FindBest();if(bf){GJK::Mkv*w = Support(-bf-&gt;n);const Fd(bf-&gt;n.dot(w-&gt;w)+bf-&gt;d);bestface=bf;if(d&lt;-accuracy){Face*cf =0;Face*ff =0;Unf = 0;Detach(bf);bf-&gt;mark=++markid;for(U i=0;i&lt;3;++i){ nf+=BuildHorizon(markid,w,*bf-&gt;f[i],bf-&gt;e[i],cf,ff); }if(nf&lt;=2){ break; }Link(cf,1,ff,2);} else break;} else break;}</code></pre></div>* FindBest, finds the best face to split.<br>* BuildHorizon, makes the expanded polytope convex.<br>* Support(direction) is the similar to 'localGetSupportingVertexWithoutMargin' in btMinkowskiPenetrationDepthSolver.<br><br>A series of pictures would probably explain this better.<br>Hope this helps,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Jun 30, 2007 4:51 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lonestar]]></name></author>
+		<updated>2007-06-30T05:25:30+00:00</updated>
+
+		<published>2007-06-30T05:25:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4637#p4637</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4637#p4637"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4637#p4637"><![CDATA[
+<blockquote class="uncited"><div>Basically when GJK terminates, the origin is inside the minwkowski sum, and GJK terminates with a simplex (tetrahedron or fewer verts) that encapsulates the origin. The goal is to inflate/expand this tetrahedron until it hits the surface of the minkowski sum, while keeping it convex. Expansion is done by breaking triangles. Keeping it convex is done by keeping the silhouette seen from the new vertex.<br><br>Which part of EPA don't you understand exactly?<br>Thanks,<br>Erwin</div></blockquote>i understand the process EPA is doing, <br>but when it comes to implementing it, i am having a lot of wonders.<br><br>GJK terminates, i have intersection, so now i have the origin and a tetrahedron, i never terminate with less than 4 points in my list.<br><br>ok so the origin is in the tetrahedron, i need to know which face to select so i can make a new tetrahedron until i hit the surface of the minkowski sum.<br>do we agree until now?<br><br><br>so my question is here, how to do that?<br><br>how to select the face?<br>i've been told to cast a ray from the origin having as direction the relative motion vector of the 2 objects,( a with Va, b with Vb, the vector is Va-Vb)<br><br> i see that ray which face it hits, save it, <br>have a new point by calling the support function, do the same test again, keep on doing it until i cant find any furthest point along that direction, it would mean that i hit the minowski's sum.<br><br><br>The points that make up the triangle through which i finally exit the sum are minkowski sums of parts of my objects (each point is an a - b). These tell me what parts of the object are closest ("penetrating"). <br><br><br>do you think this would work?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1810">lonestar</a> — Sat Jun 30, 2007 5:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-06-29T21:14:09+00:00</updated>
+
+		<published>2007-06-29T21:14:09+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4629#p4629</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4629#p4629"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4629#p4629"><![CDATA[
+I moved the topic, because EPA is complicated and not for beginners.<br><br>Before Gino published EPA, we were collegues and shared an office, so we discussed and tried EPA within Blender/Solid. Later I assisted implementing EPA in Havok, and now I'm providing an open source implementation through Bullet, contributed by Nathanael Presson. The basic idea is fairly simple, but getting to the current robust implementation in Bullet is extremely complicated.<br><br>Basic idea behind EPA:<br>Blowing up a balloon embedded within a convex object until it hits the surface.<br><br>Basically when GJK terminates, the origin is inside the minwkowski sum, and GJK terminates with a simplex (tetrahedron or fewer verts) that encapsulates the origin. The goal is to inflate/expand this tetrahedron until it hits the surface of the minkowski sum, while keeping it convex. Expansion is done by breaking triangles. Keeping it convex is done by keeping the silhouette seen from the new vertex.<br><br>Which part of EPA don't you understand exactly?<br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Jun 29, 2007 9:14 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[lonestar]]></name></author>
+		<updated>2007-06-29T16:41:31+00:00</updated>
+
+		<published>2007-06-29T16:41:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4628#p4628</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4628#p4628"/>
+		<title type="html"><![CDATA[expanding GJK]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4628#p4628"><![CDATA[
+<blockquote class="uncited"><div>I recommend Gino's book for GJK/EPA, I don't think the Ericson book covers EPA at all.</div></blockquote>yeah i'm reading Gino's book, but still, it is somehow complicated for me, some areas are easy to understand, and some areas are not! <br>so that is why i had all the above questions.<br><br>anyone who implemented EPA can please explain it to me?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1810">lonestar</a> — Fri Jun 29, 2007 4:41 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

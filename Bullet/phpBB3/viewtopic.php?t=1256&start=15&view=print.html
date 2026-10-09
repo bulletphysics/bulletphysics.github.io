@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; expanding GJK - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>expanding GJK</h2>
+		<p><a href="viewtopic.php%3Ft=1256.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1256</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jun 30, 2007 9:12 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content">so the approach i gave is wrong?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 01, 2007 9:35 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content">i have a question about doing the shallow penetration,<br>
+if you have a sphere, in the support function we are adding a certain margin, <br>
+so it is like we are testing 2 spheres with slightly bigger radius.<br>
+<br>
+shouldn't it be smaller radius? so when there is collision we have the penetrating depth?<br>
+<br>
+can someone explain it in some details please?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 2:01 am</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>I recommend just learning from Bullet's GJK and EPA implementation.<br>
+<br>
+Otherwise, please read those forums more thoroughly, read Christer Ericson and Gino van den Bergen's books on this topic. For further info check:<br>
+<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?=&amp;p=2247" class="postlink">http://www.continuousphysics.com/Bullet ... p?=&amp;p=2247</a><br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+<br>
+<br>
+i thought i would go for the shallow penetration first, <br>
+how would i go?<br>
+<br>
+i know that i should add some margin to the support function, i did that, <br>
+but how to get the distance and the points of intersection?<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 8:25 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Please read the material we provided here more sorrowly. All this is explained e.g. beginning from slide 20 in Erin Catto's slides.<br>
+<br>
+From the slides:<br>
+<br>
+- The support points are scaled up by a small margin to detect contact.<br>
+- Compute the closest points (no margin).<br>
+- This gives the position and normal.<br>
+- The penetration is the margin minus the true distance.<br>
+<br>
+The next two slides have two nice sketches...<br>
+<br>
+<br>
+Also something that might help is to setup a nice simple example that you can follow easily using the debugger, e.g. two unit spheres with distance 1.<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 7:07 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Please read the material we provided here more sorrowly. All this is explained e.g. beginning from slide 20 in Erin Catto's slides.<br>
+<br>
+From the slides:<br>
+<br>
+- The support points are scaled up by a small margin to detect contact.<br>
+- Compute the closest points (no margin).<br>
+- This gives the position and normal.<br>
+- The penetration is the margin minus the true distance.<br>
+<br>
+The next two slides have two nice sketches...<br>
+<br>
+<br>
+Also something that might help is to setup a nice simple example that you can follow easily using the debugger, e.g. two unit spheres with distance 1.<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div></blockquote>
+
+<br>
+my question resides here:<br>
+Compute the closest points (no margin). <br>
+<br>
+how would i compute the closest points, that is what i am not able to make.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 02, 2007 7:57 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The major difference is that instead of computing the projection of the origin onto a searched subsimplex, Casey determines a search direction perpendicular to the subsimplex in the direction of the origin without having the projected point.<br>
+<br>
+This means when your simplex is e.g. a segment you  compute the closest point on this segement to the origin. This is your search direction. In the SAT-GJK there is no simplex in this form. Also when you compute the closest points to the segment (or triangle, tetrahedron) you find baraycentric coordinates (look at Christer's book please!!!). <br>
+<br>
+So your simplex has basically the following structure:<br>
+<br>
+struct Simplex<br>
+{<br>
+int mSize;  // Current number of vertices (1 - 4)<br>
+Vec3 mW[4], mP[4], mQ[4];  <br>
+float mLambda[4]; // Barcentric coordinates<br>
+}<br>
+<br>
+1) Compute u, v, w (SupportPoints - see Bullet)<br>
+2) Add support points to simplex (if not already contained)<br>
+3) Compute the closest point on the simplex to the origin (FindPoint OfMinimumNorm). Since the simplex is either a point, segment, triangle or tetrahedron this breaks down to the computations of (as I have already told you twice)<br>
+<br>
+ClosestPointToPoint<br>
+ClosestPointToSegement<br>
+ClosestPointToTriangle<br>
+ClosestPointToTetrahedron<br>
+<br>
+Your new search direction is the vector from the origin O to this closest point. Thats it! Even though there is quite some heavy math involved it is conceptually relatively easy.<br>
+<br>
+So I suggest the following. <br>
+<br>
+a) Clear your mind from Casey implemention for now<br>
+b) Look at Solid and Bullets implementation and learn form it!<br>
+c) Understand what Johnson's sub-algorithm is and how Bullet replaces it<br>
+b) Implement your own simplex solver based on Voronoi regions. That is implement functions like AddPoint() which should return false if the new point is already in the simplex or better is linear dependent on the current points. Also compute a function PointOfMinimumNorm() which falls back onto the four function mentionend above based on the current size of the simplex.<br>
+<br>
+The major gotcha is the reduction of the simplex. (Steps 2 and 4 in Christers book). As pointed out earlier these steps belong together. So when you compute the closest point and find the barycentric coordinates those vertices that have barycentric coordinates of zero are removed. (E.g. you current simplex is a triangle ABC and you find the closest point on the edge BC all you need to do is to remove vertex A from your current simplex). <br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

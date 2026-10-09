@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9318" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2013-08-01T15:39:29+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9318</id>
+
+		<entry>
+		<author><name><![CDATA[Eaglegor]]></name></author>
+		<updated>2013-08-01T15:39:29+00:00</updated>
+
+		<published>2013-08-01T15:39:29+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=31475#p31475</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=31475#p31475"/>
+		<title type="html"><![CDATA[Question about cluster collision algorithm for cloth]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=31475#p31475"><![CDATA[
+Hi everybody!<br>Hopefully you are not yet much annoyed with my posts )<br><br>I'm a bit confused by a behaviour of cloth lying on the box-shaped ground. I could be seen in bullet soft body demos. I modified code of Init_ClusterCollide1 in this manner:<br><div class="codebox"><p>Code: </p><pre><code>static voidInit_ClusterCollide1(SoftDemo* pdemo){const btScalars=8;btSoftBody*psb=btSoftBodyHelpers::CreatePatch(pdemo-&gt;m_softBodyWorldInfo,btVector3(-s,0,-s),btVector3(+s,0,-s),btVector3(-s,0,+s),btVector3(+s,0,+s),17,17,//9,9,//31,31,0,true);btSoftBody::Material* pm=psb-&gt;appendMaterial();pm-&gt;m_kLST=1.0;pm-&gt;m_flags-=btSoftBody::fMaterial::DebugDraw;psb-&gt;m_cfg.kDF=1;psb-&gt;m_cfg.kSRHR_CL=1;psb-&gt;m_cfg.kSR_SPLT_CL=1;psb-&gt;m_cfg.kSKHR_CL=1;psb-&gt;m_cfg.kSK_SPLT_CL=1;psb-&gt;m_cfg.collisions=btSoftBody::fCollision::CL_SS | btSoftBody::fCollision::CL_RS;psb-&gt;generateBendingConstraints(4,pm);psb-&gt;randomizeConstraints();psb-&gt;getCollisionShape()-&gt;setMargin(2);psb-&gt;setTotalMass(1, true);///pass zero in generateClusters to create  cluster for each tetrahedron or triangle//psb-&gt;generateClusters(0);psb-&gt;generateClusters(64);pdemo-&gt;getSoftDynamicsWorld()-&gt;addSoftBody(psb);//Ctor_RbUpStack(pdemo,10);}</code></pre></div>When the number of clusters is 64, the behavior is so:<br><a href="http://youtu.be/qqz9Bzn4TmI" class="postlink">http://youtu.be/qqz9Bzn4TmI</a><br><br>When there are only 3 clusters, I see this:<br><a href="http://youtu.be/GOPkskRQAm0" class="postlink">http://youtu.be/GOPkskRQAm0</a><br><br>I was a bit confused by jerking in 3-clusters case. I want to ask if my understanding of reasons of these jerks is correct.<br><br>Let's have a part of cloth with cluster:<br><img src="http://s12.postimg.org/9vg1vho3x/Cluster_Problem_Initial_Terms.png" class="postimage" alt="Image"><br><br>It falls on the ground affected by the gravity force. The cluster then gets an impulse to move away from the ground. The impulse, the gravity force and mass-spring forces are applied to vertices of cluster like this:<br><img src="http://s11.postimg.org/6p2jwhfib/Cluster_Problem_Initial_Impulses.png" class="postimage" alt="Image"><br><br>Then vertices are above the ground and convex cluster shape doesn't collide with ground:<br><img src="http://s2.postimg.org/vton5m5rt/Cluster_Problem_Vertices_Up.png" class="postimage" alt="Image"><br><br>A bit later the lowest vertices hit the ground causing the bottom border of cluster collide with ground:<br><img src="http://s24.postimg.org/nr8pedq6d/Cluster_Problem_New_Cluster_Impulse.png" class="postimage" alt="Image"><br><br>The cluster gets a new impulse from this collision and applies it to all own vertices (including the ones which are already in air):<br><img src="http://s24.postimg.org/3wr9600cl/Cluster_Problem_New_Impulses.png" class="postimage" alt="Image"><br><br>Then collided vertices jump in air again, and the next ones hit the ground:<br><img src="http://s22.postimg.org/mgodm6269/Cluster_Problem_New_Collision.png" class="postimage" alt="Image"><br><br>The new impulses are applied to all vertices again:<br><img src="http://s21.postimg.org/glpmwj4zb/Cluster_Problem_Continuous_Collide.png" class="postimage" alt="Image"><br><br>This process repeats endless for different groups of colliding vertices. This could explain why the corners of cloth are flying in air in the 3-clusters case.<br><br>I want to know, if I'm understanding the process correct.<br><br>If I don't make a mistake, the solution could be to generate much more clusters but it slows the simulation. And even with generateClusters(0) I see the jerking with smaller amplitude and higher frequency. Is there any way to avoid it?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10296">Eaglegor</a> — Thu Aug 01, 2013 3:39 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [SOLVED] Collisions not working as intended when setting position/rotation  manually</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[SOLVED] Collisions not working as intended when setting position/rotation  manually</h2>
+		<p><a href="viewtopic.php%3Ft=13486.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13486</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[SOLVED] Collisions not working as intended when setting position/rotation  manually</h3>
+				<div class="date">Posted: <strong>Fri Oct 14, 2022 5:17 am</strong></div>
+				<div class="author">by <strong>Txori</strong></div>
+				<div class="content">Hello everyone.<br>
+I'm working on <a href="https://txori.itch.io/omeganaut" class="postlink">a game called Omeganaut</a>, and I decided to use Bullet for collisions because it will involve physics in the future.<br>
+The engine is <a href="https://www.zgameeditor.org/" class="postlink">ZGameEditor</a> with <a href="https://github.com/Rado-1/ZgeBullet" class="postlink">a wrapper for Bullet Physics Library</a>.<br>
+<br>
+Until now, everything was fine. The player could fly and collide with buildings and enemies made out of collision boxes and spheres. But recently, I started adding pillars that are not vertical and discovered this problem:<br>
+<br>
+When the pillar is vertical or horizontal (fig. A), like a lot of the objects in my game, everything's fine.<br>
+But if it's rotated (fig. B), the ball collides with the box that encompasses the rotated pillar...<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13486&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>shape = zbtCreateCylinderShape(0.5, 10);</code></pre></div>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1950" class="postimage" alt="collision01.png" onclick="viewableArea(this);" /></dt>
+						<dd>collision01.png (51.06 KiB) Viewed 17555 times</dd>
+		</dl>
+		
+		
+			</div>
+
+.<br>
+<br>
+On the contrary, if the shape of the pillar is "complex", the collision works better, but it's not perfect: the ball gets the collision correctly with the pillar, but then it stays collided as long as the ball stays in the red rectangle.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13486&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>shape = zbtCreateCompoundShape();
+zbtAddChildShape(shape, zbtCreateCylinderShape(0.5, 10), 0,0,0, 0,0,0);</code></pre></div>
+
+...<br>
+<br>
+I could replace all shapes by compound shapes in my game, but it would be overkill for what it is supposed to do.<br>
+I made <a href="http://www.emix8.org/forum/viewtopic.php?p=10413#p10413" class="postlink">a working example</a> if you want to try, but here's the general idea:<br>
+I heavily simplified the code for readability. As you will see, it's quite simple. I use setPosRot to set the physics of the rotating pillar, and the coordinates of the ball. Then I use isColliding to check if both collides.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13486&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;OnLoaded&gt;
+	// init physical world
+	xptr World = zbtCreateWorld();
+	zbtSetCurrentWorld(World);
+	
+	// Create models
+	createModel(PillarModel);
+	createModel(BallModel);
+&lt;/OnLoaded&gt;
+  
+&lt;OnUpdate&gt;
+	zbtStepSimulation(App.DeltaTime, 0, 0);
+&lt;/OnUpdate&gt;
+  
+&lt;Model Name="PillarModel"&gt;
+	&lt;Definitions&gt;
+		&lt;Variable Name="PillarBody" Type="xptr"/&gt;
+	&lt;/Definitions&gt;
+      
+	&lt;OnSpawn&gt;
+		xptr shape = zbtCreateCylinderShape(0.5, 10);
+		PillarBody = zbtCreateRigidBody(1, shape, CurrentModel.Position, CurrentModel.Rotation);
+	&lt;/OnSpawn&gt;
+      
+	&lt;OnUpdate&gt;
+		// Rotate the pillar
+		CurrentModel.Rotation.Z += 0.001;
+		zbtSetPosRot(PillarBody, CurrentModel.Position, CurrentModel.Rotation);
+	&lt;/OnUpdate&gt;
+
+	&lt;OnRender&gt;
+		&lt;RenderMesh Mesh="PillarMesh"/&gt;
+	&lt;/OnRender&gt;
+&lt;/Model&gt;
+
+&lt;Model Name="BallModel"&gt;
+	&lt;Definitions&gt;
+		&lt;Variable Name="BallBody" Type="xptr"/&gt;
+	&lt;/Definitions&gt;
+      
+	&lt;OnSpawn&gt;
+		xptr shape = zbtCreateSphereShape(1.0);
+		BallBody = zbtCreateRigidBody(1, shape, CurrentModel.Position, CurrentModel.Rotation);
+	&lt;/OnSpawn&gt;
+      
+	&lt;OnUpdate&gt;
+		// Set Ball position to mouse coordinate
+		CurrentModel.Position = vector3(App.MousePosition.X, App.MousePosition.Y, 0);	
+		zbtSetPosRot(BallBody, CurrentModel.Position, CurrentModel.Rotation);
+
+		// Test collision between ball and rotating pillar
+		if (zbtIsColliding(BallBody)) {
+			BallColor.Color = vector3(1, 0, 0); // red
+		} else {
+			BallColor.Color = vector3(1, 1, 1); // white
+		}
+	&lt;/OnUpdate&gt;
+	
+	&lt;OnRender&gt;
+       		&lt;RenderSetColor Name="BallColor" /&gt;
+		&lt;RenderMesh Mesh="BallMesh"/&gt;
+	&lt;/OnRender&gt;
+&lt;/Model&gt;
+</code></pre></div>
+
+I'm really stuck with this problem. What am I doing wrong ?<br>
+Thanks for your help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collisions not working as intended when setting position/rotation  manually</h3>
+				<div class="date">Posted: <strong>Fri Oct 14, 2022 1:26 pm</strong></div>
+				<div class="author">by <strong>Txori</strong></div>
+				<div class="content">Here's the small executable example to illustrate my problem:
+<ul><li>Move the ball around with the mouse</li>
+<li>Click to switch from simple body shape to compound shape</li></ul></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collisions not working as intended when setting position/rotation  manually</h3>
+				<div class="date">Posted: <strong>Tue Nov 22, 2022 10:15 am</strong></div>
+				<div class="author">by <strong>Txori</strong></div>
+				<div class="content">Thanks to Kjell from ZGameEditor forum, this pesky problem is now solved. The problem was coming from the ITERATE_MANIFOLDS_FOR_OBJECT macro in the c++ wrapper. Collisions are now perfect in Omeganaut and I can start messing with rotating objects and physics.<br>
+<br>
+Maybe I'll make a Pinball game too using ZGameEditor and Bullet3, now that everything is fine!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Tank track simulation?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Tank track simulation?</h2>
+		<p><a href="viewtopic.php%3Ft=9342.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9342</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Tank track simulation?</h3>
+				<div class="date">Posted: <strong>Wed Aug 14, 2013 3:03 pm</strong></div>
+				<div class="author">by <strong>ynm</strong></div>
+				<div class="content">Hi everyone,<br>
+<br>
+I am trying to simulate tank track using Unity built in Physx. Some approaches I have tried:<br>
+<br>
+Use many joints and box colliders to simulate track: very high computing power required. Tried with like under 30 joints and framerate dropped significantly. To simulate real tank like M1 Abrams I need 80 joints for 80 track links, not realistic. Another problem is it is very hard to control and drive tank in this case.<br>
+<br>
+Use multi wheel collider: work well on smooth terrain, but not good when riding over sharp objects like small box, it could penetrate track model because wheel collider use ray casting, so no matter how dense is ray casting, there is away a chance for sharp object penetrate it. Not good for off road simulation.<br>
+<br>
+Another problem is tank track links can not be sketched, while with Physx even the hardest fixed joint or cloth is still sketched considerably.<br>
+<br>
+So I ask for general solution of simulate tank track accurately.<br>
+<br>
+Regards</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Tank track simulation?</h3>
+				<div class="date">Posted: <strong>Wed Aug 14, 2013 6:37 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Not to be nitpicky, but I think you want the word "stretched" not "sketched" - I'm just mentioning this because it took me a moment to figure out what you were saying.<br>
+<br>
+Anyway, that's a challenging problem to do well in realtime. I think you'll definitely have to customize your solution to get what you want. For the joints and box colliders, do you know what's taking up most of the CPU time?<br>
+<br>
+It appears that you would prefer the accuracy of the box colliders, so if that's not taking up too much time, you could stick with those. BUT, I wouldn't try to simulate them as rigid bodies with their actual joints with respect to each other and the wheels and sprockets - that is likely to be VERY expensive, and to be honest an accurate simulation of those joints is probably not going to be appreciated by 99% of your end users.<br>
+<br>
+So if it were me, I'd probably place your collision boxes (tank tracks) programmatically with respect to the tank itself. Then you'll have to accumulate all the forces yourself based on contact info and then apply them to the tank appropriately. The collision boxes would not be simulated rigid bodies (only the tank and maybe the turret and gun would be rigid bodies). That's my first guess of how to attack this problem, based on what I perceive your desired level of simulation to be.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Tank track simulation?</h3>
+				<div class="date">Posted: <strong>Thu Aug 15, 2013 8:04 am</strong></div>
+				<div class="author">by <strong>ynm</strong></div>
+				<div class="content">Ah thank for your help and also your correction, English is not my first language.<br>
+<br>
+In the future I want to switch to bullet because I read that it have cylinder collider which is far better than wheel collider of Physx</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Tank track simulation?</h3>
+				<div class="date">Posted: <strong>Thu Aug 15, 2013 2:38 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Good point, I agree cylinders might work pretty well.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Tank track simulation?</h3>
+				<div class="date">Posted: <strong>Fri Aug 16, 2013 7:58 am</strong></div>
+				<div class="author">by <strong>Basroil</strong></div>
+				<div class="content">You probably don't need to simulate all the joints unless you're talking about optimization techniques, in which case framerate isn't an issue. If you're talking about BF3 style tanks, simply use the raycast vehicle (or equivalent) to know how the tank would drive, and then render the tracks in your graphics (but ignore them in physics). The fewer collisions taking place in a scene the better it is for your simulation. If you used 80 links per side, with 30% in contact (likely higher) and 4 contact points per link, you have about 100 contact points in 24 bodies you need to solve, per side. On top of that you need to solve at least 162 hinge joints per side, which means you're asking for trouble. Just a dozen joints at high iterations and framerate will drop you below 60hz, maybe you can get away with 100 joints at medium iterations and standard framerate, but three times that leaves you with no cpu time to calculate the collisions on top of the joint constraints. By taking link calculations out of the picture, you can drop that to just one body and no joints (or more likely three bodies two joints, main tank+ two treads connected by 6dof joints), and increase simulation stability in the process (no random sliding across a flat surface) <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

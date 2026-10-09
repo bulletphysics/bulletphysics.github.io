@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Extending Box2D  Concepts to Polygon2D</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Extending Box2D  Concepts to Polygon2D</h2>
+		<p><a href="viewtopic.php%3Ft=398.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=398</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Extending Box2D  Concepts to Polygon2D</h3>
+				<div class="date">Posted: <strong>Sat Jul 01, 2006 1:15 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">In Erin Catto's paper: 'Fast and Simple Physics using Sequential Impulses', he uses boxes.  <br>
+I am interested in extending this to 2d convex polygons with more than 4 sides for a simple 2d physics engine I'm developing.<br>
+<br>
+I've read through the code and understand it all for the most part. However, I'm looking for ideas on how to extend the clipping and coherence concepts to non-box bodies.<br>
+<br>
+clipping:  Is there anything that needs to be done differently when using non-boxes? Or is the clipping algo the same regardless of the number of sides?<br>
+<br>
+coherence: Any suggestions on how to implement the "ContactID's" for many sided polygons?  I'm thinking of just using some simple arrays.<br>
+<br>
+Any other tips you can give for moving the concepts in this paper to many-sided convex polygons would be appreciated.<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 01, 2006 9:32 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">It ought to be straightforward. You should store the verts in local space in CCW order. The edge number is implicit: 1, 2, 3, ..., n, where n is the number of verts. Contact IDS are just the two edge numbers that produce the verts. The two edges could come from either polygon (1,1), (1,2), (2,1), or (2,2).<br>
+<br>
+The clipping algorithm is the same: incident edge versus reference edge side edges. For the side edges, just imagine the reference edge belongs to a box and do the same clipping.<br>
+<br>
+Before all that you need to use the SAT for convex polygons. To start with, you can just use the edge normal for each edge of both polygons. Later you my try to optimize this by storing hints in the Arbiters.<br>
+<br>
+I think it would be very cool if you achieve this. Let us know about your progress.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 11, 2006 3:31 am</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Hi Erin, thanks for the response.<br>
+<br>
+I've started digging into this and still have some small questions.<br>
+<br>
+For box/box I can see how the contactId can be made up of the two edge numbers that produce the verts, but with poly-poly, the clipping will most likely not be done by an edge of the poly but rather by "artificial" side vectors perpendicular to the reference edge.  So, the question is what do I use for the contactId in this situation.  The only thing I could think of was to create some additional indexes for these clipping edges  and use those.<br>
+<br>
+Also, in your gdc presentation(slide 15 or so) you breifly talk about applying weightings to prefer one axis over another.  How exactly are you "weighting" your objects. Could you expand a little on this topic?<br>
+<br>
+Thanks again for your help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 11, 2006 5:04 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I see two choices for contact ids:<br>
+<br>
+- use the adjoining edge ids.<br>
+- give each vertex an edge id corresponding to an edge that is perpendicular to the xy-plane.<br>
+<br>
+There is no one right way of defining contact ids. They just have to be unique and consistent.<br>
+<br>
+Now consider the weighting technique used in Box2D. Look at this section of Collide.cpp:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=398&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	axis = FACE_A_X;
+	separation = faceA.x;
+	normal = dA.x &gt; 0.0f ? RotA.col1 : -RotA.col1;
+
+	if (faceA.y &gt; 1.05f * separation + 0.01f * hA.y)
+	{
+		axis = FACE_A_Y;
+		separation = faceA.y;
+		normal = dA.y &gt; 0.0f ? RotA.col2 : -RotA.col2;
+	}
+</code></pre></div>
+
+The code first chooses FACE_A_X as the separating axis. If FACE_A_Y provides a significant increase in separation, then it is chosen as the best separating axis so far. The factor 1.05 requires a 5% increase and 0.01 * hA.y guards against very small separation magnitudes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 12, 2006 12:04 am</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Ok, that's kinda the idea i had for contactID's  Seems pretty straight forward.<br>
+<br>
+Thanks for the info on the weighting. I saw that code but didn't realize that was what you meant by weighting. Makes sense now.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

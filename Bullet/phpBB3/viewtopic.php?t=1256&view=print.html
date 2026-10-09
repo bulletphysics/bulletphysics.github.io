@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; expanding GJK</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>expanding GJK</h2>
+		<p><a href="viewtopic.php%3Ft=1256.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1256</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>expanding GJK</h3>
+				<div class="date">Posted: <strong>Tue Jun 26, 2007 11:24 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content">Hello,<br>
+this is my first post here.<br>
+<br>
+I am currently building my 3d engine, and i am still doing my collision engine.<br>
+<br>
+So for now, i made it working with a yes/no intersection test using GJK.<br>
+but i want to expand it, like have the normal, points of intersection, penetration depth.<br>
+<br>
+What is the best way of do it?<br>
+Can someone explain it to me in an easy approach?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jun 26, 2007 11:24 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content">And just to mention this, i implemented the GJK algorithm the way Casey explained it here:<br>
+<a href="https://mollyrocket.com/forums/viewtopic.php?t=245" class="postlink">https://mollyrocket.com/forums/viewtopic.php?t=245</a><br>
+as i've been reading somewhere that i should be changing the termination case or something like that.<br>
+<br>
+So can anyone explain the steps i have to do in some details please? Because this is the first time i ever work on collision!<br>
+<br>
+Thank you all</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jun 27, 2007 2:01 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I recommend just learning from Bullet's GJK and EPA implementation.<br>
+<br>
+Otherwise, please read those forums more thoroughly, read Christer Ericson and Gino van den Bergen's books on this topic. For further info check:<br>
+<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?=&amp;p=2247" class="postlink">http://www.continuousphysics.com/Bullet ... p?=&amp;p=2247</a><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jun 27, 2007 5:08 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>I recommend just learning from Bullet's GJK and EPA implementation.<br>
+<br>
+Otherwise, please read those forums more thoroughly, read Christer Ericson and Gino van den Bergen's books on this topic. For further info check:<br>
+<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?=&amp;p=2247" class="postlink">http://www.continuousphysics.com/Bullet ... p?=&amp;p=2247</a><br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+<br>
+i have the 2 books, but they are more confusing me, and it is hard for me to understand, there are a lot of methods, i dont know which one to use,<br>
+this is why i am asking, <br>
+like do i use Johnson's distance? EPA?<br>
+<br>
+Bullet GJK's for example, when implementing GJK myself, i did it Casey's way,<br>
+then i took the simplex2,3,4 from your code, they only return intersection when the object1 hits another object2, but  if object1 keeps on penetrating object2, your version will start giving me no intersection.<br>
+<br>
+I never had this case with Casey's method.. mayne i am missing something like with the termination case <br>
+<br>
+you've been saying that you're going to write a paper about extracting the info, did you ever had the chance to do it?<br>
+<br>
+<br>
+Regards</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jun 27, 2007 5:32 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Johnson is the subalgorithm to find the closest point on the simplex to the orign. Bullet uses a Voronoi simplex solver.<br>
+<br>
+I suggest looking at Christer's book page 401. What is a a little confusing in the book is that point 2 and 4 actually belong together. That is when you compute the currently closest point to the simplex you also directly reduce it. E.g. you have a segement and the closest point to the origin is vertex A, then you also directly reduce the simplex to vertex A or if your current simplex is the triangle ABC and you find the closest point is on the segement AC, then you directly reduce your simplex to the segement AC. <br>
+All these closest points calculations use Voronoi regions (see p. 127, 136, 142). Hence the name Voronoi simplex solver. <br>
+<br>
+Casey's GJK implementation doesn't compute closest points, but it only is a boolean query whether to objects intersect or not. Gino calls this the SAT-GJK in his book IIRC. <br>
+<br>
+GJK fails when to objects penetrate. In this case you need another algorithm to find the minimum penetration distance. For this you could use EPA (like Bullet does)<br>
+<br>
+<br>
+HTH a little,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jun 27, 2007 11:10 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Johnson is the subalgorithm to find the closest point on the simplex to the orign. Bullet uses a Voronoi simplex solver.<br>
+<br>
+I suggest looking at Christer's book page 401. What is a a little confusing in the book is that point 2 and 4 actually belong together. That is when you compute the currently closest point to the simplex you also directly reduce it. E.g. you have a segement and the closest point to the origin is vertex A, then you also directly reduce the simplex to vertex A or if your current simplex is the triangle ABC and you find the closest point is on the segement AC, then you directly reduce your simplex to the segement AC. <br>
+All these closest points calculations use Voronoi regions (see p. 127, 136, 142). Hence the name Voronoi simplex solver. <br>
+<br>
+Casey's GJK implementation doesn't compute closest points, but it only is a boolean query whether to objects intersect or not. Gino calls this the SAT-GJK in his book IIRC. <br>
+<br>
+GJK fails when to objects penetrate. In this case you need another algorithm to find the minimum penetration distance. For this you could use EPA (like Bullet does)<br>
+<br>
+<br>
+HTH a little,<br>
+-Dirk</div></blockquote>
+
+well, i dont need to know the distance between the 2 objects if they are not intersecting, i only need to find the distance once i have collision, in other terms i want to find everything related to when the 2 objects intersect: penetration depth, points of contacts, and normal.<br>
+<br>
+so i only need EPA? i wouldnt need Voronoi simplex solver?<br>
+that is what i've been asking, like what algorithm to use to have the information i need?<br>
+<br>
+<br>
+thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 28, 2007 8:32 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think only using EPA would not be the best idea. When using GJK for contact generation you usually have to deal with shallow and deep penetration. Shallow penetration means that the distance is withing some specified margin. Only when you have real penetration you fall back on another method like e.g. EPA. Also note that GJK/EPA will only find one contact point and normal per frame. So you need to collect and maintain contact points over several frames. This is done in btPersistentManifold in Bullet.<br>
+<br>
+The other option is to use SAT and specialized algorithms for sphere, capsule, etc. <br>
+<br>
+Erin has made a nice presentation regarding this topic at this year GDC. You can find it here:<br>
+<br>
+<a href="http://www.gphysics.com/files/GDC2007_ErinCatto.zip" class="postlink">http://www.gphysics.com/files/GDC2007_ErinCatto.zip</a><br>
+<br>
+Contact point generation is in my opinion one of the toughest problems when doing rigid body physics. If you have problems understanding how this works you better use Bullet directly. This will save you a lot of time...<br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 28, 2007 5:17 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>I think only using EPA would not be the best idea. When using GJK for contact generation you usually have to deal with shallow and deep penetration. Shallow penetration means that the distance is withing some specified margin. Only when you have real penetration you fall back on another method like e.g. EPA. Also note that GJK/EPA will only find one contact point and normal per frame. So you need to collect and maintain contact points over several frames. This is done in btPersistentManifold in Bullet.<br>
+<br>
+The other option is to use SAT and specialized algorithms for sphere, capsule, etc. <br>
+<br>
+Erin has made a nice presentation regarding this topic at this year GDC. You can find it here:<br>
+<br>
+<a href="http://www.gphysics.com/files/GDC2007_ErinCatto.zip" class="postlink">http://www.gphysics.com/files/GDC2007_ErinCatto.zip</a><br>
+<br>
+Contact point generation is in my opinion one of the toughest problems when doing rigid body physics. If you have problems understanding how this works you better use Bullet directly. This will save you a lot of time...<br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div></blockquote>
+
+<br>
+<br>
+i am not doing rigid body physics, i just want the info for my collision reaction thing.<br>
+<br>
+Unfortunatly i cant use Bullet, it is a junior school project, and i have to be the one who wrote everything..<br>
+<br>
+I am trying to understand it instead of just hacking it, you know.<br>
+<br>
+I just want to have EPA explained in an easy way to understand so i can know how things work.<br>
+<br>
+so you talked about deep penetration and shallow penetration, with deep penetration i'll be using EPA? <br>
+and for shallow penetration, how would i be doing the margin thing?<br>
+<br>
+<br>
+Erwin, are you planning to do like a documentation of your engine explaining the algorithms you are doing for example?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 28, 2007 11:01 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content">so i've been reading more, and i want to do EPA.<br>
+i am running Casey's SA_GJK to see when i have intersection/no intersection<br>
+since i dont need the shallow penetration.<br>
+<br>
+so after that what should i do?<br>
+i am actually getting somehow what i have to do..<br>
+however i have some questions:<br>
+<br>
+<br>
+we start with the last simplex,  so i cast a ray having an origin (0.0.0) and as direction the direction vector (relative motion).<br>
+<br>
+cant that ray have the opposite direction of the last direction i had when returning the tetrahedron as simplex after intersection? or should it be the relative motion vector?<br>
+<br>
+<br>
+so i do a ray triangle intersection from that ray to the 4 triangles of the tetrahedron to know which face i am exiting? or there is a faster way to do that (classical ray triangle intersection) ?<br>
+<br>
+<br>
+so after that i have the new face, and i call the support function along the direction, i'll get a new point, would the tetrahedron i get be always convex? or it wouldnt matter?<br>
+<br>
+<br>
+we are always assuming that what i start with is a tetrahedron, are there any cases where that is wrong? ie: returning a line or a triangle as a simplex?<br>
+<br>
+i am glad i'm on the good track thinking of this, but here we go, i have a very good number of questions i need answers for..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 29, 2007 8:32 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Sorry, I haven't implemented EPA so far. All I remember that you need some special attention when the simplex containing the origin is not a tetrahedron. Might happen when two spheres are overlapping...<br>
+<br>
+You have two good books and Bullet and SOLID have implementations for the presented algorithms, so you best try to understand how this works. I recommend running Bullet side to side with your collision stuff to see if it works and also this will allow you to step through the code. <br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 29, 2007 3:26 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I recommend Gino's book for GJK/EPA, I don't think the Ericson book covers EPA at all.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 29, 2007 4:41 pm</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content"><blockquote><div><cite>raigan2 wrote:</cite>I recommend Gino's book for GJK/EPA, I don't think the Ericson book covers EPA at all.</div></blockquote>
+
+yeah i'm reading Gino's book, but still, it is somehow complicated for me, some areas are easy to understand, and some areas are not! <br>
+so that is why i had all the above questions.<br>
+<br>
+anyone who implemented EPA can please explain it to me?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 29, 2007 9:14 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I moved the topic, because EPA is complicated and not for beginners.<br>
+<br>
+Before Gino published EPA, we were collegues and shared an office, so we discussed and tried EPA within Blender/Solid. Later I assisted implementing EPA in Havok, and now I'm providing an open source implementation through Bullet, contributed by Nathanael Presson. The basic idea is fairly simple, but getting to the current robust implementation in Bullet is extremely complicated.<br>
+<br>
+Basic idea behind EPA:<br>
+Blowing up a balloon embedded within a convex object until it hits the surface.<br>
+<br>
+Basically when GJK terminates, the origin is inside the minwkowski sum, and GJK terminates with a simplex (tetrahedron or fewer verts) that encapsulates the origin. The goal is to inflate/expand this tetrahedron until it hits the surface of the minkowski sum, while keeping it convex. Expansion is done by breaking triangles. Keeping it convex is done by keeping the silhouette seen from the new vertex.<br>
+<br>
+Which part of EPA don't you understand exactly?<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jun 30, 2007 5:25 am</strong></div>
+				<div class="author">by <strong>lonestar</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Basically when GJK terminates, the origin is inside the minwkowski sum, and GJK terminates with a simplex (tetrahedron or fewer verts) that encapsulates the origin. The goal is to inflate/expand this tetrahedron until it hits the surface of the minkowski sum, while keeping it convex. Expansion is done by breaking triangles. Keeping it convex is done by keeping the silhouette seen from the new vertex.<br>
+<br>
+Which part of EPA don't you understand exactly?<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+i understand the process EPA is doing, <br>
+but when it comes to implementing it, i am having a lot of wonders.<br>
+<br>
+GJK terminates, i have intersection, so now i have the origin and a tetrahedron, i never terminate with less than 4 points in my list.<br>
+<br>
+ok so the origin is in the tetrahedron, i need to know which face to select so i can make a new tetrahedron until i hit the surface of the minkowski sum.<br>
+do we agree until now?<br>
+<br>
+<br>
+so my question is here, how to do that?<br>
+<br>
+how to select the face?<br>
+i've been told to cast a ray from the origin having as direction the relative motion vector of the 2 objects,( a with Va, b with Vb, the vector is Va-Vb)<br>
+<br>
+ i see that ray which face it hits, save it, <br>
+have a new point by calling the support function, do the same test again, keep on doing it until i cant find any furthest point along that direction, it would mean that i hit the minowski's sum.<br>
+<br>
+<br>
+The points that make up the triangle through which i finally exit the sum are minkowski sums of parts of my objects (each point is an a - b). These tell me what parts of the object are closest ("penetrating"). <br>
+<br>
+<br>
+do you think this would work?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jun 30, 2007 4:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There is no motion involved. It would help if you familiarize yourself with sampling the penetration depth, given a certain direction using the minkowski sum of the two objects. This is implemented in Bullet in Bullet/src/BulletCollision/NarrowPhaseCollision/btMinkowskiPenetrationDepthSolver.cpp<br>
+<br>
+The search directions are based on the current triangle/face normals in the (expanding) polytope.<br>
+<br>
+The ending criterium is more complex then 'hits the minkowski surface', I should have be more clear, perhaps some pictures help: imagine a triangle (simplex/polytope) inside a convex polyhedron. You can split the triangle and project the vertex onto the surface. The new simplex that includes the new projected vertex might be concave, so this needs to be made convex.<br>
+<br>
+The ending criterium is when the new penetration distance is 'not decreasing' anymore (or as safety gap for degenerate cases terminate if the total number of iterations is exceeded).<br>
+<br>
+EPA loop from btGjkEpa.cpp
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1256&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>/* Expand hull		*/
+		for(;iterations&lt;EPA_maxiterations;++iterations)
+			{
+			Face*		bf = FindBest();
+			if(bf)
+				{
+				GJK::Mkv*	w = Support(-bf-&gt;n);
+				const F		d(bf-&gt;n.dot(w-&gt;w)+bf-&gt;d);
+				bestface	=	bf;
+				if(d&lt;-accuracy)
+					{
+					Face*	cf =0;
+					Face*	ff =0;
+					U		nf = 0;
+					Detach(bf);
+					bf-&gt;mark=++markid;
+					for(U i=0;i&lt;3;++i)	{ 
+nf+=BuildHorizon(markid,w,*bf-&gt;f[i],bf-&gt;e[i],cf,ff); }
+					if(nf&lt;=2)			{ break; }
+					Link(cf,1,ff,2);
+					} else break;
+				} else break;
+			}
+
+</code></pre></div>
+
+* FindBest, finds the best face to split.<br>
+* BuildHorizon, makes the expanded polytope convex.<br>
+* Support(direction) is the similar to 'localGetSupportingVertexWithoutMargin' in btMinkowskiPenetrationDepthSolver.<br>
+<br>
+A series of pictures would probably explain this better.<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Kinematic objects colliding with dynamic objects very badly</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Kinematic objects colliding with dynamic objects very badly</h2>
+		<p><a href="viewtopic.php%3Ft=13544.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13544</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Kinematic objects colliding with dynamic objects very badly</h3>
+				<div class="date">Posted: <strong>Thu Mar 02, 2023 9:10 pm</strong></div>
+				<div class="author">by <strong>ed_welch</strong></div>
+				<div class="content">Kinematic objects do not seem to interact very well with dynamic objects. When you call m_pRigidBody-&gt;getWorldTransform().setOrigin() it caterpults any dynamic objects in it's way with enormous force. Is this normal?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Kinematic objects colliding with dynamic objects very badly</h3>
+				<div class="date">Posted: <strong>Fri Mar 03, 2023 2:25 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">What you want to do is to also set the velocities of the kinematic object correctly.  Setting the velocities doesn't help move it to new transoforms, but it does help the collision system impart correct velocity on the dynamic object, allowing it to be knocked out of the way instead of getting into a state of interpenetration and then being ejected by non-physical algorithms.<br>
+<br>
+So, you need to measure the velocity and ideally this would be done once per substep, which means you would give your Kinematic object a custom KinematicMotionsState and put the velocity measuring logic inside KinematicMotionState::getWorldTransform() method.  It might look something like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13544&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>///synchronizes world transform from user to physics
+void KinematicMotionState::getWorldTransform(btTransform &amp; newWorldTransform) const override {
+    // linear velocity
+    btVector3 old_position = m_body-&gt;getWorldTransform().getPosition();
+    btVector3 new_position = newWorldTransform.getOrigin();                              
+    btVector3 new_linear_velocity = (new_position - old_position) / SUBSTEP_DURATION;
+    constexpr btScalar MIN_LINEAR_SPEED_SQUARED = 0.0001;     // 1 cm/sec
+    if (new_linear_velocity.length2() &lt; MIN_LINEAR_SPEED_SQUARED) {
+        new_linear_velocity.setZero();
+    }
+    m_body-&gt;setLinearVelocity(new_linear_velocity);
+    
+    // angular velocity
+    btQuaternion old_rotation = m_body-&gt;getWorldTransform().getRotation();
+    btQuaternion new_rotation = newWorldTransform.getRotation();
+    btQuaternion delta_rotation = m_body-&gt;getWorldTransform().getRotation().inverse() * newWorldTransform.getRotation();
+    btScalar delta_angle = delta_rotation.getAngle();
+    btVector3 new_angular_velocity(0.0, 0.0, 0.0);  
+    constexpr btScalar MIN_ANGULAR_SPEED = 0.01; // radians/sec
+    if (angle &gt; MIN_ANGULAR_SPEED) {
+        new_angular_velocity = (angle / SUBSTEP_DURATION) * delta_rotation.getAxis();
+    }
+    m_body-&gt;setAngularVelocity(new_angular_velocity);
+    
+    // transform
+    m_body-&gt;setWorldTransform(newWorldTransform);
+}
+</code></pre></div>
+Note: that is written from scratch and I didn't bother to compile it, so it may have bugs and typos.  Tune the constants to suit your application.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Kinematic objects colliding with dynamic objects very badly</h3>
+				<div class="date">Posted: <strong>Fri Mar 03, 2023 11:51 am</strong></div>
+				<div class="author">by <strong>ed_welch</strong></div>
+				<div class="content">Thanks for the reply. Unfortunately, it makes no difference. I think velocity is ignored for kinematic objects.<br>
+<br>
+Edit:<br>
+I finally figured it out. I was directly updating the WorldTransform, without updating the MotionState. I changed this to update both and now it works great:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13544&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		btTransform&amp; t = m_pRigidBody-&gt;getWorldTransform();
+		t.setOrigin(btVector3(m_x+m_xOffset, m_y+m_yOffset, m_z));
+		m_pRigidBody-&gt;getMotionState()-&gt;setWorldTransform(t);	// adding this line fixed the problem
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

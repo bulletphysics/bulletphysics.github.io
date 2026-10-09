@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Readblend and ListBase</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Readblend and ListBase</h2>
+		<p><a href="viewtopic.php%3Ft=4139.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4139</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Readblend and ListBase</h3>
+				<div class="date">Posted: <strong>Sun Sep 27, 2009 3:38 am</strong></div>
+				<div class="author">by <strong>Sorlaize</strong></div>
+				<div class="content">Hi, I can't seem to load a ListBase struct from a .blend, I am importing an armature which has worked, going by the makesDNA headers and <a href="http://wiki.blender.org/index.php/Dev:Source/Blender/Architecture/Double_Linked_List" class="postlink">this blender page</a>, but I don't really know what I'm doing <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"> <br>
+<br>
+Here is the problem code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=4139&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void
+blend_acquire_armature_from_obj(BlendFile *bf, BlendObject *meobj, bArmature *arm)
+{
+	{
+		BlendObject obj, bListBaseObj, bFirstBoneObj;
+		BlendBlockPointer vblock, fblock, cblock, ttblock,mtblock,dblock, matlink, bFirstBonePtr;
+		int i;
+		int32_t ldata = 123456;
+		float fdata1, fdata2, fdata3;
+
+		blend_init_armature(arm);
+
+		if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,
+			"flag") &amp;&amp;
+			blend_object_getdata(bf, &amp;ldata, obj))) 
+		{
+			printf("invalid armature 0x1\n");
+			meobj-&gt;type = BOBJ_TYPE_INVALID_ARMATURE;
+			return;
+		}
+		arm-&gt;flag = ldata;
+
+		if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,
+			"drawtype") &amp;&amp;
+			blend_object_getdata(bf, &amp;ldata, obj))) 
+		{
+				printf("invalid armature 0x2\n");
+				meobj-&gt;type = BOBJ_TYPE_INVALID_ARMATURE;
+				return;
+		}
+		arm-&gt;drawtype = ldata;
+
+		if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,
+			"bonebase") &amp;&amp;
+				blend_object_structure_getfield(bf, &amp;bListBaseObj, obj,
+				"first") &amp;&amp;
+					//blend_object_structure_getfield(bf, &amp;bFirstBoneObj, bListBaseObj,
+					//"weight") &amp;&amp;
+					blend_object_getdata(bf, &amp;bFirstBonePtr, bListBaseObj))) {
+					abort();
+		}</code></pre></div>
+
+This is the part where I'm trying to get some data from the bones. When I step through the second blend_object_structure_getfield() I can see "ListBase" as the type, so it looked as though I was close.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=4139&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		if (!(blend_object_structure_getfield(bf, &amp;obj, *meobj,
+			"bonebase") &amp;&amp;
+				blend_object_structure_getfield(bf, &amp;bListBaseObj, obj,
+				"first") &amp;&amp;
+					//blend_object_structure_getfield(bf, &amp;bFirstBoneObj, bListBaseObj,
+					//"weight") &amp;&amp;
+					blend_object_getdata(bf, &amp;bFirstBonePtr, bListBaseObj))) {
+					abort();
+		}</code></pre></div>
+
+That code doesn't "abort" but bFirstBonePtr is set to 0 here:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=4139&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>*(BlendBlockPointer*)dest =
+			blend_block_from_blendpointer(blend_file,
+			BGETLEUINT32(data));</code></pre></div>
+So I can't get the data that way, it seems! Any thoughts?<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Readblend and ListBase</h3>
+				<div class="date">Posted: <strong>Tue Oct 06, 2009 7:12 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">ListBase pointers have to be extracted in a special way indeed. <br>
+<br>
+Check out the latest revision of GameKit, I just added some example code how to iterate over a ListBase, object-&gt;ipo-&gt;curve:<br>
+<a href="http://code.google.com/p/gamekit/source/browse/trunk/bullet/Extras/readblend/readblend.c?spec=svn40&amp;r=40#1802" class="postlink">http://code.google.com/p/gamekit/source ... &amp;r=40#1802</a><br>
+<br>
+The ListBase.first pointer can be extracted manually using
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=4139&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void** ptrptr = &amp;block-&gt;array_entries-&gt;field_bytes[block-&gt;array_entries-&gt;field_offsets[obj2.field_index]];
+ BlendBlockPointer ptrlast;
+BlendBlockPointer firstptr = *ptrptr;
+ptrptr++;
+ptrlast= *ptrptr;
+if (firstptr)
+{
+BlendBlockPointer curveblockptr = blend_block_from_blendpointer(bf, firstptr);
+BlendObject curve;
+BlendBlock* block3;
+BlendBlock* block2;
+BlendObject newObj,nextOb;
+BlendBlockPointer nextPtr;
+curve = blend_block_get_object(bf, curveblockptr, 0);
+do {
+        extract_curve_bezier_triples(bf, &amp;curve);
+
+        //blend_acquire_obj_from_obj(bf,&amp;obj,&amp;tmpObj,0);
+        if (!(blend_object_structure_getfield(bf, &amp;nextOb, curve,"next") &amp;&amp;     blend_object_getdata(bf, &amp;nextPtr, nextOb))) 
+        {
+                printf("error: no next?\n");
+        } else
+        {
+                ///this 'next' object would let you iterate over the linked list until next == 0
+                if (nextPtr)
+                {
+                        BlendBlock* block3;
+                        nextOb = blend_block_get_object(bf, nextPtr, 0);
+                        block3 = (BlendBlock*)nextOb.block;
+                        curve = nextOb;
+                }
+        }
+} while (nextPtr);
+}
+</code></pre></div>
+Then iterate as long as you get a valid next pointer, check the above code snippet for IpoCurve bez<br>
+<br>
+Here is some more background on .blend files<br>
+<a href="http://atmind.nl/blender/mystery_ot_blend.html" class="postlink">http://atmind.nl/blender/mystery_ot_blend.html</a><br>
+<a href="http://www.atmind.nl/blender/blender-sdna-249.html" class="postlink">http://www.atmind.nl/blender/blender-sdna-249.html</a><br>
+<br>
+Extracting ListBase linked lists in Armature objects should be possible in a similar way.<br>
+<br>
+If you manage to get it up and running, do you mind sharing your code?<br>
+Thanks,<br>
+Erwin<br>
+<br>
+by the way, Blender 2.50 will change several data structures, so we will update readblend once Blender 2.50 is released. Also note that readblend only supports 32bit, little-endian .blend files.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Readblend and ListBase</h3>
+				<div class="date">Posted: <strong>Sun Oct 18, 2009 1:40 am</strong></div>
+				<div class="author">by <strong>ibkanat</strong></div>
+				<div class="content">I was wondering if there is a plan or way to <a href="http://code.google.com/p/gamekit/issues/detail?id=10" class="postlink">build this on Linux 64 bit</a>.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

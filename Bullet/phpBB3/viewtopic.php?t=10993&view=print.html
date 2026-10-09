@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [SOLVED] Position Based Elastic Rods implementation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[SOLVED] Position Based Elastic Rods implementation</h2>
+		<p><a href="viewtopic.php%3Ft=10993.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10993</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>[SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Jan 05, 2016 2:28 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Hello All,<br>
+<br>
+I am trying to implement the "Position Based Elastic Rods" paper:<br>
+<a href="http://www.nobuyuki-umetani.com/PositionBasedElasticRod/2014_sca_PositionBasedElasticRod.html" class="postlink">http://www.nobuyuki-umetani.com/Positio ... icRod.html</a><br>
+<br>
+All the constraints are nicely derived in the paper's appendix except the bending and twisting constraint, for which the authors do not provide the final position update.<br>
+I know that the derivatives of the Darboux vector given in the appendix need to be plugged into equation (17) in the paper, but I am not sure how to do this. <br>
+<br>
+This is what I got so far using low constraint stiffness: <a href="https://www.youtube.com/watch?v=mQdwS2k4AZ4" class="postlink">https://www.youtube.com/watch?v=mQdwS2k4AZ4</a><br>
+<br>
+I provide the full source code and Unity3D project below. I triple checked all the equations code as well as matrix ops should be fine (although I can't 100% guarantee).<br>
+<br>
+Big thanks in advance for help<br>
+<br>
+korzen303<br>
+<br>
+EDIT:  I  have just reveived a hint: "Equation (17) is an generalization of the typical PBD projection into vector valued constraint. In the bending-twisting constraint, the constraint is vector value (C is a 3-vector). Hence \nabla C is a 3x(3*5) matrix {I think he meant (3x3)*5,  korzen303}. Please compute 3x3 normal matrix (\nabla C)^T(nabla C). And compute inverse. <br>
+The appendix shows how to compute the nabla C:<br>
+<a href="http://www.nobuyuki-umetani.com/PositionBasedElasticRod/PositionBasedElasticRod_appendix.pdf" class="postlink">http://www.nobuyuki-umetani.com/Positio ... pendix.pdf</a>"<br>
+<br>
+I have edited the following source code accordingly, but still getting unstable behaviour.<br>
+EDIT: Get the working code here <a href="https://github.com/korzen/PositionBasedDynamics-ElasticRod" class="postlink">https://github.com/korzen/PositionBased ... ElasticRod</a><br>
+<br>
+The constraint method for a quick glance:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10993&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> /// &lt;summary&gt;
+    /// Projects bending And twisting constraint
+    /// &lt;/summary&gt;
+    /// &lt;param name="n"&gt;Constraint index&lt;/param&gt;
+    /// &lt;param name="pi"&gt;pA, pB and pC are positions of subsequent centreline points. pD and pE are ghost points&lt;/param&gt;
+    /// &lt;param name="wi"&gt;Inverse masses of the corresponding points&lt;/param&gt;
+    /// &lt;param name="dA"&gt;Material frame A consisting of pA, pB and pD. Must be recalculated at each constraint update&lt;/param&gt;
+    /// &lt;param name="dB"&gt;Material frame B consisting of pB, pC and pE. Must be recalculated at each constraint update&lt;/param&gt;
+    /// &lt;param name="darbouxVector"&gt;Darboux vector of this element. Must be recalculated at each constraint update&lt;/param&gt;
+    void ProjectBendingAndTwistingConstraint(int n, ref Vector3 pA, ref Vector3 pB, ref Vector3 pC, ref Vector3 pD, ref Vector3 pE,
+        float wA, float wB, float wC, float wD, float wE, ref Matrix3x3 dA, ref Matrix3x3 dB, ref Vector3 darbouxVector)
+    {
+
+        ComputeMaterialFrame(n, pA, pB, pD, ref dA);
+
+        ComputeMaterialFrame(n + 1, pB, pC, pE, ref dB);
+
+        ComputeDarbouxVector(n, dA, dB, ref darbouxVector);
+
+        ComputeMaterialFrameDerivative(n, pA, pB, pD, dA,
+            ref m_dajpi[0, 0], ref m_dajpi[0, 1], ref m_dajpi[0, 2],
+            ref m_dajpi[1, 0], ref m_dajpi[1, 1], ref m_dajpi[1, 2],
+            ref m_dajpi[2, 0], ref m_dajpi[2, 1], ref m_dajpi[2, 2]);
+
+        ComputeMaterialFrameDerivative(n + 1, pB, pC, pE, dB,
+            ref m_dbjpi[0, 0], ref m_dbjpi[0, 1], ref m_dbjpi[0, 2],
+            ref m_dbjpi[1, 0], ref m_dbjpi[1, 1], ref m_dbjpi[1, 2],
+            ref m_dbjpi[2, 0], ref m_dbjpi[2, 1], ref m_dbjpi[2, 2]);
+
+        ComputeDarbouxGradient(n, darbouxVector, m_midEdgeLength, m_dajpi, m_dbjpi,
+                               dA, dB, m_bendTwistKs,
+                               ref m_deltaOmegas[0],
+                               ref m_deltaOmegas[1],
+                               ref m_deltaOmegas[2],
+                               ref m_deltaOmegas[3],
+                               ref m_deltaOmegas[4]);
+
+        Vector3 C = new Vector3( m_bendTwistKs[0] * (darbouxVector[0] - m_restDarbouxVector[0]),
+                                 m_bendTwistKs[1] * (darbouxVector[1] - m_restDarbouxVector[1]),
+                                 m_bendTwistKs[2] * (darbouxVector[2] - m_restDarbouxVector[2]));
+
+        Matrix3x3 factor_matrix = new Matrix3x3();
+        float[] invMasses = new float[5] { wA, wB, wC, wD, wE };
+        for (int i = 0; i &lt; 5; i++)
+        {
+            //cannot invert the matrix if multiplied by w = 0 (i.e. locked point)
+            // factor_matrix += (m_deltaOmegas[i] * m_deltaOmegas[i].Transpose()) * invMasses[i];
+            factor_matrix += (m_deltaOmegas[i] * m_deltaOmegas[i].Transpose());
+        }
+        factor_matrix = factor_matrix.Inverse();
+
+        Vector3[] deltaPos = new Vector3[5];
+        for (int i = 0; i &lt; 5; ++i)
+        {
+            deltaPos[i] = m_deltaOmegas[i] * (factor_matrix * C);
+        }
+
+        pA -= (m_bendTwistMult * deltaPos[0]);
+        pB -= (m_bendTwistMult * deltaPos[1]);
+        pC -= (m_bendTwistMult * deltaPos[2]);
+        pD -= (m_bendTwistMult * deltaPos[3]);
+        pE -= (m_bendTwistMult * deltaPos[4]);
+
+    }
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 5:26 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Check these implementations: <br>
+<br>
+<a href="https://github.com/serpheroth/rod" class="postlink">https://github.com/serpheroth/rod</a><br>
+<a href="viewtopic.php%3Ft=10113.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... =4&amp;t=10113</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 7:48 am</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Thanks Mobeen,<br>
+<br>
+I based the above constraint code on Serpheroth's implementation. Remotion's , whose demo from the post works very well, did not reveal the code.<br>
+<br>
+I will keep digging</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 11:41 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Here it is: <a href="https://github.com/Remotion/Position-based-Elastic-Rods/releases" class="postlink">https://github.com/Remotion/Position-ba ... s/releases</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 11:46 am</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">The zip files contain only the readMe file, similarly as the GitHub repo. Anyways, I have managed to solve the problem. Will update the source files soon.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 2:09 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content"><blockquote class="uncited"><div>The zip files contain only the readMe file, similarly as the GitHub repo. Anyways, I have managed to solve the problem. Will update the source files soon.</div></blockquote>. <br>
+Really sorry I had not seen the zip contents.  I really don't understand why people create git repos but don't add sources?  Whats the point of keeping an emplty open source repo.  I m glad that u were able to solve ur problem</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 5:05 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content"><a href="https://bitbucket.org/yukikoyama/view-dependent-control-of-elastic-rod-simulation-for-3d/" class="postlink">https://bitbucket.org/yukikoyama/view-d ... on-for-3d/</a><br>
+<br>
+ have found an old repo from the original author.  Hope this will help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 5:14 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I haven't looked, but it's possible that Jan Bender's PBD code has an implementation, too. But no matter since you've apparently found a solution.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 06, 2016 6:14 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content"><blockquote class="uncited"><div><a href="https://bitbucket.org/yukikoyama/view-d" class="postlink">https://bitbucket.org/yukikoyama/view-d</a> ... on-for-3d/<br>
+have found an old repo from the original author. Hope this will help.</div></blockquote>
+
+This is a different paper (except that the first author is also Japanese). But thanks Mobeen anyway, they also use some sort of elastic rod using PBD and oriented particles [Müller and Chentanez, 2011] which is interesting plus they provide the reference source code.<br>
+
+<blockquote class="uncited"><div>
+I haven't looked, but it's possible that Jan Bender's PBD code has an implementation, too. But no matter since you've apparently found a solution.
+</div></blockquote>
+
+It is not there, but I am willing to contribute this to Jan's excellent library.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Fri Jan 08, 2016 5:47 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Korzen,<br>
+   Just for completeness since you have already found the problem, could you let us know what was wrong? or perhaps highlight how PB elastic rods are implemented for the rest of us? It would be a good idea placing your source code on github (if possible) as a reference for others who might fall in trouble when they try their implementation. (I might give it a try over the weekend <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">)<br>
+<br>
+Thanks,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Fri Jan 08, 2016 2:32 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">There was a couple of minor bugs. The main thing was to change the indices when computing the Darboux Vector (not entirely sure why). Again, credits to Serpheroth:<br>
+const int permutation[3][3] = <br>
+{<br>
+	//0, 1, 2,<br>
+	//1, 2, 0,<br>
+	//2, 1, 0<br>
+	0, 2, 1,<br>
+	1, 0, 2,<br>
+	2, 1, 0<br>
+};</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Fri Jan 08, 2016 2:32 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">I have made an implementation for PBD library. It is basically a rough and dirty port of Serpherot's code to Eigen. I will need to spend some more time on matrix ops optimizations. Very likely that his implementation is much faster.<br>
+<br>
+The repo is here. I have asked Jan to pull it into PBD main branch.<br>
+<a href="https://github.com/korzen/PositionBasedDynamics-ElasticRod" class="postlink">https://github.com/korzen/PositionBased ... ElasticRod</a><br>
+<br>
+And the binary for a quick look:<br>
+<a href="https://github.com/korzen/PositionBasedDynamics-ElasticRod/releases/download/v0.1/PBD_ElasticRodDemo.zip" class="postlink">https://github.com/korzen/PositionBased ... odDemo.zip</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Mon Jan 11, 2016 7:46 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi korzen,<br>
+   Sorry to revive this thread again but I think there are still some problems with the current implementation. The solution diverges in the release build and apart from the first two nodes, the rest of nodes disappear to infinity. The debug build works fine but is awefully slow. I am running it on an Intel Core i7 CPU @ 4GHz with 16GB RAM and an NVIDIA GeForce Titan Black GPU on Windows 8.1 64-bit machine. The demo binaries that you shared work fine though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Mon Jan 11, 2016 8:06 am</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Check the readMe file in Demos/ElasticRodDemo:<br>
+<br>
+"IMPORTANT: The OpenMP is not supported in this release!<br>
+By default, the CMake generated ElasticRodDemo project has OpenMP turned on. <br>
+Deactivate it to run the demo, otherwise to rod will explode."<br>
+<br>
+Sorry for the inconvenience</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Mon Jan 11, 2016 9:29 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Check the readMe file in Demos/ElasticRodDemo:<br>
+<br>
+"IMPORTANT: The OpenMP is not supported in this release!<br>
+By default, the CMake generated ElasticRodDemo project has OpenMP turned on.<br>
+Deactivate it to run the demo, otherwise to rod will explode."<br>
+<br>
+Sorry for the inconvenience</div></blockquote>
+Yep sorry I didn't bother reading the readme <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"> works fine after turning openmp off <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

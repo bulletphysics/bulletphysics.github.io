@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13103" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-11-25T20:24:44+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13103</id>
+
+		<entry>
+		<author><name><![CDATA[edwinleonil]]></name></author>
+		<updated>2020-11-25T20:24:44+00:00</updated>
+
+		<published>2020-11-25T20:24:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43194#p43194</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43194#p43194"/>
+		<title type="html"><![CDATA[Re: Malloc error during creatiion of a soft body from a .vtk]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43194#p43194"><![CDATA[
+Hi Fred, thanks for the suggestion. I'll give it a go once more with Gmsh and let you know if I succeeded. If that doesn't work I will try your method.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13828">edwinleonil</a> — Wed Nov 25, 2020 8:24 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[fwegner]]></name></author>
+		<updated>2020-11-23T11:33:55+00:00</updated>
+
+		<published>2020-11-23T11:33:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43190#p43190</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43190#p43190"/>
+		<title type="html"><![CDATA[Re: Malloc error during creatiion of a soft body from a .vtk]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43190#p43190"><![CDATA[
+I examined the .vtk and compared it to the torus.vtk from the examples that worked.<br> <br> 1. The cube has type POLYDATA while my torus has type UNSTRUCTURED_GRID<br> 2. The cube1.vtk has version 5.1 while the torus has vtk data file version 2.0<br> 3. The cube1.vtk is not a tetrahedral volumetric mesh. I triangulized it, but I did not tetrahedalize it.<br><br>I will try to sort out these issues as they are all possible causes for the error and will post updates.<br>The problematic 'cube1.vtk' can be found here: <a href="https://gofile.io/d/tkJ4ue" class="postlink">https://gofile.io/d/tkJ4ue</a><br><br>UPDATE:<br>I tetrahedralized my original .obj using <a href="https://github.com/Yixin-Hu/TetWild" class="postlink">https://github.com/Yixin-Hu/TetWild</a> resulting in a .msh file.<br>Then I used <a href="https://pypi.org/project/meshio/" class="postlink">https://pypi.org/project/meshio/</a> to convert the .msh to .vtk. The resulting .vtk was of data file version 5.1 which is indeed an issue.<br>I could not find any tool that would convert between different versions of the vtk data file format.<br>Therefore I wrote a script myself that converts from 5.1 to 2.0. Use with cation as some things are hard coded to my files.<br><div class="codebox"><p>Code: </p><pre><code>import numpy as npimport osimport sys# load 5.1def pad_last(list_of_arrays):forlast = list_of_arrays[-2]last = np.zeros_like(forlast)last[:len(list_of_arrays[-1])] = list_of_arrays[-1]list_of_arrays[-1] = lastreturn list_of_arraysfilename = sys.argv[1]outname = "converted".join(os.path.splitext(filename))with open(filename, 'r') as f:points = []offsets = []connectivity = []meta = []reading_section = "meta"for l in f.readlines():if "POINTS" in l:reading_section = "points"n_points = int(l.split(" ")[1])continueelif "OFFSET" in l:reading_section = "offsets"continueelif "CONNECTIVITY" in l:reading_section = "connec"continueelif "META" in l or l == "\n":reading_section = "meta"if reading_section == "meta":meta.append(l)if reading_section == "points":points.append(np.array([float(x) for x in l.split(" ") if x not in ["\n", ""]]))if reading_section == "offsets":offsets.append(np.array([int(x) for x in l.split(" ") if x not in ["\n", ""]]))if reading_section == "connec":connectivity.append(np.array([int(x) for x in l.split(" ") if x not in ["\n", ""]], dtype=np.int64))points = pad_last(points)offsets = pad_last(offsets)connectivity = pad_last(connectivity)points = np.stack(points)offsets = np.stack(offsets)connectivity = np.stack(connectivity)print(points.shape)print(offsets.shape)print(connectivity.shape)# convert to 2.0 formatpoints = points.reshape(-1, 3)[:n_points]offsets = offsets.reshape(-1)offset = offsets[1] - offsets[0]cells = connectivity.reshape(-1, offset)cells_with_offset = np.zeros((cells.shape[0], offset+1))print(cells_with_offset.shape)cells_with_offset[:, 1:] = cellscells_with_offset[:, 0] = offset# write 2.0with open(outname, 'w') as f:f.write("# vtk DataFile Version 2.0\ncustom vtk output\nASCII\nDATASET UNSTRUCTURED_GRID\n")# write pointsf.write("POINTS {} double\n".format(n_points))for p in points:f.write(" ".join([str(x) for x in p])+"\n")f.write("\n")f.write("CELLS {} {}\n".format(cells_with_offset.shape[0], cells_with_offset.shape[0] * cells_with_offset.shape[1]))for c in cells_with_offset:f.write(" ".join([str(int(x)) for x in c]) + "\n")f.write("\n")f.write("CELL_TYPES {}\n".format(cells_with_offset.shape[0]))f.writelines(["10\n"]*cells_with_offset.shape[0])</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13820">fwegner</a> — Mon Nov 23, 2020 11:33 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[edwinleonil]]></name></author>
+		<updated>2020-11-22T17:43:21+00:00</updated>
+
+		<published>2020-11-22T17:43:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43189#p43189</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43189#p43189"/>
+		<title type="html"><![CDATA[Re: Malloc error during creatiion of a soft body from a .vtk]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43189#p43189"><![CDATA[
+Hi, I'm trying to load a VTK file to simulate a soft body (a bendable electric cable) but I'm getting this message: "Load deformable failed: Only Tetrahedra are supported in VTK file.<br><br>I used Gmsh to generate the VTK format file but it seems that it is not pure tetrahedral mesh. Could anyone advise what is the best way to generate a VTK file for soft body simulation?   Many thanks.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13828">edwinleonil</a> — Sun Nov 22, 2020 5:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2020-11-13T22:15:43+00:00</updated>
+
+		<published>2020-11-13T22:15:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43186#p43186</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43186#p43186"/>
+		<title type="html"><![CDATA[Re: Malloc error during creatiion of a soft body from a .vtk]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43186#p43186"><![CDATA[
+It could be the vtk file, can you attach (zipped) cube1.vtk?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Nov 13, 2020 10:15 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[fwegner]]></name></author>
+		<updated>2020-11-10T05:30:20+00:00</updated>
+
+		<published>2020-11-10T05:30:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43181#p43181</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43181#p43181"/>
+		<title type="html"><![CDATA[Malloc error during creatiion of a soft body from a .vtk]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43181#p43181"><![CDATA[
+Hey guys,<br><br>I am currently trying to simulate silicone using the pybullet soft body engine. I have noticed that the examples use .vtk files as meshes and not the .obj commonly used for rigid bodies. After further investigation I think to have understood that .vtk files, when loaded result in a volumetric mesh while .obj yield a hollow shell mesh. Can anybody here confirm this assumption? When loading soft bodies loaded from .obj they indeed behave like an inflated balloon.<br><br>Using the python vtk API, I loaded my .obj files and saved them as .vtk. But when loading these .vtk with the following code: <br><div class="codebox"><p>Code: </p><pre><code>p.connect(p.GUI)p.resetSimulation(p.RESET_USE_DEFORMABLE_WORLD)p.loadSoftBody(    "res/cube1.vtk", basePosition=[0,0,0.01 ], baseOrientation=p.getQuaternionFromEuler([0,0,0]), scale=1, mass=0.1)while True:    p.stepSimulation()</code></pre></div>pybullet crashes on stepSimulation() with:<br><div class="codebox"><p>Code: </p><pre><code>malloc(): invalid size (unsorted)</code></pre></div>If I load the torus.vtk from the examples, no crash occures. Therefore I assume, that my .vtk is somehow faulty.<br><br>So tld: how to create a .vtk that can be loaded without pybullet crashing?<br><br>Thank you in advance, any help is appreciated.<br><br>Best,<br>Fred<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13820">fwegner</a> — Tue Nov 10, 2020 5:30 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

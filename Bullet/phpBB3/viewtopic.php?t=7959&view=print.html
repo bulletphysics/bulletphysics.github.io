@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Sleeve over hinge/elbow joint demo</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Sleeve over hinge/elbow joint demo</h2>
+		<p><a href="viewtopic.php%3Ft=7959.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7959</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Sleeve over hinge/elbow joint demo</h3>
+				<div class="date">Posted: <strong>Mon Mar 12, 2012 8:51 pm</strong></div>
+				<div class="author">by <strong>pmanandhar</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I have created a sleeved joint. If you want, I have reproduced source code to be integrated into the SoftDemo.cpp file. A video of screen-captures is posted at: <a href="http://youtu.be/LiYYqO2BxyQ" class="postlink">http://youtu.be/LiYYqO2BxyQ</a><br>
+<br>
+I also have a question, request for improvement. When the joint includes a "ball", body3 in the code below, at large joint angles, the cloth passes through the ball. I think it is similar to some cloth problems that other people were reporting in this forum. If you can fix it, please do so. I have been trying to fix it with smaller timesteps, collision margins, and other things suggested without much success. This also happens if the joint is flexed too fast.<br>
+<br>
+Thanks, Prakash.<br>
+<br>
+SoftDemo.cpp
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7959&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static btScalar SleeveTriMesh_GetX(const int m, const int M, const btVector3&amp; origin, const btScalar r)
+{
+	return origin.x() + r*cos(2*M_PI/(M + 0.0)*m);
+}
+
+static btScalar SleeveTriMesh_GetZ(const int m, const int M, const btVector3&amp; origin, const btScalar r)
+{
+	return origin.z() + r*sin(2*M_PI/(M + 0.0)*m);
+}
+
+static btScalar SleeveTriMesh_GetY(const int n, const int N, const btVector3&amp; origin, const btScalar h)
+{
+	return origin.y() + h*n/(N - 1.0);
+}
+
+static void Init_SleevedJoint_GetSleeveTriMesh(btScalar*	vertices,
+		int* triangles,
+		const int M, const int N, const btVector3&amp; origin, const btScalar radius, const btScalar height)
+{
+	for(int n = 0; n &lt; N-1; n++)
+	for(int m = 0; m &lt; M; m++)
+	{
+		int p = n*M + m;
+		vertices[p*3 + 0] = SleeveTriMesh_GetX(m, M, origin, radius);
+		vertices[p*3 + 1] = SleeveTriMesh_GetY(n, N, origin, height);
+		vertices[p*3 + 2] = SleeveTriMesh_GetZ(m, M, origin, radius);
+		triangles[6*p + 0] = p;
+		triangles[6*p + 1] = p + M;
+		triangles[6*p + 2] = (m == M - 1)?p - M + 1:p + 1;
+		triangles[6*p + 3] = triangles[6*p + 2];
+		triangles[6*p + 4] = p + M;
+		triangles[6*p + 5] = triangles[6*p + 2] + M;
+	}
+
+	for(int m = 0; m &lt; M; m++)
+	{
+		int n = N - 1;
+		int p = n*M + m;
+		vertices[p*3 + 0] = SleeveTriMesh_GetX(m, M, origin, radius);
+		vertices[p*3 + 1] = SleeveTriMesh_GetY(n, N, origin, height);
+		vertices[p*3 + 2] = SleeveTriMesh_GetZ(m, M, origin, radius);
+	}
+}
+
+//
+// Joint with sleeve.
+//
+static void	Init_SleevedJoint(SoftDemo* pdemo)
+{
+	const int COLLISION_MARGIN = 0.001;
+	const btScalar Z_LOCATION = 2.0;
+	const int M_PATCH = 30, N_PATCH = 30;
+	btScalar vertices[M_PATCH*N_PATCH*3];
+	const int ntriangles = M_PATCH*(N_PATCH - 1)*2;
+	int triangles[ntriangles*3];
+
+	Init_SleevedJoint_GetSleeveTriMesh(vertices, triangles,
+		M_PATCH, N_PATCH, btVector3(0, 1.5, Z_LOCATION), 2.1, 19);
+
+//#define SLEEVE_DEBUG 1
+
+#ifdef SLEEVE_DEBUG
+	for(int nv = 0; nv &lt; M_PATCH*N_PATCH*3; nv++)
+		printf("vertices(%d) = %g\n", nv, vertices[nv]);
+#endif
+
+	//
+	
+	btTransform startTransform;
+	startTransform.setIdentity();
+	startTransform.setOrigin(btVector3(0, 4, Z_LOCATION));
+	btRigidBody* body1 = pdemo-&gt;localCreateRigidBody(50,startTransform,new btCapsuleShape(2,6));
+	body1-&gt;getCollisionShape()-&gt;setMargin(COLLISION_MARGIN);
+	body1-&gt;setRestitution(1.0);
+	body1-&gt;setDamping(0.9, 0.9);
+	body1-&gt;setCcdMotionThreshold(0.001);
+	
+	startTransform.setIdentity();
+	startTransform.setOrigin(btVector3(0, 10.6, Z_LOCATION));
+	btRigidBody* body3 = pdemo-&gt;localCreateRigidBody(00,startTransform,new btSphereShape(1.5));
+	body3-&gt;getCollisionShape()-&gt;setMargin(COLLISION_MARGIN);
+	body3-&gt;setRestitution(1.0);
+	body3-&gt;setCcdMotionThreshold(0.001);
+
+	startTransform.setIdentity();
+	startTransform.setOrigin(btVector3(0, 17.2, Z_LOCATION));
+	btRigidBody* body2 = pdemo-&gt;localCreateRigidBody(00,startTransform,new btCapsuleShape(2,6));
+	body2-&gt;getCollisionShape()-&gt;setMargin(COLLISION_MARGIN);
+
+	btHingeConstraint *hingeC = 
+		new btHingeConstraint(*body1,  
+		btVector3(0, 5.5, 0),
+		btVector3(0, 0, 1)
+		);
+	hingeC-&gt;setLimit(btScalar(-M_PI_4), btScalar(M_PI_4));
+	pdemo-&gt;getDynamicsWorld()-&gt;addConstraint(hingeC, false);
+
+	btSoftBody*	psb = btSoftBodyHelpers::CreateFromTriMesh( pdemo-&gt;m_softBodyWorldInfo,
+			vertices, triangles, ntriangles, false);
+	psb-&gt;getCollisionShape()-&gt;setMargin(COLLISION_MARGIN);
+	btSoftBody::Material* pm=psb-&gt;appendMaterial();
+	pm-&gt;m_kLST		=	0.1;
+	//pm-&gt;m_flags		-=	btSoftBody::fMaterial::DebugDraw;
+	psb-&gt;generateBendingConstraints(3,pm);
+	psb-&gt;setTotalMass(10);
+	//psb-&gt;setFriction(500.0);
+	psb-&gt;m_cfg.kDF = 0.5;
+	psb-&gt;m_cfg.kDP = 0.2;
+	psb-&gt;m_cfg.kKHR = 1.0;
+	psb-&gt;m_cfg.kPR = 0.5;
+	//psb-&gt;m_cfg.piterations = 1;
+	psb-&gt;m_cfg.timescale = 0.1;
+	psb-&gt;setContactProcessingThreshold(0);
+	psb-&gt;m_cfg.collisions = btSoftBody::fCollision::SDF_RS +
+		btSoftBody::fCollision::CL_SS +
+		btSoftBody::fCollision::CL_SELF;
+	//psb-&gt;generateClusters(64);
+	psb-&gt;setPose(true, false);
+	pdemo-&gt;getSoftDynamicsWorld()-&gt;addSoftBody(psb);
+
+
+	for (int m = 0; m &lt; M_PATCH; m++) {
+		psb-&gt;appendAnchor(m, body1, false, 1.0);
+		psb-&gt;appendAnchor(M_PATCH*N_PATCH - m - 1, body2, false, 1.0);
+	}
+	pdemo-&gt;getDynamicsWorld()-&gt;getSolverInfo().m_splitImpulse = true;
+	
+	pdemo-&gt;m_cutting=true;
+}</code></pre></div>
+
+SoftDemo.cpp, Init section<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7959&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	/* Init		*/ 
+	void (*demofncs[])(SoftDemo*)=
+	{
+		Init_Cloth,
+		Init_Pressure,
+		Init_Volume,
+		Init_Ropes,
+		Init_RopeAttach,
+		Init_ClothAttach,
+		Init_Sticks,	
+		Init_Collide,
+		Init_Collide2,
+		Init_Collide3,
+		Init_Impact,
+		Init_Aero,
+		Init_Aero2,
+		Init_Friction,			
+		Init_Torus,
+		Init_TorusMatch,
+		Init_Bunny,
+		Init_BunnyMatch,
+		Init_Cutting1,
+		Init_ClusterDeform,
+		Init_ClusterCollide1,
+		Init_ClusterCollide2,
+		Init_ClusterSocket,
+		Init_ClusterHinge,
+		Init_ClusterCombine,
+		Init_ClusterCar,
+		Init_ClusterRobot,
+		Init_ClusterStackSoft,
+		Init_ClusterStackMixed,
+		Init_TetraCube,
+		Init_TetraBunny,
+		Init_SleevedJoint
+	};</code></pre></div>
+
+SoftDemo.h
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7959&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>MACRO_SOFT_DEMO(30)//Init_SleevedJointDemo
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sleeve over hinge/elbow joint demo</h3>
+				<div class="date">Posted: <strong>Tue Mar 13, 2012 12:26 am</strong></div>
+				<div class="author">by <strong>pmanandhar</strong></div>
+				<div class="content"><blockquote><div><cite>pmanandhar wrote:</cite>
+I also have a question, request for improvement. When the joint includes a "ball", body3 in the code below, at large joint angles, the cloth passes through the ball. I think it is similar to some cloth problems that other people were reporting in this forum. If you can fix it, please do so. I have been trying to fix it with smaller timesteps, collision margins, and other things suggested without much success. This also happens if the joint is flexed too fast.
+</div></blockquote>
+
+As I am experimenting with it, having a higher mesh-density combined with smaller time-steps seems to help, especially the fabric is allowed to "bake"/settle to an equilibrium position.<br>
+<br>
+Adjusted code, only modified portions:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7959&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const int M_PATCH = 50, N_PATCH = 50;</code></pre></div>
+
+Added possibility for the elbow, sphere to move around a little bit:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7959&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>startTransform.setIdentity();
+	startTransform.setOrigin(btVector3(0, 10.6, Z_LOCATION));
+	btRigidBody* body3 = pdemo-&gt;localCreateRigidBody(50,startTransform,new btSphereShape(1.5));
+	body3-&gt;getCollisionShape()-&gt;setMargin(COLLISION_MARGIN);
+	body3-&gt;setRestitution(1.0);
+	body3-&gt;setCcdMotionThreshold(0.001);
+	btHingeConstraint *hingeC3 = 
+		new btHingeConstraint(*body3,  
+		btVector3(0, 1.5, 0),
+		btVector3(0, 0, 1)
+		);
+	hingeC3-&gt;setLimit(btScalar(-M_PI_4/2), btScalar(M_PI_4/2));
+	pdemo-&gt;getDynamicsWorld()-&gt;addConstraint(hingeC3, false);</code></pre></div>
+
+Increased step-time resolution, in void SoftDemo::clientMoveAndDisplay():
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7959&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>numSimSteps = m_dynamicsWorld-&gt;stepSimulation(dt,10,1./420.f);</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

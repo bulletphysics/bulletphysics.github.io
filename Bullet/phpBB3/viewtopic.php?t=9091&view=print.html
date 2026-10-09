@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Box Box Collider - ODE style or GJK?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Box Box Collider - ODE style or GJK?</h2>
+		<p><a href="viewtopic.php%3Ft=9091.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9091</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Box Box Collider - ODE style or GJK?</h3>
+				<div class="date">Posted: <strong>Sun May 12, 2013 7:21 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">Hello,<br>
+<br>
+Looking at a number of physics engines it seems that some use an explicit box-box collider, while others use GJK. Bullet appears to support both, with the Box v Box from ODE being used as default.<br>
+<br>
+What are the pros and cons of these two approaches? Is there any documentation or description of the technique ODE uses - it appears to be SAT? Our engine supports persistent manifolds, so I would assume GJK and Box v Box would ultimately generate the same point set.<br>
+<br>
+Has anyone experimented with exploiting frame coherence with either of these approaches?<br>
+<br>
+I would like to implement an effective and robust solution so input and experiences would be appreciated.<br>
+<br>
+Best,<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Box Box Collider - ODE style or GJK?</h3>
+				<div class="date">Posted: <strong>Mon May 13, 2013 3:48 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Essentially there are two approaches: Incremental and full manifolds. <br>
+<br>
+With incremental manifolds you find one contact per frame (e.g. using GJK) and build your manifold over time. The problem with this approach is that you need 4 frames until you have a stable manifold. A manifold is stable when the center of mass projects inside the manifold. Say you have a box. In the first frame you find one corner point. This creates an artificial torque which often looks awkward. In the second frame you will find the next point on the other side of box. This is still not stable since the box can rotate around the line between the contact points and potentially tunnel out of the world. In practice many artists are complaining about the artificial torque. It makes objects to appear very light weight and this is sometimes called the Styrofoam effect therefore. The tunneling is a major problem since you don't want objects to tunnel out of the world under any circumstances. So you start working around this with speculative contacts which makes a simple problem rather complex. You don't want to go into this direction. You solve one problem and get five new ones <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+For direct manifolds you find the axis of minimum penetration and then build contact points using clipping. You can use SAT, GJK or EPA, but it seems SAT is the more popular choice for this. As e.g. the ODE box/box collider. The full manifold solves the two problems mentioned above. I gave a presentation at the GDC about the SAT version between convex polyhedra this year. The presentation is a bit dense so I also released some source code. You kind find it here: <a href="https://box2d.googlecode.com/files/DGregorius_GDC2013.zip" class="postlink">https://box2d.googlecode.com/files/DGre ... DC2013.zip</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Box Box Collider - ODE style or GJK?</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 5:32 am</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">Dirk,<br>
+<br>
+Thanks again for your input.<br>
+<br>
+I've implemented a persistent contact manifold that accepts incremental or full manifolds. My first attempt at using contacts from GJK show the artificial torque, as expected. I'll look into the clipping approach next. Thanks for the zip file.<br>
+<br>
+Making great progress — now I just need to get this stuff running fast enough on handhelds.<br>
+<br>
+Best,<br>
+<br>
+S</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

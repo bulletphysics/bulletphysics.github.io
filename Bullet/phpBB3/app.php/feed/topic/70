@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/70" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-12-20T10:34:03+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/70</id>
+
+		<entry>
+		<author><name><![CDATA[steveh]]></name></author>
+		<updated>2005-12-20T10:34:03+00:00</updated>
+
+		<published>2005-12-20T10:34:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=524#p524</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=524#p524"/>
+		<title type="html"><![CDATA[High Level simulator pseudo code]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=524#p524"><![CDATA[
+Hi all, this is my first post here, so please bare with me. <br><br>jmc : Thanks for the pseudo code, I've just started out on a simulator, and I'd have written exaclty the same pseudo code as you. It's nice to know you're thinking along the same lines...<br><br>You have:<br><br>build_collision_queue: <br>  empty queue <br>  foreach body i <br>    foreach body j <br>      calculate TOI between i &amp; j <br>      insert TOI,i,j into priority queue <br><br>Do you have a cunning way of elimating redundant checks between bodies you've already tested? For example you wouldn't want to test body 0 with body 2, then later in your loop test body 2 with body 0 would you? (as you would be calculating the forces twice).<br><br>I *think* if you insert the line:<br><br>build_collision_queue: <br>  empty queue <br>  foreach body i <br>    foreach body j <br>      if(j &gt;= i){              // This line here.<br>         calculate TOI between i &amp; j <br>         insert TOI,i,j into priority queue <br>      }<br><br>This would stop any redundant checks. I realise I'm being pedantic, but I'm just starting my own simulator and I want to be aware of the pitfalls.<br><br>Also, as you are only interested in collisions that are earlier than your current earliest TOI, I assume you dont need to add them to the the list?<br><br>We might be able to refine the pseudo code to a slightly lower level, I think people new to this area would find very useful (myself included).<br><br>Thanks,<br><br>Steve.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=375">steveh</a> — Tue Dec 20, 2005 10:34 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2005-08-03T09:47:36+00:00</updated>
+
+		<published>2005-08-03T09:47:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=187#p187</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=187#p187"/>
+		<title type="html"><![CDATA[Re: High Level simulator pseudo code]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=187#p187"><![CDATA[
+I replied earlier, but changed my mind, deleted it and decided to reformulate it.<br><blockquote class="uncited"><div>Hi, this is my first post. So let me introduce myself. I'm John McCutchan, I go to McMaster University in Hamilton, Ontario. I have been interested in 3D Physics engines for about a year now.<br><br>Last year I wrote a rigid body simulator based on the paper 'Non-convex rigid bodies with stacking'. I have since replaced the collision detection algorithm with GJK. Currently I am trying to implement ray casting and TOI GJK. </div></blockquote>Can you share anything ? Do you have a demo ? Would be nice !<br><blockquote class="uncited"><div>Lately I have been thinking about the high level simulator algorithm. I'm about half way through the timewarp paper by Mirtich. But, I'm starting to think that the timewarp algorithm is over kill. As far as I can see, there are two possible main loops.<br><br>1:<div class="codebox"><p>Code: </p><pre><code>loop  foreach body i    foreach body j      calculate TOI between i &amp; j      update i &amp; j to TOI      respond to collisionend loop</code></pre></div>or 2:<div class="codebox"><p>Code: </p><pre><code>build_collision_queue:  empty queue  foreach body i    foreach body j      calculate TOI between i &amp; j      insert TOI,i,j into priority queueloop  build_collision_queue  while (NOT_EMPTY collision_queue)    TOI = FRONT(collision_queue)    update simulation to TOI    respond to collisions    build_collision_queue ()end loop</code></pre></div>From what I can tell, 2 should work perfectly. And 1 should work about as well as a discrete collision detection system. <br><br>I'm curious what other peoples main loops look like. Are people using the timewarp algorithm? What kind of overhead does the timewarp algorithm have?<br><br>-John</div></blockquote>Doom 3 approach is similar to your mainloop 1:<br><div class="codebox"><p>Code: </p><pre><code>loop- (continuous) collision detection for all bodies, to gather contact points- resolve constraints using LCP for ragdoll- foreach body i- foreach body japply impulse on contactcalculate toi, integrate to a safe (non-penetrating) position</code></pre></div>Loop 2 is more global correct solution for time of impact. However every time of impact event will cause ALL objects to be integrated again etc.<br>This can be a big overhead. This is exactly what Time Warp solves:<br><br>Make an initial estimate of independent groups. Then simulate each group independently, with your loop 2. If the estimation fails, which leads to merging (fusion) or splitting (fision) groups, time warp messages are send, perhaps roll back (especially when you implement this in a parallel way, and do optimistic approach, assuming estimation was fine).<br><br>The cost of timewarp can be reduced in several ways. More conservative estimation will avoid fusion/fision. You can also ignore most fisions (splits).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Aug 03, 2005 9:47 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[John McCutchan]]></name></author>
+		<updated>2005-08-03T03:14:33+00:00</updated>
+
+		<published>2005-08-03T03:14:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=186#p186</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=186#p186"/>
+		<title type="html"><![CDATA[Missing reply?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=186#p186"><![CDATA[
+What happened to the reply that I saw earlier?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=148">John McCutchan</a> — Wed Aug 03, 2005 3:14 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[John McCutchan]]></name></author>
+		<updated>2005-08-02T02:05:27+00:00</updated>
+
+		<published>2005-08-02T02:05:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=181#p181</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=181#p181"/>
+		<title type="html"><![CDATA[High Level simulator pseudo code]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=181#p181"><![CDATA[
+Hi, this is my first post. So let me introduce myself. I'm John McCutchan, I go to McMaster University in Hamilton, Ontario. I have been interested in 3D Physics engines for about a year now.<br><br>Last year I wrote a rigid body simulator based on the paper 'Non-convex rigid bodies with stacking'. I have since replaced the collision detection algorithm with GJK. Currently I am trying to implement ray casting and TOI GJK. <br><br>Lately I have been thinking about the high level simulator algorithm. I'm about half way through the timewarp paper by Mirtich. But, I'm starting to think that the timewarp algorithm is over kill. As far as I can see, there are two possible main loops.<br><br>1:<br><br>loop<br>  foreach body i<br>    foreach body j<br>      calculate TOI between i &amp; j<br>      update i &amp; j to TOI<br>      respond to collision<br>end loop<br><br>or 2:<br><br>build_collision_queue:<br>  empty queue<br>  foreach body i<br>    foreach body j<br>      calculate TOI between i &amp; j<br>      insert TOI,i,j into priority queue<br><br>loop<br>  build_collision_queue<br>  while (NOT_EMPTY collision_queue)<br>    TOI = FRONT(collision_queue)<br>    update simulation to TOI<br>    respond to collisions<br>    build_collision_queue ()<br>end loop<br><br>From what I can tell, 2 should work perfectly. And 1 should work about as well as a discrete collision detection system. <br><br>I'm curious what other peoples main loops look like. Are people using the timewarp algorithm? What kind of overhead does the timewarp algorithm have?<br><br>-John<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=148">John McCutchan</a> — Tue Aug 02, 2005 2:05 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

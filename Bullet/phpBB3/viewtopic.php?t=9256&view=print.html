@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; stepSimulation() and ticks</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>stepSimulation() and ticks</h2>
+		<p><a href="viewtopic.php%3Ft=9256.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9256</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>stepSimulation() and ticks</h3>
+				<div class="date">Posted: <strong>Sat Jul 06, 2013 10:57 pm</strong></div>
+				<div class="author">by <strong>bill23</strong></div>
+				<div class="content">(disclaimer: sorry for my bad english)<br>
+<br>
+I have some question regarding stepSimulation() in btDiscreteDynamicsWorld  (bullet-2.81-rev2613).<br>
+<br>
+I keep track of physics ticks incrementing a variable inside the callback of dynamicsWorld-&gt;setInternalTickCallback().<br>
+I checked and discovered that the ticks returned by stepSimulation() and the ticks of the callback are not the same.<br>
+<br>
+I see that stepSimulation() returns 'numSimulationSubSteps', but the code do the follow:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9256&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	int clampedSimulationSteps = (numSimulationSubSteps &gt; maxSubSteps)? maxSubSteps : numSimulationSubSteps;
+	saveKinematicState(fixedTimeStep*clampedSimulationSteps);
+	applyGravity();
+
+	for (int i=0;i&lt;clampedSimulationSteps;i++)
+	{
+		internalSingleStepSimulation(fixedTimeStep);
+		synchronizeMotionStates();
+	}
+
+</code></pre></div>
+
+1) I think that re return value must be clampedSimulationSteps...<br>
+<br>
+2)  What's the point updating the motion states every internalSingleStepSimulation() ?<br>
+We can safely remove it out of the for loop. Or not?<br>
+<br>
+<br>
+My real problem was the method used by bullet to calculate the substeps. So, in the end I inherited the btDiscreteDynamicsWorld and implemented this version without noticing any problem (note: this version don't use variable timeStep).<br>
+<br>
+Any feedback is much apreciated.<br>
+<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9256&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    int    BraveNewWorld::stepSimulation2(double elapsed, const int&amp; maxSubSteps, const double&amp; fixedTimeStep) {
+        startProfiling(elapsed);
+        BT_PROFILE("stepSimulation");
+
+
+        double max_time =  fixedTimeStep * double( maxSubSteps ) ;
+        m_localTime        +=   (elapsed &gt; max_time) ?  max_time : elapsed;
+
+        double num_ticks;
+        /* double tick_interpolator  = */ modf( m_localTime / fixedTimeStep , &amp;num_ticks);
+        m_localTime        -=   fixedTimeStep * num_ticks;
+
+
+
+        int numSimulationSubSteps = int(num_ticks);
+
+
+        //process some debugging flags
+        if (getDebugDrawer())
+        {
+             btIDebugDraw* debugDrawer = getDebugDrawer ();
+             gDisableDeactivation = (debugDrawer-&gt;getDebugMode() &amp; btIDebugDraw::DBG_NoDeactivation) != 0;
+        }
+        
+        if (numSimulationSubSteps) {
+            saveKinematicState(fixedTimeStep*double(numSimulationSubSteps));
+            applyGravity();
+
+            for (int i=0;i&lt;numSimulationSubSteps;i++) {
+                internalSingleStepSimulation(fixedTimeStep);
+            }
+        }
+       
+
+        synchronizeMotionStates();
+        clearForces();
+
+#ifndef BT_NO_PROFILE
+     CProfileManager::Increment_Frame_Counter();
+#endif //BT_NO_PROFILE
+
+
+        return numSimulationSubSteps;
+    }
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: stepSimulation() and ticks</h3>
+				<div class="date">Posted: <strong>Tue Jul 09, 2013 3:40 pm</strong></div>
+				<div class="author">by <strong>STTrife</strong></div>
+				<div class="content">I think it's more up to Erwin or someone with more expertise as I to comment on this, but I think moving the update-motionshapes outside the loop like that is fine when the update of your graphics renderer happens in the same process, i.e. after or before calling StepSimulation. <br>
+But in a case where your graphics renderer runs in another process, I could imagine that it looks smoother if the motion states are updated for each internal tick. cause it might be rendered between internal ticks. But besides that, I don't think you would actually break anything by moving it outside the loop. <br>
+However, I also doubt if it will give a noticable performance improvement, because compared to collosion checking and solving.. updating motion states is probably peanuts (but yeah...if you use the same process for rendering, any optimization is welcome I guess?)<br>
+<br>
+<br>
+As for point 1: yeah I think it would be more sensible to return the clamped number of substeps, I think people would expect the number of REAL substepts taken to be returned, and not the number of substeps that would be taken in case there was no maximum.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: stepSimulation() and ticks</h3>
+				<div class="date">Posted: <strong>Sat Jul 13, 2013 11:01 pm</strong></div>
+				<div class="author">by <strong>bill23</strong></div>
+				<div class="content">Thanks STTrife for the feedback.<br>
+You're right: I'm using a single thread for everything right now (shame on me).<br>
+<br>
+But AFAIK, the synchronizeMotionStates() in Bullet interpolates between the last 2 transforms computed by the library.<br>
+So I imagine that bullet save these 2 transforms internally, and they change every tick (the 'current' becomes the 'previous' and what computed during last tick becomes the new 'current', and I do the same in my program for other things).<br>
+<br>
+The motion states are useful for rendering purpose, so I think the interpolation IMO should be made (if needed) one for every rendering frame.<br>
+I don't actually understand how using two thread can be a problem for this, but I must admit I have not much experience in multi-threading.<br>
+<br>
+Thanks anyway!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: stepSimulation() and ticks</h3>
+				<div class="date">Posted: <strong>Sun Jul 14, 2013 11:00 pm</strong></div>
+				<div class="author">by <strong>STTrife</strong></div>
+				<div class="content">In the case that the physics engine is updating in a separate thread, the rendering code in another thread might be running at a much higher FPS. So any update in using the motion states will show immediately in the rendering. <br>
+Now if some reason the thread with the physics updates is delayed (it might be doing other logic that is taking longer), it might take 2 or 3 internal steps at once. If you only update the motions states after those 3 internal steps, you'll get less smooth visual movement compared to when it would update them each internal time step.<br>
+<br>
+When you say <br>
+
+<blockquote class="uncited"><div>The motion states are useful for rendering purpose, so I think the interpolation IMO should be made (if needed) one for every rendering frame.</div></blockquote>
+
+it seems like you assume that a frame render only takes place after bullet has done it's work, but that's why I started about the separate thread idea: it's doesn't have to be that way. Perhaps it's more accurate to say that you want to update the motions states at a smooth rate like 60 fps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: stepSimulation() and ticks</h3>
+				<div class="date">Posted: <strong>Thu Dec 31, 2020 1:28 pm</strong></div>
+				<div class="author">by <strong>przecze</strong></div>
+				<div class="content">Hello there,<br>
+I encountered the same problem and create an issue for, but unfortunately no response in over a year:<br>
+<a href="viewtopic.php%3Ft=5066.html" class="postlink">viewtopic.php?t=5066</a><br>
+My idea to deal with this problem is either to disable clamping (by setting maxSubSets to some high number or 0) or use some other method to calculate the actual steps (setInternalTickCallback?)</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

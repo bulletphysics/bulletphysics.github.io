@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How can I control Throttle and Steering of Hinge2Vehicle?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How can I control Throttle and Steering of Hinge2Vehicle?</h2>
+		<p><a href="viewtopic.php%3Ft=13240.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13240</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How can I control Throttle and Steering of Hinge2Vehicle?</h3>
+				<div class="date">Posted: <strong>Sun Jul 18, 2021 4:42 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">first, sorry for bad english<br>
+<br>
+I follow some example about Hinge2Vehicle, than I realized that Hinge2Vehicle doesn't have any Control of Throttle<br>
+So I  guess that pHinge2-&gt;setTargetVelocity is might be solution of this, and this is result<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13240&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>switch (dwBehave)
+	{
+		case DIR_LEFT:
+		{
+			m_gVehicleSteering += m_steeringIncrement;
+			if (m_gVehicleSteering &gt; m_steeringClamp)
+				m_gVehicleSteering = m_steeringClamp;
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(5, m_gVehicleSteering);
+			}
+
+			break;
+		}
+		case DIR_RIGHT:
+		{
+			m_gVehicleSteering -= m_steeringIncrement;
+			if (m_gVehicleSteering &lt; -m_steeringClamp)
+				m_gVehicleSteering = -m_steeringClamp;
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(5, m_gVehicleSteering);
+			}
+			break;
+		}
+		case DIR_FORWARD:
+		{
+			m_gEngineForce = m_maxEngineForce;
+			m_gBreakingForce = 0.f;
+
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(3, m_gEngineForce);
+			}
+
+			break;
+		}
+		case DIR_BACKWARD:
+		{
+			m_gEngineForce = -m_maxEngineForce;
+			m_gBreakingForce = 0.f;
+
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(3, m_gEngineForce);
+			}
+
+			break;
+		}
+	}
+</code></pre></div>
+
+but result is very wrong - wheels are not rotates it self, but it revolution with pBodyA - chassis of the car<br>
+how can i fix this? i can't find what is wrong</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How can I control Throttle and Steering of Hinge2Vehicle?</h3>
+				<div class="date">Posted: <strong>Sun Jul 18, 2021 12:12 pm</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">I fixed it! it was just little mistake. here's fixed code : 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13240&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+void CVehiclePlayer::Update(float fTimeElapsed, btDiscreteDynamicsWorld* pbtDynamicsWorld, DWORD dwBehave)
+{
+	switch (dwBehave)
+	{
+		case DIR_LEFT:
+		{
+			m_gVehicleSteering += m_steeringIncrement * fTimeElapsed;
+			if (m_gVehicleSteering &gt; m_steeringClamp)
+				m_gVehicleSteering = m_steeringClamp;
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(5, m_gVehicleSteering);
+			}
+
+			break;
+		}
+		case DIR_RIGHT:
+		{
+			m_gVehicleSteering -= m_steeringIncrement * fTimeElapsed;
+			if (m_gVehicleSteering &lt; -m_steeringClamp)
+				m_gVehicleSteering = -m_steeringClamp;
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(5, m_gVehicleSteering);
+			}
+			break;
+		}
+		case DIR_FORWARD:
+		{
+			m_gEngineForce += m_EngineForceIncrement * fTimeElapsed;
+			m_gBreakingForce = 0.f;
+
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(3, m_gEngineForce);
+			}
+
+			break;
+		}
+		case DIR_BACKWARD:
+		{
+			m_gEngineForce -= m_EngineForceIncrement * fTimeElapsed;
+			m_gBreakingForce = 0.f;
+
+			for (int i = 0; i &lt; 2; ++i)
+			{
+				m_pWheel[i]-&gt;getHinge()-&gt;setTargetVelocity(3, m_gEngineForce);
+			}
+
+			break;
+		}
+	}
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

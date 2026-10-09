@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Looking for help with settings and code to get my physics game correct</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Looking for help with settings and code to get my physics game correct</h2>
+		<p><a href="viewtopic.php%3Ft=13519.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13519</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Looking for help with settings and code to get my physics game correct</h3>
+				<div class="date">Posted: <strong>Wed Jan 11, 2023 7:58 pm</strong></div>
+				<div class="author">by <strong>dataexcess</strong></div>
+				<div class="content">Hi there! <br>
+<br>
+I would love for someone to help me with getting the correct settings of my game right, because I am really lost.<br>
+I have a terrain with hills and abstract shapes and my player is a sphere that I want to be able to roll over the landscape.<br>
+<br>
+You can visit the website here: <a href="https://staging.subneu.live/" class="postlink">https://staging.subneu.live/</a><br>
+You need to toggle gravity by clicking the G key in order for the physics to be enabled!<br>
+<br>
+I am using ammo.js which is a javascript port of Bullet. <a href="https://github.com/kripken/ammo.js/" class="postlink">https://github.com/kripken/ammo.js/</a><br>
+<br>
+first off, in order to move the player I am currently using the setLinearVelocity() method which is triggered while holding the arrow keys every update. This works, but I believe it is not the best way since by setting the velocity the gravity of the world is circumvented/ignored? So I probably need to use setForce or setImpulse, but I am not getting it correctly.<br>
+<br>
+some code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13519&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const moveRigidBodyWithVector = (body:any, vector:any, scaleFactor:number) =&gt; {
+    const resultantImpulse = new Ammo.btVector3(vector.x, vector.y, vector.z) // eslint-disable-line
+    resultantImpulse.op_mul(scaleFactor)
+    physicsBody.setLinearVelocity(resultantImpulse)
+}</code></pre></div>
+
+Secondly I want my sphere to stick to the terrain at all times, I do not want it to jump in the air after going up a slope. The sphere should stick like velcro on to the terrain at all times, but at the same time it should be relatively light-weight. I am a bit lost as to which settings are appropriate:<br>
+<br>
+- world gravity                     : Ammo.btVector3(0, -100, 0)<br>
+- mass of sphere                  : 800<br>
+- friction of sphere.             : 4<br>
+- rolling friction of sphere.  : 10<br>
+<br>
+I just want my game to have normal earth-like physics + the sticky but easy-to-roll sphere on the terrain moving around with controls.<br>
+<br>
+Any help so much appreciated!!!<br>
+Thank you.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Looking for help with settings and code to get my physics game correct</h3>
+				<div class="date">Posted: <strong>Thu Jan 12, 2023 4:25 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">My advice is to avoid applying force/torque because it is complicated and difficult to tune.  This because the amount of force depends on the mass and angular inertia of your object.  Setting the velocities is the right way to go: it is much easier to implement because it works independently of mass and substep duration.  However you shouldn't just slam it to its exact intended motion.  Instead you need to measure its real velocity (which could be influenced by gravity but also by collisions with other objects in the world) and slam the new velocity to be a linear interpolation between that and the object's intended velocity.  I've outlined how to do this several times on the forums.  Here are some, but not all, of the old threads:<br>
+<br>
+<a href="viewtopic.php%3Fp=35325.html" class="postlink">viewtopic.php?p=35325</a><br>
+<a href="viewtopic.php%3Fp=40055.html" class="postlink">viewtopic.php?p=40055</a><br>
+<a href="viewtopic.php%3Fp=41288.html" class="postlink">viewtopic.php?p=41288</a><br>
+<a href="viewtopic.php%3Fp=42205.html" class="postlink">viewtopic.php?p=42205</a><br>
+<br>
+I have worked on very similar dynamic character controllers that needed to stay tight to the ground but also needed to be able to climb slopes.  At upward slopes the character would go very slow if I used a horizontal target velocity, consequently I would have to adjust the target velocity upwards according to the slope (or step height if the character should be able to climb small steps).  The solutions were usually a bit complex with a bunch of special checks and branches of behavior logic.  In your case, if you allow the ball to roll then you have an opportunity to simplify your logic by adjusting the angular velocity only and ignoring the current linear velocity, except to maybe attenuate its vertical component in order to keep it tight to the ground.  In other words, your target velocity may be linear but the way to achieve it would be to compute the corresponding angular velocity and to slam the sphere toward it over time, such that the character rolls in the right direction.<br>
+<br>
+Set the friction high (yes 4 is plenty high) and restitution (bounciness) to zero.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Looking for help with settings and code to get my physics game correct</h3>
+				<div class="date">Posted: <strong>Mon Jan 16, 2023 10:59 am</strong></div>
+				<div class="author">by <strong>dataexcess</strong></div>
+				<div class="content">Interesting!<br>
+Thank you very much for the quick reply.<br>
+<br>
+Can you explain me how I can set the restitution? I cannot find it in the API of rigidBody?<br>
+<br>
+I will try to analyse the other threads and find out how to calculate the correct linearVelocity (although I must say I'm a bit overwhelmed at first haha).<br>
+Thank you!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Looking for help with settings and code to get my physics game correct</h3>
+				<div class="date">Posted: <strong>Mon Jan 16, 2023 4:04 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I don't use <strong class="text-strong">ammo.js</strong> however after downloading the repository and scanning the codebase I learned: it appears to support <strong class="text-strong">set/getResitution()</strong>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Looking for help with settings and code to get my physics game correct</h3>
+				<div class="date">Posted: <strong>Fri Feb 17, 2023 7:50 pm</strong></div>
+				<div class="author">by <strong>dataexcess</strong></div>
+				<div class="content">I think I'm a bit confused about the difference between setLinearVelocity and setAngularVelocity. Could you explain the difference? It seems using these interchangeably does not result in any different behaviour.<br>
+<br>
+Also I cannot make my ball stick to my terrain. When I'm not pressing my keys (hence not applying setLinearVelocity) my ball just rolls of the hill. Is there a way to make the ball only apply physics when it is told to?<br>
+<br>
+Sorry if I am misunderstanding some fundamental concepts.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Looking for help with settings and code to get my physics game correct</h3>
+				<div class="date">Posted: <strong>Sun Feb 19, 2023 5:52 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">After thinking about it some more I realized: if I just wanted a very simple rolling controller that pretty much always moved in the direction I wanted then I would blend toward a target <strong class="text-strong">linear</strong> velocity and then slam the <strong class="text-strong">angular</strong> velocity to always agree.  In C++ it might look something like the code below.  Porting to Java is left as an exercise for the reader:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13519&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// get character's desired linear velocity 
+// Note: desired velocity might be zero when character is trying to stop
+btVector3 target_linear_velocity = character-&gt;getTargetLinearVelocity();
+
+// get character's movement timescale
+// short-timescale means character is strong and can quickly change its velocity
+// long-timescale means character is weak and takes a while to change its velocity
+btScalar timescale = character-&gt;getMovementTimescale();
+
+// compute a new velocity that is a blend toward target_velociity
+// Note: dt must be provided by outside context
+btScalar del = dt / timescale;
+if (del &gt; 1.0) {
+    // avoid instability by capping del to 1.0
+    del = 1.0;
+}
+btVector3 linear_velocity = body-&gt;getLinearVelocity();
+btVector3 new_linear_velocity = (1.0 - del) * linear_velocity + del * target_linear_velocity;
+
+// slam the body's linear velocity
+body-&gt;setLinearVelocity(new_linear_velocity);
+
+// since the character is a rolling sphere
+// we calculate an angular velocity to agree with with its the linear velocity component
+// tangential to surface normal
+ btVector3 ground_normal = character-&gt;getSurfaceNormal();
+ btVector3 tangential_velocity = new_linear_velocity - (new_linear_velocity.dot(ground_normal)) * new_linear_velocity;
+ btScalar tangential_speed = tangential_velocity.length();
+constexpr btScalar MIN_ROLLING_LINEAR_SPEED = 0.01;
+btVector3 new_angular_velocity;
+if (tangential_speed &gt; MIN_ROLLING_LINEAR_SPEED) {
+    btVector3 roll_axis = ground_normal.cross(tangential_velocity).normalize();
+    // DANGER: Bad Things happen if rolling radius is zero or very very small!
+    btScalar angular_speed = tangential_speed / character-&gt;getRollingRadius();
+    new_angular_velocity = angular_speed * roll_axis;
+} else {
+    // character is not moving tangentially to surface
+    // so it is not "rolling"
+    new_angular_velocity.setZero();
+}
+
+// slam the object's angular velocity
+body-&gt;setAngularVelocity(new_angular_velocity);
+</code></pre></div>
+I didn't actually test the code but wrote it from scratch.  It may well have bugs.<br>
+<br>
+This logic doesn't care about gravity.  If the character aims to move up a very steep hill or climb a vertical wall then this logic will happily scoot it right up.<br>
+<br>
+It assumes the existence of the following methods:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13519&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 Character::getTargetLinearVelocity(); // returns the velocity the character wants to achieve
+btScalar Charcater::getMovementTimescale(); // returns the exponential timescale of the character's change of velocity
+btVector3 Character::getSurfaceNormal(); // returns the normal of the surface on which the character is rolling
+btScalar Character::getRollingRadius(); // returns radius of rolling sphere</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Looking for help with settings and code to get my physics game correct</h3>
+				<div class="date">Posted: <strong>Sun Feb 19, 2023 3:43 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I should probably mention: one problem with slamming the linear velocity is it can override collision rebound effects and if the velocity blend is too strong it might lead to pushing the character through obstacle geometry (e.g. tunnel through a <strong class="text-strong">btBvhTriangleMeshShape</strong> terrain).  To avoid this problem you should make the <strong class="text-strong">movement_timescale</strong> long relative to the simulation <strong class="text-strong">substep</strong>.  In other words, keep the <strong class="text-strong">movement_timescale</strong> at least 3X substep duration, but even better would be no less than 10x <strong class="text-strong">substep</strong>.<br>
+<br>
+One way to tune the timescale is to think about it this way: absent any obstacles your character will achieve 80% of its target velocity within only three timescales.  So if you want the character to ramp up to full speed in about 1 second then set the <strong class="text-strong">movement_timescale</strong> to be 1/3 of a second.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

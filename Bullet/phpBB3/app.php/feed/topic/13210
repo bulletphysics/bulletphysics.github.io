@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13210" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-05-21T10:23:07+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13210</id>
+
+		<entry>
+		<author><name><![CDATA[guasqui_act]]></name></author>
+		<updated>2021-05-21T10:23:07+00:00</updated>
+
+		<published>2021-05-21T10:23:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43432#p43432</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43432#p43432"/>
+		<title type="html"><![CDATA[How to speed up the deserialization of 'btBvhTriangleMeshShape' object.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43432#p43432"><![CDATA[
+Hello everyone!<br><br>I am trying to take advantage of the serialization/deserialization feature to speed up the time of constructing a <strong class="text-strong">btBvhTriangleMeshShape</strong> object but for some reason I do not get the result I would expect.<br><br>Without using serialization/deserialization, my <strong class="text-strong">btBvhTriangleMeshShape</strong> object is constructed as:<div class="codebox"><p>Code: </p><pre><code>//////// Inputs are://x - matrix with x-component values//y - matrix with y-component values//z - matrix with z-component values//nRows, nCols - number of rows and columns of the input x, y, and z matrixes//////// populating ground verticesconst int totalVerts = nRows * nCols;btVector3 *groundVertices = new btVector3[totalVerts];for (int i = 0; i &lt; nRows; i++){for (int j = 0; j &lt; nCols; j++){groundVertices[i * nCols + j].setValue( x[i][j], y[i][j], z[i][j] );}}// populating ground indicesconst int totalTriangles = 2 * (nRows - 1) * (nCols - 1);const int numTriangleIndexes = totalTriangles * 3;int *groundIndices = new int[numTriangleIndexes];int index = 0;for (int i = 0; i &lt; nRows - 1; i++){for (int j = 0; j &lt; nCols - 1; j++){groundIndices[index++] = i * nCols + j;groundIndices[index++] = (i + 1) * nCols + j;groundIndices[index++] = i * nCols + j + 1;groundIndices[index++] = i * nCols + j + 1;groundIndices[index++] = (i + 1) * nCols + j;groundIndices[index++] = (i + 1) * nCols + j + 1;}}// constructing 'btBvhTriangleMeshShape'int vertStride = sizeof(btVector3);int indexStride = 3 * sizeof(int);btTriangleIndexVertexArray *indexVertexArrays = new btTriangleIndexVertexArray(totalTriangles, groundIndices, indexStride, totalVerts, (btScalar*)&amp;groundVertices[0].x(), vertStride);btBvhTriangleMeshShape *groundShape = new btBvhTriangleMeshShape(indexVertexArrays, false);</code></pre></div>Now, I am willing to speed up the construction of the <strong class="text-strong">btBvhTriangleMeshShape</strong> by serializing/deserializing the <strong class="text-strong">btBvhTriangleMeshShape</strong> object. The following code is how I serialize it:<div class="codebox"><p>Code: </p><pre><code>btDefaultSerializer serializer;serializer.startSerialization();groundShape-&gt;serializeSingleShape( &amp;serializer );serializer.finishSerialization();FILE* ff = fopen("my_ground_shape.bullet", "wb");if ( !ff ){printf("Unable to open file\n");return;}fwrite(serializer.getBufferPointer(), serializer.getCurrentBufferSize(), 1, ff);fclose(ff);</code></pre></div>and the deserialization code is as follows:<div class="codebox"><p>Code: </p><pre><code>btBulletWorldImporter importer(NULL);if ( !importer.loadFile("my_ground_shape.bullet") ){printf("Unable to load file\n");return;}int numShape = importer.getNumCollisionShapes();if (!numShape) {printf("No terrain info found in file\n");return;}btBvhTriangleMeshShape *groundShape = (btBvhTriangleMeshShape*)importer.getCollisionShapeByIndex(0);</code></pre></div>Let's assume that the serialization process was done offline and therefore that 'my_ground_shape.bullet' file already exists. At this stage, I would expect a speed-up when constructing <strong class="text-strong">btBvhTriangleMeshShape</strong> object using the desirialization approach as opposed to doing this from scratch, but unfortunately it looks like there is no gain in terms of execution time.<br>My usual test case has <em class="text-italics">nRows = nCols = 400</em> and has the construction of <strong class="text-strong">btBvhTriangleMeshShape</strong> object being repeated 40 to 50 times. With these parameters the first snippet of code (creating the triangle mesh and allocating <strong class="text-strong">btBvhTriangleMeshShape</strong>) takes around 10 seconds, while the deserialization approach takes about 23.5 seconds (more than double).<br><br>I am sure I am missing some implementation point but I really can't get why the deserialization is such an inefficient method here. Can anyone explain this and give me the right implementation to speed-up the construction of <strong class="text-strong">btBvhTriangleMeshShape</strong> object?<br><br>Thank you!<br>Pierluigi Guasqui<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13985">guasqui_act</a> — Fri May 21, 2021 10:23 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

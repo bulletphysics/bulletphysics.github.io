@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Set and cap dynamic body rotation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Set and cap dynamic body rotation</h2>
+		<p><a href="viewtopic.php%3Ft=7452.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7452</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Mon Sep 19, 2011 11:54 am</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">Hi everyone,<br>
+<br>
+I need to have perfect control over a dynamic body rotation (Box restricted to rotation, no movement allowed).  I need to be able to click a button and rotate this body at different speed based on different setting.  I also need to make sure the rotation do not exceed some hard coded degree.  It would be better if I could directly set the rotation in my simulation code but I do not think this will ever work if I want to ensure proper collision with world objects (if I am wrong please let me know).<br>
+<br>
+I would like to know what are my options?<br>
+<br>
+I am trying to do the following without success:<br>
+1 - Use setAngularVelocity() in my simulation code to rotate the object fast.  I think it may rotate too fast sometime and miss collision with world objects.  I rotate it fast because I need it at the proper rotation in only a few frames.<br>
+<br>
+2 - Cap the rotation angle on the dynamic body using setWorldTransform() (using the body motion state) in physics call back function (myProcessCallBack).  I was hoping this would work similar ways as the example for capping the velocity.<br>
+<br>
+Is this the best method and or is it even going to work properly in all cases?  some other solution should be use instead?<br>
+<br>
+Thanks for your help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Mon Sep 19, 2011 11:36 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">How about applytorque/applytorqueimpulse?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Tue Sep 20, 2011 1:59 am</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">If I understand well: "applytorque" and "applytorqueimpulse" will not fix my problem because the rotation will not cap at any specific rotation right?  It will just start rotating until no more angular velocity remains.  I need it to rotate up to a specific rotation value, stop its angular velocity once this given rotation is reached.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Tue Sep 20, 2011 11:34 am</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">I tried two different ways and both are not working properly:<br>
+<br>
+1 - In game simulation I get the body transform, apply the right angle I want my body to move to and then call proceedToTransform() onto the body with the new transform.  This method bring the object to the right rotation.  However it does not collide properly with the object around it.  Not only the body will not collide because it pass through other objects without touching but It is also important for objects around the body to be pushed away with force proportionally to the body rotation speed.<br>
+<br>
+2 - As I previously stated in my first comment:  I tried to call setAngularVelocity() in my simulation logic and then cap the rotation in my myProcessCallback().  This method does not seem to be stable and or work properly.  sometime it will cap properly but other time it will be shaking between the capping position and some previous or pass position. <br>
+<br>
+When rotation is over my capping value:  I am calling body-&gt;getCenterOfMassTransform() to get the transform and getBasis() to get the rotation matrix.  I modify the rotation value for exactly what I want and then call body-&gt;proceedToTransform() to set the new transform.  I also stop the angular velocity by calling setAngularVelocity() with 0s.<br>
+<br>
+A solution for stopping the shaking that I am getting?<br>
+<br>
+Any thoughts?<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Tue Sep 20, 2011 7:05 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">I am not sure about whether the torque would satisfy your need, but I think you can try that.<br>
+<br>
+Another method, if it is possible in your case, is to set up a joint. for example a hinge joint. You can specify the limits of the joint, so it will stop exactly at the rotation angle as you like.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Wed Sep 21, 2011 11:24 am</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">I have the same problem with applytorque().  This also make the object rotate but it will not stop properly at a specific rotation without the code I implemented in myProcessCallback() for capping the rotation.  With applytorque() combined with the capping code in myProcessCallback() I am also getting some shaking at the capping rotation.<br>
+<br>
+I will look at the joint.  That might work.  I am new to bullet so I am not exactly sure how to use this type of constraint.  The quick example I have seen on the forum was about two objects being attached to the joint.  In my case I only have one object, which rotate around his center of mass located in the center of the object.  Maybe I can add a joint in the middle of the object somehow?<br>
+<br>
+Also, The rotation limit in my case will be changing potentially every frame because the rotation destination will be different based on user input.  Not sure if a constraint can have its limit modified in real time.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Wed Sep 21, 2011 12:22 pm</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">I created a btGeneric6DofConstraint() constraint right in the middle of my object. This indeed cap the object rotation properly.  This solution seems much cleaner.  Thanks for the tips.<br>
+<br>
+So now I have 1 new problem and 1 more thing to test <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+1 Problem:  The rotation is now cap but when I use applytorque() or setAngularVelocity() to rotate my object it will reach the limit and then bounce back.  Someone knows how to stop the bouncing?<br>
+<br>
+1 more test to do:  I need to modify the rotation limit in real-time to match the user input.  Not sure if i can do this and if I can what will be the result when the current rotation is higher then a new lower limit...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Wed Sep 21, 2011 11:17 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">So what you want is the box stops exactly at the rotation, right?<br>
+<br>
+Since joint does some work here and it can be integrated with velocity and torque control, we may follow this path.<br>
+<br>
+What I would further suggest, is to compute the torque as exactly as you need. It is more like a spring-mass system, the rotation speed will accelerate, reach the peak, then slow down, till 0 (Here it should arrive the limit rotation you want !), then if you want, it will accelerate in opposite direction, then .....<br>
+<br>
+<a href="http://en.wikipedia.org/wiki/Harmonic_oscillator" class="postlink">http://en.wikipedia.org/wiki/Harmonic_oscillator</a><br>
+<br>
+In this way, neither the speed or the torque is constant, you should apply a simple function to accomplish that.<br>
+<br>
+Hope it works!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Thu Sep 22, 2011 3:07 am</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">Yes, I would like the box to stop at the exact rotation specified in code.  This specified rotation might change over time and when it does the box would need to rotate again up or down to the new destination rotation.  I am not 100% sure but it look like that I should be able to modify the constrain new desired angle limit on the fly.  If this is the case it should work fine for me (given that I find a solution for the box angular velocity bouncing back from the constraint angle limit).<br>
+<br>
+For solving the bouncing issue you would suggest to compute how much torque or angular velocity I need to reach the exact desired angle?   I definitely felt my lack of physics knowledge once I opened the link you gave above <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">  I would probably need to read this link many times <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">  But above all I would wonder how to compute this value given that we have time steps that will likely be none consistent?  Would it not be impossible to reach the exact rotation?<br>
+<br>
+I would have hope to fix the box angular velocity bouncing back from the constraint angle limit by somehow disabling the box force transfer or bouncing value <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Thu Sep 22, 2011 9:59 am</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">You can compute the torque/time function given the rotation angle, it's not that difficult, more or less like a sin()/cos() function.<br>
+<br>
+But if you can find a way to stop the bouncing back, that's great and straight. Tell me if it works out.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Thu Sep 22, 2011 10:50 am</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">Yes, that does not sound too hard.  I will take a look at those computation.<br>
+<br>
+I will go ahead and implement the real input controller now.  Up to now I only had an input controller test case.  It is not enough anymore to test what I want to do.<br>
+<br>
+I will reply here soon and tell how it goes.  Thanks for the help Dr.Shepherd.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Fri Sep 23, 2011 8:48 am</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">Hey, today I just come across the simulation tick callback, I think it would be easier for you to check your rotation at each tick callback, if it is over the limit, then set it back.<br>
+<br>
+The explanations in the tutorials:<br>
+Such callback is useful to notify other parts of your application about the simulation or to modify velocities of bodies, for example, if you are building a spaceship and you want each spaceship to have an individual speed cap. No matter how many substeps Bullet will do, your spaceship can have its speed limited at the end of every tick, which helps framerate independance<br>
+<br>
+Check the link below<br>
+<a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Simulation_Tick_Callbacks" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... _Callbacks</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Tue Sep 27, 2011 11:17 am</strong></div>
+				<div class="author">by <strong>pivot</strong></div>
+				<div class="content">Yes, capping the rotation inside the tick call back was the first thing I tried. It work well for capping velocity but for some reason when I tried to cap rotation I ended up with my object flickering (rendering the cap rotation and some other rotation close by). I am not sure why this did not work.<br>
+<br>
+One thing that somewhat work:  If you create a btGeneric6DofConstraint on your object and then set the upper and lower angle limit as you go with both the destination angle it will kind of work.  <br>
+<br>
+For example:  in your simulation you want your object to rotate at an angle of value 1:  <br>
+Call this on your constrain:  constrain-&gt;setLimit(5, 1, 1);.  This will rotate the object around to an angle of value 1.  It work perfectly except for this:  It will rotate itself at some predefine speed.  Not sure what force rotate it and I am not sure how the angular velocity could be increase.<br>
+<br>
+If there was a way to modify the speed at which the object rotate it would make it an easy and clean way for doing this.  Calling SetAngularVelocity will not work in this case because the constrain somehow take over.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Set and cap dynamic body rotation</h3>
+				<div class="date">Posted: <strong>Tue Sep 27, 2011 11:45 am</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">Yeah, the flickering is quite possible.<br>
+<br>
+For example, you want your object to stop at 50, and in every tick callback, you check it, if it is over 50, then you set it back to 50. However, the actual case is always like: in the previous tick, it is 49.5, and in the next tick, it is 50.5. So it may shake in a small range.<br>
+<br>
+One solution is to make your timestep smaller, it's kind of "silly".<br>
+<br>
+Anyway, you solved it, that's great news!<br>
+<br>
+Cheers.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

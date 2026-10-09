@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Twist Limit for Ball and Socket Constraint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Twist Limit for Ball and Socket Constraint</h2>
+		<p><a href="viewtopic.php%3Ft=9826.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9826</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Twist Limit for Ball and Socket Constraint</h3>
+				<div class="date">Posted: <strong>Thu Mar 13, 2014 10:44 pm</strong></div>
+				<div class="author">by <strong>Andrew Alvarez</strong></div>
+				<div class="content">So, I've been trying to sort out my twist limit for the ball and socket (pin, point, etc.) constraint. Swing was simple enough, but I can't seem to get the twist calculations correct. Currently, I'm orienting object b relative to object a. Then, I'm decomposing the resulting quaternion to get the angular and vector components.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9826&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Quat bOrientationInA = m_b-&gt;m_actor-&gt;m_orientation * m_a-&gt;m_actor-&gt;m_orientation.Inverse();        
+Quat scalar = (bOrientationInA + bOrientationInA.Conjugate()) / 2; // .r is the scalar.
+Quat vector = (bOrientationInA - bOrientationInA.Conjugate()) / 2; // .xyz is the vector
+</code></pre></div>
+
+What I've been doing next has gone through a few different methods. The first thing I tried was just going backwards to grab the angle out of the quaternion, so...<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9826&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float angle = 2 * acos(scalar.r);
+</code></pre></div>
+
+Unfortunately, that doesn't work because of the bounds of acos being between 0 and pi.<br>
+<br>
+The next thing I tried was to use atan2.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9826&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float angle = 2 * atan2(scalar.r, vector.Length()); // Might be (v, r)?
+</code></pre></div>
+
+The idea behind it being that, since the quaternion is normalized, the "hypotenuse" of the quaternion is 1, making the other two sides of the triangle the vector and the scalar components. Well, something I'm still not 100% sure on is whether or not I want the angle theta or phi, it appears I have difficultly visualizing <strong class="text-strong">H</strong>-&gt;<strong class="text-strong">R</strong>^2 projections... haha. Also, I think atan might work just as well, since vector.Length() will always be positive. So, the initial return value of the atan function will always be between -pi/2 and pi/2 anyway. Which is perfectly fine because the angle returned is actually half the real angle.<br>
+<br>
+<img src="http://i.imgur.com/kPN29Kr.jpg" class="postimage" alt="Image"><br>
+<br>
+I've realized that the problem with this atan method is that, due to the duality of quaternions, the direction of rotation around the axis can either be embedded in the scalar or the vector component. For example, (.9219, -.03, -.37, -.109) gives the same twist angle as (.9219, .03, .37, -.109) when using the previously mentioned method even though they are twisted in opposite directions. Using the number of positive/negative numbers as the indicator for the correct direction of twists seems like it might work, but I'm not sure. I'm not even 100% sure if this is the correct way to be going about it. It might be something in my implementation that isn't working, but I wanted to make sure I have the concept correct before continuing. Specifically the things about atan and the extraction of the angle and the determination of the direction of the twist.<br>
+<br>
+The last thing I'm trying to get working is how to nicely fix the limits for constrained objects that have an initial "twist" as a part of the construction. So, for example, I want to have the limit as being initialTwist-pi/2 &lt; currentTwist &lt; initialTwist+pi/2 where initialTwist is equal to something like 2*pi/3. I can't think of a nice way to get this to work without having to do some ugly bounds checking. Maybe something to the effect of using atan((v - v_initial) / (s - s_initial)) to calculate the twist?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

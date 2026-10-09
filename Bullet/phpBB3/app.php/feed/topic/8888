@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8888" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2013-03-04T11:30:36+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8888</id>
+
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2013-03-04T11:30:36+00:00</updated>
+
+		<published>2013-03-04T11:30:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30168#p30168</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30168#p30168"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30168#p30168"><![CDATA[
+Thanks Dirk, I am glad we got somewhere. It's an easy mistake to make. I will look into the solvers as you advised.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Mon Mar 04, 2013 11:30 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2013-03-03T16:42:26+00:00</updated>
+
+		<published>2013-03-03T16:42:26+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30164#p30164</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30164#p30164"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30164#p30164"><![CDATA[
+I am glad you found it. People sometimes call J*W*JT the effective mass though it is the inverse. I did this even myself <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> . Anyway, the effective mass is the mass seen/felt by the constraint and it also considers the rotational effect. If you just use the plain mass you ignore these rotational effects. For the mouse joint it is a hack, but ok. Also note that it is a 3d constraint and the effective mass is a 3x3 matrix. I dont know now, but maybe there is a better mass approximation in this case. <br><br>Look at Box2D how it solves position constraints. The easiest example is the revolute joint. Also search for NGS in the code and maybe in the forum.<br><br>I also recommend looking into the Spook solver. Search for it here.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Mar 03, 2013 4:42 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2013-03-03T10:16:51+00:00</updated>
+
+		<published>2013-03-03T10:16:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30161#p30161</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30161#p30161"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30161#p30161"><![CDATA[
+Solved. The effective mass used to compute the spring constants and damping coefficients should be Meff = 1/Keff = (JM^-1JT)^-1 and this is the mass seen by the constraint. I was making the mistake of using JM^-1JT. This means that we have a spring constant matrix K and damping coefficient matrix D<br><br>K = Meff * wn^2<br>D = 2 * Meff * wn * zeta<br><br>However it is not wrong to choose a mass from either body as this works equally as well, perhaps Erin can explain if it's derived or purely experimental<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sun Mar 03, 2013 10:16 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2013-03-03T05:27:28+00:00</updated>
+
+		<published>2013-03-03T05:27:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30158#p30158</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30158#p30158"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30158#p30158"><![CDATA[
+I had a thorough look at b2MouseJoint and the only difference between that and my code is the fact that Erin uses the mass of bodyB instead of the mass JM^-1JT seen by the impulse to compute the spring constant k and damping coefficient d.<br><br>I did this and reproduced the same behaviour. Technically from the harmonic oscillator derivation, we have only one body involved in the equation, and the same applies for the constraint equation for d^2x/dt^2 = lambda/m. <br><br>For the revolute joint, it seems as though we should take the average mass between the two planks, as two bodies are involved as opposed to the mouse joint, which is what was done in Box2D lite for the revolute joint.<br><br>For the line joint, we should take the mass of the anchored free body.<br><br>So Baumgarte stabilisation (dependent on beta, h and C) along with warm starting is still used in the mouse joint as:<br><br>(JM^-1JT + gamma/h)*LambdaImpulse = -Jvi - Beta/dt*C - gamma*AccumulatedLambdaImpulse<br><br>What do you mean by position projection Dirk? Thanks for all your help.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sun Mar 03, 2013 5:27 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2013-03-03T01:32:48+00:00</updated>
+
+		<published>2013-03-03T01:32:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30157#p30157</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30157#p30157"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30157#p30157"><![CDATA[
+It is (J*W*JT + gamma). No division by h. Please check out the mouse joint in Box2D. This example should answer all your questions. I use these formulas myself and they work.<br><br>As for the stability issues that you are seeing remember warmstarting and Baumgarte don't work nicely together in many cases and you cannot fix it easily be softening the constraints. You have to ramp up the iteration count dramatically. This is why Box2D uses position projection.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Mar 03, 2013 1:32 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2013-03-02T23:57:52+00:00</updated>
+
+		<published>2013-03-02T23:57:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30156#p30156</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30156#p30156"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30156#p30156"><![CDATA[
+In Box2D Lite, the mass of each plank is used to calculate the spring stiffness and damping coefficient. I thought the mass of the constraint system is supposed to be used in order to incorporate gamma into the solver equation.<br><br>(JM^-1JT + gamma/h) * LambdaImpulse  = -Jvi - beta/h*C<br><br>So if gamma wasn't a matrix of the same size of JM^-1JT, matrix addition would not be valid. From the behaviour of my line joint and distance joints, which need a lot less spring stiffness and damping, I think it is fair to assume that with a suspension bridge of large span, you would need a huge spring stiffness with a large damper to stop the oscillation.<br><br>Since Erin uses the mass of the planks to compute k and d, he would achieve a large k value and damping constant, even though it's not correct in the derivation. Am I looking at this correctly?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sat Mar 02, 2013 11:57 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2013-03-02T13:51:10+00:00</updated>
+
+		<published>2013-03-02T13:51:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30154#p30154</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30154#p30154"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30154#p30154"><![CDATA[
+Well since I have applied the Baumgarte technique on my other constraints with success, I have reshuffled some calculations for my revolute joint and now I am getting a really soft constraint rather than instability.<br><br>The revolute joint is tricky in 3D because the mass seen by the impulse JM^-1JT is not a scalar, therefore the spring constant and damping coefficient are 3x3 matrices<br><br>K = A * omega * omega<br>D = 2 * A * omega * zeta<br><br>I read in the ODE doc that the CFM updates the diagonal of the A matrix, so I'll try to figure out where I've gone wrong in my previous code that I pasted.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sat Mar 02, 2013 1:51 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2013-03-02T05:00:10+00:00</updated>
+
+		<published>2013-03-02T05:00:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30151#p30151</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30151#p30151"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30151#p30151"><![CDATA[
+So you are seeing problems with warmstarting the bridge with Baumgarte stabilization. Baumgarte and warmstarting do not working well together. Especially for closed loops. So this is actually normal. Personally I use position projection since it gives much better results. You can only warmstart with say 95%, but this makes the constraints soft. I recommend to try position correction. With Baumgarte you tweak yourself to death in my experience <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sat Mar 02, 2013 5:00 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2013-03-02T03:19:28+00:00</updated>
+
+		<published>2013-03-02T03:19:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30149#p30149</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30149#p30149"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30149#p30149"><![CDATA[
+I tested Box2D lite by removing warm starting and multiplying gamma by the inverse timestep and reproduced the same behaviour. However if you do not divide gamma by the timestep, the bridge behaves correctly<br><br>So now in Box2D lite, we have (no warm starting):<br>(JM^-1JT*gamma)*lambda = -beta/h*C<br><br>where gamma = 1/(d+kh) and beta = hk / (d+hk)<br><br>I don't really understand how this came about, as we derived the magic formulas for forces, but it still works for some reason.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sat Mar 02, 2013 3:19 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2013-03-02T00:50:06+00:00</updated>
+
+		<published>2013-03-02T00:50:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30148#p30148</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30148#p30148"/>
+		<title type="html"><![CDATA[Re: Soft constraint derivation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30148#p30148"><![CDATA[
+Thanks Dirk, I know your formulas are definitely correct, but I was trying to understand some concepts. In Box2D lite, Erin doesn't actually divide gamma by the timestep:<br><br>float softness = 1.0f / (d + timeStep * k);<br><br>He also adds gamma to the diagonal of the mass matrix in the prestep.<br><br>My revolute joint was actually working, except I had the spring stiffness set at 2 as in Box2D lite and the bridge fell down the y axis due to gravity. However my span is 4x10m 50kg planks, whereas in Box2D lite it's a 10m span, so I assume I have to increase the stiffness substantially to get a mild parabolic curvature. So I have my natural frequency at 150Hz and damping ratio at 50 to get it to settle fast. If I set the damping ratio to 1, I get oscillation but the bridge eventually settles. Anything under 1.0 enables more oscillation in the system.<br><br>So with my line joint, a simple box hanging down, I set the frequency to 2.0 and damping to 1.0 and this works fine. <br><br>What do you think of this sort of behaviour?<br><br>ALso, one question about a cloth simulation. I have set the vertical and horizontal distance joints to very stiff (100Hz) and overdamped at 10 as these are shear and bending joints, and the diagonal joints to mildly stiff at 3Hz and underdamped 0.3 . The distance between each particle is 0.2m. You can see that the cloth is not smooth when adding a horizontal wind force. Are there any other constraints required?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sat Mar 02, 2013 12:50 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

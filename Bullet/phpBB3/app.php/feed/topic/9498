@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9498" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2013-10-24T17:55:54+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9498</id>
+
+		<entry>
+		<author><name><![CDATA[nsf]]></name></author>
+		<updated>2013-10-24T17:55:54+00:00</updated>
+
+		<published>2013-10-24T17:55:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32007#p32007</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32007#p32007"/>
+		<title type="html"><![CDATA[Kinematic character controller interpolation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32007#p32007"><![CDATA[
+It's not even a question, more like I'm sharing how I've fixed a problem with btKinematicCharacterController stuttering. In case if anyone else is wondering. Perhaps it's worth adding to some guide, I don't know. Feel free to repost it, I don't have a blog.<br><br>The problem with btKinematicCharacterController is that it doesn't take advantage of bullet's MotionState interpolation system. When you run your physics with fixed timestep, occasionally it can miss a frame, and the result is visible stutter. In my case I was using SDL's built-in timer, which reports time with a millisecond resolution and for 60 FPS it will report 16 or 17. Which means a slight desync between bullet's internal time and my vsync-based time. The solution is rather simple - keep previous character position and interpolate between it and the current one manually. The code is rather minimal. First we need a btKinematicCharacterController hack that keeps the previous, current positions and bullet's local time (the code is C++11):<br><div class="codebox"><p>Code: </p><pre><code>class MyCharacterController : public btKinematicCharacterController {public:        float local_time {0.0f};        Vec3 prev_pos;        Vec3 cur_pos;        MyCharacterController(btPairCachingGhostObject *ghost, btConvexShape *shape, btScalar step):                btKinematicCharacterController(ghost, shape, step) {}        void updateAction(btCollisionWorld *world, btScalar delta) override {                btKinematicCharacterController::updateAction(world, delta);                local_time += delta;                prev_pos = cur_pos;                cur_pos = ToVec3(m_ghostObject-&gt;getWorldTransform().getOrigin());        }};</code></pre></div>And in your rendering loop:<div class="codebox"><p>Code: </p><pre><code>void Update(float delta) {        btworld-&gt;stepSimulation(delta, 10); // will run character's updateAction zero or more times        if (player-&gt;local_time &gt; local_time) {                // here we simply reset the time if we can, to avoid floating point precision issues                player-&gt;local_time -= local_time;                local_time = 0.0f;        }        local_time += delta; // this local_time is vsync-based time        float diff = 1.0f - (local_time - player-&gt;local_time) / (1.f / 60.f); // 'player' is our MyCharacterController        camera.position = player-&gt;prev_pos * diff + player-&gt;cur_pos * (1.0f - diff);}</code></pre></div>That fixes the stutter. Well, there is no protection from giant 'delta', but if 'delta' is within bullet's limit (10 * fixedTimeStep in that case), it will work just fine. Stepping the simulation will shorten the gap between vsync time and bullet's time to a value less than fixedTimeStep and the interpolation works correctly because of that.<br><br>Also I would like to add a couple of things. If you do collision detection using a ray that starts from a camera - use the actual ghost object's position instead of interpolated one. Another thing that is worth mentioning is that you don't have to lag/interpolate the camera's orientation.<br><br>I hope it's useful for somebody at least. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10515">nsf</a> — Thu Oct 24, 2013 5:55 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

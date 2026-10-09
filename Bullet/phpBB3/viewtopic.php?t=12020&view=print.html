@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Why are chunk pointers updated when deserializing?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Why are chunk pointers updated when deserializing?</h2>
+		<p><a href="viewtopic.php%3Ft=12020.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12020</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Why are chunk pointers updated when deserializing?</h3>
+				<div class="date">Posted: <strong>Wed Feb 14, 2018 6:43 am</strong></div>
+				<div class="author">by <strong>nickolai</strong></div>
+				<div class="content">Sorry for the rather terse title.<br>
+<br>
+I’ve been playing around with the serialization/deserialization code. It’s really awesome that it can resolve pointers to structures (so long as the struct being pointed to is serializable of course), but I find one of the details of how it does this confusing.<br>
+<br>
+On the serialization side, you get an id for an object in memory by passing its pointer into the serializer’s getUniqueId function, which returns an void* that’s actually hiding an int, which is weird, but that’s a separate discussion.*<br>
+<br>
+And whatever object is being pointed to, whenever it serializes itself, it stores that same id in the chunk in which it’s serialized.<br>
+<br>
+So far so good. All chunks have ids, and some chunks contain data members containing the id of chunks that they need once deserialization happens.<br>
+<br>
+Now we get to deserialization, and these chunk ids, which are really ints, get updated to be pointers to where the chunk is being stored in memory. ???<br>
+<br>
+Of course, the data members inside the chunks get updated from their int nature to be pointers (I guess that’s done through the resolvePointers function?), and then at the application level there’s the business of storing these things in maps with the key being the pointer to the chunk and the value being the pointer to the newly constructed object in memory.<br>
+<br>
+So my question is, why this complex business of updating these ids? Why not just leave them as ints?<br>
+<br>
+And while we’re here, thanks Erwin for <a href="https://github.com/bulletphysics/bullet3/blob/master/Extras/Serialize/BulletFileLoader/bFile.cpp#L1228" class="postlink">this comment</a>. It saved me at least several hours of debugging, and much suffering!<br>
+<br>
+*Now that I think about it, it's probably saved as a void* because it later gets updated to a pointer, but now we're back to my original question!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Sweep and Prune or dBVT for this use case - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Sweep and Prune or dBVT for this use case</h2>
+		<p><a href="viewtopic.php%3Ft=9800.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9800</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: Sweep and Prune or dBVT for this use case</h3>
+				<div class="date">Posted: <strong>Tue Mar 04, 2014 5:48 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I thought about the shape transform and I think it just comes from Maya where shapes nearly always have a parent transform.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sweep and Prune or dBVT for this use case</h3>
+				<div class="date">Posted: <strong>Wed Mar 05, 2014 11:26 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">So I took another look at my implementation and discovered that I was incorrectly inflating the AABBs for the bone objects. Once I took that into account, things got a lot better. I had to use quite a large inflation value (2 meters) but it does effectively remove all but the first broadphase overlap tests when the characters are pushing up against one another.<br>
+<br>
+In my test case it is 1/10th the cost of SAP in a similar situation with the added bonus of ray queries being faster.<br>
+<br>
+Thanks for your feedback and help Dirk - looks like a win here.<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sweep and Prune or dBVT for this use case</h3>
+				<div class="date">Posted: <strong>Thu Mar 06, 2014 5:43 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Are you inflating in the direction of the linear movement of the body or do you use a fixed amount of to inflate? I use a combination of both. <br>
+<br>
+Here is my code for reference. I moved the inflation part into the broadphase and the dynamic tree doesn't know about this. What kind of inflation strategy (if any) you use depends on the use-case so I decoupled it.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9800&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// Bounds are the tight bounds of the parent shape. Displacememnt = LinearVelocity * ElapsedTime
+bool rnBroadphase::MoveProxy( int Proxy, const rnBounds3&amp; Bounds, const rnVector3&amp; Displacement )
+	{
+	if ( mTree.GetBounds( Proxy ).Contains( Bounds ) )
+		{
+                // No update required
+		return false;
+		}
+
+	// Update tree with inflated and motion anticipating bounds
+	rnVector3 Extension = rnVector3( RN_BOUNDS_EXTENSION, RN_BOUNDS_EXTENSION, RN_BOUNDS_EXTENSION );
+
+	rnBounds3 ExtendedBounds;
+	ExtendedBounds.Min = Bounds.Min - Extension;
+	ExtendedBounds.Max = Bounds.Max + Extension;
+
+	if ( Displacement.X &lt; 0.0f )
+		{
+		ExtendedBounds.Min.X += RN_BOUNDS_MULTIPLIER * Displacement.X;
+		}
+	else
+		{
+		ExtendedBounds.Max.X += RN_BOUNDS_MULTIPLIER * Displacement.X;
+		}
+
+	if ( Displacement.Y &lt; 0.0f )
+		{
+		ExtendedBounds.Min.Y += RN_BOUNDS_MULTIPLIER * Displacement.Y;
+		}
+	else
+		{
+		ExtendedBounds.Max.Y += RN_BOUNDS_MULTIPLIER * Displacement.Y;
+		}
+
+	if ( Displacement.Z &lt; 0.0f )
+		{
+		ExtendedBounds.Min.Z += RN_BOUNDS_MULTIPLIER * Displacement.Z;
+		}
+	else
+		{
+		ExtendedBounds.Max.Z += RN_BOUNDS_MULTIPLIER * Displacement.Z;
+		}
+
+	mTree.MoveProxy( Proxy, ExtendedBounds );
+	BufferMove( Proxy );
+
+        // Update required
+        return true;
+	}
+</code></pre></div> <br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sweep and Prune or dBVT for this use case</h3>
+				<div class="date">Posted: <strong>Thu Mar 06, 2014 6:17 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Are you inflating in the direction of the linear movement of the body or do you use a fixed amount of to inflate? I use a combination of both. <br>
+<br>
+Here is my code for reference. I moved the inflation part into the broadphase and the dynamic tree doesn't know about this. What kind of inflation strategy (if any) you use depends on the use-case so I decoupled it.</div></blockquote>
+
+Dirk,<br>
+<br>
+I did exactly the same thing - I plan on using the dynamic tree for a number of subsystems so I simply made it ignorant of the inflation and did the work in the broadphase.<br>
+<br>
+For bodies with dynamics I inflate in the direction of linear velocity and I inflate it by some amount. For animation-driven bodies (bones) I currently inflate it by a consistent amount around the entire body as I don't currently infer linear velocity from the bone positions - it isn't required in my use case and I can't afford any extra maths.<br>
+<br>
+I may actually put an additional fudge factor into the bodies themselves so that the client code has control over this for certain cases such as rotation-only animated objects (powerups) and fast moving narrow animated objects (projectiles).<br>
+<br>
+Seems we are on the same page here - thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sweep and Prune or dBVT for this use case</h3>
+				<div class="date">Posted: <strong>Fri Mar 07, 2014 3:25 am</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">Dirk,<br>
+<br>
+Do you save the pre-inflated bounds for each object and perform an overlap test with that prior to narrow phase? Obviously the inflated bounds are used to manage the overlapping pairs, but I wonder if smaller objects would benefit from performing a tight-fighting bounds overlap test prior to entering narrow phase.<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sweep and Prune or dBVT for this use case</h3>
+				<div class="date">Posted: <strong>Fri Mar 07, 2014 4:48 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Good question! Currently I create a contact when the fat AABBs begin to overlap. I never have compared this, though I definitely should. I have other caching schemes (as described earlier) in place which kind of do this though.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

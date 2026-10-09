@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; New research on real-time deformable body dynamics (FEM). - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>New research on real-time deformable body dynamics (FEM).</h2>
+		<p><a href="viewtopic.php%3Ft=5468.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5468</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Wed Aug 11, 2010 8:24 am</strong></div>
+				<div class="author">by <strong>nisse</strong></div>
+				<div class="content"><blockquote><div><cite>fishboy82 wrote:</cite>Nisse and XperienS：<br>
+  I only know to use CG to solve linear eqaution but don't know how to use it solve LCP,<br>
+Could you refer me some Material how to use active set in CG method to solve LCP with unilateral contacts  and box constraint like friction？</div></blockquote>
+
+I guess we are all looking for ways to do that. The paper by Morten Silcowitz-Hansen, Sarah Niebe and Kenny Erleben describes one way - although it doesn't seem fully parallelizable as it involves one GS iteration (LCP solve) in each CG iteration.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 9:07 am</strong></div>
+				<div class="author">by <strong>FD</strong></div>
+				<div class="content">nisse, fishboy82, spade<br>
+<br>
+Yes, all the stuff is coupled into a single system that is PD LCP with box constraints. The parallelizable solver we use is a CG-like LCP solver, not CG itself. It is in fact our extension to a not-well-known optimization algorithm.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 9:39 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><strong class="text-strong">Dirk Gregorius</strong><br>
+&gt; <em class="text-italics">This is not due to PGS, but due to the stabilization method when solving on the velocity level.</em><br>
+Maybe there's some misunderstanding, I'm telling about FEM systems with high Young's module, and there is no stabilization (it is used for stiff joints such as ball-in-socket and etc.). Actually, we're solving exactly same system with PGS (and it cannot converge within 1000 iterations) and with our solver (it converges to given precision within 150 iterations), so it really seems like instabilities comes from the solver.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 12:31 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Ok, I thought you were refering to the rigid-body dynamics. One question I was always thinking about. Did you try to compute the exact solution with CG and then use warmstarted PGS for the actual simulation? I was wondering if the deformation was small PGS might be good enough to cover this.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 1:47 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><strong class="text-strong">Dirk Gregorius</strong><br>
+I can't fully understand, what do you mean? Solving on each simulation step only FEM joints with CG and then use this data as warmstarting for full system solved with PGS? Although, we didn't try anything like this, we wanted to solve coupled system. Btw, computing exact solution with CG is not quite possible due to FP-errors.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 2:49 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Basically I was thinking of this. You solve the initial system using CG to get a solution within some tolerance. For the next solves you use PGS which is warmstarted with the result from the last frame. Since you have a very good initial solution and if the system is only deforming slowly the results might be good enough.<br>
+<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 13, 2010 12:23 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><strong class="text-strong">Dirk Gregorius</strong><br>
+So, you want to solve the system once to get starting initial guess? That might be a good idea for some kind of simulations (e.g. for smooth deformations), but I assume not for interactive ones. Consider a falling body: when sim starts, it has zero strain, hence zero stress. Your IG is 0, and then, as it hits the floor, strain raises roughly. Here, if body's material is stiff enough, we could get with PGS instabilities mentioned above; so if we want to have some guarantees that our sim won't explode, this approach is not very good. Example I presented is quite simple, but same stuff could happen if we pull a body with some ball-socket chain or just apply high force/impulse to a free node of the body. Also, if you propose to use simple CG (w/o any additional actions), it can fail to calculate correct IG if there's limits introduced in the initial configuration.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Mon Mar 21, 2011 11:26 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">Sorry guys for such long delay! We wanted to write a full paper with all the proofs and stuff, but after a year of wasted time we realized that we're quite limited on time. Although, we wanted to share the idea with you, so we quickly wrote a sketch which introduces main concepts of our recent research. Hope you'll find it useful. If you'll have suggestions/corrections, please share with us in <a href="viewtopic.php%3Ft=6514.html" class="postlink">this</a> forum thread (you can find a link to the sketch there too).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Sun Aug 05, 2012 11:37 pm</strong></div>
+				<div class="author">by <strong>IvarHeyguen</strong></div>
+				<div class="content"><blockquote><div><cite>XperienS wrote:</cite><strong class="text-strong">fishboy82</strong><br>
+About the paper: right now we have only our old paper in Russian</div></blockquote>
+
+Hi XperienS,<br>
+<br>
+Are you still working on this? It would be great if you shared your latest findings/results as well as publications. We are looking for a software which could handle combined FEM/rigid body simulations and your work in this direction is very impressive. Depending on the state of the work we could discuss some research or commercial collaboration<br>
+<br>
+Could you please also share the Russian version of your paper and possibly other publications on this topic in Russian, if available? I'm sure we'll find someone to interpret it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 24, 2012 1:05 pm</strong></div>
+				<div class="author">by <strong>KenB</strong></div>
+				<div class="content">Hmm, I don't find a link to a paper. What am I missing?<br>
+<br>
+I also just wanted to comment about PGS. It was previously in this thread stated that PGS provides smooth convergence with improving results for each iteration. There is no guarantee for this.  PGS can be noisy and cyclic, and also completely stop converging and just fluctuate around the same error. Obviously, it can also diverge!<br>
+If it at all works, it typically gives some convergence for the first 1-30 iterations in MBD problems, but beyond this it is notoriously inefficient and doesn't improve that much even for hundreds or even thousands of iterations. This of course all depends on the spectral radius of the problem and the nature of the LCP, but my general experience is that it sucks for anything but perhaps large contact systems, where few other methods can be used at all.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Mon Aug 27, 2012 8:30 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>KenB wrote:</cite>If it at all works, it typically gives some convergence for the first 1-30 iterations in MBD problems, but beyond this it is notoriously inefficient and doesn't improve that much even for hundreds or even thousands of iterations.</div></blockquote>
+
+In my experience, decreasing/subdividing the time step seems to help improve convergence of PGS better than increasing the number of iterations.<br>
+Is that something you looked into?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Mon Aug 27, 2012 9:46 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>KenB wrote:</cite>This of course all depends on the spectral radius of the problem and the nature of the LCP, but my general experience is that it sucks for anything but perhaps large contact systems, where few other methods can be used at all.</div></blockquote>
+
+I don't know that it necessarily "sucks", but it's fairly well known that PGS has the general limitation that mass ratios should be kept near unity, and that a long chain of stiff constraints is going to take an unacceptably long time to converge. On the other hand, part of the reason it works so well for contact systems is because it seamlessly handles over-constrained systems.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 31, 2012 12:15 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><strong class="text-strong">IvarHeyguen</strong><br>
+&gt; <em class="text-italics">Are you still working on this? It would be great if you shared your latest findings/results as well as publications.</em><br>
+Sorry, but we abandoned the project quite a long time ago; we had some results like working GPU-accelerated simulator (you can see the demos at the beginning of the thread), but that is basically all that we have.<br>
+<br>
+&gt; <em class="text-italics">Could you please also share the Russian version of your paper and possibly other publications on this topic in Russian, if available? I'm sure we'll find someone to interpret it</em><br>
+Of course, glad you're interested <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <a href="http://fem.xp3d.net/files/FEM_article.pdf" class="postlink">_Link_</a>. Sorry for the total lack of markup there, this is kind of draft. Please, do not hesitate to ask if you'll have questions (better via e-mail, we do not visit the forums too frequently).<br>
+<br>
+<strong class="text-strong">KenB</strong><br>
+&gt; <em class="text-italics">Hmm, I don't find a link to a paper. What am I missing?</em><br>
+There is actually no link to the paper, because we didn't manage to translate it from russian. We only have a paper on CG-based solver <a href="viewtopic.php%3Ft=6514.html" class="postlink">_here_</a> along with the source code, and the paper mentioned above. The thing is, at the end we came up with almost the same formulation as Servin et al. (I cannot remember details right now, probably adding corotation or maybe decomposition for easier solver implementation, or something), so if you're interested, you can look at their paper and our source code.<br>
+<br>
+&gt; <em class="text-italics">I also just wanted to comment about PGS ... Obviously, it can also diverge!</em><br>
+For most constraint dynamic formulations (for our combined rigid body/FEM) the convergence of PGS has solid proof in Murty's LCP webbook (well he doesn't prove anything for rigid bodies of course <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> our system just satisfies convergence conditions), but indeed PGS convergence is unsatisfactory for our problem, that's why we developed CG-based box MLCP solver for our case (based on Dostal's work).<br>
+<br>
+&gt; <em class="text-italics">It was previously in this thread stated that PGS provides smooth convergence with improving results for each iteration. There is no guarantee for this</em><br>
+Most likely, it was stated for GS (LS, not LCP solver, for which, each iteration is effectively transforming the error term by iteration matrix, hence if the spectral radius for this "iteration" matrix  - not the original one - is &lt; 1 then GS converges, and provides smooth convergence curve), for PGS, projection I think can spoil the picture with some spiking, but it should be anyway below some conservative bound if convergence criterion is satisfied, and the projected gradient norm will be a lot smoother than the one for CG-based solvers (based on empiric results).<br>
+<br>
+&gt; <em class="text-italics">but my general experience is that it sucks for anything but perhaps large contact systems, where few other methods can be used at all</em><br>
+Agreed <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> I think I mentioned that earlier, for some large FEM systems with not-so-much contacts, PGS fails and requires more than a thousand iterations (esp. considering its "the more iterations, the less convergence steps"), again - that is why we decided to use another solver.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 31, 2012 10:46 am</strong></div>
+				<div class="author">by <strong>FD</strong></div>
+				<div class="content">IvarHeyguen,<br>
+<br>
+it's not even a paper but a draft that even lacks propper formatting. But our approach turned to be very similar to <a href="http://www.physics.umu.se/digitalAssets/44/44753_def-final-sigrad.pdf" class="postlink">http://www.physics.umu.se/digitalAssets ... sigrad.pdf</a> paper, so perhaps you can first read it. We used a different solver, however, based on Dostal's MPRGP solver. And we used co-rotation and some plasticity tricks like Mueller describes. Also we derived the contsrints in some way different from the paper mentioned above, and I am still not sure if there is any significant difference in the resulting formulas. Also we algebraically diagonalized the constraint-force mixing matrix (the force-dependent multiplier in the constraint formulation), which naively appears to be tridiagonal, but we did so for the specific Hooke's law formulation that is valid for isotropic materials only.  Also we used regularization to avoid numerical instability at degenerate solutions..</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

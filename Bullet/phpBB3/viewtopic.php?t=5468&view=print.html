@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; New research on real-time deformable body dynamics (FEM).</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>New research on real-time deformable body dynamics (FEM).</h2>
+		<p><a href="viewtopic.php%3Ft=5468.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5468</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>New research on real-time deformable body dynamics (FEM).</h3>
+				<div class="date">Posted: <strong>Fri Jul 30, 2010 3:44 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><a href="http://fem.xp3d.net/public/cuda_newsolver_features.gif" class="postlink"><img src="http://fem.xp3d.net/public/fem_preview.gif" class="postimage" alt="Image"></a><br>
+<a href="http://fem.xp3d.net/public/fem_basicdemos.zip" class="postlink">Download demos (zip, 1.1 Mb)</a><br>
+( controls: WASD + mouse [camera], F/G [apply force], Q [start simulation] )<br>
+This demos illustrates our research on deformable body dynamics.<br>
+We (me and <a href="memberlist.php%3Fmode=viewprofile&amp;u=525.html" class="postlink">FD</a>) developed a method of simulating elastic and plastic deformation of bodies that can be easily integrated into a typical modern game rigid body dynamics pipeline.<br>
+The soft bodies are represented by particles and joints between them that can be solved together with rigid-body constraints.<br>
+This makes it possible to create constraints not only between the soft bodies, but also between soft and rigid bodies that will be solved simultaneously as any other constraint in the rigid body dynamics simulation.<br>
+As soon as your impulse-based dynamics engine is capable of handling points (that are totally the same as bodies, but without a rotational part in velocities, positions, forces and accelerations), and custom joints are supported, you can easily employ our method.<br>
+This approach finally makes it possible to generate contact points between soft and rigid bodies the same way they are generated for rigid bodies, making the interactions between soft and rigid bodies smooth, with the soft body being an integral part of the simulation.<br>
+The algorithm behind the soft body simulation is not a spring-mass simplification, but a true linear Finite Elements Method. The method uses tetrahedral finite elements, the infinitesmall strain theory with stiffness warping used to eliminate the artifacts of linearization, and the matrix form of the Hooke's law that enables the user to provide material properties in the form of the Poisson's ration and Young's modulus.<br>
+The algorithm is designed for real-time simulations; almost everything is precomputed and the code that is run every frame is as small as possible and easily parallelized per joint (per tetrahedron). Specifically there's no integration of a stiffness matrix or global matrix reassembling in this code.<br>
+For stiff systems, the accuracy of the typical Projected Gauss-Seidel solver is insufficient, so we propose a new method for solving LCPs that is based on conjugate gradients and has never been used in the game industry before; in fact the method was adapted by us so that with our modifications it is possible to substitute the most popular Projected Gauss-Seidel for this method in a typical impulse-based dynamics engine.<br>
+The new solver is also fit easily for GPU parallelization (as well as our FEM implementation), so we present you a version that runs on the GPU using CUDA technology.<br>
+Please try out the demos; if you are interested in the technology, feel free to contact us.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Wed Aug 04, 2010 5:37 am</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">Seems good ,Could you write paper  describe you new techinique?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Wed Aug 04, 2010 9:06 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><strong class="text-strong">fishboy82</strong><br>
+Thank you!<br>
+About the paper: right now we have only our old paper in Russian, and we will write a new one, in English (with additions and enhancements), as soon as possible. Although, this will require some time which we almost don't have now <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Thu Aug 05, 2010 7:19 am</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">That's great ,Look forward to see your paper,but also I am a little intersted to know the speed efficiency and  memory need when solve the system</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Thu Aug 05, 2010 11:29 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">Well, if I understood you correctly, here is data that you need:<br>
+1) solver complexity: O(n), n - number of constrained DoFs;<br>
+2) solver convergence: R-linear;<br>
+3) memory statistics:<br>
+Memory usage for body/node storage:<br>
+*per triple:<br>
+  28 floats + 1 bool;<br>
+Memory usage for solver:<br>
+*per constrained DoF:<br>
+  42 floats + 1 uint for PGS solver,<br>
+  47 floats + 42 uints for our new solver;<br>
+*per triple:<br>
+  6 floats for PGS solver,<br>
+  6 floats + 2 uints for our new solver;<br>
+Memory usage per FE (tetrahedron):<br>
+  111 floats;<br>
+  <br>
+The facts, needed to be considered:<br>
+* one rigid body is represented with two triples (linear and angular parts), while FEM node with only one (linear only);<br>
+* FEM tetrahedral constraint has 6 CDoFs and its own data to construct Jacobian (mem usage per FE);<br>
+* our new solver needs to know spectral radius of a matrix A, we used 10 iterations of Power Iterations method which is also O(n);</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 06, 2010 2:53 am</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">XperienS:<br>
+   Thanks alot for you reply,that's the data I need, Actually I am more intersting about your new CG LCP sover, so you mean you solve rigid body and sift body all use your new solver? Or you use traditional PGS solver for rigid body and use your new solver for rigid-soft constraint(contact etc)？</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 06, 2010 9:03 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><strong class="text-strong">fishboy82</strong><br>
+We're using one solver for solving the whole system, either PGS or our new CG-based one. We're not combining them, that's the point of our research <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> - to make one system which could be solved at once, w/o any tricky coupling techniques. So yes, all the constraints (between rigid body, rigid-soft body, and between soft bodies) are solved within one system with a chosen solver.<br>
+Data for PGS in my previous message was presented for comparison of memory usage to our new solver.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 06, 2010 10:36 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">One nice thing about PGS is that with each iteration the result becomes better. With CG can you get a worse result when you go the next iteration. You basically get spikes in the convergence graph. Another nice thing about PGS is that it can be warmstarted so you get an amortized iteration count. Usually games use 5-10 iterations. You seem to need iterations in the range of ~50. <br>
+<br>
+Can your solver be warmstarted?<br>
+Does your solver converge gradually?<br>
+What is the typical iteration count and how would you compare it to one pure PGS iteration?<br>
+<br>
+I have seen combinations of PGS and CG. For example Moten Silcowitz from Diku (author Jinnengine <a href="http://code.google.com/p/jinngine/" class="postlink">http://code.google.com/p/jinngine/</a> ) uses a Fletcher–Reeves type nonlinear non-smooth conjugate gradient (NNCG) type method. How does your method compares to his research?<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 06, 2010 1:21 pm</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">Hi Dirk:<br>
+have you got the pdf of the paper&lt;&lt;A nonsmooth nonlinear conjugate gradient method for interactive contact force problems &gt;&gt;,If you have, could you send me one?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Fri Aug 06, 2010 2:59 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Please ask Morten for the paper. He is very responsive.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Sat Aug 07, 2010 5:02 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><strong class="text-strong">Dirk Gregorius</strong><br>
+&gt; Can your solver be warmstarted?<br>
+Yes, it definitely can be simply warmstarted (as well as CG though) and it amortizes iteration count too.<br>
+<br>
+&gt; Does your solver converge gradually?<br>
+Our solver have the similar behaviour here as CG solver. It is not 'unpredictable' - it makes steady progress towards the solution, although there could be 'spikes' in the Euclidean norm of the residual that you mentioned.<br>
+<br>
+&gt; What is the typical iteration count and how would you compare it to one pure PGS iteration?<br>
+Actually, 'typical iteration count' varies widely: e. g. 3 swinging chains of 50 ball-in-socket joints (right end of its initial position fixed) could converge simply within 15 iterations; but our FEM tests usually require 30-150 iterations (150 when stressed hardly), while PGS could easily introduce instabilities even within 300-1000 iterations (when used on highly stiff systems). But one iteration of CG-based solver is 3-4 times heavier than one PGS iteration, although CG-based solver is highly parallel.<br>
+<br>
+&gt; How does your method compares to his research?<br>
+We haven't read his research yet, we'll try to make a comparison later in a spare time; but in contrast to what you've said, our approach has nothing in common with PGS.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Sat Aug 07, 2010 5:47 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Thanks for the information. I would be interested to read about your research <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">. <br>
+
+<blockquote class="uncited"><div>...while PGS could easily introduce instabilities even within 300-1000 iterations (when used on highly stiff systems)...</div></blockquote>
+This is not due to PGS, but due to the stabilization method when solving on the velocity level.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Mon Aug 09, 2010 8:29 am</strong></div>
+				<div class="author">by <strong>nisse</strong></div>
+				<div class="content">Impressive work! Are you solving the contacts as unilateral contacts - with friction - using the CG solver as well? Do you have your own method for handling the active set in the LCP solve or do you use some standard method? That is the hardest part to parallelize as I understand the problem.<br>
+<br>
+Keep up the good work - and please publish when you feel ready for it  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Mon Aug 09, 2010 2:44 pm</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">Hi Dirk：<br>
+   I read the paper &lt;&lt;A nonsmooth nonlinear conjugate gradient method for interactive contact force problems &gt;&gt;<br>
+    But there seems some problem in the paper . As they say r = (H − I)Lamda+h can be<br>
+interpreted as the gradient of a non-smooth nonlinear quasi-quadratic function f(Lambda) ≡ 1/2|| r||^2 and the gradient of this function is gradf = -r;but when I deduce this gradient actually should be (H-I)*r rather than -r have you deduced that?<br>
+<br>
+Nisse and XperienS：<br>
+  I only know to use CG to solve linear eqaution but don't know how to use it solve LCP,<br>
+Could you refer me some Material how to use active set in CG method to solve LCP with unilateral contacts  and box constraint like friction？</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New research on real-time deformable body dynamics (FEM)</h3>
+				<div class="date">Posted: <strong>Mon Aug 09, 2010 3:43 pm</strong></div>
+				<div class="author">by <strong>spade</strong></div>
+				<div class="content">Hi XperienS,<br>
+is your method able to solve softbody (FEM)  and contact constraints (not only joints) between the soft and rigid body together in a coupled system?<br>
+In my engine I've tried to solve it and I've end up with a linear system (LCP) in which the matrix is still symmetric but no more positive defined.<br>
+Indefinite systems shouldn't be solved by a simple CG method but require other algorithms and  I believe that PCG doesn't work for a indefinite LCP.<br>
+Have you encountered this problem?<br>
+<br>
+<br>
+I'm very interested on your research paper</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

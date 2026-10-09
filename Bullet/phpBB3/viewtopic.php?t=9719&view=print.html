@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Help building Jacobian using partial derivative</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Help building Jacobian using partial derivative</h2>
+		<p><a href="viewtopic.php%3Ft=9719.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9719</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Help building Jacobian using partial derivative</h3>
+				<div class="date">Posted: <strong>Thu Jan 30, 2014 9:03 pm</strong></div>
+				<div class="author">by <strong>Numsgil</strong></div>
+				<div class="content">I'm trying to get my mathematical ducks in a row and finally tackle building Jacobians for a constraint using partial derivatives.  In the past I've sort of messed around with what I want the constraint to do in velocity space and built up the Jacobian that way.  But this time I'd like to tackle doing it from first principles from the position-space constraint equation.<br>
+<br>
+As a medium-difficulty problem, I'm tackling a revolute joint pinning a point on a rigid body to a fixed point in space in 2D.  Can someone take a look at what I have and help me correct any misunderstandings?  I'm not being <em class="text-italics">super</em> formal below with the notation, as many of the matrices below are actually block matrices, but hopefully it makes sense.  Also, apologies in advance for this massive wall of text <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+...<br>
+<br>
+Let [θ] be the 2D rotation matrix for an angle θ.  That is:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>| cos θ  -sin θ | = [θ]
+| sin θ   cos θ |
+</code></pre></div>
+
+Let [θ, p] be the 2D affine transformation matrix for orientation θ and translation p.  That is:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>| cos θ  -sin θ  p.x | = | [θ] p | = [θ, p]
+| sin θ   cos θ  p.y |   | 0 0 1 |
+| 0       0        1 |
+</code></pre></div>
+
+Then for my revolute joint I want:<br>
+<br>
+[θ,p] * r = { c.x; c.y; 1 }, where r is the position of the pivot in the body's local space, and [θ,p] is the local-to-world transformation matrix for the body, and c is the position we're pinning the body to in world space.<br>
+<br>
+Let X = { θ; p.x; p.y } be the 3x1 column vector of the degrees of freedom of the system.  ie: X is the position and orientation of the body.<br>
+<br>
+We can write the above as f(X) = { c.x ; c.y ; 1 }.  Then take the derivative.  Using the chain rule, this becomes:<br>
+<br>
+f'(X) * X' = {0;0;0}<br>
+<br>
+f'(X) is the Jacobian, and X' is the change in the degrees of freedom over time, ie: the body's linear and angular velocity.<br>
+<br>
+So now we want to take the Jacobian of the affine transformation matrix.<br>
+<br>
+First: 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>cos' θ = -θ' * sin θ = -w * sin θ
+sin' θ =  θ' * cos θ =  w * cos θ
+w = θ' = angular velocity
+</code></pre></div>
+
+So then:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>[θ]' = | cos' θ -sin' θ | = w * | -sin θ -cos θ | = w [θ] [#]
+       | cos' θ  sin' θ |       | -sin θ  cos θ |
+</code></pre></div>
+
+where [#] is a 2x2 matrix which takes a vector and maps it to its perpindicular.  ie:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>[#] = | 0 -1 |
+      | 1  0 |
+</code></pre></div>
+
+So now we take [θ,p] and find the partial derivatives of it with respect to x, y, and θ.  First, we subdivide the matrix in terms of sub functions:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>F1 = { cos θ, -sin θ } dot r + p.x
+F2 = { sin θ,  cos θ } dot r + p.y
+F3 = 1
+</code></pre></div>
+
+And then we take the partial derivative:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>J = | I,    w [θ] [#] r |
+    | 0, 0, 0           |
+</code></pre></div>
+
+And of course, being all 0s, the last row can just be dropped in practice.  That gives a 2x3 matrix, which makes sense: two degrees of freedom have been removed from the system.<br>
+<br>
+...<br>
+<br>
+But now my question: I have a w term (the angular velocity) in my Jacobian, which I don't think is right!  I feel like the above is almost what I expect, but I can't figure out how to get rid of that w term.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Help building Jacobian using partial derivative</h3>
+				<div class="date">Posted: <strong>Sat Feb 01, 2014 9:38 pm</strong></div>
+				<div class="author">by <strong>Numsgil</strong></div>
+				<div class="content">Ah, hmm, I think I figured it out.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9719&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>d cos θ(t)    -sin θ(t) * dθ(t)
+---------- = ------------------- = -sin θ(t)
+  dθ(t)              dθ(t)
+</code></pre></div>
+
+That is, I'm not finding the derivative with respect to time, but with respect to θ(t).  So the derivatives on the top and bottom cancel, and w drops out of my Jacobian.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Help building Jacobian using partial derivative</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 1:12 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Yes, the common way is to build the time derivative and then find the Jacobian by inspection. You can find some details e.g. in the excellent book 'Computational Dynamics' by Shabana. <br>
+<br>
+Basically you have C( x(t), t ) = 0<br>
+Now you can build the time derivative which has a special form: dC/dt = del_C / del_x * dx / dt + del_C / del_t<br>
+Where del_* is the partial derivative.<br>
+<br>
+The constraint functions we usually use in games don't dependent explicitly on time so the last term is usually zero. The del_C / del_x is the famous Jacobian matrix. Each row of the Jacobian is the transposed gradient vector of each scalar constraint function c_i in the constraint vector C = ( c1( x, t ), c2( x, t ), cn( x, t ) )^T<br>
+<br>
+For reference: <a href="http://en.wikipedia.org/wiki/Total_derivative" class="postlink">http://en.wikipedia.org/wiki/Total_derivative</a><br>
+<br>
+In your particular example above for a revolute joint in 2D you write down the constraint function for a revolute joint:<br>
+C = x2 + R2 * r2' - x1 - R1 * r1' = x2 + r2 - x1 - r1    // The primes should denote body fixed coordinates<br>
+dC/dt = = J * v = v2 + cross( omega2, r2 ) - v1 - cross( omega1, r1 )<br>
+<br>
+From here we identify the Jacobian by inspection as:<br>
+J = ( -I skew( r1 ) I -skew( r2 ) <br>
+<br>
+Where I is the 2x2 identity matrix and skew( r ) is the skew symmetric cross product matrix. <br>
+<br>
+You can find a bunch of examples in the Box2D joint implementations. Erin added a bunch of derivations at the top of the corresponding *.cpp files.<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Help building Jacobian using partial derivative</h3>
+				<div class="date">Posted: <strong>Sun Feb 02, 2014 1:42 am</strong></div>
+				<div class="author">by <strong>Numsgil</strong></div>
+				<div class="content">Yes, I'm familiar with that approach.  I was specifically interested in getting comfortable with the mathematics, though.  I'm going to be exploring building the hessian matrices of a reduced coordinate system, which is a much harder problem!  So I wanted to exercise my math chops and make sure I can do problems I know the answer to.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

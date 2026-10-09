@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Numerical issues with GJK for large triangle areas</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Numerical issues with GJK for large triangle areas</h2>
+		<p><a href="viewtopic.php%3Ft=11155.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11155</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Mon May 16, 2016 12:58 am</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">I've noticed that my GJK implementation is suffering from numerical issues for a 3-simplex early out (e.g. the closest point is on a triangle), where the shapes involved are a sphere and a triangle.<br>
+<br>
+What made me notice this was a vertical stack of 10 spheres falling over the following static triangle: v1 = (-50.0, 1.0, -50.0), v2 = (0.0, 1.0, 50.0), v3 = (50.0, 1.0, -50.0).<br>
+<br>
+So, I tested a sphere of radius = 1 located at c = (-5.0, 2.0..n, 0.0) over the same triangle, and noticed the solver was fuzzy in the z-axis canonical direction. Then shifted the spheres to c = (0.0, 2.0, 0.0) and the stack became stable. This was expected of course, because the barycentric for this c does not suffer much from precision issues. The same problem is reduced as long as the sphere over the triangle is close to the triangle centroid.<br>
+<br>
+Is there currently any work around for this problem or we still do need to limit the size of triangles (of course coming from meshes) in our games?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Tue May 17, 2016 8:57 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">How does the support function of sphere looks like?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Tue May 17, 2016 9:22 pm</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">The support point is just the sphere center. <br>
+<br>
+I'm pretty sure the implementation is correct as it is has been working very well since implemented. I just need to know if this is a common numerical problem for GJK (large shape sizes). I've read about this in the forums some weeks ago but can't remember exaclty where. <br>
+<br>
+If I replace the triangle mesh with a hull of the same size (but the face being a quad now) this problem doesn't occurs.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Tue May 17, 2016 9:31 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Looks like a bug to me. I have no numerical issues at that scale.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Wed May 18, 2016 1:05 am</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">Okay, I tested the stack on a hull and now with the sphere stack starting from a different location, and looks like a numerical problem due to GJK barycentrics. If anyone is able to reproduce this same setup and post back the results I'd greatly appreciate and set this thread as solved. <br>
+<br>
+Box (Hull)<br>
+<br>
+Position = (0.0, 0.0, 0.0)<br>
+Density = 0.0 kg m^3<br>
+Friction = 1.0<br>
+Dimensions = 100 x 1 x 100 m^3 / Scale = (50, 1, 50)<br>
+<br>
+Sphere 1<br>
+<br>
+Position = (-30.0, 2.05, 10.0)<br>
+Density = 1 kg m^3<br>
+Friction = 1.0<br>
+Radius = 1.0 m<br>
+<br>
+Sphere 2<br>
+<br>
+Position = (-30.0, 4.55, 10.0)<br>
+Density = 1 kg m^3<br>
+Friction = 1.0<br>
+Radius = 1.0 m<br>
+<br>
+Frequency = 60 Hz<br>
+Sleeping = 0<br>
+Warm Starting = 1<br>
+Vel. Iters = 8<br>
+Pos. Iters. = 2<br>
+Gravity = 9.8 m/s^2<br>
+<br>
+After ~20 s Sphere 2 should start sliding along the z axis and the stack fall.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Wed May 18, 2016 3:38 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I am not sure I understand what the problem is. Are you saying that the closest point returned from GJK is not *exactly* projecting under the lowest sphere center and that the tiny offset due to numerical imprecision is making your sphere stack fall over?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Wed May 18, 2016 4:06 pm</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">Yeah. Obviously if the contact point doesn't align with the center of mass of Sphere 1 because of rouding errors being accumulated when projecting its center on the triangle, and if Sphere 2 does, then the latter will start sliding after some significant amount of time has passed.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Wed May 18, 2016 5:30 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I am not sure if I would consider this a bug and spend time trying to fix this.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Numerical issues with GJK for large triangle areas</h3>
+				<div class="date">Posted: <strong>Wed May 18, 2016 5:53 pm</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">Yeah, same thing here. Thanks.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

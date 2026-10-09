@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Computing Minimum De-Penetration Between Two Colliders</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Computing Minimum De-Penetration Between Two Colliders</h2>
+		<p><a href="viewtopic.php%3Ft=13228.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13228</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Computing Minimum De-Penetration Between Two Colliders</h3>
+				<div class="date">Posted: <strong>Tue Jun 29, 2021 5:29 pm</strong></div>
+				<div class="author">by <strong>mbetters</strong></div>
+				<div class="content">Hello, I'd like to compute the minimum translation needed to de-penetrate two collision bodies. I essentially want to port Unity's <a href="https://docs.unity3d.com/ScriptReference/Physics.ComputePenetration.html" class="postlink">Physics.ComputePenetration</a> to a roughly equivalent static function using Bullet. Here's my implementation:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13228&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static bool physicsComputePenetration( btCollisionWorld* collisionWorld, 
+                                btBroadphasePair* collisionPair,
+                                btCollisionObject* penetrator,
+                                btVector3* minDepenetrationDirection,
+                                btScalar* minDepenetrationDistance )
+{
+    btCollisionObject* obj0 = static_cast&lt;btCollisionObject*&gt;(collisionPair-&gt;m_pProxy0-&gt;m_clientObject);
+    btCollisionObject* obj1 = static_cast&lt;btCollisionObject*&gt;(collisionPair-&gt;m_pProxy1-&gt;m_clientObject);
+    if ((obj0 &amp;&amp; !obj0-&gt;hasContactResponse()) || (obj1 &amp;&amp; !obj1-&gt;hasContactResponse())) {
+        Ogre::LogManager::getSingleton().logMessage("No contact");
+        return false;
+    }
+    Ogre::LogManager::getSingleton().logMessage("Contact happened");
+    if (!needsCollision(obj0, obj1)) {
+        Ogre::LogManager::getSingleton().logMessage("No collision");
+        return false;
+    }
+    Ogre::LogManager::getSingleton().logMessage("Collision happened");
+    btManifoldArray manifoldArray;
+    if (collisionPair-&gt;m_algorithm)
+		collisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(manifoldArray);
+    Ogre::LogManager::getSingleton().logMessage("Num manifolds in collision = "
+        + Ogre::StringConverter::toString(manifoldArray.size()));
+    btScalar maxPenetration = btScalar(0.0); // TODO: Why is this 0 ???
+    bool isPenetrating = false;
+    for (int j = 0; j &lt; manifoldArray.size(); j++)
+    {
+        btPersistentManifold* manifold = manifoldArray[j];
+        btScalar directionSign = manifold-&gt;getBody0() == penetrator ? btScalar(-1.0) : btScalar(1.0);
+        Ogre::LogManager::getSingleton().logMessage(
+            "Num Contact Points in Manifold "
+            + Ogre::StringConverter::toString(j)
+            + " = "
+            + Ogre::StringConverter::toString(manifold-&gt;getNumContacts())
+        );
+        for (int p = 0; p &lt; manifold-&gt;getNumContacts(); p++)
+		{
+            const btManifoldPoint&amp; pt = manifold-&gt;getContactPoint(p);
+            btScalar dist = pt.getDistance();
+            Ogre::LogManager::getSingleton().logMessage(
+                "Contact Point "
+                + Ogre::StringConverter::toString(p) + "'s "
+                + " Distance = "
+                + Ogre::StringConverter::toString(dist)
+            );
+            if (dist &lt; maxPenetration)
+            {
+                maxPenetration = dist;
+                *minDepenetrationDirection = pt.m_normalWorldOnB * directionSign * dist;
+                *minDepenetrationDistance = minDepenetrationDirection-&gt;length();
+                *minDepenetrationDirection = minDepenetrationDirection-&gt;normalized();
+                isPenetrating = true;
+            }
+        }
+    }
+    return isPenetrating;
+}
+</code></pre></div>
+
+Is this the right way to do this in Bullet? I was looking at btComputeMprPenetration for example, but that seemed too low-level, and I was wondering if functions like that already get called as part of collision detection itself, or something... I'm basically an idiot when it comes to physics, so help would be greatly appreciated. I just want minimum de-penetration distance, and to my mind the function above calculates it by finding the maximum penetration distance... unless I'm totally misunderstanding something here.<br>
+<br>
+I should clarify and say this would be used as a helper function for a kinematic character controller using a btPairCachingGhostObject. The function above is just a factored-out version of the inner-most block of the recoverFromPenetration function in Bullet's existing kinematic character controller example.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Computing Minimum De-Penetration Between Two Colliders</h3>
+				<div class="date">Posted: <strong>Tue Jun 29, 2021 8:18 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I would expect your algorithm to work well enough when only two objects are involved but it will sometimes have problems (oscillations) when the character is trapped between two or more objects (e.g. when it steps out of penetration from ObjectA and thereby into penetration with ObjectB).  For more robust behavior you probably want to "integrate" the harvested penetration vectors across multiple objects and probably also will need to make your algorithm more iterative such that it doesn't try to fully extract itself in a single step.  Of course that would require more CPU cycles and also more time: there will be tradeoffs between: accuracy, cost, and lag.  You'll have to decide how to balance them.<br>
+<br>
+One optimization suggestion: you appear to be doing wasted work inside the loop.  Specifically this code unnecessarily computes the length of the penetration twice.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13228&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                *minDepenetrationDirection = pt.m_normalWorldOnB * directionSign * dist;
+                *minDepenetrationDistance = minDepenetrationDirection-&gt;length();
+                *minDepenetrationDirection = minDepenetrationDirection-&gt;normalized();</code></pre></div>
+Assuming <strong class="text-strong">pt.m_normalWorldOnB</strong> is already normalized I believe you could achieve the same results like so:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13228&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                *minDepenetrationDistance = - dist;
+                *minDepenetrationDirection = pt.m_normalWorldOnB * directionSign;</code></pre></div>
+Alternatively you could store direction and distance in one <strong class="text-strong">btVector3</strong> and extract its length as necessary outside the function call:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13228&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                *minDepenetration = (-dist * directionSign) * pt.m_normalWorldOnB;</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Computing Minimum De-Penetration Between Two Colliders</h3>
+				<div class="date">Posted: <strong>Thu Jul 01, 2021 3:38 pm</strong></div>
+				<div class="author">by <strong>mbetters</strong></div>
+				<div class="content">Thanks for the reply and the code fix!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

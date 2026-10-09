@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Setting up collision between OpenGL meshes</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Setting up collision between OpenGL meshes</h2>
+		<p><a href="viewtopic.php%3Ft=11519.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11519</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Setting up collision between OpenGL meshes</h3>
+				<div class="date">Posted: <strong>Tue Jan 31, 2017 8:18 pm</strong></div>
+				<div class="author">by <strong>jimjamjack</strong></div>
+				<div class="content">Hello, I'm pretty new to Bullet so I'm pretty confused about setting up collisions between meshes. I understand how to set it up for basic shapes, but I'm having issues giving three of my meshes a collision shape of its mesh (I want simple ray callbacks, and I have a ray casting method).<br>
+<br>
+I have three meshes in the shape of targets, for which I want each to have their mesh as the collision shape. How would I go about this? <br>
+Can anyone provide some sort of code to help me through this? Thanks in advance <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting up collision between OpenGL meshes</h3>
+				<div class="date">Posted: <strong>Sun Feb 12, 2017 10:14 pm</strong></div>
+				<div class="author">by <strong>benelot</strong></div>
+				<div class="content">If you want performance, do not try to use your OpenGL meshes to detect collisions. You should use an approximation of it built from the primitives. So if your mesh looks a bit like and mainly behaves like a sphere, use a sphere. If a capsule is better, then use that. Things like characters are usually full of capsules <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+If you really need to go for the full meshes, perform a convex shape decomposition and compose the convex hulls into a compound shape.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting up collision between OpenGL meshes</h3>
+				<div class="date">Posted: <strong>Sun Feb 12, 2017 11:14 pm</strong></div>
+				<div class="author">by <strong>jimjamjack</strong></div>
+				<div class="content">The meshes are shooting targets, I currently have a collision box shape for each one but it's inaccurate since I can shoot through the box but not the target and still 'hit' it. Would you recommend another primitive shape in particular? <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I've looked into convex hulls and btvTriangleArrays and similar things, but honestly cannot figure out how to create the collision shape using the vertices/indices that I have. I know it's less efficient than using primitives, but accuracy is quite important for the ray calls :/<br>
+<br>
+Appreciate the help though <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting up collision between OpenGL meshes</h3>
+				<div class="date">Posted: <strong>Mon Feb 13, 2017 2:55 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Here is some code that may work for you.  I tried to make it clear and correct, however please keep in mind that I did not test: there may be syntax errors, incorrect API usage,  and memory leaks.  Use at your own risk:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11519&amp;hilit=btTriangleIndexVertexArray&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    std::vector&lt;unsigned short&gt; targetIndices;
+    std::vector&lt;glm::vec3&gt; targetVertices;
+    std::vector&lt;glm::vec2&gt; targetUvs;
+    std::vector&lt;glm::vec3&gt; targetNormals;
+    res = loadAssImp("target2.obj", targetIndices, targetVertices, targetUvs, targetNormals);
+
+    // first create a <span class="posthilit">btTriangleIndexVertexArray</span>
+    // NOTE: we must track this pointer and delete it when all shapes are done with it!
+    <span class="posthilit">btTriangleIndexVertexArray</span>* data = new <span class="posthilit">btTriangleIndexVertexArray</span>;
+
+    // add an empty mesh (data makes a copy)
+    btIndexedMesh tempMesh;
+    data-&gt;addIndexedMesh(tempMesh, PHY_FLOAT);
+
+    // get a reference to internal copy of the empty mesh
+    btIndexedMesh&amp; mesh = data-&gt;getIndexedMeshArray()[0];
+
+    // allocate memory for the mesh
+    const int32_t VERTICES_PER_TRIANGLE = 3;
+    size_t numIndices = targetIndices.size();
+    mesh.m_numTriangles = numIndices / VERTICES_PER_TRIANGLE;
+    if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max()) {
+        // we can use 16-bit indices
+        mesh.m_triangleIndexBase = new unsigned char[sizeof(int16_t) * (size_t)numIndices];
+        mesh.m_indexType = PHY_SHORT;
+        mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int16_t);
+    } else {
+        // we need 32-bit indices
+        mesh.m_triangleIndexBase = new unsigned char[sizeof(int32_t) * (size_t)numIndices];
+        mesh.m_indexType = PHY_INTEGER;
+        mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int32_t);
+    }
+    mesh.m_numVertices = targetVertices.size();
+    mesh.m_vertexBase = new unsigned char[VERTICES_PER_TRIANGLE * sizeof(btScalar) * (size_t)mesh.m_numVertices];
+    mesh.m_vertexStride = VERTICES_PER_TRIANGLE * sizeof(btScalar);
+
+    // copy vertices into mesh
+    btScalar* vertexData = static_cast&lt;btScalar*&gt;((void*)(mesh.m_vertexBase));
+    for (int32_t i = 0; i &lt; mesh.m_numVertices; ++i) {
+        int32_t j = i * VERTICES_PER_TRIANGLE;
+        const glm::vec3&amp; point = targetVertices[i];
+        vertexData[j] = point.x;
+        vertexData[j + 1] = point.y;
+        vertexData[j + 2] = point.z;
+    }
+    // copy indices into mesh
+    if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max()) {
+        // 16-bit case
+        int16_t* indices = static_cast&lt;int16_t*&gt;((void*)(mesh.m_triangleIndexBase));
+        for (int32_t i = 0; i &lt; numIndices; ++i) {
+            indices[i] = (int16_t)targetIndices[i];
+        }
+    } else {
+        // 32-bit case
+        int32_t* indices = static_cast&lt;int32_t*&gt;((void*)(mesh.m_triangleIndexBase));
+        for (int32_t i = 0; i &lt; numIndices; ++i) {
+            indices[i] = targetIndices[i];
+        }
+    }
+
+    // create the shape
+    // NOTE: we must track this pointer and delete it when all btCollisionObjects that use it are done with it!
+    const bool USE_QUANTIZED_AABB_COMPRESSION = true;
+    btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(data, USE_QUANTIZED_AABB_COMPRESSION);</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting up collision between OpenGL meshes</h3>
+				<div class="date">Posted: <strong>Mon Feb 13, 2017 9:44 pm</strong></div>
+				<div class="author">by <strong>jimjamjack</strong></div>
+				<div class="content">@drleviathan<br>
+<br>
+Wow, after scouring the web for about a week that is by far the most useful post I've come across! Thanks for the code and break down, it really was helpful. The code works perfectly, apart from the impact on performance and frame rate, but I'll take a look at that when I can <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+That is unless you have any suggestions for improving performance? Regardless, an extremely useful post, so thanks again <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting up collision between OpenGL meshes</h3>
+				<div class="date">Posted: <strong>Tue Feb 14, 2017 6:03 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">If your graphics mesh data are in the right format I believe is is possible to create a <strong class="text-strong">btStridingMeshInterface</strong> that points into that memory: you can share the same data for rendering and collisions.  I've never done it so I don't have any example code to offer.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting up collision between OpenGL meshes</h3>
+				<div class="date">Posted: <strong>Tue Feb 14, 2017 7:21 pm</strong></div>
+				<div class="author">by <strong>jimjamjack</strong></div>
+				<div class="content">Ah, I've actually looked into btStridingMeshInterfaces before. I'll look into them again, and if I make any progress with it then I'll post it here. If anyone else is looking into them as well, the basic idea is to create a btStridingMeshInterface, call getLockedVertexIndexBase, fill the array it returns, and unlock.<br>
+<br>
+Cheers again  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

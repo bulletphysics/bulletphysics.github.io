@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10147" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-10-09T01:33:42+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10147</id>
+
+		<entry>
+		<author><name><![CDATA[dtruman]]></name></author>
+		<updated>2014-10-09T01:33:42+00:00</updated>
+
+		<published>2014-10-09T01:33:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34128#p34128</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34128#p34128"/>
+		<title type="html"><![CDATA[Re: switching rigidbody between static and dynamic]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34128#p34128"><![CDATA[
+Fixed:<br><br>After a long night I figured it out. First of all for an unknown reason at this time using a triangle mesh (the mesh of the object) will have the possibility of crashing the application. So instead I used a convex collision shape. In addition, you will need to call some flags in the switch to properly switch between static and dynamic. The code is as such:<div class="codebox"><p>Code: </p><pre><code>btConvexShape* tmpConvexShape=new btConvexTriangleMeshShape(mTriMesh);btShapeHull* hull=new btShapeHull(tmpConvexShape);btScalar margin=tmpConvexShape-&gt;getMargin();hull-&gt;buildHull(margin);tmpConvexShape-&gt;setUserPointer(hull);btConvexHullShape* convexShape=new btConvexHullShape();bool updateLocalAabb=false;for(int i=0; i&lt;hull-&gt;numVertices(); i++){    convexShape-&gt;addPoint(hull-&gt;getVertexPointer()[i],updateLocalAabb);}convexShape-&gt;recalcLocalAabb();convexShape-&gt;setMargin(0.001f);delete tmpConvexShape;delete hull;meshInfos[currentMesh].shape=convexShape;meshInfos[currentMesh].motionState=new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), btVector3(position.x,position.y,position.z)));meshInfos[currentMesh].mass=mass;btVector3 inertia;meshInfos[currentMesh].shape-&gt;calculateLocalInertia(mass, inertia);btRigidBody::btRigidBodyConstructionInfo rigidBodyCI(0, meshInfos[currentMesh].motionState, meshInfos[currentMesh].shape, inertia);meshInfos[currentMesh].rigidBody=new btRigidBody(rigidBodyCI);</code></pre></div>and switching:<div class="codebox"><p>Code: </p><pre><code>    if(gravityOn &amp;&amp; !addedToWorld){    if(mass&gt;0)    {        world-&gt;removeRigidBody(body);        btVector3 inertia(0,0,0);        body-&gt;getCollisionShape()-&gt;calculateLocalInertia(mass, inertia);        body-&gt;setActivationState(DISABLE_DEACTIVATION);        body-&gt;setMassProps(mass, inertia);        body-&gt;setLinearFactor(btVector3(1,1,1));        body-&gt;setAngularFactor(btVector3(1,1,1));        body-&gt;updateInertiaTensor();        body-&gt;clearForces();        btTransform transform;        transform.setIdentity();        float x=position.x;        float y=position.y;        float z=position.z;        transform.setOrigin(btVector3(x, y,z));        body-&gt;getCollisionShape()-&gt;setLocalScaling(btVector3(1,1,1));        body-&gt;setWorldTransform(transform);        world-&gt;addRigidBody(body);        addedToWorld=true;    }    else    {        std::cout &lt;&lt; "Mass must be set to a number greater than 0" &lt;&lt; std::endl;    }}else if(!gravityOn &amp;&amp; addedToWorld){    world-&gt;removeRigidBody(body);    btVector3 inertia(0,0,0);    body-&gt;getCollisionShape()-&gt;calculateLocalInertia(0, inertia);    body-&gt;setCollisionFlags(btCollisionObject::CF_STATIC_OBJECT);    body-&gt;setMassProps(0, inertia);    body-&gt;setLinearFactor(btVector3(0,0,0));    body-&gt;setAngularFactor(btVector3(0,0,0));    body-&gt;setGravity(btVector3(0,0,0));    body-&gt;updateInertiaTensor();    body-&gt;setAngularVelocity(btVector3(0,0,0));    body-&gt;setLinearVelocity(btVector3(0,0,0));    body-&gt;clearForces();    body-&gt;setActivationState(WANTS_DEACTIVATION);    btTransform transform;    transform.setIdentity();    float x=position.x;    float y=position.y;    float z=position.z;    transform.setOrigin(btVector3(x, y,z));    body-&gt;getCollisionShape()-&gt;setLocalScaling(btVector3(1,1,1));    body-&gt;setWorldTransform(transform);    world-&gt;addRigidBody(body);    addedToWorld=false;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11038">dtruman</a> — Thu Oct 09, 2014 1:33 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[dtruman]]></name></author>
+		<updated>2014-10-07T06:48:24+00:00</updated>
+
+		<published>2014-10-07T06:48:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34122#p34122</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34122#p34122"/>
+		<title type="html"><![CDATA[switching rigidbody between static and dynamic]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34122#p34122"><![CDATA[
+I am fairly new to Bullet and my goal here is to be able to switch a btRigidBody between static and dynamic. To initialize my rigidbody I start out by doing this:<br><div class="codebox"><p>Code: </p><pre><code>btGImpactMeshShape* triMesh=new btGImpactMeshShape(mTriMesh);triMesh-&gt;setLocalScaling(btVector3(1,1,1));triMesh-&gt;updateBound();meshInfos[currentMesh].shape=triMesh;meshInfos[currentMesh].motionState=new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), btVector3(position.x,position.y,position.z)));meshInfos[currentMesh].mass=mass;btVector3 inertia;meshInfos[currentMesh].shape-&gt;calculateLocalInertia(mass, inertia);btRigidBody::btRigidBodyConstructionInfo rigidBodyCI(0, meshInfos[currentMesh].motionState, meshInfos[currentMesh].shape, inertia);meshInfos[currentMesh].rigidBody=new btRigidBody(rigidBodyCI);</code></pre></div>that sets it up as static_object because the "mass" variable I have is 0 to start. Later on I have a function that checks if a boolean was switched on and it switches the rigidbody to a dynamic object like this:<br><div class="codebox"><p>Code: </p><pre><code>if(gravityOn &amp;&amp; !addedToWorld){    if(mass&gt;0)    {        world-&gt;removeRigidBody(body);        btVector3 inertia;        body-&gt;getCollisionShape()-&gt;calculateLocalInertia(mass, inertia);        body-&gt;setMassProps(mass, inertia);        body-&gt;setLinearFactor(btVector3(1,1,1));        body-&gt;setAngularFactor(btVector3(1,1,1));        body-&gt;updateInertiaTensor();        world-&gt;addRigidBody(body);        addedToWorld=true;    }    else    {        std::cout &lt;&lt; "Mass must be set to a number greater than 0" &lt;&lt; std::endl;    }}else if(!gravityOn &amp;&amp; addedToWorld){    world-&gt;removeRigidBody(body);    body-&gt;setMassProps(0, btVector3(0,0,0));    body-&gt;setLinearFactor(btVector3(0,0,0));    body-&gt;setAngularFactor(btVector3(0,0,0));    body-&gt;updateInertiaTensor();    world-&gt;addRigidBody(body);    addedToWorld=false;}</code></pre></div>the addedToWorld boolean just makes sure that the if statement doesn't keep running through the code block every update. From what I have researched this should work but instead does nothing. Am I missing something? From what I've seen the best practice is to remove the rigidbody first before you do any changes to it. And then setMassProps to change inertia, setLinearFactor and setAngularFactor allows the object to not move or move depending on the vector you pass into it when collided into, updateInertiaTensor allows the inertia to update properly, and then I add the rigidbody back. I might have misunderstood some of this, any help would be greatly appreciated.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11038">dtruman</a> — Tue Oct 07, 2014 6:48 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

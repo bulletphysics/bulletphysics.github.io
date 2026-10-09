@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/681" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-11-12T08:24:19+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/681</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-11-12T08:24:19+00:00</updated>
+
+		<published>2006-11-12T08:24:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2404#p2404</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2404#p2404"/>
+		<title type="html"><![CDATA[Help with ball and socket joint separating.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2404#p2404"><![CDATA[
+A Ball-Socket Joint removes 3DOF you have formulated a distance constraint. which is a 1D constraint. Look at Erin Catto's slides from GDC 2006 or Bullet.<br><br>K is the 3x3 system matrix<br>0.1 is the Baumgarte factor (tau in Bullet and erp in the ODE)<br><br>Let me know if you have problems to formulate this.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Nov 12, 2006 8:24 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[MarkZ]]></name></author>
+		<updated>2006-11-12T06:19:31+00:00</updated>
+
+		<published>2006-11-12T06:19:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2403#p2403</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2403#p2403"/>
+		<title type="html"><![CDATA[Help with ball and socket joint separating.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2403#p2403"><![CDATA[
+Thanks for the reply.<br><br>I was wondering what K is and where the -0.1 come from in the equation?<br><br>Cheers,<br>Mark<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=950">MarkZ</a> — Sun Nov 12, 2006 6:19 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-11-10T15:15:04+00:00</updated>
+
+		<published>2006-11-10T15:15:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2386#p2386</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2386#p2386"/>
+		<title type="html"><![CDATA[Help with ball and socket joint separating.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2386#p2386"><![CDATA[
+I haven't checked, but is the sign of the extra velocity correct? It must be:<br><br>K * impulse = -0.1 * deviation / dt - v_rel<br><br>Where deviations is x1 + r1 - x2 - r2<br>You should also apply the extra velocity always and not only when some MAY_DEVIATION is exceeded...<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Fri Nov 10, 2006 3:15 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[MarkZ]]></name></author>
+		<updated>2006-11-10T14:48:44+00:00</updated>
+
+		<published>2006-11-10T14:48:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2383#p2383</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2383#p2383"/>
+		<title type="html"><![CDATA[Help with ball and socket joint separating.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2383#p2383"><![CDATA[
+Hello,<br><br>I've been trying to make a ball and socket joint based on constraint impulses.  I do this by calculating the relative velocities at the joint ends on the two connected objects and using this to find an impulse that will make this relative velocity zero. I also add a drift velocity to the relative velocity so that the impulse also corrects drift. The problem is the joint is separating like in the screen shot below.<br><img src="http://yallara.cs.rmit.edu.au/~mzaloumi/rtr/ball.png" class="postimage" alt="Image"><br><br>I was hoping someone could have a look at my code and offer some suggestions about why this would be happening as I have no idea where to look.<div class="codebox"><p>Code: </p><pre><code>void cBallSocketJoint::PreApply(float dt){// Calculate the deviation between the end points and the joint anchorcVector deviation = m_a-&gt;WorldPos(m_ra) - m_b-&gt;WorldPos(m_rb);float deviationMag = deviation.Mag();if (deviationMag &gt; MAX_DEVIATION){cVector deviationDir = deviation.Unit();m_vrExtra = deviationDir * (deviationMag / dt);}else{m_vrExtra.Zero();}}void cBallSocketJoint::Apply(float dt){// Align joint ends based on current rotationcVector ra = m_a-&gt;Q() * m_ra;cVector rb = m_b-&gt;Q() * m_rb;// Get velocity of joint endscVector va = m_a-&gt;LocalPointVel(ra);cVector vb = m_b-&gt;LocalPointVel(rb);cVector vr = m_vrExtra + va - vb;if (vr.Mag() &lt; 0.0001f)return;cVector normal = vr.Unit();float num = -Dot(normal, vr);float term1 = 1.0f / m_a-&gt;Mass();float term2 = 1.0f / m_b-&gt;Mass();float term3 = Dot(normal, Cross(m_a-&gt;IInv() * Cross(ra, normal), ra));float term4 = Dot(normal, Cross(m_b-&gt;IInv() * Cross(rb, normal), rb));float den = term1 + term2 + term3 + term4;if (absf(den) &lt; 0.0001f)return;cVector impulse = normal * (num / den);// Apply constraint impulsem_a-&gt;ApplyLocalImpulse(impulse, ra);m_b-&gt;ApplyLocalImpulse(-impulse, rb);}</code></pre></div>Cheers,<br>Mark.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=950">MarkZ</a> — Fri Nov 10, 2006 2:48 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

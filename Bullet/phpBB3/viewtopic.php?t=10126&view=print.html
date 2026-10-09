@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Big changes to bullet source(@ bullet developers)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Big changes to bullet source(@ bullet developers)</h2>
+		<p><a href="viewtopic.php%3Ft=10126.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10126</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Big changes to bullet source(@ bullet developers)</h3>
+				<div class="date">Posted: <strong>Sun Sep 21, 2014 8:57 am</strong></div>
+				<div class="author">by <strong>he3117</strong></div>
+				<div class="content">Hi<br>
+I'm new to bullet physic but I'm working on video games in past few years and I have experience by other physic engines like havok and physx.<br>
+For my new project (a racing game)I want to use bullet physic.I tried to port my other project that used physx to use bullet but I found some missing futures in bullet and I want to ask them here before trying to implement them my self.<br>
+<strong class="text-strong">future I like to see in bullet:<br>
+<br>
+1-contact modification<br>
+2-better way for filtering<br>
+3-a more general way for callbacks and customizations<br>
+</strong><br>
+this can be a long post so the bottom line is <strong class="text-strong">I think these futures are useful for every one and I think its an easy task for experience bullet developers.Is there any plan or interest to implement these options or I should try them my self and use them as heavily modified version of bullet instead of general open source?</strong><br>
+<br>
+<br>
+1-It seems there is no way to alter the inverse Mass of a pair of objects in collision response.<br>
+For example I don't want the little debris in the road effect on my vehicle in any way but I need collision response for them. I need contact modification callback like <a href="http://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Callbacks.html#contact-modification" class="postlink">physx</a> engine.<br>
+I checked the source and it is possible by using <strong class="text-strong">btSolverBody</strong>.in this class we have a member named <strong class="text-strong">m_invMass</strong> but in more functions like <strong class="text-strong">btSequentialImpulseConstraintSolver.cpp</strong> they used original object invMass instead of btSolverBody invMass so we need changes here.also in function <strong class="text-strong">initSolverBody</strong> it should takes 2 other parameters like <strong class="text-strong">float invMass</strong> and <strong class="text-strong">float InteriaScale</strong> and use them for initializing btSolverBody so we can pass customized value instead of original<br>
+<br>
+2-for collision filtering I found there is only 2 mask to use in most parts,<strong class="text-strong">m_collisionFilterGroup</strong> and <strong class="text-strong">m_collisionFilterMask</strong>.<br>
+I think its very limited for game programming and we need more space for filtering for example in <a href="http://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Callbacks.html#collision-filtering" class="postlink">physx</a> we have 4 DWORD for filtering instead of 2 short.<br>
+I want to suggest an alternative for it.we can warp <strong class="text-strong">m_collisionFilterGroup</strong> and <strong class="text-strong">m_collisionFilterMask</strong> in a structure and use that structure.I actually wrote a prototype here:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10126&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>struct btGenericFilter
+{
+    #define NUM_ELEMENTS 2  //number of filter elements
+
+	typedef short filterByte;//type of filter element.you can change this if you need more bits
+
+	//array of filter value
+	filterByte m_filter[NUM_ELEMENTS];
+
+	//default constructor
+	btGenericFilter()
+	{
+		for(int i=0;i&lt;NUM_ELEMENTS;i++)
+		{
+			m_filter[i]=1;
+		}
+	};
+
+	//constructor for backward compatibility
+	btGenericFilter(int collisionGroup,int collisionMask)
+	{
+		m_filter[0]=collisionGroup;
+		m_filter[1]=collisionMask;
+	};
+
+	//default behavior for filtering.use this function instead of writing it manually so any 
+        //one can change it in future instead of modifying all the source codes
+	//this function works like:btCollisionWorld.h line:233
+	//bool collides = (proxy0-&gt;m_collisionFilterGroup &amp; m_collisionFilterMask) != 0;
+	//collides = collides &amp;&amp; (m_collisionFilterGroup &amp; proxy0-&gt;m_collisionFilterMask);
+	//return collides;
+	bool DoDefaultFiltering(const btGenericFilter &amp;otherFilter)
+	{
+		bool b=( m_filter[0] &amp; otherFilter.m_filter[1]);
+
+		b=b &amp;&amp; (m_filter[1] &amp; otherFilter.m_filter[0]);
+
+		return b;
+	};
+
+};
+</code></pre></div>
+but the problem is these masks spreads all over the place and we need a bullet developer to change them.I can do this but it takes more time since I'm not familiar with bullet source code.<br>
+<br>
+<br>
+3-<strong class="text-strong">callbacks and customizations</strong>:again like <a href="http://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Callbacks.html" class="postlink">physx</a> its a good idea to change the callbacks to return more value instead of a single bool.We can also use them to improve performance.<br>
+<br>
+<br>
+thanks for reading this long post <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

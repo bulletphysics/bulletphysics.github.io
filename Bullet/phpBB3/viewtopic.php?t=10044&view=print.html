@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet + Ogre (Falling sphere)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet + Ogre (Falling sphere)</h2>
+		<p><a href="viewtopic.php%3Ft=10044.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10044</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet + Ogre (Falling sphere)</h3>
+				<div class="date">Posted: <strong>Thu Aug 07, 2014 12:53 pm</strong></div>
+				<div class="author">by <strong>kumbwol</strong></div>
+				<div class="content">Hello!<br>
+<br>
+I made an application, in C++, VS11, with OGRE. Yet it just make a flat field, at (0,0,0), and makes a sphere at (0,50,0).<br>
+Heres the code:<br>
+<br>
+//Base.h<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10044&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#ifndef __BASE_H_
+#define __BASE_H_
+
+#include &lt;OgreCamera.h&gt;
+#include &lt;OgreEntity.h&gt;
+#include &lt;OgreLogManager.h&gt;
+#include &lt;OgreRoot.h&gt;
+#include &lt;OgreString.h&gt;
+#include &lt;OgreViewport.h&gt;
+#include &lt;OgreSceneManager.h&gt;
+#include &lt;OgreRenderWindow.h&gt;
+#include &lt;OgreConfigFile.h&gt;
+
+#include &lt;OISEvents.h&gt;
+#include &lt;OISInputManager.h&gt;
+#include &lt;OISKeyboard.h&gt;
+#include &lt;OISMouse.h&gt;
+
+#include &lt;SdkTrays.h&gt;
+#include &lt;SdkCameraMan.h&gt;
+
+class Base : public Ogre::FrameListener, public Ogre::WindowEventListener, public OIS::KeyListener, public OIS::MouseListener, OgreBites::SdkTrayListener {
+protected:
+	/*******************************************************************************
+	*** Változók *******************************************************************
+	*******************************************************************************/
+	Ogre::Root*					mRoot;
+    Ogre::Camera*				mCamera;
+    Ogre::SceneManager*			mSceneMgr;
+    Ogre::RenderWindow*			mWindow;
+    Ogre::String				mResourcesCfg;
+    Ogre::String				mPluginsCfg;
+
+	Ogre::OverlaySystem*		mOverlaySystem;
+
+    OgreBites::SdkTrayManager*	mTrayMgr;
+    OgreBites::SdkCameraMan*	mCameraMan;
+
+	OgreBites::InputContext		mInputContext;
+	
+	bool mCursorWasVisible;
+    bool mShutDown;
+
+    OIS::InputManager*			mInputManager;
+    OIS::Mouse*					mMouse;
+    OIS::Keyboard*				mKeyboard;
+
+	/*******************************************************************************
+	*** Függvények *****************************************************************
+	*******************************************************************************/
+	virtual bool setup();
+    virtual bool configure(void);
+    virtual void chooseSceneManager(void);
+    virtual void createCamera(void);
+    virtual void createFrameListener(void);
+    virtual void createScene(void) = 0; // Override me!
+    virtual void destroyScene(void);
+    virtual void createViewports(void);
+    virtual void setupResources(void);
+    virtual void createResourceListener(void);
+    virtual void loadResources(void);
+
+    virtual bool frameRenderingQueued(const Ogre::FrameEvent&amp; evt);
+
+    virtual bool keyPressed( const OIS::KeyEvent &amp;arg );
+    virtual bool keyReleased( const OIS::KeyEvent &amp;arg );
+
+    virtual bool mouseMoved( const OIS::MouseEvent &amp;arg );
+    virtual bool mousePressed( const OIS::MouseEvent &amp;arg, OIS::MouseButtonID id );
+    virtual bool mouseReleased( const OIS::MouseEvent &amp;arg, OIS::MouseButtonID id );
+
+    virtual void windowResized(Ogre::RenderWindow* rw);
+    virtual void windowClosed(Ogre::RenderWindow* rw);
+
+public:
+    Base(void);
+    virtual ~Base(void);
+
+	virtual void init(void);
+};
+
+#endif</code></pre></div>
+
+//Sphere.h<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10044&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include &lt;OgreAxisAlignedBox.h&gt;
+
+// A gömb osztálya
+class Sphere : public Base {
+public:
+	Sphere();
+	virtual ~Sphere();
+
+protected:
+	virtual void createScene(void);
+	virtual void createSphere(const std::string&amp; strName, const float r, const int nRings = 16, const int nSegments = 16);
+};
+
+#endif</code></pre></div>
+
+//Application.cpp<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10044&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#define WIN32_LEAN_AND_MEAN
+#include &lt;Windows.h&gt;
+#include "Sphere.h"
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
+	Sphere sphere;
+	sphere.init();
+
+	return 0;
+}</code></pre></div>
+
+//Base.cpp<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10044&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include "Base.h"
+
+Base::Base(void) :	mRoot(0), mCamera(0), mSceneMgr(0), mWindow(0), mResourcesCfg(Ogre::StringUtil::BLANK), mPluginsCfg(Ogre::StringUtil::BLANK), mTrayMgr(0), mCameraMan(0),
+					mCursorWasVisible(false), mShutDown(false), mInputManager(0), mMouse(0), mKeyboard(0), mOverlaySystem(0) {
+}
+
+Base::~Base(void) {
+	if (mTrayMgr)
+		delete mTrayMgr;
+
+    if (mCameraMan)
+		delete mCameraMan;
+
+	if (mOverlaySystem)
+		delete mOverlaySystem;
+
+    Ogre::WindowEventUtilities::removeWindowEventListener(mWindow, this);
+    windowClosed(mWindow);
+    delete mRoot;
+}
+
+bool Base::configure(void) {
+	if(mRoot-&gt;showConfigDialog()) {
+        mWindow = mRoot-&gt;initialise(true, "Application");
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+void Base::chooseSceneManager(void) {
+    mSceneMgr = mRoot-&gt;createSceneManager(Ogre::ST_GENERIC);
+    mOverlaySystem = new Ogre::OverlaySystem();
+    mSceneMgr-&gt;addRenderQueueListener(mOverlaySystem);
+}
+
+void Base::createCamera(void) {
+    mCamera = mSceneMgr-&gt;createCamera("PlayerCam");
+    mCamera-&gt;setPosition(Ogre::Vector3(0,0,80));
+    mCamera-&gt;lookAt(Ogre::Vector3(0,0,-300));
+    mCamera-&gt;setNearClipDistance(5);
+
+    mCameraMan = new OgreBites::SdkCameraMan(mCamera);
+}
+
+void Base::createFrameListener(void) {
+    Ogre::LogManager::getSingletonPtr()-&gt;logMessage("*** Initializing OIS ***");
+    OIS::ParamList pl;
+    size_t windowHnd = 0;
+    std::ostringstream windowHndStr;
+
+    mWindow-&gt;getCustomAttribute("WINDOW", &amp;windowHnd);
+    windowHndStr &lt;&lt; windowHnd;
+    pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
+
+    mInputManager = OIS::InputManager::createInputSystem( pl );
+
+    mKeyboard = static_cast&lt;OIS::Keyboard*&gt;(mInputManager-&gt;createInputObject( OIS::OISKeyboard, true ));
+    mMouse = static_cast&lt;OIS::Mouse*&gt;(mInputManager-&gt;createInputObject( OIS::OISMouse, true ));
+
+	mInputContext.mKeyboard = mKeyboard;
+    mInputContext.mMouse = mMouse;
+
+    mMouse-&gt;setEventCallback(this);
+    mKeyboard-&gt;setEventCallback(this);
+
+    windowResized(mWindow);
+
+    Ogre::WindowEventUtilities::addWindowEventListener(mWindow, this);
+
+	mTrayMgr = new OgreBites::SdkTrayManager("InterfaceName", mWindow, mInputContext, this);
+    mTrayMgr-&gt;hideCursor();
+
+    Ogre::StringVector items;
+    items.push_back("cam.pX");
+    items.push_back("cam.pY");
+    items.push_back("cam.pZ");
+    items.push_back("");
+    items.push_back("cam.oW");
+    items.push_back("cam.oX");
+    items.push_back("cam.oY");
+    items.push_back("cam.oZ");
+    items.push_back("");
+    items.push_back("Filtering");
+    items.push_back("Poly Mode");
+
+    mRoot-&gt;addFrameListener(this);
+}
+
+void Base::destroyScene(void) {
+
+}
+
+void Base::createViewports(void) {
+    Ogre::Viewport* vp = mWindow-&gt;addViewport(mCamera);
+    vp-&gt;setBackgroundColour(Ogre::ColourValue(0,0,0));
+
+    mCamera-&gt;setAspectRatio(Ogre::Real(vp-&gt;getActualWidth()) / Ogre::Real(vp-&gt;getActualHeight()));
+}
+
+void Base::setupResources(void) {
+    Ogre::ConfigFile cf;
+    cf.load(mResourcesCfg);
+
+    Ogre::ConfigFile::SectionIterator seci = cf.getSectionIterator();
+
+    Ogre::String secName, typeName, archName;
+    while (seci.hasMoreElements()) {
+        secName = seci.peekNextKey();
+        Ogre::ConfigFile::SettingsMultiMap *settings = seci.getNext();
+        Ogre::ConfigFile::SettingsMultiMap::iterator i;
+        for (i = settings-&gt;begin(); i != settings-&gt;end(); ++i) {
+            typeName = i-&gt;first;
+            archName = i-&gt;second;
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(archName, typeName, secName);
+        }
+    }
+}
+
+void Base::createResourceListener(void) {
+
+}
+
+void Base::loadResources(void) {
+    Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
+}
+
+void Base::init(void) {
+#ifdef _DEBUG
+    mResourcesCfg = "resources_d.cfg";
+    mPluginsCfg = "plugins_d.cfg";
+#else
+    mResourcesCfg = "resources.cfg";
+    mPluginsCfg = "plugins.cfg";
+#endif
+
+    if (!setup())
+        return;
+
+    mRoot-&gt;startRendering();
+    destroyScene();
+}
+
+bool Base::setup(void) {
+    mRoot = new Ogre::Root(mPluginsCfg);
+
+    setupResources();
+
+    bool carryOn = configure();
+
+    if (!carryOn)
+		return false;
+
+    chooseSceneManager();
+    createCamera();
+    createViewports();
+
+    Ogre::TextureManager::getSingleton().setDefaultNumMipmaps(5);
+
+    createResourceListener();
+    loadResources();
+
+    createScene();
+
+    createFrameListener();
+
+    return true;
+};
+
+bool Base::frameRenderingQueued(const Ogre::FrameEvent&amp; evt) {
+    if(mWindow-&gt;isClosed())
+        return false;
+
+    if(mShutDown)
+        return false;
+
+	mInputContext.capture();
+
+    mTrayMgr-&gt;frameRenderingQueued(evt);
+
+    if (!mTrayMgr-&gt;isDialogVisible()) {
+        mCameraMan-&gt;frameRenderingQueued(evt);
+    }
+
+    return true;
+}
+
+bool Base::keyPressed( const OIS::KeyEvent &amp;arg ) {
+    if (mTrayMgr-&gt;isDialogVisible())
+		return true;
+	
+	if (arg.key == OIS::KC_ESCAPE) {
+        mShutDown = true;
+    }
+
+    mCameraMan-&gt;injectKeyDown(arg);
+    return true;
+}
+
+bool Base::keyReleased( const OIS::KeyEvent &amp;arg ) {
+    mCameraMan-&gt;injectKeyUp(arg);
+    return true;
+}
+
+bool Base::mouseMoved( const OIS::MouseEvent &amp;arg ) {
+    if (mTrayMgr-&gt;injectMouseMove(arg))
+		return true;
+
+    mCameraMan-&gt;injectMouseMove(arg);
+    return true;
+}
+
+bool Base::mousePressed( const OIS::MouseEvent &amp;arg, OIS::MouseButtonID id ) {
+    if (mTrayMgr-&gt;injectMouseDown(arg, id))
+		return true;
+
+    mCameraMan-&gt;injectMouseDown(arg, id);
+    return true;
+}
+
+bool Base::mouseReleased( const OIS::MouseEvent &amp;arg, OIS::MouseButtonID id ) {
+    if (mTrayMgr-&gt;injectMouseUp(arg, id))
+		return true;
+
+    mCameraMan-&gt;injectMouseUp(arg, id);
+    return true;
+}
+
+void Base::windowResized(Ogre::RenderWindow* rw) {
+    unsigned int width, height, depth;
+    int left, top;
+    rw-&gt;getMetrics(width, height, depth, left, top);
+
+    const OIS::MouseState &amp;ms = mMouse-&gt;getMouseState();
+    ms.width = width;
+    ms.height = height;
+}
+
+void Base::windowClosed(Ogre::RenderWindow* rw) {
+    if( rw == mWindow ) {
+        if( mInputManager ) {
+            mInputManager-&gt;destroyInputObject( mMouse );
+            mInputManager-&gt;destroyInputObject( mKeyboard );
+
+            OIS::InputManager::destroyInputSystem(mInputManager);
+            mInputManager = 0;
+        }
+    }
+}</code></pre></div>
+
+//Sphere.cpp<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10044&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include "Sphere.h"
+
+Sphere::Sphere() {
+}
+
+Sphere::~Sphere() {
+
+}
+
+void Sphere::createSphere(const std::string&amp; strName, const float r, const int nRings, const int nSegments) {
+	Ogre::ManualObject* manual = mSceneMgr-&gt;createManualObject(strName);
+	manual-&gt;begin("BaseWhiteNoLighting", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+ 
+	float fDeltaRingAngle = (Ogre::Math::PI / nRings);
+	float fDeltaSegAngle = (2 * Ogre::Math::PI / nSegments);
+	unsigned short wVerticeIndex = 0 ;
+ 
+	for (int ring = 0; ring &lt;= nRings; ring++) {
+		float r0 = r * sinf (ring * fDeltaRingAngle);
+		float y0 = r * cosf (ring * fDeltaRingAngle);
+ 
+		for (int seg = 0; seg &lt;= nSegments; seg++) {
+			float x0 = r0 * sinf(seg * fDeltaSegAngle);
+			float z0 = r0 * cosf(seg * fDeltaSegAngle);
+ 
+			manual-&gt;position( x0, y0, z0);
+			manual-&gt;normal(Ogre::Vector3(x0, y0, z0).normalisedCopy());
+			manual-&gt;textureCoord((float) seg / (float) nSegments, (float) ring / (float) nRings);
+ 
+			if (ring != nRings) {
+				manual-&gt;index(wVerticeIndex + nSegments + 1);
+				manual-&gt;index(wVerticeIndex);               
+				manual-&gt;index(wVerticeIndex + nSegments);
+				manual-&gt;index(wVerticeIndex + nSegments + 1);
+				manual-&gt;index(wVerticeIndex + 1);
+				manual-&gt;index(wVerticeIndex);
+
+				wVerticeIndex ++;
+			}
+		};
+	}
+
+	manual-&gt;end();
+	Ogre::MeshPtr mesh = manual-&gt;convertToMesh(strName);
+	mesh-&gt;_setBounds(Ogre::AxisAlignedBox(Ogre::Vector3(-r, -r, -r), Ogre::Vector3(r, r, r) ), false);
+ 
+	mesh-&gt;_setBoundingSphereRadius(r);
+
+	unsigned short src, dest;
+	if (!mesh-&gt;suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest)) {
+		mesh-&gt;buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+	}
+}
+
+void Sphere::createScene(void) {
+	Ogre::MovablePlane* mPlane;
+    Ogre::Entity* mPlaneEnt;
+    Ogre::SceneNode* mPlaneNode;
+    Ogre::Rectangle2D* mMiniScreen;
+
+    mSceneMgr-&gt;setAmbientLight(Ogre::ColourValue(0.2f, 0.2f, 0.2f));
+ 
+	Ogre::Light* light = mSceneMgr-&gt;createLight("MainLight");
+	light-&gt;setPosition(20, 80, 50);
+ 
+	mCamera-&gt;setPosition(60, 200, 70);
+	mCamera-&gt;lookAt(0,0,0);
+ 
+	Ogre::MaterialPtr mat = Ogre::MaterialManager::getSingleton().create("PlaneMat", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+	Ogre::TextureUnitState* tuisTexture = mat-&gt;getTechnique(0)-&gt;getPass(0)-&gt;createTextureUnitState("grass_1024.jpg");
+ 
+	mPlane = new Ogre::MovablePlane("Plane");
+	mPlane-&gt;d = 0;
+	mPlane-&gt;normal = Ogre::Vector3::UNIT_Y;
+
+	createSphere("mySphereMesh", 10, 64, 64);
+
+	Ogre::Entity* sphereEntity = mSceneMgr-&gt;createEntity("mySphereEntity", "mySphereMesh");
+ 
+    Ogre::SceneNode* sphereNode = mSceneMgr-&gt;getRootSceneNode()-&gt;createChildSceneNode();
+	sphereEntity-&gt;setMaterialName("HeatVision");
+	sphereNode-&gt;setPosition(0.0f, 50.0f, 0.0f);
+    sphereNode-&gt;attachObject(sphereEntity);
+	sphereNode-&gt;_update(true, false);
+ 
+	Ogre::MeshManager::getSingleton().createPlane("PlaneMesh", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, *mPlane, 120, 120, 1, 1, true, 1, 1, 1, Ogre::Vector3::UNIT_Z);
+	mPlaneEnt = mSceneMgr-&gt;createEntity("PlaneEntity", "PlaneMesh");
+	mPlaneEnt-&gt;setMaterialName("PlaneMat");
+ 
+	mPlaneNode = mSceneMgr-&gt;getRootSceneNode()-&gt;createChildSceneNode();
+	mPlaneNode-&gt;attachObject(mPlaneEnt);
+}</code></pre></div>
+
+<br>
+------------------------------------------------------------------------------<br>
+<br>
+If run this 5 part, and you setup ogre 1.9 well, it must work in VS 11.<br>
+<br>
+And my question is, how can i make the sphere falling with bullet?<br>
+<br>
+Already calculated the falling in this application, with bullet:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10044&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include "stdafx.h"
+#include &lt;iostream&gt;
+
+#include &lt;btBulletDynamicsCommon.h&gt;
+
+int main (void)
+{
+
+        btBroadphaseInterface* broadphase = new btDbvtBroadphase();
+
+        btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+        btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+
+        btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
+
+        btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+
+        dynamicsWorld-&gt;setGravity(btVector3(0, -10, 0));
+
+
+        btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0, 1, 0), 1);
+
+        btCollisionShape* fallShape = new btSphereShape(1);
+
+
+        btDefaultMotionState* groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, -1, 0)));
+        btRigidBody::btRigidBodyConstructionInfo
+                groundRigidBodyCI(0, groundMotionState, groundShape, btVector3(0, 0, 0));
+        btRigidBody* groundRigidBody = new btRigidBody(groundRigidBodyCI);
+        dynamicsWorld-&gt;addRigidBody(groundRigidBody);
+
+
+        btDefaultMotionState* fallMotionState =
+                new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
+        btScalar mass = 1;
+        btVector3 fallInertia(0, 0, 0);
+        fallShape-&gt;calculateLocalInertia(mass, fallInertia);
+        btRigidBody::btRigidBodyConstructionInfo fallRigidBodyCI(mass, fallMotionState, fallShape, fallInertia);
+        btRigidBody* fallRigidBody = new btRigidBody(fallRigidBodyCI);
+        dynamicsWorld-&gt;addRigidBody(fallRigidBody);
+
+
+        for (int i = 0; i &lt; 300; i++) {
+                dynamicsWorld-&gt;stepSimulation(1 / 60.f, 10);
+
+                btTransform trans;
+                fallRigidBody-&gt;getMotionState()-&gt;getWorldTransform(trans);
+
+                std::cout &lt;&lt; "sphere height: " &lt;&lt; trans.getOrigin().getY() &lt;&lt; std::endl;
+        }
+
+        dynamicsWorld-&gt;removeRigidBody(fallRigidBody);
+        delete fallRigidBody-&gt;getMotionState();
+        delete fallRigidBody;
+
+        dynamicsWorld-&gt;removeRigidBody(groundRigidBody);
+        delete groundRigidBody-&gt;getMotionState();
+        delete groundRigidBody;
+
+
+        delete fallShape;
+
+        delete groundShape;
+
+
+        delete dynamicsWorld;
+        delete solver;
+        delete collisionConfiguration;
+        delete dispatcher;
+        delete broadphase;
+
+        return 0;
+}</code></pre></div>
+
+<br>
+------------------------------------------------<br>
+<br>
+Please tell me how to "combine" this 2 programs, to make the sphere falling  <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

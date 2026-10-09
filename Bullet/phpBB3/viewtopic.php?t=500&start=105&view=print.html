@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet on GPU - Page 8</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet on GPU</h2>
+		<p><a href="viewtopic.php%3Ft=500.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=500</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>8</strong> of <strong>9</strong></div>
+					<div class="post">
+				<h3>Re: Something wrong with the GPU demo..</h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 3:25 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>tasora wrote:</cite>Hallo, <br>
+ I am testing your GPU demo since I am going to implement some<br>
+GP-GPU stuff for my multibody simulator.<br>
+The demo is very interesting, but I found some problems on my<br>
+system.
+</div></blockquote>
+
+There are a lot of strange things about the way this demo does or does not run on different systems.  Unfortunately, I only have access to a handful of different Linux systems (with nVidia 6800 hardware) to do intensive testing on.   We really need other OpenSource developers to do some diagnosis on other systems in order that we have a chance to fix this.<br>
+
+<blockquote class="uncited"><div>
+GPUphysics -s:<br>
+   ops: program crashes!
+</div></blockquote>
+
+Can you get us a stack backtrace from the debugger so we can understand where it crashed?   That would tell me a lot.<br>
+
+<blockquote class="uncited"><div>
+GPUphysics -p:<br>
+   OK, static green cubes displayed. 
+</div></blockquote>
+
+Are the cubes really solidly green or are they shades of green/blue/cyan?<br>
+
+<blockquote class="uncited"><div>
+GPUphysics -v:<br>
+   OK, cubes are moving &amp; colliding.<br>
+   <br>
+GPUphysics   :<br>
+   OK, cubes are moving &amp; colliding. <br>
+   Exactly as in GPUphysics -v mode (in fact there is<br>
+   always the message about vertex shader being disabled,<br>
+   by default on Win systems.)
+ </div></blockquote>
+
+We don't understand why the vertex shader coide doesn't work under Windows - that's a very bizarre thing that certainly slows the demo down somewhat.<br>
+
+<blockquote class="uncited"><div>
+The <strong class="text-strong">performance is a bit too low</strong>.. I suspect that there's something <br>
+wrong.. Just to give you an idea, the 'average' result is the following:<br>
+  'Performance: 2 passes 256 cubes: other=0.501740ms collisions=16.285310ms'<br>
+Is this normal on a Nvidia 7900GS board?
+</div></blockquote>
+
+On my nVidia 6800-Ultra (on a deskside machine with a 2.8GHz CPU, I get:<br>
+<br>
+Performance: 2 passes 256 cubes: other=0.296000ms collisions=1.746000ms<br>
+<br>
+...so no, what you are seeing is definitely not good.<br>
+<br>
+One possibility is that you have set the nVidia control panel (I'm not entirely sure how this works under Windows) such that the system's buffer swap is locked to the video vertical retrace signal.  That would force the system to run no faster than 60Hz - or 16.667ms - if the delay somehow ended up being counted inside the collisions code then that might explain the problem.   The additional 'other' time is due to the vertex shader being disabled under Windows.<br>
+
+<blockquote class="uncited"><div>
+After I close the window by mouse clicking, the background DOS <br>
+window starts printing the following line THOUSANDS of times:<br>
+ <strong class="text-strong">'GLSL_ShaderPair::getUniformLocation: OpenGL Error - operazione non valida'</strong><br>
+until I stop this by Ctrl+C.
+</div></blockquote>
+
+That's weird too.  Once again, this does not happen under Linux - so I'm not able to diagnose it.  But it seems that one or more of the shader programs has been killed off - yet the main C++ renderer is still running - so whenever C++ tries to send data to the shader that's an invalid operation...but that's a guess.  I'm not familar with Windows.<br>
+
+<blockquote class="uncited"><div>
+I suspect this should not happen  - also, I guess that this may be related<br>
+with note 1), that is the poor performance.
+</div></blockquote>
+
+If the message was coming out all the time then that would indeed be a problem.  Can you start the program from within a DOS shell so you can see the messages coming out as the program runs?   It seems hard to believe that this particular error could be happening while the program was running normally (albeit slowly).<br>
+
+<blockquote class="uncited"><div>
+PS: have you tested  the GP-GPU code in <br>
+<a href="http://www.mathematik.uni-dortmund.de/~goeddeke/gpgpu/tutorial.html" class="postlink">http://www.mathematik.uni-dortmund.de/~ ... orial.html</a><br>
+There are some hints about supported OpenGL modes <br>
+on ATI-Nvidia etc.
+</div></blockquote>
+
+No I'll take a look.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Debugging the GPU demo..</h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 4:00 pm</strong></div>
+				<div class="author">by <strong>tasora</strong></div>
+				<div class="content">Hi Steve,<br>
+
+<blockquote class="uncited"><div>Are the cubes really solidly green or are they shades of green/blue/cyan?</div></blockquote>
+
+They are shaded - no problems here.<br>
+
+<blockquote class="uncited"><div>We don't understand why the vertex shader coide doesn't work under Windows - that's a very bizarre thing that certainly slows the demo down somewhat.</div></blockquote>
+
+This is not a big issue on my opinion, for the moment - maybe<br>
+this could be useful later when tuning the code for faster execution.<br>
+
+<blockquote class="uncited"><div>One possibility is that you have set the nVidia control panel (I'm not entirely sure how this works under Windows) such that the system's buffer swap is locked to the video vertical retrace signal. </div></blockquote>
+
+Right! you are a genius of remote debugging! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> In fact I forced the<br>
+vertical retrace = off, which was in 'Controlled by application' mode, and<br>
+now the performance is 30x faster!<br>
+Well, the now result is 0.5ms for 'other' stuff and less than 0.5 ms for <br>
+collision, on average.<br>
+BTW: Funny how the performance is still slow for few tenth of <br>
+seconds at the beginning, then it runs at full speed. Is this normal?<br>
+I'd like to install updated Nvidia drivers, to see if these glitches<br>
+may change, but I see that latest updates of the mobile (GO series)<br>
+drivers are not so up-to-date.<br>
+
+<blockquote class="uncited"><div>RE: 'GLSL_ShaderPair::getUniformLocation<br>
+That's weird too. Once again, this does not happen under Linux - so I'm not able to diagnose it. But it seems that one or more of the shader programs has been killed off - yet the main C++ renderer is still running - so whenever C++ tries to send data to the shader that's an invalid operation...but that's a guess.</div></blockquote>
+
+Ok, sorry, this was my fault! Looks like the process did not<br>
+close just by pressing the 'close' button on the top-right corner <br>
+of the window , so it simply runs without the window and that's<br>
+why all these errors came up <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Quitting the process by Ctrl+C<br>
+in the console just ends it correctly.  <br>
+(I formerly thought the console was outputting all these errors as<br>
+they were queued into a buffer, since once I saw an app doing so.. )<br>
+<br>
+Ok, I look forward testing a new release of your GPU demos!<br>
+<br>
+Alessandro</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Debugging the GPU demo..</h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 4:45 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+<blockquote class="uncited"><div>We don't understand why the vertex shader coide doesn't work under Windows - that's a very bizarre thing that certainly slows the demo down somewhat.</div></blockquote>
+
+This is not a big issue on my opinion, for the moment - maybe<br>
+this could be useful later when tuning the code for faster execution.
+</div></blockquote>
+
+What seems to be the problem is that Windows doesn't let me use floating point vertex shader texture maps - I have no idea why because the Windows and the Linux nVidia drivers share 95% of their code so you'd expect them both to support the same kinds of stuff in that regard.  That's not really serious for the physics side of things - we'll be using fragment shaders most of the time.  But in general, it's a problem with the libraries I've written - and I want to use those for other things (Doing AI on the GPU is interesting!).<br>
+
+<blockquote class="uncited"><div>
+<blockquote class="uncited"><div>One possibility is that you have set the nVidia control panel (I'm not entirely sure how this works under Windows) such that the system's buffer swap is locked to the video vertical retrace signal. </div></blockquote>
+
+Right! you are a genius of remote debugging! :) 
+</div></blockquote>
+
+Well, the 16.xx milliseconds was a big clue.  16.667ms is 60Hz - and if that's your video frame rate (which it typically is on laptops) then all else is obvious.<br>
+
+<blockquote class="uncited"><div>
+Well, the now result is 0.5ms for 'other' stuff and less than 0.5 ms for <br>
+collision, on average.
+</div></blockquote>
+Right - so the 'other stuff' is slow because of the problem with vertex shader textures in Windows.  If we can figure out what's broken, that'll jump to a tenth of a millisecond or so. 0.5ms for collisions is three times faster than I get with my 6800 ultra - and that's showing the benefits of the 7800's faster paths for floating point textures.<br>
+
+<blockquote class="uncited"><div>
+BTW: Funny how the performance is still slow for few tenth of <br>
+seconds at the beginning, then it runs at full speed. Is this normal?
+</div></blockquote>
+
+Not on my Linux box.  If forced to guess, I would suspect that this was something to do with memory organisation and caching and such.  Maybe the graphics card has it's memory full of some other junk that needs to be shuffled out of GPU memory.   That seems unlikely because you have a half gig of video RAM.   But I don't know what Windows does with this stuff.   Are you running other 3D applications at the same time (even applications that are iconified or paused or something)?<br>
+
+<blockquote class="uncited"><div>
+Ok, sorry, this was my fault! Looks like the process did not<br>
+close just by pressing the 'close' button on the top-right corner <br>
+of the window , so it simply runs without the window and that's<br>
+why all these errors came up :) Quitting the process by Ctrl+C<br>
+in the console just ends it correctly.  <br>
+(I formerly thought the console was outputting all these errors as<br>
+they were queued into a buffer, since once I saw an app doing so.. )
+</div></blockquote>
+
+So the 'close window' widget doesn't kill the application?!?  Which version of GLUT are you using?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Nov 28, 2006 10:22 am</strong></div>
+				<div class="author">by <strong>tasora</strong></div>
+				<div class="content">Hallo Steve, <br>
+by the way, have you ever tried using _multiple_ graphic boards for GPGPU processing? I mean, one may buy 4 graphic adaptors and use them in parallel on the same PCI bus - a cheap way to build a supercomputer at home, if bus bandwidth doesn't become a serious bottleneck.. <br>
+For example, as in this thread:<br>
+<br>
+<a href="http://www.gpgpu.org/forums/viewtopic.php?t=3320&amp;start=0&amp;postdays=0&amp;postorder=asc&amp;highlight=" class="postlink">http://www.gpgpu.org/forums/viewtopic.p ... highlight=</a><br>
+<br>
+(I found no code samples, so I wonder how can the application send the 'draw rectangle for gpu stuff' to N boards without waiting for each one..)<br>
+<br>
+regards<br>
+<br>
+Alessandro</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Feb 22, 2007 11:04 pm</strong></div>
+				<div class="author">by <strong>endif</strong></div>
+				<div class="content">when ever i run any of the precompiled versions from the sourceforge it says my card doesnt support vertex shaders so the results wont be as impressive<br>
+<br>
+i have a radeon 9600 xt which im pretty sure supports vertex shaders<br>
+<br>
+i running windoze so that may be the problem<br>
+<br>
+or is the demo only for nvida?<br>
+<br>
+(pardon my lack of technical knowledge on these points)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Feb 27, 2007 2:49 am</strong></div>
+				<div class="author">by <strong>Arseny Kapoulkine</strong></div>
+				<div class="content">Windows XP, MSVC 8.0. NV 6600 GT, drivers 84.60.<br>
+<br>
+Everything works <strong class="text-strong">when vertex textures are turned on</strong>. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+other ~= 0.5 ms, collisions ~= 0.9 ms, though numbers deviate too much to be certain.<br>
+<br>
+<strong class="text-strong">edit:</strong> the version is compiled from sources; just grabbed them from SVN repository.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Feb 27, 2007 8:22 pm</strong></div>
+				<div class="author">by <strong>endif</strong></div>
+				<div class="content">i dont think i turned of vertex shaders...<br>
+<br>
+im not even sure you can turn them off on my card</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2007 4:28 pm</strong></div>
+				<div class="author">by <strong>Arseny Kapoulkine</strong></div>
+				<div class="content">endif, it complains about the lack of vertex texturing support (ability to sample textures in vertex shaders). It's not supported by any released ATi card.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Tue Sep 18, 2007 10:47 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hello!!<br>
+<br>
+What is the status of Bullet on GPU?<br>
+Is this development stopped now???<br>
+<br>
+Another a bit of topic question.<br>
+What is about freeglut, does it work well on Win64???<br>
+I was able to compile it after only one change in code for Win64.<br>
+<a href="http://freeglut.sourceforge.net/" class="postlink">http://freeglut.sourceforge.net/</a><br>
+<br>
+Why Bulet does not use freeglut?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Mon Sep 24, 2007 11:59 pm</strong></div>
+				<div class="author">by <strong>bsanders</strong></div>
+				<div class="content">would it be possible to have Bullet work on the physX card? just curious.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Sat Jul 12, 2008 12:27 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Well the PhysX card is now absolute.<br>
+PhysX run now on GeForce GPU via CUDA.<br>
+The question is now how hard it will be to port Bulet to CUDA or/and AMD Stream???<br>
+If I wanted to try to port Bullet to GPU using CUDA or Stream where I wold start?<br>
+What are most time consuming parts of Bullet?<br>
+What part can be easily calculated by GPU?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Mon Jul 14, 2008 6:50 pm</strong></div>
+				<div class="author">by <strong>sparkprime</strong></div>
+				<div class="content">Probably just convert the SPU solver stuff to use CUDA instead of the SPU libs. NV GPUs and the cell are similar from the POV of the programmer.  You have to work harder to get full performance from NV GPU though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Mon Sep 01, 2008 10:38 pm</strong></div>
+				<div class="author">by <strong>Hamstray</strong></div>
+				<div class="content">Just a quick question: why bother doing physics on the GPU? It is the bottleneck with doing all the fancy drawing and shading of much less objects than the physics can handle. The average GPU is a GMA anyways...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Tue Sep 02, 2008 9:00 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Optimizing and parallelizing hotspots for multi-core, Cell SPU, CUDA and Larrabee is an interesting and important topic for future Bullet development.<br>
+<br>
+Several stages of the physics pipeline should be considered. For SPU we focussed on narrowphase collision detection, aabb tree traversal, constraint solver and ray casting.<br>
+<br>
+For Bullet 2.71, we will share some r&amp;d work in using CUDA for the collision detection broadphase, the btCudaBroadphase.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet on GPU</h3>
+				<div class="date">Posted: <strong>Fri May 21, 2010 5:07 pm</strong></div>
+				<div class="author">by <strong>DIMEDROLL</strong></div>
+				<div class="content">Hi,<br>
+Can you tell me what is the current status of CUDA connection? Is it possible to simulate Cloth(SoftBody) collisions on GPU right now?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>8</strong> of <strong>9</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

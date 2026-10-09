@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Angular error with fixed joint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Angular error with fixed joint</h2>
+		<p><a href="viewtopic.php%3Ft=1019.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1019</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Angular error with fixed joint</h3>
+				<div class="date">Posted: <strong>Tue Mar 06, 2007 10:26 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">hey all,<br>
+<br>
+I'm continuing my adventures with implementing a SI constraint system. Anyways, I've introduced a fixed joint which fixes a single body so that they don't move or rotate.<br>
+<br>
+I'm having a problem with stopping the rotation. I fix a block and then I drop another block on top of it's corner. The fixed block starts to rotate slowly until the dropped block slides off of it. But the fixed block never stops rotating... <br>
+<br>
+Could someone verify my jacobian and baumgarte term. Kenny's thesis never explains how to compute Qerr but I think I figured it out from ODE's source.<br>
+<br>
+My jacobian:<br>
+<br>
+J = [I(6,6) 0(6,6)]<br>
+<br>
+Where I is identity and O is zero.<br>
+<br>
+I construct my baumgarte term as such:<br>
+(I'm going to skip the position entries)<br>
+<br>
+on joint creation:<br>
+q_initial = bodyA-&gt;get_orientation().conjugate()<br>
+<br>
+before applying impulses:<br>
+q_error = bodyA-&gt;get_orientation().conjugate() * q_initial.conjugate()<br>
+make q_error smallest angle<br>
+vector3 u = axis from q_error<br>
+u = bodyA-&gt;get_rotation_matrix() * u<br>
+b[3..6] = 2 * u<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 07, 2007 1:08 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Basically you setup the normal point-point constraint which removes 3 degrees of freedom and also a full orientation constraint. Setting up orientation constraints works as follows:<br>
+<br>
+You define a constraint coordinate frame (u,v, w) which you store in each body. Bascially you want that u1 and u2, v1 and v2 and w1 and w2 are always algned. Instead of this we use the dot product and want the axes to remain orthogonal, e.g. <br>
+<br>
+C1 = u1 * v2<br>
+C2 = u1 * w2<br>
+C3 = v1 * w2<br>
+<br>
+Then you build the time derivate and find the Jacobian again by inspection, e.g.<br>
+<br>
+dC1/dt = ( omega1 x u1 ) * v2 + u1 * ( omega2 x v2 )<br>
+<br>
+<br>
+The stabilization term is the integral of the velocity constraint and it is very hard to find it when you start with the velocity constraint. E.g. you could easily say that the relative angluar velocity must be zero and would get:<br>
+<br>
+dC/dt = omega1 - omega2<br>
+<br>
+But what is you stabilization? You could take the relative rotation of course and this might work (the ODE does this), but note that this would not be mathematically correct, because there is no differential relation between them then.<br>
+<br>
+I suggest the following references (though both use the *not* so correct approach):<br>
+<br>
+Thesis of K. Erleben <br>
+Thesis of M. Cline<br>
+<br>
+You find a correct position based formulation in the thesis of Barthenbrug. <br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 07, 2007 3:33 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Thanks Dirk! You are always so helpful.<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>
+dC1/dt = ( omega1 x u1 ) * v2 + u1 * ( omega2 * v2 )
+</div></blockquote>
+
+I assume you meant omega2 x v2.<br>
+<br>
+<br>
+I worked out the jacobian on paper and after a bunch of simplifying this is what I got:<br>
+<br>
+Assuming that u1,v1,v2,w2 have been rotated into world space from their respective body space.<br>
+<br>
+t1 = u1 x v2<br>
+t2 = u1 x w2<br>
+t3 = v1 x w2<br>
+<br>
+The jacobians would then be:<br>
+<br>
+J1A = [  t1,  t2,  t3 ]^T<br>
+<br>
+J2A = [ -t1, -t2, -t3 ]^T<br>
+<br>
+B1 = beta * u1.v2<br>
+B2 = beta * u1.w2<br>
+B3 = beta * v1.w2<br>
+<br>
+I implemented this and it's working just as well as the old relative orientation method was.<br>
+So, if you see anything wrong with my derivation I'd appreciate your help. Could you point me<br>
+to Barthenbrug's thesis, I googled but couldn't find it.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 07, 2007 5:45 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">This looks correct.<br>
+<br>
+The Jacobians schould have the following form:<br>
+<br>
+J_linear    = ( I3  -R1  -I3  R2 )<br>
+J_angular = ( 0  T  0  -T ) <br>
+<br>
+<br>
+I3 is the identity and R1 ist the skew matrix for r1 (the lever arm from the COM to the anchor point) and R2 the same for body 2. T is the matrix holding you t_i computations in its rows. So I assume for beta you use 0.1 / dt and dt fixed at 60Hz. <br>
+<br>
+My next question is how you relax the system. You have basically three options to solve the 6x6 system:<br>
+<br>
+a) You solve each row individually ( this is basically PGS )<br>
+b) You solve the linear and angular constraint en block. This is solving two 3x3 system and this is what I would recommend<br>
+c) You solve the whole system directly what means to solve a 6x6 system.<br>
+<br>
+Does you system explode or does it only move a little. In order to debug this stuff you can deactivate the stabilization (set it zero) and use a smaller timestep. Then also check the signs of your stabilization.<br>
+<br>
+PM me your e-mail address and I send you the Barthenbrug thesis.<br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Mar 09, 2007 1:48 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>This looks correct.<br>
+<br>
+The Jacobians schould have the following form:<br>
+<br>
+J_linear    = ( I3  -R1  -I3  R2 )<br>
+J_angular = ( 0  T  0  -T ) 
+</div></blockquote>
+
+This is what I have. Except I'm fixing a single body at it's origin.<br>
+So R1, R2 are zero.<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>
+I3 is the identity and R1 ist the skew matrix for r1 (the lever arm from the COM to the anchor point) and R2 the same for body 2. T is the matrix holding you t_i computations in its rows. So I assume for beta you use 0.1 / dt and dt fixed at 60Hz. 
+</div></blockquote>
+
+My beta is 0.2 / dt and dt is fixed at 60hz.<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>
+My next question is how you relax the system. You have basically three options to solve the 6x6 system:<br>
+<br>
+a) You solve each row individually ( this is basically PGS )<br>
+b) You solve the linear and angular constraint en block. This is solving two 3x3 system and this is what I would recommend<br>
+c) You solve the whole system directly what means to solve a 6x6 system.
+</div></blockquote>
+
+I use c). I invert K once and use K^-1 for all future calculations.<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>
+Does you system explode or does it only move a little. In order to debug this stuff you can deactivate the stabilization (set it zero) and use a smaller timestep. Then also check the signs of your stabilization.
+</div></blockquote>
+
+The system just moves a little bit, but it never stops. I've deactivated stabilization and switched to 120Hz and it is no better. The signs of my stabilization depend on which direction the body is starting to rotate in. So they vary between negative and positive.<br>
+<br>
+Thanks for your help!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 14, 2007 7:33 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Hey,<br>
+<br>
+I have done some bug fixing and now the joint is working correctly with no stabalization.<br>
+<br>
+With stabalization one of the axis settles (incorrectly) and then the joint spins around that axis for ever in a pulsing fashion.<br>
+<br>
+<br>
+Any suggestions?<br>
+<br>
+Thaks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 14, 2007 7:39 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Can you post some pseudo code of what you do?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 14, 2007 8:35 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">I'm just working on a single body scenario right now.<br>
+<br>
+<strong class="text-strong">On setup:</strong><br>
+RAI = bodyA-&gt;get_rotation_matrix_inverse ();<br>
+Roff = bodyA-&gt;get_position ();<br>
+uA = RAI * UNIT_X;<br>
+vA = RAI * UNIT_Y;<br>
+wA = RAI * UNIT_Z;<br>
+uB = UNIT_X;<br>
+vB = UNIT_Y;<br>
+wB = UNIT_Z;<br>
+<br>
+<strong class="text-strong">Pre impulse:</strong><br>
+RA = bodyA-&gt;get_rotation_matrix ()<br>
+uAW = RA * uA<br>
+vAW = RA * vA<br>
+wAW = RA * wa<br>
+uBW = uB<br>
+vBW = vB<br>
+wBW = wB<br>
+<br>
+T1 = uAW.cross(vBW);<br>
+T2 = uAW.cross(wBW);<br>
+T3 = vAW.cross(wBW);<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1019&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>J = [I | 0      | 0 | 0
+     0 | T1,2,3 | 0 | 0 ]
+</code></pre></div>
+T1,2,3 are laid out in rows<br>
+I and 0 are 3x3<br>
+K = J * W * JT<br>
+KI = K^-1<br>
+<br>
+B[0..2] = Roff - bodyA-&gt;get_position()<br>
+B[3] = uAW.dot(vBW);<br>
+B[4] = uAW.dot(wBW);<br>
+B[5] = vAW.dot(wBW);<br>
+<br>
+P = accumulated_impulse * J<br>
+apply P<br>
+<br>
+<strong class="text-strong">Impulse:</strong><br>
+v = [BodyA velocities | 0]<br>
+<br>
+baum = beta * B - (J * v)<br>
+<br>
+lambda = KI * baum<br>
+old_lambdas = accumulated_lambdas<br>
+accumulated_lambdas += lambda<br>
+lambda = accumulated_lambda - old_lambdas<br>
+<br>
+P = lambda * J<br>
+apply P</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 14, 2007 9:54 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think you missed to transform the velocity:<br>
+<br>
+v_rel = J * v<br>
+<br>
+where <br>
+<br>
+v = ( vA, wA, vB, wB ) = ( vA, wA, 0, 0 )  <br>
+<br>
+Read wA = omega of A <br>
+<br>
+Let me know if this works then for you.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 14, 2007 10:58 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">I don't think I did. Take a look at the second line of the <strong class="text-strong">Impulse:</strong> section.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 14, 2007 11:11 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">I found the problem. It was in my 6x12 matrix class. I'm sorry to have wasted your time, it's working wonderfully now!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 15, 2007 10:31 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Cool!<br>
+<br>
+Just two small points:<br>
+<br>
+a) I am sure you know that, but you can also build the universal and hinge using the above formulas. For each axis you want to constaint find the tangent plane and require that the dot product becomes zero<br>
+<br>
+b) In order to boost performance you should solve 1D and 3D linear and angular atoms. So for example for a universal you solve a 3D linear constraint (actually a point-point) and one angular constraint atom. Or for the fixed joint you can solve the 3D linear and angular atoms. This is faster than solving systems of higher dimensions with the same stability and can also be nicely implemented using SIMD<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

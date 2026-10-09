@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Collision notification</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Collision notification</h2>
+		<p><a href="viewtopic.php%3Ft=604.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=604</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Collision notification</h3>
+				<div class="date">Posted: <strong>Sat Oct 14, 2006 9:09 am</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">Is there an ability to get notification (callback) when collision with particular object occurs?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision notification</h3>
+				<div class="date">Posted: <strong>Sat Oct 14, 2006 7:03 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>Is there an ability to get notification (callback) when collision with particular object occurs?</div></blockquote>
+
+It depends what you want to do with this:<br>
+<br>
+If you only want to know the contacts/bodies overlapping with a certain body, you can use the btDynamicsWorld (btCollisionWorld) and iterate over all contact points (btPersistentManifolds) and intercept the objects that you are interested in, and check wether there are at least one contact point. The details are in CollisionInterfaceDemo:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=604&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int numManifolds = collisionWorld-&gt;getDispatcher()-&gt;getNumManifolds();
+	for (i=0;i&lt;numManifolds;i++)
+	{
+		btPersistentManifold* contactManifold = collisionWorld-&gt;getDispatcher()-&gt;getManifoldByIndexInternal(i);
+		btCollisionObject* obA = static_cast&lt;btCollisionObject*&gt;(contactManifold-&gt;getBody0());
+		btCollisionObject* obB = static_cast&lt;btCollisionObject*&gt;(contactManifold-&gt;getBody1());
+		contactManifold-&gt;refreshContactPoints(obA-&gt;m_worldTransform,obB-&gt;m_worldTransform);
+
+		int numContacts = contactManifold-&gt;getNumContacts();
+		for (int j=0;j&lt;numContacts;j++)
+		{
+			btManifoldPoint&amp; pt = contactManifold-&gt;getContactPoint(j);
+
+			glBegin(GL_LINES);
+			glColor3f(1, 0, 1);
+			
+			btVector3 ptA = pt.getPositionWorldOnA();
+			btVector3 ptB = pt.getPositionWorldOnB();
+
+			glVertex3d(ptA.x(),ptA.y(),ptA.z());
+			glVertex3d(ptB.x(),ptB.y(),ptB.z());
+			glEnd();
+		}
+
+		//you can un-comment out this line, and then all points are removed
+		//contactManifold-&gt;clearManifold();	
+	}
+</code></pre></div>
+
+<br>
+If you want to modify the friction/restitution of the contact points with that particular object, you can do that by enabling the CF_CUSTOM_MATERIAL_CALLBACK for the rigidbody, see ConcavePhysicsDemo for details:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=604&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>staticBody-&gt;m_collisionFlags |= btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK;
+</code></pre></div>
+
+Notice that there is only a callback for new contacts, not for existing contacts ( so a resting box on a surface gets 4 contact callbacks, unless contacts gets removed and added again when it is sliding).  A more user-friendly interface will probably be added, another todo.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

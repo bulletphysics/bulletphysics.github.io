@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Box vs. Box primitive collision in Bullet ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Box vs. Box primitive collision in Bullet ?</h2>
+		<p><a href="viewtopic.php%3Ft=625.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=625</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Box vs. Box primitive collision in Bullet ?</h3>
+				<div class="date">Posted: <strong>Mon Oct 23, 2006 8:21 am</strong></div>
+				<div class="author">by <strong>andrei.lupas</strong></div>
+				<div class="content">Hi,<br>
+<br>
+It seems like newer versions of Bullet include some support for primitive collision detection instead of GJK (sphere-sphere, box-sphere).<br>
+<br>
+In an older version of Bullet (i.e. 1.5) for a scenario made only of boxes, I replaced GJK with box-box collision from OpenDynamicsEngine. At each frame I clear the previous manifold point and add the new points "dBoxBox"(ODE box-box routine) returns.<br>
+<br>
+Contact points and contact normals seem be be right. However, my stack remains stable only for a couple of frames, and then becomes unstable. Boxes don't pass through each-other, but pop as they are getting a lot of energy. <br>
+<br>
+Can this behavior be caused by lack of contact coherence that single-shot algorithms (ODE box-box) exhibit? <br>
+<br>
+Are there any plans on introducing some box-box primitive collision algorithm in Bullet?<br>
+<br>
+<br>
+Thanks,<br>
+Andrei.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 23, 2006 9:13 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">1) How many boxes?<br>
+2) Which dimension have the boxes?<br>
+3) How many iterations?<br>
+4) Do you clean the accumulated impulse each frame?<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 23, 2006 2:20 pm</strong></div>
+				<div class="author">by <strong>andrei.lupas</strong></div>
+				<div class="content"><blockquote class="uncited"><div>1) How many boxes?</div></blockquote>
+ I build a stack of 10 boxes. The stack breaks down rapidly even if it's made of 2 boxes.<br>
+
+<blockquote class="uncited"><div>2) Which dimension have the boxes?</div></blockquote>
+Boxes half-sides are 1.0; the ground box half-sides are default (450,10,450)<br>
+
+<blockquote class="uncited"><div>3) How many iterations?</div></blockquote>
+Impulse solver uses 10 iterations.
+<blockquote class="uncited"><div>4) Do you clean the accumulated impulse each frame?</div></blockquote>
+I don't apply impulses computed on previous frames. Even if I do, the behavior is the same.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 23, 2006 2:47 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+In an older version of Bullet (i.e. 1.5) for a scenario made only of boxes, I replaced GJK with box-box collision from OpenDynamicsEngine.
+</div></blockquote>
+
+Why? <br>
+Have you tried recent Bullet 2.18 box-box, or any other GJK primitive?<br>
+As far as I know all convex primitives, including box show stable stacking.<br>
+<br>
+I prefer one generic solution using GJK, rather then all those special cases. This way I can keep the core code (in /src folder) under the ZLib license. There are improvements that I'm intending to add to improve the contact manifold generation and maintenance. This will improve stability. At the moment, Bullet just adds only 1 point at a time, but it is possible to perform direct clipping to get all points at a time, still using GJK. Basically ODE and other libraries first determine the separating axis, and then clip/project the most parallel features for this axis. This can be done using GJK or SAT.<br>
+<br>
+In the past I had some comparison sample code running the ODE box-box inside Bullet framework without problems. You want me to add this as a demo, for comparison?<br>
+<br>
+Hope this helps,<br>
+Erwin<br>
+<br>
+PS: btContinuousDynamicsWorld, based on Bullet's Continuous collision detection will be added back in soon. This requires closest distance query, which is not available for the generic SAT (which the ODE box-box is based on).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 23, 2006 3:01 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You must make sure that you clear the accumulated impulses to zero. The sequentiel impulses are clamped against the accumulated impulse when you pass the contact points from dBoxBox. Not applying the accumulated impulse is not enough in your case. Let me know if this helps. At 10 iterations you should be able to do at least 3 boxes without warmstarting. <br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 23, 2006 3:04 pm</strong></div>
+				<div class="author">by <strong>andrei.lupas</strong></div>
+				<div class="content"><blockquote class="uncited"><div>In the past I had some comparison sample code running the ODE box-box inside Bullet framework without problems. You want me to add this as a demo, for comparison?</div></blockquote>
+
+That would be excelent<br>
+<br>
+Thanks a lot !<br>
+Andrei.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 23, 2006 3:07 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">OK, I will add such sample. I'll add the ODE box-box integration in the /Extras folder.<br>
+<br>
+Dirk:<br>
+Bullet automatically sets the accumulated impulse to zero for new points, if you reset / clear out all manifold points each frame.<br>
+As I mentioned before, there is no reason to add a special box-box, GJK should simulate/run fine. Using GJK with out without warm starting you ocan stably stack more then 3 boxes at 60 hertz with default 9.8 gravity.<br>
+I will add some option to disable/toggle warmstarting, it doesn't improve stability much for Bullet actually.<br>
+<br>
+Andrei:<br>
+Can you explain why you are not happy with Bullet's box-box? The CcdPhysicsDemo can be easily modified to use boxes instead of cylinders. Can you provide/modify a Bullet sample that shows which performance/quality improvement are needed? <br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Oct 25, 2006 2:07 pm</strong></div>
+				<div class="author">by <strong>andrei.lupas</strong></div>
+				<div class="content">Here is my code in Bullet 2.18a.<br>
+If a single box rests on the ground box, everything seems fine. However, for bigger stacks, things go crazy. The behavior is the same with both SOR_LCP and impulse approaches. The problem is definitely in my code.<br>
+<br>
+Maybe I don't understand well the relation between 3D coordinate system assumed by ODE and Bullet respectively.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=625&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void btBoxBoxCollisionAlgorithm::processCollision (btCollisionObject* col0,btCollisionObject* col1,const btDispatcherInfo&amp; dispatchInfo,btManifoldResult* resultOut)
+{
+	if (!m_manifoldPtr)
+		return;
+
+	btBoxShape* box0 = (btBoxShape*)col0-&gt;m_collisionShape;
+	btBoxShape* box1 = (btBoxShape*)col1-&gt;m_collisionShape;
+
+	
+	btVector3 Box_0_pos = col0-&gt;m_worldTransform.getOrigin();
+	btVector3 Box_1_pos = col1-&gt;m_worldTransform.getOrigin();
+
+	btMatrix3x3 Box_0_rot = col0-&gt;m_worldTransform.getBasis();
+	btMatrix3x3 Box_1_rot = col1-&gt;m_worldTransform.getBasis();
+
+	btVector3 Box_0_halfSide = box0-&gt;getHalfExtents();
+	btVector3 Box_1_halfSide = box1-&gt;getHalfExtents();
+
+	//Z axis in Bullet corresponds to Y axis in ODE and vice-versa ?!
+	dMatrix3 R0, R1;
+	dVector3 P0, P1;
+	dVector3 side0, side1;
+
+	//Swap Y, Z for position vectors
+	P0[0] = Box_0_pos[0]; P0[1] = Box_0_pos[2]; P0[2] = Box_0_pos[1];
+	P1[0] = Box_1_pos[0]; P1[1] = Box_1_pos[2]; P1[2] = Box_1_pos[1];
+
+	R0[0] = Box_0_rot[0][0]; R0[1] = Box_0_rot[0][1]; R0[2]  = Box_0_rot[0][2]; R0[3] = 0;
+	R0[4] = Box_0_rot[1][0]; R0[5] = Box_0_rot[1][1]; R0[6]  = Box_0_rot[1][2]; R0[7] = 0;
+	R0[8] = Box_0_rot[2][0]; R0[9] = Box_0_rot[2][1]; R0[10] = Box_0_rot[2][2]; R0[11]= 0;
+
+	R1[0] = Box_1_rot[0][0]; R1[1] = Box_1_rot[0][1]; R1[2]  = Box_1_rot[0][2]; R1[3] = 0;
+	R1[4] = Box_1_rot[1][0]; R1[5] = Box_1_rot[1][1]; R1[6]  = Box_1_rot[1][2]; R1[7] = 0;
+	R1[8] = Box_1_rot[2][0]; R1[9] = Box_1_rot[2][1]; R1[10] = Box_1_rot[2][2]; R1[11]= 0;
+
+	//Swap Y, Z for half-sides; ODE takes full box size (halfSize * 2)
+	side0[0] = Box_0_halfSide[0]*2; side0[1] = Box_0_halfSide[2]*2; side0[2]= Box_0_halfSide[1]*2;
+	side1[0] = Box_1_halfSide[0]*2; side1[1] = Box_1_halfSide[2]*2; side1[2]= Box_1_halfSide[1]*2;
+
+		
+	#define MAXC 4 //maximum 4 contacts allowed
+	dContactGeom contacts[MAXC];
+	int skip = sizeof(dContactGeom);
+
+	dVector3 normal;
+	dReal depth;	//not used;
+	int retCode;	//not used;
+
+	int noContacts;
+	//ODE box-box collision:
+	noContacts = dBoxBox(P0, R0, side0, 
+						 P1, R1, side1,
+						 normal, &amp;depth, &amp;retCode, MAXC, &amp;contacts[0], skip);
+	if(noContacts == 0)
+		return;
+
+	//Now add contacts to maniford:
+	btVector3 SIMD_normal;
+			SIMD_normal[0] = -normal[0];
+			SIMD_normal[1] = -normal[2];
+			SIMD_normal[2] = -normal[1];
+
+	btVector3 SIMD_pos;
+	
+	resultOut-&gt;setPersistentManifold(m_manifoldPtr);
+	for(int i=0; i&lt;noContacts; i++){
+			SIMD_pos[0] = contacts[i].pos[0];
+			SIMD_pos[1] = contacts[i].pos[2];
+			SIMD_pos[2] = contacts[i].pos[1];
+		resultOut-&gt;addContactPoint(SIMD_normal, SIMD_pos, -contacts[i].depth);
+	}
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Oct 25, 2006 8:30 pm</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite> There are improvements that I'm intending to add to improve the contact manifold generation and maintenance. <br>
+<br>
+... it is possible to perform direct clipping to get all points at a time, still using GJK. Basically ODE and other libraries first determine the separating axis, and then clip/project the most parallel features for this axis. This can be done using GJK or SAT.
+</div></blockquote>
+
+Do you have any links to papers on this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 26, 2006 12:45 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>dog wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite> There are improvements that I'm intending to add to improve the contact manifold generation and maintenance. <br>
+<br>
+... it is possible to perform direct clipping to get all points at a time, still using GJK. Basically ODE and other libraries first determine the separating axis, and then clip/project the most parallel features for this axis. This can be done using GJK or SAT.
+</div></blockquote>
+
+Do you have any links to papers on this?</div></blockquote>
+
+In 2002 on comp.graphics.algorithms John Nagle describes the projection on the separating plane and then the 2D contact clipping method:<br>
+<a href="http://groups.google.co.uk/group/comp.games.development.programming.algorithms/browse_frm/thread/b6316c1311b726a0/118bae17f95d39db" class="postlink">http://groups.google.co.uk/group/comp.g ... 17f95d39db</a><br>
+
+<blockquote><div><cite>John Nagle wrote:</cite>
+What you want is the "contact polygon". <br>
+For two nearby, non-intersecting convex polyhedra, here's <br>
+the algorithm. <br>
+<br>
+    1.  First, get from GJK (inside SOLID) the final simplex from <br>
+        the GJK algorithm.  This defines the closest set of features <br>
+        for the two nearby bodies.  Each body will have one, two, <br>
+        or three points in the simplex.  A body with one point <br>
+        indicates the closest point is a vertex.  A body with three <br>
+        points indicates the closest point is in the interior of <br>
+        a face.  A body with two points indicates either that the <br>
+        contact is along an edge or on a diagonal of a face. <br>
+<br>
+<br>
+    2.  With this data extracted, for each face, find the <br>
+        "most parallel face" for each object.  This is the <br>
+        face most perpendicular to the line through the <br>
+        closest points reported by GJK.  If the GJK simplex <br>
+        defined a face, that's the face.  If it defined a <br>
+        vertex, pick the most parallel face of those meeting <br>
+        at that vertex.  If the simplex defined an edge, pick <br>
+        the most parallel face that includes that edge.  The <br>
+        output of this step is two faces, one on each body. <br>
+<br>
+<br>
+    3.  Project both faces from the previous step onto the <br>
+        plane which goes through the midpoint of the line segment <br>
+        between the closest points, and is perpendicular to <br>
+        that line.  This yields two convex polygons in a plane. <br>
+<br>
+<br>
+    4.  Compute the intersection of those two convex polygons. <br>
+        This is the contact polygon. <br>
+<br>
+<br>
+This is all straightforward geometry and bookkeeping.  Check <br>
+those GJK simplicies, though; if you get a simplex that has <br>
+points from more than one face, you've found a problem <br>
+with GJK (roundoff errors can occur) or the original geometry <br>
+wasn't convex.  The input geometry should not have coplanar <br>
+faces.  So don't tesselate your convex hulls.  When you <br>
+have a cube on a bigger cube, you want a square contact <br>
+polygon, not a triangle. <br>
+<br>
+<br>
+                                        John Nagle <br>
+<br>
+<br>
+                                        Animats <br>
+<br>
+<br>
+
+</div></blockquote>
+Some discussion on this forum:<br>
+<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=39" class="postlink">http://www.continuousphysics.com/Bullet ... c.php?t=39</a><br>
+Bullet contains an implementation (contributed by Simon Hobbs) of this projection/intersection for convex polyhedra in Extras/SATConvexCollision/Hull.cpp see
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=625&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int Hull::AddContactsHullHull(btSeparation&amp; sep, const Point3* pVertsA, const Point3* pVertsB,
+									   const Transform&amp; trA, const Transform&amp; trB,const Hull&amp; hullA,const Hull&amp; hullB,
+									   HullContactCollector* hullContactCollector)
+{
+...
+}
+</code></pre></div>
+
+Jan Bender offered another recent contact generation/clipping method, I haven't found the time to integrate it into Bullet yet. Kenny Erleben's book Physics Based Animation discusses some other contact generation methods.<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 26, 2006 1:09 am</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content">Doesn't seem so hot for implicit surfaces. The references all seem to care about whether you have face or edge features in the remaining simplex. I suppose you would have to classify the source of the vertex somehow (for a cylinder side, it would be a line from top to bottom). Sounds like a lot of book-keeping.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 26, 2006 1:13 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Indeed, this clipping method assumes convex polyhedra. In Bullet I'm using the contact caching and reduction method, and I'm happy with the results for both convex polyhedra and implicit convexes. The CcdPhysicsDemo shows stable implicit cylinders stacking. I'll add the clipping method as a comparison.<br>
+
+<blockquote><div><cite>dog wrote:</cite>Doesn't seem so hot for implicit surfaces. The references all seem to care about whether you have face or edge features in the remaining simplex. I suppose you would have to classify the source of the vertex somehow (for a cylinder side, it would be a line from top to bottom). Sounds like a lot of book-keeping.</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 27, 2006 3:35 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>andrei.lupas wrote:</cite>Here is my code in Bullet 2.18a.<br>
+If a single box rests on the ground box, everything seems fine. However, for bigger stacks, things go crazy. The behavior is the same with both SOR_LCP and impulse approaches. The problem is definitely in my code.
+</div></blockquote>
+
+I haven't had the time yet to add the box-box comparison code in the Extras folder of Bullet (I have some old code that works, should take about an hour or so to update).<br>
+<br>
+Have you checked this:<br>
+<br>
+* is the normal pointing from B towards A in worldspace?<br>
+* is the penetration depth negative when overlap (positive distance means separation in Bullet)<br>
+* are the contact points in world space?<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 28, 2006 2:42 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi Andrei,<br>
+<br>
+Bullet 2.19a has a comparison collision algorithm in Extras/AlternativeCollisionAlgorithms/<br>
+<br>
+There is also a native Bullet btSphereTriangleCollisionAlgorithm in src/BulletCollision/CollisionDispatch.<br>
+<br>
+Have fun,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Impulse-based dynamic simulation system - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Impulse-based dynamic simulation system</h2>
+		<p><a href="viewtopic.php%3Ft=534.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=534</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 6:16 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">I tried already applying friction impulses at the end of all iterations. The results didn't convince me of this. I had more problems than now. The problem with this approach is that a friction impulse in general causes a change of the normal velocity in the contact point. So the normal velocity after contact resolution is not correct anymore. And since the normal velocity in the contact point is not correct the normal impulse is wrong as well. And so in the end the friction impulse which depends on the normal impulse is not correct. <br>
+<br>
+It is hard to find a correct solution for this problem. But I can say that I have already made some nice simulations with my method and even mechanical toys like the tippe top or the rattleback worked very well <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy">  <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 7:06 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>What I don't see is the problem with wild impulses. I compulte the friction using the accumulated impulse, not the intermediate "Delta Impulses". I don't see how this should get wild, since the accumulated converges 
+</div></blockquote>
+It really depends when you perform static-friction clipping. If you clip during the iterations, it will be not correct, even if you use accumulated impulse.<br>
+<br>
+Say, for one contact point, 2 iterations with 1.0 being the static friction clipping treshold<br>
+<br>
+incremental impulse, first iteration: 1.5, second iteration -0.5<br>
+accumulated, first iteration:1.5, second iteration 1.0<br>
+<br>
+if you perform friction clipping between first and second iteration, 1.5 will be clipped to 1. If you wait until all iterations are over, no clipping is performed, which is correct.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 7:10 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I actually did the sphere stacking test awhile ago with PGS. Top down gives you approximately a one iteration advantage over bottom up. I also found this counter intuitive. You might think of it as getting the full weight to ground quicker.<br>
+<br>
+With regard to going back-and-forth, this is called Symmetric Successive Over Relaxation (SSOR). I also thought this sounded good. Apparently it has provably worse convergence than regular SOR (of which GS is a subset). See Matrix Computations by Golub.<br>
+<br>
+Randomization of constraints kills the cache. I saw solver performance double on the PS2 by turning off randomization.<br>
+<br>
+Dirk, convergence of GS is determined by the eigenvalues. These should be immutable under row and column swaps. I think ordering can only affect convergence in small ways (like 1 iteration).</div></blockquote>
+
+Thanks for the explanation. Things can be counter-intuitive indeed.<br>
+I tested the convergence with the CcdPhysicsDemo stack, and the symmetric version (back-and-forth) gave more stable results. Same for the friction model.<br>
+<br>
+So rather then a global mathematically correct statement, I just used the very restricted domain, being my stacking rigid bodies demo.<br>
+
+<blockquote><div><cite>Jan wrote:</cite>
+tippe top or the rattleback worked very well  
+</div></blockquote>
+
+We all use different testbeds, and make assumptions based on our own testbed. It would be good to re-use the same tests at least. If we all support COLLADA physics import, we can share complex setups, including articulated models <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 8:43 pm</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content">Sorting my constraints so I process the deepest penetrations first has been far more effective  (speed of convergence and stability over multiple frames) than randomizing or sweeping up and down.<br>
+<br>
+Whether this would help other people's solvers is debatable.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 8:51 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">It would be great if someone in academia could spend the time to compare these methods and write a nice paper with pictures and graphs (pssst ... Jan).  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 10:58 pm</strong></div>
+				<div class="author">by <strong>sbroumley</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>
+Regarding friction:<br>
+I apply the friction at the manifold center as we discussed a while ago <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">. And of course I have all normal impulses then. What I don't see is the problem with wild impulses. I compulte the friction using the accumulated impulse, not the intermediate "Delta Impulses"....
+</div></blockquote>
+
+With regards to applying the friction at the manifold center - I'm actually experimenting with the same thing. My approach is as follows:<br>
+<br>
+Before the solver loop I:<br>
+<br>
+1) Compute the friction information by taking the average of the position, normal, and accumulated normal (impulse) force of all the contacts from the previous frame. eg. for a cube lying on a plane, this will be the center of the 4 contact points, with normal pointing upwards. From this I have "FrictionPoint", "FrictionNormal" and "NormalForce"<br>
+ <br>
+2) Compute the relative velocity of FrictionPoint. From this I can compute the velocity into the collision plane (FrictionNormal) and along the collision plane (I call this the FrictionDirection). If the FrictionPoint is not moving I use the previous frames FrictionDirection<br>
+ <br>
+3) Compute the impulse at FrictionPoint required to stop the FrictionPoint moving along the FrictionDirection. I call this impulse the FrictionForce<br>
+<br>
+4) I then use the NormalForce information from 1) so I can compute the friction limits. In the case that contacts have just been added (no normal impulse force info available from the previous frame) and NormalForce=0, I compute the appropriate normal impulse force at the friction point to stop movement (or bounce etc) into the collision plane and assign it to NormalForce. <br>
+<br>
+5) So with the approx FrictionForce and NormalForce available, I can then decide on what friction limits to use like so:<br>
+<br>
+MaxStaticForce     = MaterialStaticFriction * NormalForce<br>
+MaxDynamicForce = MaterialDynamicFriction * NormalForce<br>
+<br>
+FrictionLimit = ( FrictionForce &lt; MaxStaticForce ) ? MaxStaticForce : MaxDynamicForce<br>
+<br>
+I then setup 3 friction constraints for the solver using FrictionPosition, FrictionLimit, FrictionDirection, and FrictionNormal like so:<br>
+ a) 1 constraint for movement along FrictionDirection, <br>
+ b) 1 constraint for movement along CrossProduct( FrictionDirection, FrictionNormal )<br>
+ c) 1 constraint for rotation only around FrictionNormal<br>
+<br>
+It seems to be working okay, although I'm not sure how mathmatically correct it is. <br>
+<br>
+A couple of questions I have is<br>
+<br>
+A) For 1) when computing the "NormalForce" do I take the average of all the contact point normal forces or the total?<br>
+<br>
+B) Is my static/dynamic friction limit test mathematically correct?<br>
+<br>
+thanks<br>
+Steve.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 4:47 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">You definitely should sum the accumulated normal impulses when determining the maximum centeral friction. This will approximate integration over the manifold surface.<br>
+<br>
+I would use the dynamic friction limit if the tangential velocity from the end of the last step is above a threshold, otherwise I would use the static friction limit.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 7:49 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>It would be great if someone in academia could spend the time to compare these methods and write a nice paper with pictures and graphs (pssst ... Jan). </div></blockquote>
+
+Nice try. But I think first I will finish writing another nice paper... my PhD thesis  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+By the way, if somebody is very interested in my work then visit the VRIPHYS '06 in Madrid. I will present my newest paper with the title <br>
+<br>
+"Fast Dynamic Simulation of Multi-Body Systems Using Impulses". <br>
+<br>
+Or you wait until I put it on my homepage  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 07, 2006 8:57 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">I moved the webpage to <br>
+<br>
+<a href="http://www.impulse-based.de/" class="postlink">http://www.impulse-based.de/</a><br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

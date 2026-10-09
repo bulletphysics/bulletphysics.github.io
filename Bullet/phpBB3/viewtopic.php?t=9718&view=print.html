@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; x86\x64 undefined behavior feedback</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>x86\x64 undefined behavior feedback</h2>
+		<p><a href="viewtopic.php%3Ft=9718.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9718</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>x86\x64 undefined behavior feedback</h3>
+				<div class="date">Posted: <strong>Thu Jan 30, 2014 7:54 pm</strong></div>
+				<div class="author">by <strong>Scriptslol</strong></div>
+				<div class="content">Hi there, just wanted to leave some feedback on some odd behavior that I ran into while working with Bullet. <br>
+<br>
+Visual Studio 2013<br>
+Msvc: v100<br>
+targets: x86, x64<br>
+Bullet: 2.81<br>
+BT_USE_DOUBLE_PRECISION<br>
+<br>
+All of Bullet's features and performance has been acceptable between x86 and x64. However, a game breaking error worked itself into the x86 build which would trigger an assert when a character would move on the terrain:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9718&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//btQuantizedBvh.h
+SIMD_FORCE_INLINE void quantize(unsigned short* out, const btVector3&amp; point,int isMax) const
+{
+	btAssert(m_useQuantization);
+
+	btAssert(point.getX() &lt;= m_bvhAabbMax.getX()); //&lt;--- this gets triggered when btKinematicController moves.
+	//...
+}</code></pre></div>
+<strong class="text-strong">Examination</strong><br>
+<br>
+The debugger says the value 'point.getX()' is "1.#QNAN00000000000"<br>
+<br>
+Quiet Not A Number. It's not a division by zero. But, a floating point was unable to resolve trailing floating point values. I figured that since the game is mainly built for x64 this could be an issue with Bullet being fed bad values for the terrain. I checked the creation of btBvhTriangleMeshShape during terrain generation and that looked good.<br>
+<br>
+I started working my way through Bullet with a variant of this logic in attempt to catch when values went bad:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9718&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if (_isnan(point.getX()))
+	int test = 0; //&lt;-- Break Point here</code></pre></div>
+Surprisingly, when I put this check right before Broad Phase detection the assert would fire right at game start - NOT when the player moved. Step in the wrong direction.<br>
+<br>
+I finally worked my way down enough in the processes, before values went bad, to recognize that the Transform for btBvhTriangleMeshShape was becoming QNAN'd - this always happen against a capsule shape.<br>
+<br>
+After a couple more hours of trying to understand the 'why' I decided to just work my way back up in game versions for the past 2 months until I found the version it broke and then deduce the call that was making Bullet Assert in x86 and not x64. Here's what I found:<br>
+<br>
+<strong class="text-strong">Issue</strong><br>
+<br>
+The problem was in the ghost object for the character controller. Specifically, the collision flags. The commit that broke x86 changed:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9718&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_ghostObject-&gt;setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT | btCollisionObject::CF_STATIC_OBJECT);</code></pre></div>to
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9718&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_ghostObject-&gt;setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);</code></pre></div>
+The above line had no issues in x64 builds. But would always cause an Assert in x86. This is undefined behavior.<br>
+<br>
+This has probably worked itself out with newer versions. But, it is a very indirect issue and I hope some of the feedback I've given has been helpful.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

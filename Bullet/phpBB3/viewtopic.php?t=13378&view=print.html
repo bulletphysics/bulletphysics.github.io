@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet skeletal animation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet skeletal animation</h2>
+		<p><a href="viewtopic.php%3Ft=13378.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13378</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet skeletal animation</h3>
+				<div class="date">Posted: <strong>Wed Feb 16, 2022 2:36 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hello to the group,<br>
+<br>
+I'm using opengl and want to implement skeletal animation on imported objects. Currently the animation will be handled on the gpu(vertex shader) and I need to synchronize this with the rigid bodies. Any ideas on how to proceed? <br>
+<br>
+P.S I don't have any code yet for this as I am doing an analysis first</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet skeletal animation</h3>
+				<div class="date">Posted: <strong>Wed Feb 16, 2022 4:10 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">This sounds much like a robot simulation project.  Are you planning on using <strong class="text-strong">pyBullet</strong> or the <strong class="text-strong">C++</strong> library?  If <strong class="text-strong">pyBullet</strong> I suggest you move your question to the <a href="viewforum.php%3Ff=24.html" class="postlink">pyBullet forum</a>.  If <strong class="text-strong">C++</strong> then you're in the right place.<br>
+<br>
+When it comes to how to proceed... it is a pretty broad question and since I haven't done exactly what you're doing I have only vague ideas about how I would try it.  Perhaps you should elaborate on what you're doing, and hopefully someone else has pertinent experience and advice.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet skeletal animation</h3>
+				<div class="date">Posted: <strong>Wed Feb 16, 2022 5:36 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Thanks for the quick answer. I'm using the C++ library indeed <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> . To elaborate a bit, I am developing a game and I am using a 3D object with bones with animation information in an .fbx file. I am using OpenGL for graphics and as many sources exist on OpenGL skeletal animation this is happening in the GPU not the CPU. The problem is that after I apply the animation, the vertices of the mesh have changed positions and I would like to keep also bullet in sync with the changes. So one question is what kind of shape should I use for the individual meshes (Box, Capsule, Convex Hull)? And the second and most important question is how to keep in sync the rigid bodies positions and orientations with the current animation phase? Maybe you could share your vague ideas, they are better than nothing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet skeletal animation</h3>
+				<div class="date">Posted: <strong>Thu Feb 17, 2022 5:19 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">If you're animating a set of rigid shapes and want things to collide against them but don't need any collision feedback guiding the animation then that would be kinematic motion and you could do it the normal way: use custom MotionStates to communicate the body transforms to Bullet.  That is, you would represent your "mesh" with a convex decomposition and use a RigidBody per part: each part gets a transform update through its MotionState.  Note: for more correct collisions your MotionState must measure the effective velocity of the relevant RigidBody and set accordingly.<br>
+<br>
+Alternatively you could use one RigidBody and put all the sub-shapes into a btCompoundShape and then update the sub-shape local transforms.  This strategy has limitations since you can't assign a velocity to a sub-part and you will necessarily get slightly incorrect collision info (e.g. not quite right velocity) when dynamic objects hit them -- this might be ok for slowly animating shape but not for fast motion.  Also you'd have to either <strong class="text-strong">(a)</strong> constantly rebuild the AABB of the compound shape, or <strong class="text-strong">(b)</strong> manually assign it a larger-than-necessary AABB that it will never exceed.<br>
+<br>
+If you're animating a single mesh kinematically then... things get tricky.  It is possible to use a btBvhTriangleMeshShape and give it a custom btStridingMeshInterface which points to mesh data that is managed/modified outside of Bullet.  From there it would be possible to "animate" the triangular mesh between simulation steps however... you probably wouldn't want to use the Bvh tree feature of that shape since it would be changing all the time and recomputing it is not a good fit for a real-time simulation.  Also, you'd end up similar problems as when animating btCompoundShape sub-shapes: bad velocity and rebuild AABB.<br>
+<br>
+It is possible to "animate" a btHeightfieldTerrainShape, however it is a heightfield and so its values must be functional in its plane and you still have similar problems with "not quite right velocity" and making sure the AABB is correct.<br>
+<br>
+If you want your GPU animation to guide dynamic rigid bodies and you want either <strong class="text-strong">(a)</strong> some collision feedback to the animation or just <strong class="text-strong">(b)</strong> non-infinite mass response when other dynamic objects hit the moving parts... then there are ways to do that but explaining it is a bit more work than I want to write up right now.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet skeletal animation</h3>
+				<div class="date">Posted: <strong>Mon Feb 21, 2022 2:00 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Thank you for the extended answer. Did not have the time to test this yet. By the way did you think to make some Bullet tutorials on Youtube? You are one of the most active members here</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Barenbrug Hinge</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Barenbrug Hinge</h2>
+		<p><a href="viewtopic.php%3Ft=1054.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1054</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Barenbrug Hinge</h3>
+				<div class="date">Posted: <strong>Thu Mar 15, 2007 4:21 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Hey all! After having such great success with the fixed orientation joint from Barenbrug's thesis, I decided to implement the hinge constraint from the thesis. I'm going to give a little background for those not familiar with the derivation and give a break down of what the jacobian looks like. My current implemention is wrong and I'm wondering if anyone could check my jacobian for me.<br>
+<br>
+Instead of a single anchor point plus a line he suggests using 2 anchor points: P1 and P2. <br>
+<br>
+Let:<br>
+<br>
+P1A,P2A,P1B,P2B are the current P1 and P2's transformed by the bodies A and B.<br>
+L = P1A-P2A<br>
+T1,T2 = orthogonal basis of L.<br>
+RP1 = P1A - P1B<br>
+RP2 = P2A - P2B<br>
+<br>
+C[0] = T1 . RP1<br>
+C[1] = T2 . RP1<br>
+C[2] = L . RP1<br>
+C[3] = T1 . RP2<br>
+C[4] = T2 . RP2<br>
+<br>
+dC[0]/dt = T1 . (vA + wA x P1A_local - vB - wB x P1B_local)<br>
+etc..<br>
+<br>
+First row of J looks like:<br>
+<br>
+T1.x<br>
+T1.y<br>
+T1.z<br>
+T1.z * P1A.y - T1.y * P1A.z<br>
+T1.x * P1A.z - T1.z * P1A.x<br>
+T1.y * P1A.x - T1.x * P1A.y<br>
+-T1.x<br>
+-T1.y<br>
+-T1.z<br>
+-T1.z * P1A.y + T1.y * P1A.z<br>
+-T1.x * P1A.z + T1.z * P1A.x<br>
+-T1.y * P1A.x + T1.x * P1A.y<br>
+<br>
+The rest of the rows follow the same pattern.<br>
+<br>
+Has anyone gone down this road?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 15, 2007 10:34 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Let u be you hinge axis in world coordinates. This is your free rotation. So find two arbitrary perpendicual axes in the tangent space of u. Let's call these v and w. Using the same notation as before you get:<br>
+<br>
+C1 = u1 * v2<br>
+C2 = u1 * w2</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Mar 18, 2007 5:30 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Okay, I went with your suggestion. I'm having problems with the simulation blowing up if I include stabilization terms for the angular error. <br>
+<br>
+Scenario:<br>
+Box is hinged to a fixed box.<br>
+<br>
+I drop a box onto the free box as a way of introducing some error into the<br>
+joint. If C4, and C5 are zero the joint continues to work fine, but if I set C4 and C5 to what I have below, the box starts "randomly" spinning around the hinge joint. Is there something wrong with my derivation below?<br>
+<br>
+C:<br>
+uA = bodyA-&gt;get_rotation_matrix() * hinge_axis_local_A<br>
+uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>
+vB, wB = uB.orthogonal_basis ()<br>
+C1-3 = Ball-Socket C<br>
+C4 = uA * vB <br>
+C5 = uA * wB<br>
+<br>
+Jacoabian:<br>
+J1-3 = Ball-Socket J<br>
+uA = bodyA-&gt;get_rotation_matrix() * hinge_axis_local_A<br>
+uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>
+vB, wB = uB.orthogonal_basis ()<br>
+T1 = uA.cross(vB)<br>
+T2 = uA.cross(wB)<br>
+<br>
+<br>
+J4 = [0 | T1 | 0 | -T1 ]<br>
+J5 = [0 | T2 | 0 | -T2 ]</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Mar 18, 2007 6:46 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">If I understand you correctly you build the orthogonal axes every frame from uB. I do the following:<br>
+<br>
+uA = bodyA-&gt;get_rotation_matrix() * hinge_axis_local_A<br>
+uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>
+vB = bodyB-&gt;get_rotation_matrix() * tanget1_local_B<br>
+wB = bodyB-&gt;get_rotation_matrix() * tanget2_local_B<br>
+<br>
+So you need to create the orthogonal space from the global hinge axis when you construct the joint and save it in the local frames as you do for the hinge axis itself. If you want to save memory the wB axes could be constructed per frame like this (though I would verify this for some time using an assertion just to be sure):<br>
+<br>
+uB = bodyB-&gt;get_rotation_matrix() * hinge_axis_local_B<br>
+vB = bodyB-&gt;get_rotation_matrix() * tanget1_local_B<br>
+<br>
+wB = Cross( uB, vB );<br>
+<br>
+Note that it shouldn't actually make any difference since you don't need uB.<br>
+<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Mar 18, 2007 9:33 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Dirk, thanks again -- that was my problem! My hinge joint is working great!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

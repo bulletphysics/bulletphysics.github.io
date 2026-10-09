@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; stepSimulation() not equivalent to setRealTimeSimulation(1)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>stepSimulation() not equivalent to setRealTimeSimulation(1)</h2>
+		<p><a href="viewtopic.php%3Ft=12917.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12917</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>stepSimulation() not equivalent to setRealTimeSimulation(1)</h3>
+				<div class="date">Posted: <strong>Fri Apr 03, 2020 2:31 am</strong></div>
+				<div class="author">by <strong>avandekleut</strong></div>
+				<div class="content">I want to control a procedurally generated robot. Consider the following code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12917&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import time
+import pybullet as p
+import pybullet_data
+import sys
+
+physicsClient = p.connect(p.GUI)
+p.setPhysicsEngineParameter(enableFileCaching=0)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+p.resetSimulation()
+p.setGravity(0, 0, -10)
+planeId = p.loadURDF("plane.urdf")
+robot = p.loadURDF(sys.argv[1], [0, 0, 2])
+p.setRealTimeSimulation(1)
+for t in range(200000):
+    p.getKeyboardEvents()
+
+p.resetSimulation()
+p.setGravity(0, 0, -10)
+planeId = p.loadURDF("plane.urdf")
+robot = p.loadURDF(sys.argv[1], [0, 0, 2])
+p.setRealTimeSimulation(0)
+for t in range(200000):
+    p.stepSimulation()
+    time.sleep(1. / 240.)
+p.disconnect()
+</code></pre></div>
+The first half runs fine. The second half, my URDF file goes crazy and flies off. Example URDF files that have this behaviour:<br>
+<a href="https://raw.githubusercontent.com/avandekleut/urdf_autogen_pybullet/master/2.urdf" class="postlink">https://raw.githubusercontent.com/avand ... ter/2.urdf</a><br>
+<a href="https://raw.githubusercontent.com/avandekleut/urdf_autogen_pybullet/master/1.urdf" class="postlink">https://raw.githubusercontent.com/avand ... ter/1.urdf</a><br>
+<br>
+Am I misunderstanding something here? What is going on? Why are the two so different?<br>
+<br>
+<br>
+Edit:<br>
+<br>
+I tried this code using some of the sample URDF files provided and they seem to work alright. There must be some issue in processing the physics of my URDF files.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: stepSimulation() not equivalent to setRealTimeSimulation(1)</h3>
+				<div class="date">Posted: <strong>Tue Apr 07, 2020 7:44 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Testing here there is no difference between stepSimulation and setRealTimeSimulation, both show instable motion due to a degenerate urdf file.<br>
+<br>
+Those are urdf files with degenerate values. Avoid too small mass (keep it either 0 or in range 0.01 to 100 or so)<br>
+avoid large rpy angles, don't use collision shapes with extreme small radius (use 0.05 smallest for a start)<br>
+<br>
+Here is a working version:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12917&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;?xml version="1.0"?&gt;
+&lt;robot name="robots/1"&gt;
+  &lt;link name="8325804"&gt;
+    &lt;inertial&gt;
+      &lt;origin xyz="-5.421010862427522e-20 -1.6263032587282567e-19 0.0010000000000000002" rpy="0 0 0"/&gt;
+      &lt;mass value="1"/&gt;
+      &lt;inertia ixx="1.675516081914556e-17" ixy="0" ixz="0" iyy="1.675516081914556e-17" iyz="0" izz="1.675516081914556e-17"/&gt;
+    &lt;/inertial&gt;
+    &lt;collision&gt;
+      &lt;origin xyz="-5.421010862427522e-20 -1.6263032587282567e-19 0.0010000000000000002" rpy="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.1"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;link name="4735681"&gt;
+    &lt;inertial&gt;
+      &lt;origin xyz="-3.469446951953614e-18 -1.214306433183765e-17 0.08472517387841258" rpy="0 0 0"/&gt;
+      &lt;mass value="0.6946108199226944"/&gt;
+      &lt;inertia ixx="0.0019944652455508296" ixy="0" ixz="0" iyy="0.0019944652455508296" iyz="0" izz="0.0019944652455508296"/&gt;
+    &lt;/inertial&gt;
+    &lt;collision&gt;
+      &lt;origin xyz="-3.469446951953614e-18 -1.214306433183765e-17 0.08472517387841258" rpy="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.08472517387841255"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;link name="4064029"&gt;
+    &lt;inertial&gt;
+      &lt;origin xyz="-0.013392437970720003 6.841951323297693e-05 0.036824153984054794" rpy="0 0 0"/&gt;
+      &lt;mass value="0.32657421908334666"/&gt;
+      &lt;inertia ixx="0.0003600348756754367" ixy="0" ixz="0" iyy="0.0003600348756754367" iyz="0" izz="0.00022142031140993636"/&gt;
+    &lt;/inertial&gt;
+    &lt;collision&gt;
+      &lt;origin xyz="-0.013392437970720003 6.841951323297693e-05 0.036824153984054794" rpy="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;cylinder radius="0.0368241539840548" length="0.09571551589530464"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;link name="5314437"&gt;
+    &lt;inertial&gt;
+      &lt;origin xyz="-8.890457814381136e-18 -1.0408340855860843e-17 0.04736004193466575" rpy="0 0 0"/&gt;
+      &lt;mass value="0.14423106891506815"/&gt;
+      &lt;inertia ixx="0.00012940259033819833" ixy="0" ixz="0" iyy="0.00012940259033819833" iyz="0" izz="0.00012940259033819833"/&gt;
+    &lt;/inertial&gt;
+    &lt;collision&gt;
+      &lt;origin xyz="-8.890457814381136e-18 -1.0408340855860843e-17 0.04736004193466575" rpy="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.047360041934665746"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;link name="1844789"&gt;
+    &lt;inertial&gt;
+      &lt;origin xyz="-0.01302201858425922 5.847181364028571e-06 0.009928035035897393" rpy="0 0 0"/&gt;
+      &lt;mass value="0.022543488066187885"/&gt;
+      &lt;inertia ixx="1.8224520051453555e-05" ixy="0" ixz="0" iyy="1.8224520051453555e-05" iyz="0" izz="1.111009366082133e-06"/&gt;
+    &lt;/inertial&gt;
+    &lt;collision&gt;
+      &lt;origin xyz="-0.01302201858425922 5.847181364028571e-06 0.009928035035897393" rpy="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;cylinder radius="0.09928035035897387" length="0.09698090677467489"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;link name="3416624"&gt;
+    &lt;inertial&gt;
+      &lt;origin xyz="0.006343136646001411 0.018183987579849615 0.06582443936436896" rpy="0 0 0"/&gt;
+      &lt;mass value="0.8541329457565685"/&gt;
+      &lt;inertia ixx="0.0020295629099782607" ixy="0" ixz="0" iyy="0.001257342235037602" iyz="0" izz="0.0020295629099782607"/&gt;
+    &lt;/inertial&gt;
+    &lt;collision&gt;
+      &lt;origin xyz="0.006343136646001411 0.018183987579849615 0.06582443936436896" rpy="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;capsule radius="0.05818503294385344" length="0.04143685882263688"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+  &lt;joint name="2951283" type="continuous"&gt;
+    &lt;origin xyz=" 0.0001594  -0.00093199  0.00132557" rpy="0 0 0"/&gt;
+    &lt;parent link="8325804"/&gt;
+    &lt;child link="4735681"/&gt;
+    &lt;axis xyz="0 0 1"/&gt;
+    &lt;dynamics damping="0.1" friction="0.1"/&gt;
+    &lt;limit lower="0" upper="0" effort="1" velocity="1"/&gt;
+  &lt;/joint&gt;
+  &lt;joint name="2574580" type="fixed"&gt;
+    &lt;origin xyz=" 0.04142879 -0.06828364  0.0564523 " rpy="0 0 0"/&gt;
+    &lt;parent link="4735681"/&gt;
+    &lt;child link="4064029"/&gt;
+    &lt;axis xyz="0 0 0"/&gt;
+    &lt;dynamics damping="0" friction="0"/&gt;
+    &lt;limit lower="0" upper="0" effort="10" velocity="10"/&gt;
+  &lt;/joint&gt;
+  &lt;joint name="9958721" type="revolute"&gt;
+    &lt;origin xyz="-1.94187710e-02  2.18095641e-04  1.91914661e-07" rpy="0 0 0"/&gt;
+    &lt;parent link="4064029"/&gt;
+    &lt;child link="5314437"/&gt;
+    &lt;axis xyz="0 0 1"/&gt;
+    &lt;dynamics damping="0.1" friction="0.1"/&gt;
+    &lt;limit lower="0" upper="6.283185307179586" effort="1" velocity="1"/&gt;
+  &lt;/joint&gt;
+  &lt;joint name="3283812" type="continuous"&gt;
+    &lt;origin xyz="-0.00912397 -0.04638031  0.04442856" rpy="0 0 0"/&gt;
+    &lt;parent link="5314437"/&gt;
+    &lt;child link="1844789"/&gt;
+    &lt;axis xyz="0 0 1"/&gt;
+    &lt;dynamics damping="0.1" friction="0.1"/&gt;
+    &lt;limit lower="0" upper="0" effort="1" velocity="1"/&gt;
+  &lt;/joint&gt;
+  &lt;joint name="7781930" type="fixed"&gt;
+    &lt;origin xyz="-5.21927538e-02  3.11575316e-05  3.00292219e-09" rpy="0 0 0"/&gt;
+    &lt;parent link="1844789"/&gt;
+    &lt;child link="3416624"/&gt;
+    &lt;axis xyz="0 0 0"/&gt;
+    &lt;dynamics damping="0" friction="0"/&gt;
+    &lt;limit lower="0" upper="0" effort="10" velocity="10"/&gt;
+  &lt;/joint&gt;
+&lt;/robot&gt;</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

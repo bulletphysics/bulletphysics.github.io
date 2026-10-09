@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11311" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2016-08-26T11:24:50+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11311</id>
+
+		<entry>
+		<author><name><![CDATA[korzen303]]></name></author>
+		<updated>2016-08-26T11:24:50+00:00</updated>
+
+		<published>2016-08-26T11:24:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38082#p38082</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38082#p38082"/>
+		<title type="html"><![CDATA[Re: Applying custom position based constraints in physics en]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38082#p38082"><![CDATA[
+OK, I solved this by storing the position from the previous time-step and treating the current position as a predicted one.<br>Seems to work OK, but it is oscillating much more than the standard PBD. <br>And the collisions also often eject rod particles too much. This is probably due to partial overwriting the PhysX collision response.<br><br>Is there a way to do it better?<br><div class="codebox"><p>Code: </p><pre><code>void FixedUpdate(){    float dt =  Time.fixedDeltaTime;    float dtInv = 1.0f / dt;    float dtInv2 = 2.0f / dt;    for (int i = 0; i &lt; rod.pointsCount; i++)    {        m_predPositions[i] = m_rigidbodies[i].position;        m_predRotations[i] = m_rigidbodies[i].rotation;    }    for (int si = 0; si &lt; solverIterations; si++)    {        ApplyRodConstraints();    }    for (int i = 0; i &lt; rod.pointsCount; i++)    {        m_rigidbodies[i].velocity = (m_predPositions[i] - m_prevPositions[i]) * dtInv;        m_prevPositions[i] = m_predPositions[i];        m_rigidbodies[i].position = m_predPositions[i];        Quaternion relRot = m_predRotations[i] * Quaternion.Inverse(m_prevRotations[i]) ;        m_rigidbodies[i].angularVelocity = new Vector3(relRot.x, relRot.y, relRot.z) * dtInv2;        m_prevRotations[i] = m_predRotations[i];        m_rigidbodies[i].rotation = m_predRotations[i];    }}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10616">korzen303</a> — Fri Aug 26, 2016 11:24 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[korzen303]]></name></author>
+		<updated>2016-08-26T09:01:14+00:00</updated>
+
+		<published>2016-08-26T09:01:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38080#p38080</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38080#p38080"/>
+		<title type="html"><![CDATA[Applying custom position based constraints in physics engine]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38080#p38080"><![CDATA[
+Hi, <br><br>I need to apply my custom position based constraints (for elastic rod) on a chain of rigidbodies in Unity, which uses PhysX underneath (but the problem concerns any physics engine really). <br>To keep things simple let say that I want to apply a simple distance constraint between positions of two rigid bodies governed by PhysX.<br>In my PBD framework I predict positions using Explicit Euler integration, then apply constraints to these predicted positions, I update velocity (predictedPositions - positions) / dt, followed by positions = predictedPositions.<br><br>The question is how to do the positions and velocity update when the numerical integration is held by PhysX or Bullet or any other physics engine?<br>Just to add that the PhysX API is not fully exposed. I can modify things only between full physics update.<br><br>I have tried something like this. The constraints are very sloppy, as in my opinion, the momentum is not considered (there is no prediction step)<div class="codebox"><p>Code: </p><pre><code>                            //copy positions from the physics engine            for (int i = 0; i &lt; pointsCount; i++)                m_predPositions[i] = m_rigidbodies[i].position;                        //modify predicted position            for (int si = 0; si &lt; solverIterations; si++)                ProjectDistanceConstraints(m_predPositions[i]);                        //apply changes back to the engine            for (int i = 0; i &lt; pointsCount; i++)            {                m_rigidbodies[i].velocity = (m_predPositions[i] - m_rigidbodies[i].position) * dtInv;                m_rigidbodies[i].position = m_predPositions[i];            }</code></pre></div>I have also tried something like below, but this yields weird results (way to stiff and unstable)<div class="codebox"><p>Code: </p><pre><code>                                m_rigidbodies[i].AddForce((m_predPositions[i] - m_rigidbodies[i].position) * dtInv, ForceMode.VelocityChange);                m_rigidbodies[i].position = m_predPositions[i];</code></pre></div>Thanks a lot<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10616">korzen303</a> — Fri Aug 26, 2016 9:01 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

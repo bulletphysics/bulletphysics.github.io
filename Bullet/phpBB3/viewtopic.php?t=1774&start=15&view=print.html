@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; SuperTuxKart - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>SuperTuxKart</h2>
+		<p><a href="viewtopic.php%3Ft=1774.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1774</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Mon Jan 07, 2008 2:04 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content">Hi,<br>
+
+<blockquote><div><cite>michaelth wrote:</cite>Well,I just use the udp socket to implement the P2P version and it is easy.
+</div></blockquote>
+That sounds very interesting, since it should be portable <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+
+<blockquote class="uncited"><div>
+if you can provide me a easy way to understand your code,and the P2P version of it can be finished quickly.
+</div></blockquote>
+How did you implement it? Send the commands from all players to one computer acting as a kind of 'server'  and distribute the position of the karts (etc) back? Or is it more 'distributed', e.g. all karts receive the positions  (etc) of all other karts, and do their own physics computation? Or all computers receive all commands, or ... ?<br>
+<br>
+We don't have too much in term of documentation. There is some documentation written in the doc/implementation.txt file, but esp. the physics part hasn't been updated for the new bullet physics. I guess it's 'read the source' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+
+<blockquote class="uncited"><div>
+ Is your code mostly like the TuxKart?I means use the same Kart Class,the same control method,the same Global variables and the same GUI interface.And if your program's main flow as same as the TuxKart,the network job may be very easy.
+</div></blockquote>
+We have rewritten a large part of the TuxKart code, but the overall structure is somewhat similar. It basically depends on how you implemented it: if all computers are doing their own physics computation, it would be a bit more difficult to keep them synchronised (in bullet terms: 'remote' karts would become kinematic objects so that you could can set the new position you are going to receive, and you have to make sure that the positions are in synch (otherwise minor difference might cause a crash to happen on one computer, but not on another one)). If you are sending the commands to one computer acting as a server, that should be quite easy to port.<br>
+<br>
+The main difference is that many attributes from TuxKart are still around (e.g. sgCoord       m_curr_pos), but are kind of 'read only': the physics compute the new values, and converts the physics results into the plib data structures. This way we didn't had to replace too much code at once, since (e.g.) the AI which is using these attributes still works. If your code is just setting these values, nothing much will happen (or worse: the display will be different from the physics model, since the physics model will not know about the changed values).<br>
+
+<blockquote class="uncited"><div> I always be intersted in networking a funny game.</div></blockquote>
+That would be great - let me know what I can do to help you! Contact me at hiker at luding dot org to discuss the details. I would be happy to help you porting your code - getting network multiplayer would be great!<br>
+<br>
+Looking forward to hear from you!<br>
+   Joerg</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Mon Jan 07, 2008 1:44 pm</strong></div>
+				<div class="author">by <strong>michaelth</strong></div>
+				<div class="content">Hi.<br>
+  Socket programming for networking a game is always a better choice than sth like DirectPlay.<br>
+  I just send every machine' own controlling Kart's "running data" to other machines for a networked implementing.The "running data" includes<br>
+{<br>
+sgCoord  curr_pos  ;<br>
+sgCoord  last_pos  ;<br>
+sgCoord  curr_vel  ;<br>
+sgCoord  velocity  ;<br>
+float wheelie_angle ;<br>
+sgVec2 curr_track_coords;<br>
+};To aquire these data,I even have to change these "Protected variable" to "Public:"<br>
+ In my version,I send these every game frame.Somebody told me that I need some optimize technology to reduce the transmission data for a Internet envrionment.After all, I just have a successful test under the LAN envrionment.<br>
+ Oh,I have trying compiling your"SuperTuxKart" in VC++6.0.But I failed with 347 errors.Can you give me a solution for that because I am only skilled in VC++6.0.<br>
+  Furthermore,I have a new idea for you.Have you thought of a network game such as the "Korean Kart Game"?You can build a database for Players's registering and Players's record.One Player can hold a room for other 3 players's Joining so that they 4 players can have a Kart-race in a track. And the database can do the Player's data and rooms space management.All of these may be a "Right" network-game-form of the "SuperTuxKart". Since the ASP+Access structure is easy for aquiring and learning, this "Right" game can be finished not so difficutly.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Wed Jan 09, 2008 12:45 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content"><blockquote><div><cite>michaelth wrote:</cite>Hi.<br>
+  Socket programming for networking a game is always a better choice than sth like DirectPlay.
+</div></blockquote>
+I totally agree.<br>
+
+<blockquote><div><cite>michaelth wrote:</cite>
+  I just send every machine' own controlling Kart's "running data" to other machines for a networked implementing.The "running data" includes<br>
+{<br>
+sgCoord  curr_pos  ;<br>
+sgCoord  last_pos  ;<br>
+sgCoord  curr_vel  ;<br>
+sgCoord  velocity  ;<br>
+float wheelie_angle ;<br>
+sgVec2 curr_track_coords;<br>
+};
+</div></blockquote>
+That won't work anymore, most of these variables are now 'read only' and will actually disappear soon - they are just set with the values from the bullet physics.<br>
+
+<blockquote><div><cite>michaelth wrote:</cite>
+To aquire these data,I even have to change these "Protected variable" to "Public:"<br>
+ In my version,I send these every game frame.Somebody told me that I need some optimize technology to reduce the transmission data for a Internet envrionment.After all, I just have a successful test under the LAN envrionment.
+</div></blockquote>
+Yes, this approach won't work for a general internet (i.e. non LAN) environment. UDP packets can get lost, arrive in the wrong order, the latency is significantly higher, and the amount of data might just be too big.  Consider a latency of 30 ms (which I guess is rather on the lower side of things - I get more than 60ms if I ping work from home, though that's via a VPN, which doesn't exactly help) - with that you would be limited to 33 FPS, which comes close to be unplayable (bullet simulates everything with 60 HZ) - reaction times are too slow. We would need some kind of extrapolation - e.g. assume that each kart kept doing what it was doing for the last frames. Once we receive a packet, we update and correct the current data for that kart - not entirely trivial, since locally we might not get a collision which just happened with another kart because its position was slightly different than what we thought it would be.<br>
+Extrapolation solves (partly) the problem of lost packets, and the game might still playable if there is a sudden large lag for some players.<br>
+<br>
+Then there is information that must not be lost, e.g. a rocket was fired or so - we have to make sure that the information that a rocket was fired (or a rocket exploded or ...) arrives at all computers, which means either using a 2nd tcp connection (which guarantees delivery, though it's slower), or make the udp protocol more robust (which might then be as slow as tcp) ...<br>
+<br>
+Additionally, what if you have computers of significant different speed? Well, with your method they will all be slowed down to match the slowest computer, so that might actually be ok, but it might be better to allow computers at faster speed to display at higher FPS.<br>
+<br>
+Then there's things like lost connections ...<br>
+<br>
+It's not at all trivial! On the other hand, I would be happy to get LAN network multiplayer in as a start, where we might get away with updating the positions on each frame (what are the typical latencies you get? I see under 1ms, making 50-100 FPS possible (50 if we assume a kind of handshake)).<br>
+<br>
+Implementation-wise (for a LAN) it might be easier to do all computation one one computer, and let all other computers be clients, which send the kart inputs (steering, acceleration), and receive the new position, heading, and special events (rockets fired, ...). The main 'issue' is that it is rather difficult with bullet to change the position of a rigid body, unless you turn them into kinematic objects, which means that the physics are not computed for these objects. This would mean a somewhat larger change to the source code (the local kart would be a normal rigid body, remote karts would become kinematic bodies), while otherwise (a server does all computation, and just receives steering information and sends positions back) we would just have to skip all physics computation for the 'clients', and instead get the new position from the network.<br>
+
+<blockquote class="uncited"><div>
+ Oh,I have trying compiling your"SuperTuxKart" in VC++6.0.But I failed with 347 errors.Can you give me a solution for that because I am only skilled in VC++6.0.
+</div></blockquote>
+Did you use the VC++ project file (supertuxkart/src/ide/vc8)? It's vc8 (I am using it with the free visual express version), perhaps you can import it? Do you have all dependencies installed (more than tuxkart: besides plib you need sdl, and if possible alut, openal, ogg, vorbis, and (for now) glut)? The README in the vc8 directories explains what to do.<br>
+Otherwise: can you send me some of the error messages?<br>
+
+<blockquote class="uncited"><div> Furthermore,I have a new idea for you.Have you thought of a network game such as the "Korean Kart Game"?</div></blockquote>
+You are talking of 'Kart Rider' I guess.<br>
+
+<blockquote class="uncited"><div>
+You can build a database for Players's registering and Players's record.One Player can hold a room for other 3 players's Joining so that they 4 players can have a Kart-race in a track. And the database can do the Player's data and rooms space management.All of these may be a "Right" network-game-form of the "SuperTuxKart". Since the ASP+Access structure is easy for aquiring and learning, this "Right" game can be finished not so difficutly.</div></blockquote>
+All of this other network handling is no problem once we have the actual race working. I wouldn't mind adding the options to participate in online races to STK (though it should only be an option, many people might not like it and prefer using it stand alone only). But then there are issues about what server can we use (since we are not making any money).<br>
+<br>
+Having said that, I am very interested in starting working on multiplayer, and LAN would be a good start. I won't have time to do much in the near future (am busy with fixing all physics bug so that we can do a release soon), but will always have enough time to answer questions etc. Best would be to contact me directly (email address above somewhere), or you can post to the STK development list (see web page).<br>
+<br>
+Cheers,<br>
+   Joerg</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Wed Jan 09, 2008 7:45 am</strong></div>
+				<div class="author">by <strong>michaelth</strong></div>
+				<div class="content">Hi.<br>
+ Your EmailAddress?Mine is :<a href="mailto:michaelth@163.com">michaelth@163.com</a><br>
+ I have read a article"Unreal Networking Architecture" to get some good tricks for a high-performance networking code.Predict/Correct on client-side may be a good choice.And if the client do some server's job(simple physics calculations) for "Position" for Predicting,the Game Animation may seems more smoothly.<br>
+ Actually,In my version,every machine runs a physics simulation and it just raplace the "client's calculated postion" with a "Postion" of a Packet arrived.So it has a lot of space for optimizing.<br>
+ All what have done previously is juct to check the practicality of netWorking "TuxKart".Fortunately,I have a successful test quickly(beyond my expectation)<br>
+So,I  am confidence in finishing the consequent optimizing job.<br>
+ Oh,I have finished a Online_database(TCP commucation)now.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart: 0.4 rc1</h3>
+				<div class="date">Posted: <strong>Mon Feb 25, 2008 5:01 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content">Hi,<br>
+<br>
+just to let you all know that we have just published a first release candidate for version 0.4. Main new features are of course the new bullet physics, but also better AI, graphical improvements to some of the tracks and a new kart (wilber), new music, and the option to look-back while you are driving.
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=83" class="postimage" alt="Lighthouse Screenshot" onclick="viewableArea(this);" /></dt>
+			<dd><em>Lighthouse Screenshot</em></dd>			<dd>sshot-lighthouse.jpg (9.45 KiB) Viewed 34022 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Any feedback is welcome!<br>
+<br>
+Cheers,<br>
+   Joerg</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Wed Mar 12, 2008 2:56 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content">Hi,<br>
+<br>
+we finally managed to release version 0.4 of SuperTuxKart. It's the first official version with bullet physics, which received good feedback up to now.<br>
+<br>
+You can download a binary (Mac, Windows, Linux) or source code from our homepage at:<br>
+<br>
+<a href="http://supertuxkart.sourceforge.net/" class="postlink">http://supertuxkart.sourceforge.net/</a><br>
+<br>
+We also have an official forum now at <a href="http://forum.freegamedev.net/index.php?t=i&amp;cat=7" class="postlink">http://forum.freegamedev.net/index.php?t=i&amp;cat=7</a><br>
+<br>
+Thanks a lot to Erwin for developing bullet, and for his support.<br>
+<br>
+Cheers,<br>
+   Joerg</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Fri Jan 23, 2009 3:21 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content">Hi all,<br>
+<br>
+a quick update: we have just released version 0.6 of SuperTuxKart, and we have spent quite some time to make the physics more interesting. <br>
+<img src="http://supertuxkart.sourceforge.net/persistent/images/4/4c/Sshot0.6-8-small.jpg" class="postimage" alt="Image"><br>
+<img src="http://supertuxkart.sourceforge.net/persistent/images/7/77/Sshot0.6-6-small.jpg" class="postimage" alt="Image"><br>
+We also have a video showing the game play: <a href="http://www.vimeo.com/2891554" class="postlink">Vimeo</a> (higher quality) and <a href="http://de.youtube.com/watch?v=Crn-VMUkg6w" class="postlink">YouTube</a>.<br>
+<br>
+It can be downloaded from our <a href="https://sourceforge.net/project/showfiles.php?group_id=202302" class="postlink">download</a> page.<br>
+<br>
+As always, thanks to Erwin for support and bullet, and I hope you will enjoy the game.<br>
+<br>
+Cheers,<br>
+   Joerg</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Wed Mar 23, 2011 4:44 am</strong></div>
+				<div class="author">by <strong>Mapsking</strong></div>
+				<div class="content">I'm not sure if this is the right place or not, but I've been using SuperTuxKart for a while, and I like the changes, and as always, it is a fun game.  However, I had a question/suggestion about it that I'm not even sure would be possible, or how hard it might be.  I'm simply an end user, but regarding the multiplayer options, two things:  First, whatever happened with the LAN play?  I think it would be more useful and feasible to do that, then a non-LAN type of play.  Secondly, however, is it possible to create support for a dual-monitor setup, for a multiplayer match?  It would be a lot more fun and a lot better if each person could use their own monitor, as opposed to a split screen.  In my case, in our office/game room, we have the main computer monitor on one wall, and an HD TV on the opposite wall.  That way, each player can be comfortable, and see the race on their own respective screen.  Just a thought, and was curious to see if it is possible, or in fact likely.  Please let me know.<br>
+<br>
+Thanks, Mapsking.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Wed Mar 23, 2011 5:09 am</strong></div>
+				<div class="author">by <strong>hiker</strong></div>
+				<div class="content"><blockquote><div><cite>Mapsking wrote:</cite>I'm not sure if this is the right place or not, but I've been using SuperTuxKart for a while, </div></blockquote>
+It's not really - could you post the same question in our forum at <a href="http://supertuxkart.sourceforge.net/forum" class="postlink">http://supertuxkart.sourceforge.net/forum</a>? I'll answer there.<br>
+<br>
+Cheers,<br>
+   Joerg</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SuperTuxKart</h3>
+				<div class="date">Posted: <strong>Wed Mar 23, 2011 6:06 am</strong></div>
+				<div class="author">by <strong>Mapsking</strong></div>
+				<div class="content"><blockquote><div><cite>hiker wrote:</cite><blockquote><div><cite>Mapsking wrote:</cite>I'm not sure if this is the right place or not, but I've been using SuperTuxKart for a while, </div></blockquote>
+It's not really - could you post the same question in our forum at <a href="http://supertuxkart.sourceforge.net/forum" class="postlink">http://supertuxkart.sourceforge.net/forum</a>? I'll answer there.<br>
+<br>
+Cheers,<br>
+   Joerg</div></blockquote>
+
+Of course, my mistake.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/39" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-07-26T12:38:45+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/39</id>
+
+		<entry>
+		<author><name><![CDATA[Stephane Redon]]></name></author>
+		<updated>2005-07-26T12:38:45+00:00</updated>
+
+		<published>2005-07-26T12:38:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=131#p131</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=131#p131"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=131#p131"><![CDATA[
+Hey Erwin, <br><blockquote class="uncited"><div>- how do you determine the distance of the contact points ? Do you use discrete collision detection for that ? Or do you update the distance incrementally ?</div></blockquote>It's indeed updated incrementally (euclidean distance): for example, for an edge / edge contact that you have detected at some time step, you track the locations of the nearest points on the edges at each time step, and you compute the distance between these points. For vertex / face<br>it's the same, you track the closest point of the face to the vertex. These distances are computed at the end of a time step, for all known contact points, for example to determine whether repositioning is necessary. However, these known contacting pairs also undergo CCD during the regular CCD computations, to make sure this distance never reaches zero.<br><blockquote class="uncited"><div>- do you convert 'distance space' into 'time-of-impact' space ? Do you use linear+angular velocity for that ? And do you project this on the seperating axis ? <br><br>Another problem: for example for a featurepair vertex-face:<br>If a vertex is approaching 'almost' parallel to the face, the location of the contact might vary a lot, even for small differences in distances in the face-normal direction.</div></blockquote>I'm not sure I understand the separating axis question <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">. I don't compute distances between OBBs for the OBB/OBB continuous tests, just conservative bounds with interval arithmetic, and don't use separating axes for E/E and V/F tests. <br><br>I use 'time-of-impact' space to position the objects slightly before the time of impact, essentially with the method described in our EG2002 paper to tune the CCD precision. Basically, if you have a screw motion over a time interval [0,1], you know the length dl of the path followed by any point of the object during any time sub-interval: <br><br>dl=sqrt(s*s+w*w*r*r)*dt <br><br>where s is the total translation in the screw motion, w is the total rotation, r is the 'screw radius' of the vertex, i.e. it's distance to the screw axis, and dt the length of the time sub-interval (clearly, all points of an object with same screw radius travel the same distance over a same time sub-interval). dl can be seen as a 'time-of-impact space distance', and is always longer than the euclidean distance, because the points that are going to contact do not necessary follow straight paths. So, if you want to guarantee that the euclidean distance is smaller than some threshold, it's enough to guarantee that the 'time-of-impact space distance' dl is smaller than this threshold.<br><br>Now say you want to position the objects slightly before colliding, i.e. you want to make sure that the distance dl is smaller than some threshold e0. If you know the time of impact is tc, you can position the objects at time tc-dt with:<br><br>dt&lt;e0/sqrt(s*s+w*w*r*r)<br><br>This will ensure that the 'time-of-impact space distance' between the objects, and thus the euclidean distance between the contacting features, is smaller than e0. In the case of a vertex trajectory almost parallel to a face, the vertex will be very close to the face at that time tc-dt, so the objects will undergo a repositioning step, which should (unless there are other constraints elsewhere), push the vertex away from the face in the direction of the face normal (using CCD to perform the repositioning <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink">).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6">Stephane Redon</a> — Tue Jul 26, 2005 12:38 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2005-07-26T11:45:40+00:00</updated>
+
+		<published>2005-07-26T11:45:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=128#p128</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=128#p128"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=128#p128"><![CDATA[
+Thanks Stephane,<br><br>There are still quite a few unknowns that one has to solve for a working implementation:<br><br>- how do you determine the distance of the contact points ? Do you use discrete collision detection for that ? Or do you update the distance incrementally ?<br><br>- do you convert 'distance space' into 'time-of-impact' space ? Do you use linear+angular velocity for that ? And do you project this on the seperating axis ? <br><br>Another problem: for example for a featurepair vertex-face:<br>If a vertex is approaching 'almost' parallel to the face, the location of the contact might vary a lot, even for small differences in distances in the face-normal direction.<br><br>How do you deal with that ?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Jul 26, 2005 11:45 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Stephane Redon]]></name></author>
+		<updated>2005-07-25T12:55:50+00:00</updated>
+
+		<published>2005-07-25T12:55:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=117#p117</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=117#p117"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=117#p117"><![CDATA[
+<blockquote class="uncited"><div><blockquote class="uncited"><div>In my case during the TOI calculation. Then contacts are maintained or not from one step to the other based on the small positive distance between the contact features. Nothing fancy .</div></blockquote>sounds quite fancy to me though. Because how do you deal with the 'timestap' of the contacts ? During the TOI calculation, the TOI assumably gets smaller and smaller, and all the time contact points are collected, each with a different time stamp.<br>So I'm probably intested in your filtering scheme.<br><br>Also, at which distance is the contact created, given your 3 epsilons in the french thesis or english <a href="http://www.inrialpes.fr/i3d/people/redon/papers/vrJournal2004.pdf" class="postlink">http://www.inrialpes.fr/i3d/people/redo ... al2004.pdf</a><br><br>Eb, Es, Er or exactly at the isosurface where the distance equals 0.<br>If the latter, I tried this, and the TOI is not robust anymore. Somehow the contacts needs to be at least distance 'Er' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"> ?</div></blockquote>Yes, you never reach a perfectly contacting state, you just get close. Say you're looking for collisions in [0,1]. At some point of the detection you find one  collision at 0.7. It's the first collision in the interval, so you keep it. Then you find one at 0.6995. Because the time difference is less than a threshold you keep both contact points. If then you find a collision at 0.3, you only keep this new one. If you don't find a new collision, you keep both 0.6995 and 0.7. That's the detection part. <br><br>Then, you position the objects, thanks to the motions used for collision detection, slightly before the first impact, say 0.699. At that point, the contacts are necessarly at a strictly positive distance, because the objects were slightly separated at the previous time step. You then do a check for repositioning (i.e. you slightly separate the objects if one contact distance is less than Er). In the end of this step "detection - potential repositioning", the objects are slightly separated and you can go to the next time step. With constraint-based dynamics, these contact points will not be re-detected at the next time step (well, sometimes it happens, if you use explicit linearized constraints which are valid at the beginning of the time step only).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6">Stephane Redon</a> — Mon Jul 25, 2005 12:55 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2005-07-25T12:40:51+00:00</updated>
+
+		<published>2005-07-25T12:40:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=116#p116</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=116#p116"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=116#p116"><![CDATA[
+<blockquote class="uncited"><div>In my case during the TOI calculation. Then contacts are maintained or not from one step to the other based on the small positive distance between the contact features. Nothing fancy .</div></blockquote>sounds quite fancy to me though. Because how do you deal with the 'timestap' of the contacts ? During the TOI calculation, the TOI assumably gets smaller and smaller, and all the time contact points are collected, each with a different time stamp.<br>So I'm probably intested in your filtering scheme.<br><br>Also, at which distance is the contact created, given your 3 epsilons in the french thesis or english <a href="http://www.inrialpes.fr/i3d/people/redon/papers/vrJournal2004.pdf" class="postlink">http://www.inrialpes.fr/i3d/people/redo ... al2004.pdf</a><br><br>Eb, Es, Er or exactly at the isosurface where the distance equals 0.<br>If the latter, I tried this, and the TOI is not robust anymore. Somehow the contacts needs to be at least distance 'Er' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"> ?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Jul 25, 2005 12:40 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Stephane Redon]]></name></author>
+		<updated>2005-07-25T12:32:23+00:00</updated>
+
+		<published>2005-07-25T12:32:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=115#p115</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=115#p115"/>
+		<title type="html"><![CDATA[Re: How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=115#p115"><![CDATA[
+<blockquote class="uncited"><div>How do others create their contact manifold ? During the TOI calculation, or seperate ?</div></blockquote>In my case during the TOI calculation. Then contacts are maintained or not from one step to the other based on the small positive distance between the contact features. Nothing fancy <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6">Stephane Redon</a> — Mon Jul 25, 2005 12:32 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2005-07-24T06:02:45+00:00</updated>
+
+		<published>2005-07-24T06:02:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=111#p111</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=111#p111"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=111#p111"><![CDATA[
+The Novodex guys describe how to find an approximate convex hull for the contact manifold in their Game Programming Gems 4 article. Basically you find the min-max contact points along two orthogonal axes in the contact plane.<br><br>I use a simlar technique so that a table with four boxes for legs only gets four contact points, even on a highly tesselated mesh. This turns out to be quite cheap and gives a great performance boost in the solver.<br><br>Also, remember that the rendered mesh on a barrel can be smoother than the collision.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Sun Jul 24, 2005 6:02 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2005-07-23T21:35:28+00:00</updated>
+
+		<published>2005-07-23T21:35:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=110#p110</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=110#p110"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=110#p110"><![CDATA[
+<blockquote class="uncited"><div>I think tesselation is not a bad thing. You automatically get rolling resistance. This was done with barrels in Half Life 2.</div></blockquote>Interesting. So how do you deal with all the contact points ? For a cylinder you can easily get loads. Do you have a post-processing stage to reduce them ? If so, how do you do this ?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Jul 23, 2005 9:35 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kenny]]></name></author>
+		<updated>2005-07-23T07:53:10+00:00</updated>
+
+		<published>2005-07-23T07:53:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=108#p108</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=108#p108"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=108#p108"><![CDATA[
+<blockquote class="uncited"><div>By the way, doesn't Mirtich not have a patent in that area of using voronoi regions in collision detection ?</div></blockquote>Actually I think Lin-Canny predates him on using external voronoi regions.<br><blockquote class="uncited"><div>But Kenny,<blockquote class="uncited"><div>There is an inherent complexity limit on the geometries that are easily dealt with using case-analysis. If things get too complicated it is often easier to use something like GJK. </div></blockquote>I don't get it. If I follow your recipy for the following case:<br><br>Take a few implicit primitives, things get complicated (sorry),<br>So instead of case analysis you revert to GJK as you told. <br>But this only gives you one point.  How do you get a stable situation with just 1 point ?</div></blockquote>I was simply making the point that if you have too many cases you need to search through in a brute force manner. Maybe you are better of with a method that works on general geometries.<br><br>Using GJK you would need a post-processing phase for contact determination. <br><br>For implicit objects you do not have an explicit surface, so you need some way to detect the surface.<br><blockquote class="uncited"><div>That's exactly why I have worked on this contact manifold generation and reduction on top of GJK. And I'm very curious what alternative others have for implicit difficult cases.</div></blockquote>There is a paper from siggraph 93 which deals with the problem of implict representations<br><br><a href="http://www.gg.caltech.edu/papers/collideabstract.html" class="postlink">http://www.gg.caltech.edu/papers/collideabstract.html</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11">kenny</a> — Sat Jul 23, 2005 7:53 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2005-07-23T00:41:13+00:00</updated>
+
+		<published>2005-07-23T00:41:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=102#p102</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=102#p102"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=102#p102"><![CDATA[
+I think tesselation is not a bad thing. You automatically get rolling resistance. This was done with barrels in Half Life 2.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Sat Jul 23, 2005 12:41 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2005-07-22T21:24:31+00:00</updated>
+
+		<published>2005-07-22T21:24:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=99#p99</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=99#p99"/>
+		<title type="html"><![CDATA[How to create the contact manifold ?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=99#p99"><![CDATA[
+<blockquote class="uncited"><div>Here's what I do for box-box collision:<br>1. Find the separating axis with minimum overlap. In this determination, I bias against edge-edge contact.<br>2. If the minimum axis is edge-edge, I just generate one point.<br>3. If the minimum axis is face-(vert | edge | face), I determine the reference face according to the minimum axis and the incident face on the other box. I then clip the incident face against the reference face. I then reduce the generated points to at most 4 using an approximate convex hull.<br>This algorithm can be extended to convex polyhedra. The problem is to determine the minimum axis quickly.</div></blockquote>I've heard such approach first mentioned by John Nagle, in this thread:<br><a href="http://groups.google.co.uk/group/comp.games.development.programming.algorithms/browse_frm/thread/b6316c1311b726a0/118bae17f95d39db" class="postlink">http://groups.google.co.uk/group/comp.g ... 17f95d39db</a><br><br>This works for polyhedral objects, so you tesselate your cylinders and cones ?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Jul 22, 2005 9:24 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

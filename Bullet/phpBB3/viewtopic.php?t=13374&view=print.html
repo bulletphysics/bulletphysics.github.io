@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Optimization for Big and lots of Rigid Bodies</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Optimization for Big and lots of Rigid Bodies</h2>
+		<p><a href="viewtopic.php%3Ft=13374.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13374</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Optimization for Big and lots of Rigid Bodies</h3>
+				<div class="date">Posted: <strong>Sat Feb 12, 2022 6:32 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">hello.<br>
+<br>
+What I've been doing recently is using a large amount of Terrain Rigid Body.<br>
+There are about 1024 * 1024 Height field data used to make Shape, which has caused a FPS decline.<br>
+So what I tried was to split the data into several Rigid bodies, which didn't help much.<br>
+Is there anything I'm missing?<br>
+Perhaps we will be dealing with a larger size of Terrain in the future, but is there an optimization method for this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Optimization for Big and lots of Rigid Bodies</h3>
+				<div class="date">Posted: <strong>Sun Feb 13, 2022 4:25 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I believe the <strong class="text-strong">btHeightfieldTerrainShape</strong> builds <strong class="text-strong">btTriangleShape</strong>s as necessary from the regularly spaced heightfield data.  That is, when another object gets within proximity for the narrow-phase collision calculation then temporary <strong class="text-strong">btTriangleShape</strong>s are constructed to allow the collision algorithms to compute the results.  An advantage of this behavior is: you can relatively easily update the heightfield data between steps.  As long as you properly update the <strong class="text-strong">btHeightfieldTerrainShape</strong>'s bounding box to properly reflect the changed heights, this works, and if you need the dynamic aspect of the terrain then use that shape.<br>
+<br>
+If your terrain never changes shape then you could improve performance by using offline manipulations to reduce the triangle count, load the terrain as a mesh, and use <strong class="text-strong">btBvhTriangleMeshShape</strong> instead.  For best performance make sure your terrain has triangles as big as, or bigger, than your smallest dynamic object,  so that your dynamic objects overlap and collide with as few triangles as possible.  If you create a giant dynamic object as big as your 20k triangle mesh then... you will experience a very big CPU/memory spike when it produces 20k+ convex-object vs triangle collision pairs.  Meanwhile a little marble rolling around on a giant 20k triangle mesh will be fast.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

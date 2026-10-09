@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Soft constraint derivation - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Soft constraint derivation</h2>
+		<p><a href="viewtopic.php%3Ft=8888.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8888</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: Soft constraint derivation</h3>
+				<div class="date">Posted: <strong>Sun Mar 03, 2013 1:32 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">It is (J*W*JT + gamma). No division by h. Please check out the mouse joint in Box2D. This example should answer all your questions. I use these formulas myself and they work.<br>
+<br>
+As for the stability issues that you are seeing remember warmstarting and Baumgarte don't work nicely together in many cases and you cannot fix it easily be softening the constraints. You have to ramp up the iteration count dramatically. This is why Box2D uses position projection.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft constraint derivation</h3>
+				<div class="date">Posted: <strong>Sun Mar 03, 2013 5:27 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">I had a thorough look at b2MouseJoint and the only difference between that and my code is the fact that Erin uses the mass of bodyB instead of the mass JM^-1JT seen by the impulse to compute the spring constant k and damping coefficient d.<br>
+<br>
+I did this and reproduced the same behaviour. Technically from the harmonic oscillator derivation, we have only one body involved in the equation, and the same applies for the constraint equation for d^2x/dt^2 = lambda/m. <br>
+<br>
+For the revolute joint, it seems as though we should take the average mass between the two planks, as two bodies are involved as opposed to the mouse joint, which is what was done in Box2D lite for the revolute joint.<br>
+<br>
+For the line joint, we should take the mass of the anchored free body.<br>
+<br>
+So Baumgarte stabilisation (dependent on beta, h and C) along with warm starting is still used in the mouse joint as:<br>
+<br>
+(JM^-1JT + gamma/h)*LambdaImpulse = -Jvi - Beta/dt*C - gamma*AccumulatedLambdaImpulse<br>
+<br>
+What do you mean by position projection Dirk? Thanks for all your help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft constraint derivation</h3>
+				<div class="date">Posted: <strong>Sun Mar 03, 2013 10:16 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Solved. The effective mass used to compute the spring constants and damping coefficients should be Meff = 1/Keff = (JM^-1JT)^-1 and this is the mass seen by the constraint. I was making the mistake of using JM^-1JT. This means that we have a spring constant matrix K and damping coefficient matrix D<br>
+<br>
+K = Meff * wn^2<br>
+D = 2 * Meff * wn * zeta<br>
+<br>
+However it is not wrong to choose a mass from either body as this works equally as well, perhaps Erin can explain if it's derived or purely experimental</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft constraint derivation</h3>
+				<div class="date">Posted: <strong>Sun Mar 03, 2013 4:42 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I am glad you found it. People sometimes call J*W*JT the effective mass though it is the inverse. I did this even myself <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> . Anyway, the effective mass is the mass seen/felt by the constraint and it also considers the rotational effect. If you just use the plain mass you ignore these rotational effects. For the mouse joint it is a hack, but ok. Also note that it is a 3d constraint and the effective mass is a 3x3 matrix. I dont know now, but maybe there is a better mass approximation in this case. <br>
+<br>
+Look at Box2D how it solves position constraints. The easiest example is the revolute joint. Also search for NGS in the code and maybe in the forum.<br>
+<br>
+I also recommend looking into the Spook solver. Search for it here.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft constraint derivation</h3>
+				<div class="date">Posted: <strong>Mon Mar 04, 2013 11:30 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Thanks Dirk, I am glad we got somewhere. It's an easy mistake to make. I will look into the solvers as you advised.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

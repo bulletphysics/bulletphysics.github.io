@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; ODE sample integration</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>ODE sample integration</h2>
+		<p><a href="viewtopic.php%3Ft=123.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=123</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>ODE sample integration</h3>
+				<div class="date">Posted: <strong>Thu Sep 08, 2005 11:17 am</strong></div>
+				<div class="author">by <strong>Den</strong></div>
+				<div class="content">Hi,<br>
+<br>
+First of all, thanks for the good work. Having arbitrary convex meshes will definitely improve the usefulness of ODE. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+I've been compiled and playing around with the BulletBoxStack demo, and it's really promising. Two issues i've realized:<br>
+<br>
+- it has problems with large geoms; i've created a larger ground box (1000*1000*1m in size), and the bullet objects started penetrating and jumping; they miss collisions until the moving geom penetrates deep enough (this can even be about 0.5), and then realizes the deep penetration correctly, but drops it again as soon as the penetration decreases a bit... As i've debugged the code, it seems the main problem is in MinkowskiPenetrationDepthSolver::CalcPenDepth. I guess using EPA instead could cure this. What do you think?<br>
+<br>
+- rolling cylinders gain torque, just like they would have a 'negative rolling resistance', because the contact points go 'late'; they are generated a bit behind the correct position.<br>
+<br>
+Thanks,<br>
+Denes</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 08, 2005 11:53 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi,<br>
+<br>
+very well spotted <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+- regarding objects of large size differences, the penetration depth solver is indeed very experimental. However even commercial physics engines have difficulties with large scale ratios. It is recommended to add a PlaneShape to the primitives. This will then project the other primitive to the plane, and then perform collision detection. I will add this PlaneShape.<br>
+<br>
+- the contact points are cached, and the PersistenceManifold updates them for a little while. This causes a torque indeed. There are a few solutions, one of them is to refresh all the contacts for a cylinder every frame. Another is to damp this cylinder a bit more (notice there is some damping added in the demo already).<br>
+<br>
+Thanks for the feedback !<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Thanks for the quick reply,</h3>
+				<div class="date">Posted: <strong>Thu Sep 08, 2005 12:32 pm</strong></div>
+				<div class="author">by <strong>Den</strong></div>
+				<div class="content">Yes, meanwhile i've also realized the cached points. Fortunately ODE's solver applies much smaller reaction forces on those, but as the new (current) contact point with the large normal force is just at the 'neutral' point, it still can't prevent the old ones accelerating the cylinder with their small forces.<br>
+<br>
+ <img class="smilies" src="images/smilies/icon_idea.gif" width="15" height="15" alt=":idea:" title="Idea"> I've already been thinking about implementing some sort of rolling resistance into ODE, as many others have been asked about the infinitely rolling spherical bodies; what about 'extrapolating' the rotation matrix for the collision detection? That way the contact points would be generated a bit _ahead_, thus creating a realistic and even physically corrent rolling resistance. (Althought this idea can be applied to ODE's contact generation in general, not just for Bullet geoms)<br>
+<br>
+Denes</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

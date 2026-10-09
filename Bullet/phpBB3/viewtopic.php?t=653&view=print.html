@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; stepSimulation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>stepSimulation</h2>
+		<p><a href="viewtopic.php%3Ft=653.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=653</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>stepSimulation</h3>
+				<div class="date">Posted: <strong>Tue Oct 31, 2006 11:55 am</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=653&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void PHYSICS::Sync(void)
+{
+	const float dt = DeltaTime();
+
+	LockWrite();
+	_pPhysWorld-&gt;stepSimulation(dt);
+	UnlockWrite();
+}</code></pre></div>
+
+It looks like speed of the game depends on "dt". But it must not. If FPS are going up, the speed of the flying sphere (with constant velocity) is going up too.....</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Oct 31, 2006 1:47 pm</strong></div>
+				<div class="author">by <strong>optime</strong></div>
+				<div class="content">I am new here but dt will decrease when sync calls increase - won't it?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: stepSimulation</h3>
+				<div class="date">Posted: <strong>Tue Oct 31, 2006 1:57 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=653&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void PHYSICS::Sync(void)
+{
+	const float dt = DeltaTime();
+
+	LockWrite();
+	_pPhysWorld-&gt;stepSimulation(dt);
+	UnlockWrite();
+}</code></pre></div>
+
+It looks like speed of the game depends on "dt". But it must not. If FPS are going up, the speed of the flying sphere (with constant velocity) is going up too.....</div></blockquote>
+
+No, the speed of the simulation is decoupled of the timestep.<br>
+<br>
+Which version of Bullet are you using? Bullet 2.19 and later has an internal fixed timestep,  separate from this 'dt'. If the dt is smaller then the fixed timestep, it will automatically interpolate, so it should be fine.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: stepSimulation</h3>
+				<div class="date">Posted: <strong>Tue Oct 31, 2006 2:26 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>
+I found it. It was due to clamping:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=653&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//clamp the number of substeps, to prevent simulation grinding spiralling down to a halt
+	int clampedSimulationSteps = (numSimulationSubSteps &gt; maxSubSteps)? maxSubSteps : numSimulationSubSteps;</code></pre></div>
+
+At low FPS numSimulationSubSteps was clamped to default 1.
+</div></blockquote>
+
+btDynamicsWorld::stepSimulation has optional arguments for the maximum number of substeps and the fixed timestep:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=653&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>stepSimulation(float deltaTime, int maxNumSubSteps=1, float fixedTimeStep=1.f/60.f);
+</code></pre></div>
+
+You can increase the second argument, maxNumSubSteps. If the FPS increases and the deltaTime becomes ismaller then the fixed timestep, it will automatically interpolate transforms. If the number of required substeps is larger then maxNumSubSteps, it will drop physics frames, this happens when your machine cannot run the simulation fast enough. You can provide some feedback for the user, see the CcdPhysicsDemo how to determine several cases.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Oct 31, 2006 3:16 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>optime wrote:</cite>I am new here but dt will decrease when sync calls increase - won't it?</div></blockquote>
+
+Yes, the timeStep (or dt, deltaTime) is simply 1.0 / frame_per_second.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

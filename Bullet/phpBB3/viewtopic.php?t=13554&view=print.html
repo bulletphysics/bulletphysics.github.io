@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Setting the center of mass does nothing except translate the model</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Setting the center of mass does nothing except translate the model</h2>
+		<p><a href="viewtopic.php%3Ft=13554.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13554</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Setting the center of mass does nothing except translate the model</h3>
+				<div class="date">Posted: <strong>Thu Mar 23, 2023 9:49 pm</strong></div>
+				<div class="author">by <strong>Andrei Despinoiu</strong></div>
+				<div class="content">The way I understand it, the center of mass is the point where you can balance the thing.<br>
+<br>
+I imagine it can be used with a vehicle, for example, set somewhere underneath the visual representation (geometry), so that it never flips upside-down, or at least greatly reduces the chances of it happening.<br>
+Or if it's set somewhere above a chair, for example, it should easily tip over, right?<br>
+<br>
+I set it to -10000 on the .y axis (in OpenGL +Y is up), thinking the thing will always stay upright, like a buoy (device floating on water), but nope. It just teleported it. What am I missing? It just seems to translate my entire entity downwards, or in whatever direction I set the center of mass. Capsule collider, very thin box collider, doesn't matter, even if I drop it from any height, it just rolls on the floor... Of if I set it to +/- 10000 on the X axis, I would expect the capsule to prefer rolling on that side only, but it just doesn't work.<br>
+<br>
+I set it like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13554&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>rigidbody.rb-&gt;activate(); // Wake it up in case it's sleeping
+btTransform transf = rigidbody.rb-&gt;getCenterOfMassTransform(); // Same thing as "getWorldTransform()"
+const btVector3 pos = transf * rigidbody.centerOfMass; // Rotate this point so it's local to it and not in world-space somewhere near the center of the scene
+transf.setOrigin(pos);
+rigidbody.rb-&gt;setCenterOfMassTransform(transf);</code></pre></div>
+
+"rigidbody" is an instance of a struct called "RigidbodyComponent".<br>
+"rigidbody.rb" is the "btRigidBody*" pointer.<br>
+"rigidbody.centerOfMass" is a btVector3 that I change the values to in the editor GUI (default is 0,0,0).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting the center of mass does nothing except translate the model</h3>
+				<div class="date">Posted: <strong>Thu Mar 23, 2023 11:14 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yeah  you don't want to use<strong class="text-strong"> btRigidBody::setCenterOfMassTransform()</strong>.  That sets the world_transform of the object's center of mass and doesn't change the center of mass in the object's local-frame.<br>
+<br>
+The center of mass in the object's local-frame is, by definition, the origin of the shape geometry.<br>
+<br>
+Consider a unit mesh cube with eight corners.  The mesh vertices would be with the origin at their center would be:<br>
+<strong class="text-strong"><br>
+&lt;  0.5,  0.5,  0.5 &gt;<br>
+&lt;  0.5,  0.5, -0.5 &gt;<br>
+&lt;  0.5, -0.5,  0.5 &gt;<br>
+&lt;  0.5, -0.5, -0.5 &gt;<br>
+&lt; -0.5,  0.5,  0.5 &gt;<br>
+&lt; -0.5,  0.5, -0.5 &gt;<br>
+&lt; -0.5, -0.5,  0.5 &gt;<br>
+&lt; -0.5, -0.5, -0.5 &gt;</strong><br>
+<br>
+By symmetry the center of mass is at the origin: <strong class="text-strong">&lt;  0.0,  0.0,  0.0 &gt;</strong><br>
+<br>
+In order to move the center of mass you must move the point.  For example, if we add <strong class="text-strong">&lt; 0.5,  0.5,  0.5 &gt;</strong> to all the points we would produce a cube with the  origin (and hence its center-of-mass) is at one corner:<br>
+<strong class="text-strong"><br>
+&lt;  1.0,  1.0,  1.0 &gt;<br>
+&lt;  1.0,  1.0,  0.0 &gt;<br>
+&lt;  1.0,  0.0,  1.0 &gt;<br>
+&lt;  1.0,  0.0,  0.0 &gt;<br>
+&lt;  0.0,  1.0,  1.0 &gt;<br>
+&lt;  0.0,  1.0,  0.0 &gt;<br>
+&lt;  0.0,  0.0,  1.0 &gt;<br>
+&lt;  0.0,  0.0,  0.0 &gt;</strong><br>
+<br>
+That works fine for mesh shapes and convex hulls...but what about for implicit shapes like <strong class="text-strong">btSphereShape</strong> and <strong class="text-strong">btBoxShape</strong>?  For those you must wrap them in a btCompoundShape and supply the offset transform.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting the center of mass does nothing except translate the model</h3>
+				<div class="date">Posted: <strong>Fri Mar 24, 2023 11:54 am</strong></div>
+				<div class="author">by <strong>Andrei Despinoiu</strong></div>
+				<div class="content">I do have compound shapes working. It was a bit of a pain to set up, but they are working...<br>
+<br>
+But you should be able to shift the vertices of a collision up or down, for example a capsule surrounding a character that has its origin at its feet, so it's not only covering the upper part of its body. This is like... basic stuff. And it's completely missing from Bullet. FOR YEARS! Why do you have to translate the geometry down? I think all animations will also have to be edited to be translated down, to match it.<br>
+<br>
+So the center of mass is in world space. That is... unbelievable. It should be in local space (local to the collision). It's absurd to have it in world space for something that moves around the scene. It means you have to set it every frame, and currently, if you set it every frame it shoots up if the center of mass btVector3 is "0, 0.15, 0", because it just directly sets the world transform.<br>
+<br>
+WORST OF ALL, setting the center of mass doesn't do what you think it does!<br>
+<br>
+For example, how do I do this in Bullet (at 5:11)?<br>
+<a href="https://youtu.be/LG1CtlFRmpU?t=311" class="postlink">https://youtu.be/LG1CtlFRmpU?t=311</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting the center of mass does nothing except translate the model</h3>
+				<div class="date">Posted: <strong>Fri Mar 24, 2023 3:03 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yes, the center of mass (COM) defines the local-frame origin which means: in order to shift the COM relative to the geometry you must shift the geometry instead.  For this reason:<strong class="text-strong"> btRigidBody::setCenterOfMassTransform()</strong> can only be understood to mean "set the COM transform in the world-frame".<br>
+<br>
+The way to give a vehicle a COM outside of its own geometry is to use the aforementioned <strong class="text-strong">btCompoundShape</strong> trick.<br>
+<br>
+That youtube video talks about how they move the COM back into the bounds of the vehicle when it dies, to allow it to tumble more realistically.  It is is possible to do this in Bullet.  You would first have to make sure every potentially shifted object is already using a <strong class="text-strong">btCompoundShape</strong>.  This because implicit shapes (<strong class="text-strong">btSphereShape</strong>, <strong class="text-strong">btBoxShape</strong>, etc) don't have a COM-relative transform feature and thus cannot be shifted in this way.  Then, you could write a custom utility to "shift the world-frame COM transform while keeping the collision geometry's world-frame transform invariant" that could operate on such an object.<br>
+<br>
+Hard core game devs will often employ "shape sharing" where they use one shape instance to provide the collision info for multiple bodies.  This is an optimization because it reduces memory footprint and hence improves CPU cache performance.  In such a paradigm shifting the COM of a shape would affect ALL of the bodies, so COM-shfting a single body would require giving it a different shape... iff it was sharing.  This is why general-purpose COM-shift technology cannot be part of the default Bullet tool set: it could only be implemented as a feature of a sufficiently intelligent "shape management" system.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting the center of mass does nothing except translate the model</h3>
+				<div class="date">Posted: <strong>Sun Mar 26, 2023 12:59 pm</strong></div>
+				<div class="author">by <strong>Andrei Despinoiu</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=44295#p44295"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=44295.html#p44295" data-post-id="44295" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Fri Mar 24, 2023 3:03 pm</span></cite>
+Then, you could write a custom utility to "shift the world-frame COM transform while keeping the collision geometry's world-frame transform invariant" that could operate on such an object.</div></blockquote>
+
+I'm sorry but what is the purpose of Bullet's "setCenterOfMassTransform()" function if I need to write such a custom utility?<br>
+<br>
+This is so weird... What I was hoping to add was a small red sphere, for debug purposes, to see where its center of mass was and how it behaved if I changed its position, how it can tip over, or not. Instead, I get this "always in the middle", simply because that's where the model's origin (or "pivot" point) is.<br>
+<br>
+Let's say I have one of those adjustable fitness weights (example <a href="https://www.google.com/search?q=adjustable+weight+lift+bar&amp;tbm=isch" class="postlink">here</a>). I unscrew one of the sides, so all that's left is the bar that was holding them, and the opposite side. The center of mass is no longer in the center, but according to Bullet, it is. Doesn't mater how heavy the opposite side is, it can be 800 kg, the bar 1 kg, and Bullet is like "yeah, center".<br>
+<br>
+I guess you could treat them as separate models... and have the one with all the weights "attached" be positioned so that its pivot is in the middle, while the one with only one weight attached has the pivot where you would think the center of mass would be. Same with an axe or a hammer, for example. Or an (opened) umbrella.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Setting the center of mass does nothing except translate the model</h3>
+				<div class="date">Posted: <strong>Wed Mar 29, 2023 3:39 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Alas, physics simulations require approximation and abstraction in order to run in real-time on real-life hardware.  The discrepancy between how you think it should work, and how it actually works, is a manifestation of that truth.<br>
+<br>
+The fact of the matter is: it is possible to get the effect you want, but you have to do it the right way.  For maximum flexibility for how the physics library can be used I believe shape-manager and COM-shifter utilities really do belong outside the domain of the physics engine itself.  Not everyone needs either one of them, and those who do will want full control.<br>
+<br>
+Somewhat unrelated to your particular frustration: I do find this question interesting:<br>
+
+<blockquote class="uncited"><div>What is the purpose of Bullet's "setCenterOfMassTransform()" function?</div></blockquote>
+
+<strong class="text-strong">btRigidBody::getCenterOfMassTransform()</strong> is identical to the <strong class="text-strong">btCollisionBody::getWorldTransform()</strong> of the base class, which is odd.  So I went and examined the implementations of the setters to see if they were also identical.  No, they are different!  Each one sets <strong class="text-strong">btCollisionObject::m_worldTransform</strong>, however they have distinct side effects and the <strong class="text-strong">btRigidBody</strong> method doesn't call the the other on <strong class="text-strong">btCollisionObject</strong> and therefore it lacks that one's side effect.  Meanwhile, I have always used <strong class="text-strong">setWorldTransform()</strong>, which means I wasn't getting the side effects of <strong class="text-strong">setCenterOfMassTransform()</strong>.  Should I have been calling both?  My spidey sense tells me there is a bug here, but it AFAIK it has never bitten me and it doesn't look serious so I didn't bother to track it down.  If I were to write a fresh game engine today using Bullet I would probably take the time to understand it better.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

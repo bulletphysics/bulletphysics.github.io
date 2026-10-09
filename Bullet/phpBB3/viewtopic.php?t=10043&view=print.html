@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Objects Flying Off to -X</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Objects Flying Off to -X</h2>
+		<p><a href="viewtopic.php%3Ft=10043.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10043</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Objects Flying Off to -X</h3>
+				<div class="date">Posted: <strong>Wed Aug 06, 2014 6:49 pm</strong></div>
+				<div class="author">by <strong>BlueSpud</strong></div>
+				<div class="content">Hey,<br>
+So I downloaded bullet today because I've heard nothing but good things about it. Unfortunately, after reading a quick tutorial, something went terribly wrong XD. So I created plane to serve as the ground and then added a sphere above it and let it fall onto the plane. It hits the ground like I'd expect and then just starts infinitely accelerating towards the negative x and keeping a constant z and y. Here is my code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10043&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>physicsWorld::physicsWorld()
+    {
+        //create all the world components
+        bulletConfiguration = new btDefaultCollisionConfiguration();
+        bulletDispatcher = new btCollisionDispatcher(bulletConfiguration);
+        bulletBroadPhaseInterface = new btDbvtBroadphase();
+        bulletSolver = new btSequentialImpulseConstraintSolver();
+        
+        //create the world
+        bulletWorld = new btDiscreteDynamicsWorld(bulletDispatcher,bulletBroadPhaseInterface,bulletSolver,bulletConfiguration);
+        bulletWorld-&gt;setGravity(btVector3(0,-10,0));
+        
+        //here are some temp gemoetries
+        btTransform t;
+        t.setIdentity();
+        t.setOrigin(btVector3(0,0,0));
+        
+        btStaticPlaneShape* plane = new btStaticPlaneShape(btVector3(0,1,0),0.0);
+        btMotionState* motionStatePlane = new btDefaultMotionState(t);
+        btRigidBody::btRigidBodyConstructionInfo info(0.0,motionStatePlane,plane);
+        btRigidBody* planeBody = new btRigidBody(info);
+        
+        
+        rigidBodies.push_back(planeBody);
+        bulletWorld-&gt;addRigidBody(planeBody);
+        
+        addRigidSpehere(1, glm::vec3(0,3,0));
+        
+        
+    }
+
+physicsWorld::~physicsWorld()
+    {
+        //delete everything
+        delete bulletWorld;
+        delete bulletConfiguration;
+        delete bulletDispatcher;
+        delete bulletBroadPhaseInterface;
+        delete bulletSolver;
+        
+        //delete all the rigid bodies
+        for (int i = 0; i &lt;  rigidBodies.size(); i ++)
+            {
+                delete rigidBodies[i];
+            }
+         
+    }
+
+void physicsWorld::update(double time)
+    {
+        bulletWorld-&gt;stepSimulation(time);
+    }
+
+btRigidBody* physicsWorld::addRigidSpehere(float rad, glm::vec3 position)
+    {
+        btTransform t;
+        t.setIdentity();
+        t.setOrigin(btVector3(position.x,position.y,position.z));
+        
+        btSphereShape* sphere = new btSphereShape(rad);
+        
+        //calculate inertia
+        btVector3 inertia(0.0,0.0,0.0);
+        sphere-&gt;calculateLocalInertia(1.0, inertia);
+        
+        btMotionState* motionState = new btDefaultMotionState(t);
+        btRigidBody::btRigidBodyConstructionInfo info(1.0,motionState,sphere,inertia);
+        btRigidBody* sphereBody = new btRigidBody(info);
+        
+        rigidBodies.push_back(sphereBody);
+        bulletWorld-&gt;addRigidBody(sphereBody);
+        
+        return sphereBody;
+    }
+
+</code></pre></div>
+
+and then in my main loop 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10043&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> SceneRenderer.currentScene-&gt;PhysicsWorld-&gt;update(1.0/60.0);
+</code></pre></div>
+
+If anyone could help me, I would really appreciate it. Thanks.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; API refactoring (was ugliness)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>API refactoring (was ugliness)</h2>
+		<p><a href="viewtopic.php%3Ft=551.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=551</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3>API refactoring (was ugliness)</h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 3:17 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">There are some annoying uglinesses in the Bullet API that really need fixing.<br>
+<br>
+FIRSTLY:<br>
+<br>
+The one that upsets me the most is that global variables and classes don't have a single prefix (eg OpenGL functions all start 'gl') - which means that Bullet pollutes the namespace HORRIBLY.   In large applications, this can be a serious pain in the butt.<br>
+<br>
+SECONDLY:<br>
+The second one is that there is no consistancy of member function naming.  For example:<br>
+class CollisionShape has:  'IsConvex' and 'CalculateLocalInertia' - but 'setLocalScaling' - it's really hard to write code when there is no standard about whether functions start with uppercase or lowercase.   Worse still is 'GetAabb' - where 'AABB' is an acronym and would usually be capitalised.  We even have 'setLocalScaling' and 'SetMargin'!!<br>
+<br>
+This also makes it very tiresome to write code that uses Bullet.   The library needs some standards about function and class naming - and it needs to be MUCH more careful about namespace pollution.<br>
+<br>
+THIRDLY:<br>
+In order to use Bullet, I have to include dozens and dozens of header files (sometimes these have to be included in a very specific order - which is *NASTY*) and I have to link to half a dozen separate libraries.  I think we should have:<br>
+<br>
+#include &lt;Bullet/Bullet.h&gt;<br>
+<br>
+...and be able to link to libBullet.so and nothing else.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: API ugliness.</h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 3:28 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>There are some annoying uglinesses in the Bullet API that really need fixing.<br>
+<br>
+FIRSTLY:<br>
+<br>
+The one that upsets me the most is that global variables and classes don't have a single prefix (eg OpenGL functions all start 'gl') - which means that Bullet pollutes the namespace HORRIBLY.   In large applications, this can be a serious pain in the butt.<br>
+<br>
+SECONDLY:<br>
+The second one is that there is no consistancy of member function naming.  For example:<br>
+class CollisionShape has:  'IsConvex' and 'CalculateLocalInertia' - but 'setLocalScaling' - it's really hard to write code when there is no standard about whether functions start with uppercase or lowercase.   Worse still is 'GetAabb' - where 'AABB' is an acronym and would usually be capitalised.  We even have 'setLocalScaling' and 'SetMargin'!!<br>
+<br>
+This also makes it very tiresome to write code that uses Bullet.   The library needs some standards about function and class naming - and it needs to be MUCH more careful about namespace pollution.<br>
+<br>
+THIRDLY:<br>
+In order to use Bullet, I have to include dozens and dozens of header files (sometimes these have to be included in a very specific order - which is *NASTY*) and I have to link to half a dozen separate libraries.  I think we should have:<br>
+<br>
+#include &lt;Bullet/Bullet.h&gt;<br>
+...and be able to link to libBullet.so and nothing else.
+</div></blockquote>
+
+I agree with you, and I wanted to fix this for a while, but want to choose a good point in time. Because changing the API requires changings other peoples code-bases.<br>
+<br>
+So to reply on FIRST: indeed, a prefix for the classes should be great. I want to avoid global variables if possible, it's pure lazyness in most cases (or for quick debugging). Preferable we use different prefixes for Collision Detection and Dynamics, the collision detection can be used independent of the dynamics. We could go for namespaces too, but lots of people have troubles using them properly, and I don't want to keep on doing support for that. In Havok we used lower-case prefix 'hk' for all classes, like hkConvexShape, so would could use blConvexShape.<br>
+<br>
+On the naming, I prefer using capitals for the method and class names, to avoid confusion with variable names. So small 'setMargin' is indeed bad. It became a mixture, because parts came from different libraries (Solid's math library for example). Needs to be fixed, just like the class prefixes.<br>
+<br>
+Ideally I want a C interface-API going along with the library. That hides most internals, and focusses on the usage. We can add a C-layer (bullet.h) on top of Bullet similar to ODE or Solid (see <a href="http://www.dtecta.com" class="postlink">http://www.dtecta.com</a>).<br>
+<br>
+I put it on the TODO list. Probably best if I do that in one go at some stage, we can call it Bullet 2.5<br>
+<br>
+<a href="http://www.continuousphysics.com/mediawiki-1.5.8/index.php?title=BulletTodo" class="postlink">http://www.continuousphysics.com/mediaw ... BulletTodo</a><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 3:58 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">Perhaps it would be great to wrap BULLET into COM (at least for Windows platform)...... <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> Similar to DirectX  <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 5:18 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It would be great to add some wrappers, in the Extras folder, it's just a matter of time and priorities.<br>
+<br>
+Python bindings, Java, C#/XNA (already started), and perhaps COM.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 6:16 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>Perhaps it would be great to wrap BULLET into COM (at least for Windows platform)...... :roll: Similar to DirectX  :roll:</div></blockquote>
+
+The trouble with that is that it makes applications code non-portable.  I think it's a bad thing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 6:18 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>It would be great to add some wrappers, in the Extras folder, it's just a matter of time and priorities.<br>
+<br>
+Python bindings, Java, C#/XNA (already started), and perhaps COM.</div></blockquote>
+
+For my own sanity, I have a wrapper that pulls all of the Bullet libraries into one library and all of the headers into one header.   It's probably not much good in general - but the name I picked for it ("Sabot") is something I'm kinda pleased with! :-)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: API ugliness.</h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 6:35 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+I agree with you, and I wanted to fix this for a while, but want to choose a good point in time. Because changing the API requires changings other peoples code-bases.
+</div></blockquote>
+The problem is that the longer you leave it, the more programs exist that use it and the harder it becomes to change.  It's better to grasp the nettle right now than to wait.
+<blockquote class="uncited"><div>
+So to reply on FIRST: indeed, a prefix for the classes should be great. I want to avoid global variables if possible, it's pure lazyness in most cases (or for quick debugging). Preferable we use different prefixes for Collision Detection and Dynamics, the collision detection can be used independent of the dynamics. We could go for namespaces too, but lots of people have troubles using them properly, and I don't want to keep on doing support for that. In Havok we used lower-case prefix 'hk' for all classes, like hkConvexShape, so would could use blConvexShape.
+</div></blockquote>
+Yeah - namespaces are nice - but the widespread adoption of the 'two letter prefix' thing has become something of an expected thing.  What's nice about it is that you can look at a simple, unqualified name and know what it means.
+<blockquote class="uncited"><div>
+On the naming, I prefer using capitals for the method and class names, to avoid confusion with variable names.
+</div></blockquote>
+Actually, I prefer initial-capitals for class names, initial-lowercase for class members and all caps for constants and enumeration tags - that way you can see which is which at a glance.  I'd prefer ANY kind of standard to no standard!
+<blockquote class="uncited"><div>
+Ideally I want a C interface-API going along with the library. That hides most internals, and focusses on the usage. We can add a C-layer (bullet.h) on top of Bullet similar to ODE or Solid (see <a href="http://www.dtecta.com" class="postlink">http://www.dtecta.com</a>).
+</div></blockquote>
+Those things can generally be generated automatically these days.  Packages like SWIG can generate wrappers for almost any language from C++ headers.<br>
+<br>
+The trick for manageing the transition period is to have something like:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  class blBoxShape
+  {
+  #ifndef MODERN_BULLET_API
+    inline void setLocalScaling ( const SimdVector3&amp; scaling) { SetLocalScaling ( scaling ) ; }
+  #endif
+  } ;
+  #ifndef MODERN_BULLET_API
+    typedef blBoxShape BoxShape ;
+  #endif
+</code></pre></div>
+
+...then to #define MODERN_BULLET_API in whatever new, unified header file we chose.  Then, new applications using the new header file would automatically disallow old style API but old style applications would get all of the legacy junk.<br>
+<br>
+It would be quite a lot of editing - but kinda brainless work that can be done while watching StarTrek reruns!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 7:10 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Let me think about the consistent naming and prefixes for a bit. I agree with you we shouldn't wait too long.<br>
+
+<blockquote class="uncited"><div>
+Those things can generally be generated automatically these days. Packages like SWIG can generate wrappers for almost any language from C++ headers.
+</div></blockquote>
+No, I don't want to expose all internal C++ classes. I know swig and other tools, but that's not the direction I want to go. Please look at Solid library for what I mean, or ODE. You can download Solid at <a href="http://www.dtecta.com" class="postlink">http://www.dtecta.com</a> . This C-API only exposes the necessary bits for the user, it is the 'high level api' that is enough for 95% of the users. I don't want to expose them to C++ classes or concepts like PersistentManifold, Dispatcher etc.<br>
+<br>
+Developers who want to work with the low level C++ classes don't need this C-wrapper. We can provide one header BulletLowlevelCppAPI.h, which includes most common header files. I organized Bullet's dependencies fairly careful, and a lot of functionality can be customized using C++.<br>
+<br>
+So ideally there is this high-level single C-api headerfile, 'bullet.h', and a more low-level existing C++ API, with most commonly used C++ headers grouped into BulletLowlevelCppAPI.h.<br>
+<br>
+Still, I prefer developers to know what they include, in most cases the depencies are very minimal. If possible don't include a headerfile, but just use a forward declaration. Also, such future grouping headerfile should NEVER be used in Bullet internally. It completely messes up the dependencies <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Please click on 'directories' tab in the doxygen generated docs:<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/index.html" class="postlink">http://www.continuousphysics.com/Bullet ... index.html</a><br>
+<br>
+If you click on either Bullet, BulletDynamics, Extras, LinearMath, Demos you can see the one-way dependencies (no circularities!). Even within Bullet Collision Detection, you will notices that the seperate folders have one-way dependencies. For example, files in Bullet/CollisionShapes never include a header from Bullet/NarrowPhase/*<br>
+<br>
+There is a lot more information that would be useful to know, when we start talking about high level API. The Extras/PhysicsInterface is physics engine independent, with CcdPhysicsEnvironment a Bullet implementation. It would be good to be able to use Bullet without requiring those 'abstraction'. In other words, there is some work needed to add some mainloop/container/DynamicsWorld in BulletDynamics. <br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 7:40 pm</strong></div>
+				<div class="author">by <strong>Dragonlord</strong></div>
+				<div class="content">It's really best to cleanup the API right now as the longer you wait the messier it gets to repair it. Furthermore you tend to push it away and away every time ( god how I know this myself ).<br>
+<br>
+What goes for naming don't use namespaces. They are a pain in the ass and not good to work with. a prefix like "bl" is the best thing to do as most of the GPL stuff I know works like that and it's very good to work with it.<br>
+<br>
+The last thing is this header file thing. I don't really care what you do but don't "hide" things from developers using multiple "sabot" include files. If it's an open source type project always make all headers open and provide one huge include file for the lazy bums out there. Anything else makes it trickier for the more advanced users to work with. Furthermore there is nothing wrong with cross references from a .cpp to another directory as long as the .h files always work with base interfaces.<br>
+<br>
+- Pl?ss Roland</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 7:57 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Dragonlord wrote:</cite>It's really best to cleanup the API right now as the longer you wait the messier it gets to repair it. Furthermore you tend to push it away and away every time ( god how I know this myself ).<br>
+<br>
+What goes for naming don't use namespaces. They are a pain in the ass and not good to work with. a prefix like "bl" is the best thing to do as most of the GPL stuff I know works like that and it's very good to work with it.<br>
+<br>
+The last thing is this header file thing. I don't really care what you do but don't "hide" things from developers using multiple "sabot" include files. If it's an open source type project always make all headers open and provide one huge include file for the lazy bums out there. Anything else makes it trickier for the more advanced users to work with. Furthermore there is nothing wrong with cross references from a .cpp to another directory as long as the .h files always work with base interfaces.<br>
+<br>
+- Pl?ss Roland</div></blockquote>
+
+Ok, I got the message, I'll add a prefix soon. I also want to rename Bullet/Bullet to Bullet/BulletCollision, to make it clear where the collision detection is. The dynamics is already in Bullet/BulletDynamics.<br>
+<br>
+There will be no things hidden for C++ developers. C developers who want to use a future C-API won't (obviously) have all internal classes exposed. Adding a basic C API is already planned a while ago, to make a more tight integration with Blender modeler (C-sources) possible. Right now, Bullet is only integrated in Blender's C++ game engine.<br>
+<br>
+I try to prevent cross-references wherever possible. For example, right now you can take Bullet's GjkPairDetector or Broadphase fairly easy, without having to worry about all the other stuff. In too many libraries it is a pain to just take the bits you want, and leave the other.<br>
+<br>
+Steve: thanks for the cleanup, I double checked all changes, and they look reasonable ( <a href="http://svn.sourceforge.net/viewvc/bullet?view=rev&amp;revision=280" class="postlink">http://svn.sourceforge.net/viewvc/bulle ... vision=280</a> )<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Sep 24, 2006 11:05 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">IMO the API has also to many unnecessary indirections (layers). I totally understand that you implemtented it this way in order to try different things out or in order to compare BULLET e.g. against SOLID. Maybe you consider a 2.0 version of BULLET which uses a more slender API. While using a wrapper like SOLID makes it easier for clients to use BULLET it will become very difficult to maintain the core API for you. Honestly I only see three modules/layers for a physic system, namely a math, collision and physic library. You maybe want to consider this as well.<br>
+<br>
+Something I find very usefull is to give filenames prefixes as well, since it works nicely with SlickEdit or VisualAssist "OpenFrom Workspace" option, e.g. Math_Vector3.hpp. You do this using the directories, but you maybe want to consider this option as well. <br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Sep 24, 2006 2:05 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+<blockquote class="uncited"><div>
+Those things can generally be generated automatically these days. Packages like SWIG can generate wrappers for almost any language from C++ headers.
+</div></blockquote>
+No, I don't want to expose all internal C++ classes. I know swig and other tools, but that's not the direction I want to go. Please look at Solid library for what I mean, or ODE. You can download Solid at <a href="http://www.dtecta.com" class="postlink">http://www.dtecta.com</a> . This C-API only exposes the necessary bits for the user, it is the 'high level api' that is enough for 95% of the users. I don't want to expose them to C++ classes or concepts like PersistentManifold, Dispatcher etc.
+</div></blockquote>
+
+I strongly disagree.<br>
+<br>
+What you do or do not expose shouldn't depend on the programming language your users happen to be writing in.  That's just silly.   If there is a 'simplified bullet' subset API and a 'deep guru with access to everything' API then reflect those in two separate C++ header files that each contains only what that set of users needs access to.  Then you can 'SWIG' (or whatever) each of those to generate a 'simple bullet' and a 'guru bullet' in any language your end users happen to want to write code in.  The language used and the API accessed are orthogonal matters.  It's just not reasonable to assume that just because someone has chosen to write in (say) Python that they need a really simple API - or that someone who is using C++ automatically wants to see the whole complexity of the system.<br>
+
+<blockquote class="uncited"><div>
+Still, I prefer developers to know what they include, in most cases the depencies are very minimal. If possible don't include a headerfile, but just use a forward declaration. 
+</div></blockquote>
+You prefer it because you live and breathe the internals of this library.  The vast majority of end users most definitely won't prefer it.   They want it to be a neat little black box that quietly gets on and does the physics - with the minimum possible amount of interface.<br>
+<br>
+As an end user in your target demographics, I can tell you that Bullet was a real pain to deal with.  I had no easy way to know what I do or don't want.  For my VERY simple first effort at putting Bullet physics into my game, I needed to include TWENTY EIGHT header files spread across SEVEN internal Bullet directories!  It was hard to figure out which ones I needed and even harder to get them all in the right order so it would compile.   Worse still, if I add another feature into my code, I have to go through that pain all over again.  Header files are scattered all over Bullet's internal heirarcy - so I'm including files from seven different directories that reflect only some arcane internal structure of Bullet that your end users frankly don't give a damn about.  When Bullet installs itself, there should be at most two or three header files and two or three '.so'/'.DLL' libraries - not some huge heirarchy of directories with headers and libraries scattered all over.<br>
+<br>
+I shouldn't have to do any of that.  I should be able to say:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   #include &lt;Bullet/Bullet.h&gt;
+</code></pre></div>
+...or at the very most:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  #include &lt;Bullet/BulletMath.h&gt;
+  #include &lt;Bullet/BulletCollision.h&gt;
+  #include &lt;Bullet/BulletPhysics.h&gt;
+</code></pre></div>
+...and even then, it shouldn't matter which order I include them - it should always 'just work'.  Then at link time:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  -l bullet
+</code></pre></div>
+...or at most:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  -l bulletmath  -l bulletcollision  -l bulletphysics
+</code></pre></div>
+
+<blockquote class="uncited"><div>
+Also, such future grouping headerfile should NEVER be used in Bullet internally. It completely messes up the dependencies :)
+</div></blockquote>
+Whatever.<br>
+<br>
+Other really complex libraries manage to do this - Bullet isn't special in that regard.  It's just a matter of some cleanup.<br>
+<br>
+The end user shouldn't have to care about it - or have to suffer the consequences of it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Sep 24, 2006 2:18 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+You prefer it because you live and breathe the internals of this library. The vast majority of end users most definitely won't prefer it. They want it to be a neat little black box that quietly gets on and does the physics - with the minimum possible amount of interface. 
+</div></blockquote>
+
+Due to the fact that Bullet is all open source C++ code, developers can easily get lost in all folders and headerfiles of its internal code.<br>
+<br>
+What I want is to provide a BulletCApi.h that provide the includes for most users (high level, not exposing internal details). C++, Python, Java, C# bindings can all use this API. Then a package will be distributed with just the precompiled library .a/.lib and such headerfiles.<br>
+<br>
+Developers who want to extend and modify internal workings of the library can ignore this API and precompiled library and use the library as it is right now. It is open source after all.<br>
+<br>
+A rough idea for API methods:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//create/destroy methods
+btCollisionShape btCreateCollisionShape(..)
+btDestroyCollisionShape(btCollisionShape);
+btCollisionObject CreateCollisionObject(btCollisionShape, btMotionState)
+btDestroyCollisionObject(btCollisionObject);
+btPhysicsWorld btCreatePhysicsWorld();
+btDestroyPhysicsWorld(btPhysicsWorld world);
+btRigidBody btCreateRigidBody();
+btRigidBody btDestroyRigidBody(btRigidBody);
+
+//queries and stepping the world
+btStepSimulation(btPhysicsWorld world,btScalar timestep);
+/ray cast
+btTestRay(btCollisionWorld world,btVector3 from,btVector3 to);
+//single object-object collision query
+btGetDistance(btCollisionObject obj0,btCollisionObject obj1);
+//some stuff for callbacks etc.
+btGetTimeOfImpact(btCollisionObject obj0,btCollisionObject obj1);
+</code></pre></div>
+I will work on such a solution, and provide packages for several platforms, with just the library in a lib folder, and the API headers in the include folder.<br>
+<br>
+Does that sound reasonable?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Sep 24, 2006 2:57 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk wrote:</cite>
+IMO the API has also to many unnecessary indirections (layers). I totally understand that you implemtented it this way in order to try different things out or in order to compare BULLET e.g. against SOLID. Maybe you consider a 2.0 version of BULLET which uses a more slender API. While using a wrapper like SOLID makes it easier for clients to use BULLET it will become very difficult to maintain the core API for you. Honestly I only see three modules/layers for a physic system, namely a math, collision and physic library. You maybe want to consider this as well. 
+</div></blockquote>
+
+It would have been easier, if I would just have done like most others do in this field, and just provide a C interface/API. Providing C++ headerfiles/interface is asking for troubles <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+As I mentioned before in this thread, there is one PhysicsInterface module, which is the CcdPhysicsEnvironment/PhysicsInterface. Once that is removed, you only have 3 modules: LinearMath, BulletCollision and BulletDynamics.<br>
+<br>
+Unfortunaty, the interaction between dynamics and collision detection is more complicated then just passing contact points (like ODE does).<br>
+Following aspects make the dependency/bridge between collison detection and physics more complicated:<br>
+* parallel dispatching of both island that contain both collision detection and physics<br>
+* maintain persistent contacts<br>
+* deal with continuous collision detection<br>
+* dynamics mainloop that can call the collision detector for timewarp or backstepping.<br>
+<br>
+Those are some of the reasons that the extra CcdPhysicsEnvironment layer is introduced. It also allows some flexibility to experiment with different stepping strategies. One aspect is parallelism, and the other is handling time-of-impact queue (like Brian Mirtichs TimeWarp). This makes the interaction between collision detection and physics non-trivial.<br>
+Also, this additional layer (PHY_IPhysicsEnvironment/PHY_IPhysicsController, with CcdPhysicsEnvironment Bullet's implementation, ODEPhysicsEnvironment, PhysXEnvironment other implementations) provides abstraction of the physics engine (so using such API would allow switching engine easier). Probably a bit too ambituous, but it allows you to compare and switch physics engine.<br>
+<br>
+There are a lot of different issues being discussed here, but mainly:<br>
+<br>
+* Issue0: there is no easy distribution, with a a single API include file (and precompiled library). Right now, developers have to include zillions of headerfiles. I've seen this issue in other physics libraries too...<br>
+* Issue1: the naming of internal source code, use prefixes and consistent method capitulization<br>
+<br>
+Both need and will be address. I had them in the planning, but didn't expect it was needed so urgently. There is a lot of other work needed in the library:<br>
+<br>
+* constraint motors and limits<br>
+* memory management/referencing<br>
+* etc etc etc, see the Bullet todo list (sticky in this forum)<br>
+<br>
+Hope this helps. Please don't get to excited about this matter, I will address it soon!<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Sep 24, 2006 8:30 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+* Issue0: there is no easy distribution, with a a single API include file (and precompiled library). Right now, developers have to include zillions of headerfiles. I've seen this issue in other physics libraries too...<br>
+* Issue1: the naming of internal source code, use prefixes and consistent method capitulization
+</div></blockquote>
+Yeah - that'll solve my issues
+<blockquote class="uncited"><div>
+Both need and will be address. I had them in the planning, but didn't expect it was needed so urgently. There is a lot of other work needed in the library:<br>
+<br>
+* constraint motors and limits<br>
+* memory management/referencing<br>
+* etc etc etc, see the Bullet todo list (sticky in this forum)
+</div></blockquote>
+Well, feel free to delegate!  I'm happy to help with the cleanup...let you get on with the stuff I can't do (constraint motors, etc).<br>
+<br>
+Dumb editing is something I can manage!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

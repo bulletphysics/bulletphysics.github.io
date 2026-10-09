@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Data driven character simulation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Data driven character simulation</h2>
+		<p><a href="viewtopic.php%3Ft=10189.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10189</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Data driven character simulation</h3>
+				<div class="date">Posted: <strong>Tue Oct 28, 2014 12:58 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I've been evaluating the Bullet physics engine for use in a virtual world project (highfidelity.io).  In particular I wanted to find out if Bullet could simulate an articulated character.  To that end I started with the 2.82 Ragdoll demo and added a custom internalTickCallback() that pulls the collection of RigidBody's together.<br>
+<br>
+The algorithm was inspired by the Dynamo Data Driven Character project from Williams College: <a href="http://graphics.cs.williams.edu/papers/DynamoVGS06/" class="postlink">http://graphics.cs.williams.edu/papers/DynamoVGS06/</a><br>
+<br>
+Specifically it uses verlet relaxation to transfer momentum between neighboring bones.  The target rotations are achieved by slerping the RigidBody transforms directly, rather than applying torques (this causes a few side effects such as sudden penetrations and possibly tunneling).  The character is kept upright using the "zero inverse inertia" hack on the root bone (the character cannot be knocked over).<br>
+<br>
+I've posted a short video here:  <a href="https://www.youtube.com/watch?v=nxGvnoQZdko" class="postlink">https://www.youtube.com/watch?v=nxGvnoQZdko</a><br>
+<br>
+The source code can be downloaded from here:  <a href="https://docs.google.com/a/highfidelity.io/file/d/0BwwPQ7K_JAHtOEZ1Zzk2TkpwMFk" class="postlink">https://docs.google.com/a/highfidelity. ... zk2TkpwMFk</a><br>
+<br>
+If you want to play with it just unpack the tarfile into the normal RagdollDemo directory.  You need to add a new constraint type called NULL_CONSTRAINT_TYPE .../src/BulletDynamics/ConstraintSolver/btTypedConstraint.h and rebuild the physics engine and Demos.<br>
+<br>
+The character can be steered using the 'awsd' keys which I hijacked from their normal Demo-wide behavior:<br>
+<br>
+s = stop walk animation<br>
+w = start walk animation<br>
+a = turn left<br>
+d = turn right<br>
+<br>
+Edit: added more instructions on how to successfully build.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Data driven character simulation</h3>
+				<div class="date">Posted: <strong>Sun Nov 02, 2014 11:15 pm</strong></div>
+				<div class="author">by <strong>StabInTheDark</strong></div>
+				<div class="content">I tried to rebuild the demo using your code and ran into a little problem.<br>
+Could you tell me where you defined "NULL_CONSTRAINT_TYPE"?<br>
+<br>
+I am impressed with the results you are getting in your video.<br>
+Are you planning on adding any other data driven motions besides walking?<br>
+Would you mind if I copied your method for my project?<br>
+<br>
+I would like to add it to the Ragdoll I have working in Dark Basic Professional(DirectX).<br>
+<a href="http://www.youtube.com/watch?v=N93j9ZoGbok" class="postlink">http://www.youtube.com/watch?v=N93j9ZoGbok</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Data driven character simulation</h3>
+				<div class="date">Posted: <strong>Mon Nov 03, 2014 10:55 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">@StabInTheDark, oh right I forgot that I had to hack the Bullet source code for NULL_CONSTRAINT_TYPE.  I just added it near the end of the enumerated types in .../src/BulletDynamics/ConstraintSolver/btTypedConstraint.h, right above MAX_CONSTRAINT_TYPE.  The reason I added that custom constraint was because I couldn't get the collision filtering to work after following the directions on the wiki.  Since I had witnessed the pairwise collision filtering working for constraints I decided to add a custom no-op constraint to get the pairwise filtering as the primary feature, rather than the side-effect.<br>
+<br>
+I also forgot to mention: I hacked the Demo code to render the MultiSphereShape differently -- to render a line of spheres whenever the shape only had two spheres.  I used the MultiSphere shape for everything so I could avoid calculating an extra transform for capsules, and also so that the bones would collide like tapered capsules.<br>
+<br>
+When I watched my video again I realized that I had left the gravity at a low value -- the character is walking in a 3 m/sec^2 gravitational field.  I doubled it up to 6 m/sec^2 but then the character had trouble achieving its target animation, which is probably why I had left the gravity so low.  So I decreased the BONE_ROTATION_TIMESCALE down to 0.025 sec and then it was able to walk again.<br>
+<br>
+I'm a little dissatisfied with how I had to slave the bone rotations -- basically I slerp them toward their target rotation.  Perhaps I'll revisit this problem in a later version.  What I'd really like to do is get a character simulated using the Featherstone algorithms, but I think this might be good enough for a start.<br>
+<br>
+Generating the target animation state is outside the scope of what I'm actually aiming for, so the walk animation was purely for fun and demonstration -- I don't have any plans on adding more animations.  The walk was achieved by adding hand-tuned rotation oscillators to select joints.  I make the avatar stop by simply attenuating the amplitude of all oscillators to zero over some time period.<br>
+<br>
+Yes, the code is free to use for any purpose whatsoever, basically under the same license of the Demo code itself since that is what I started with.  The only other bit I pulled in was a bit of code from the Bullet wiki.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Data driven character simulation</h3>
+				<div class="date">Posted: <strong>Tue Nov 04, 2014 1:23 am</strong></div>
+				<div class="author">by <strong>StabInTheDark</strong></div>
+				<div class="content">Thanks for your quick reply, I got the demo running once I added the NULL_CONSTRAINT_TYPE.<br>
+
+<blockquote class="uncited"><div>I also forgot to mention: I hacked the Demo code to render the MultiSphereShape differently -- to render a line of spheres whenever the shape only had two spheres. I used the MultiSphere shape for everything so I could avoid calculating an extra transform for capsules, and also so that the bones would collide like tapered capsules</div></blockquote>
+What did you change for the multiSphereShape? My demo is not rendering the character the same as in your video.<br>
+<br>
+Here is a link to a project on Locomotion of a character using Bullet.<br>
+It has the source code link on the page. I plan on incorporating this into my project,<br>
+unfortunately I have not found the time too. Maybe it can help you with your goal.<br>
+<br>
+<a href="http://animation.comp.nus.edu.sg/locotest.html" class="postlink">http://animation.comp.nus.edu.sg/locotest.html</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Data driven character simulation</h3>
+				<div class="date">Posted: <strong>Tue Nov 04, 2014 6:03 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I dug around and rediscovered where I had hacked the Demo draw code.  Replace the relevant section of code in .../Demos/OpenGL/GL_ShapeDrawer.cpp with this block:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10189&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>            case MULTI_SPHERE_SHAPE_PROXYTYPE:                                                                      
+              {                                                                                                       
+                  const btMultiSphereShape* multiSphereShape = static_cast&lt;const btMultiSphereShape*&gt;(shape);         
+                                                                                                                      
+                  btTransform childTransform;                                                                         
+                  childTransform.setIdentity();                                                                       
+                                                                                                                      
+                                                                                                                      
+                  int numSpheres = multiSphereShape-&gt;getSphereCount();
+                  for (int i = multiSphereShape-&gt;getSphereCount()-1; i&gt;=0;i--)                                        
+                  {                                                                                                   
+                      btSphereShape sc(multiSphereShape-&gt;getSphereRadius(i));                                         
+                      childTransform.setOrigin(multiSphereShape-&gt;getSpherePosition(i));                               
+                      ATTRIBUTE_ALIGNED16(btScalar) childMat[16];                                                     
+                      childTransform.getOpenGLMatrix(childMat);                                                       
+                      drawOpenGL(childMat,&amp;sc,color,debugMode,worldBoundsMin,worldBoundsMax);                         
+                  }                                                                                                   
+                  if (numSpheres == 2)
+                  {
+                      // we'll draw a line of spheres from one end to the other
+                      // but first we compute the number of spheres we want...
+                      float startRadius = multiSphereShape-&gt;getSphereRadius(0);
+                      float endRadius = multiSphereShape-&gt;getSphereRadius(1);
+                      float averageRadius = 0.5f * (startRadius + endRadius);
+                      const float SOMETHING_SMALL = 0.001f;
+                      if (averageRadius &gt; SOMETHING_SMALL) {
+                          btVector3 startPosition = multiSphereShape-&gt;getSpherePosition(0);
+                          btVector3 endPosition = multiSphereShape-&gt;getSpherePosition(1);
+                          float distance = (startPosition - endPosition).length();
+                          int numRenderedSpheres = (int)(2.0f * distance / averageRadius);
+                          if (numRenderedSpheres &gt; 2) {
+                              float dx = distance / (float)(numRenderedSpheres - 1);
+                              float dr = (endRadius - startRadius) / (float)(numRenderedSpheres - 1);
+                              btVector3 direction = (endPosition - startPosition) / distance;
+                              for (int i = 1; i &lt; numRenderedSpheres - 1; ++i) {
+                                  float radius = startRadius + (float)i * dr;
+                                  btVector3 pos = startPosition + ((float)i * dx) * direction;
+                                  btSphereShape sc(radius);
+                                  childTransform.setOrigin(pos);
+                                  ATTRIBUTE_ALIGNED16(btScalar) childMat[16];
+                                  childTransform.getOpenGLMatrix(childMat);
+                                  drawOpenGL(childMat,&amp;sc,color,debugMode,worldBoundsMin,worldBoundsMax);
+                              }
+                          }
+                      }
+                  }
+  
+                  break;
+              }
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Data driven character simulation</h3>
+				<div class="date">Posted: <strong>Tue Nov 04, 2014 7:06 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Thanks for the link to the LocoTest project and paper.<br>
+<br>
+My method doesn't use normal constraints between the character bones.  Instead it uses verlet relaxation and other methods to push the bones around and maintain the constraints.<br>
+<br>
+In the beginning I had tried using btFixedConstraints between the character bones since this was the simpler approach.  Unfortunately the simulation was unstable for the number of joints I wanted and timesteps I was taking (although I note that it was stable when applied to the original ragdolls in the demo (11 pieces, 10 joints)).  Meanwhile, even in the stable zone the constraints would tend to push the pivot points slightly apart, which was something I wanted to minimize.<br>
+<br>
+After seeing the tiny timesteps that they used in LocoTest it occurs to me that I didn't fully explore the the small timestep limit of the regular constraints, nor have I tested how my system performs at such small steps.  I should do that.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

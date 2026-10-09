@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1079" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-06-29T06:41:32+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1079</id>
+
+		<entry>
+		<author><name><![CDATA[kotsoft]]></name></author>
+		<updated>2007-06-29T06:41:32+00:00</updated>
+
+		<published>2007-06-29T06:41:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4622#p4622</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4622#p4622"/>
+		<title type="html"><![CDATA[Concave Penetration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4622#p4622"><![CDATA[
+hi, i'm kind of new to this forum, and wasn't here when this post was created, so maybe your problems were already solved.<br><br>hey, a few months ago i was reading the n ninja forums and i saw a similar problem with the ninja landing between two boxes or something and being stopped. i think this is similar to decomposing a concave polygon.<br><br>the problem is, when you decompose, you are probably including that newly created invisible edge in your collision resolution. and because of that, objects might get trapped.<br><br>so basically, you can use the invisible edge during the SAT that determines whether there is a collision or not, but do not use it when resolving the penetration.<br><br>and then, i think just add all the resolutions to a list or something and solve them like a little system.<br><br>i haven't tried this but i think it might work. hope this solves your problems.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1720">kotsoft</a> — Fri Jun 29, 2007 6:41 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-03-22T13:52:01+00:00</updated>
+
+		<published>2007-03-22T13:52:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3995#p3995</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3995#p3995"/>
+		<title type="html"><![CDATA[Concave Penetration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3995#p3995"><![CDATA[
+<blockquote class="uncited"><div>2) Decompose the concave shapes into convex pieces, apply known convex-vs-convex solutions.<br><br>problem: just doesn't work</div></blockquote>This might be a bug in your implementation. Composite/compound objects are the most popular concave representation that has been used in many games. Havok, Bullet, PhysX/Novodex and others are using this.<br><br>Can you make a testcase using Bullet btCompoundShape that shows the failure?<br><br>Thanks,<br>Erwin<br><br>PhysX/Novodex used to have PMAPS but they are <a href="http://ode.org/pipermail/ode/2006-January/017608.html" class="postlink">obsolete due to excessive memory</a> usage. <a href="http://www.opentissue.org/" class="postlink">OpenTissue</a> has an open source signed distance map implementation, in case you are interested. You might also want to search in deformable concave collision detection for concave-versus-concave solutions based on tetrahedral meshes.<br>OPCODE/ODE uses concave trimesh-trimesh using AABB trees and heuristic for penetration depth. GIMPACT also performs concave trimesh, but convex decomposition gives better quality and performs faster in my experience. Although you didn't like to us CCD, it is an option to use CCD on concave meshes, see <a href="http://continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=608" class="postlink">the FAST paper/implementation</a>.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Mar 22, 2007 1:52 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[raigan2]]></name></author>
+		<updated>2007-03-22T02:16:54+00:00</updated>
+
+		<published>2007-03-22T02:16:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3990#p3990</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3990#p3990"/>
+		<title type="html"><![CDATA[Concave Penetration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3990#p3990"><![CDATA[
+hi,<br>I'm trying to find a well-behaved method for resolving penetrations between two concave polygons in 2D. Probably this is similar to trimesh-vs-trimesh in 3D. <br><br>By "resolving penetrations" I really just mean "generating nice penetration info", the solver can handle the actual constraint/simulation part.<br><br>Currently we have a "slightly-inflated shapes + distance tests" system working, however this breaks if there is fast movement. I would rather not resort to sweep tests: my solver is position-based, so things will be pushed into penetration at each solver iteration.. I'm not going to sweep-test with each iteration! I'd like to just clean things up at the start of the next frame.<br><br><br>For convex-vs-convex this is more or less solved: penetration can be resolved by explicitly forming the convex hull of the shapes' minkowski difference, and finding the point on the hull's surface closest to the origin. <br><br>Obviously this isn't the fastest solution, but my point is that it's a known correct solution, which can then be reached/approximated in more optimal ways (via SAT/EPA/sampled-minksum/etc).<br><br><br>Does anyone know of anything comparable for concave shapes?<br><br>Generating well-behaved penetration information for concave shapes is a topic that must be quite common in practice, yet it seems to be perpetually glossed over in the literature. There are several threads on these forums that touch on the subject, but it seems like no one has presented a solution that works much of the time. Yet most games seem to have at least convex-vs-concave working well.. <br><br><br>Obviously, if the penetration is very deep the "correct" penetration information is ambiguous (without resorting to heuristics such as looking at previous state or current velocity). I'll settle for something that only works with "reasonable" penetration amounts.<br><br><br>I'm aware of the following proposed solutions, but none of them seem to be very good:<br><br>1) back up time until the shapes aren't penetrating, find the closest features in the past, and use these to calculate the current penetration.<br><br>problem: "back up time" is a bit vague<br><br>To avoid problems with rotating objects, or cases where the objects were penetrating last frame, you wouldn't really want to look backwards in time -- you'd want to simply translate the shapes until they're separated. But.. how do you know how to translate them? This is the problem we're trying to solve! <br><br><br>2) Decompose the concave shapes into convex pieces, apply known convex-vs-convex solutions.<br><br>problem: just doesn't work<br><br>This is a very frequently presented solution, but it simply doesn't work in practice: if you represent your concave shape as a union of convex shapes, and then try to generate penetration information using convex-vs-convex tests, you end up with objects being trapped between convex shapes. This approach works well for minimum-distance and boolean/intersection queries, but not for penetration as far as I've seen.<br><br><br>3) Distance maps: represent your shapes implicitly, as a grid of signed distance samples, use point queries to determine the closest point on the surface of the shape.<br><br>problem: slow? memory-hog? Unlike the above "solutions", I haven't yet tried this; has anyone used this sort of approach in a game?<br><br><br>I'm sorry for this overlong post, I've just spent the past three days trying to hack something together with invented "heuristics", and frustratingly nothing is working well.<br><br>If you extend the thinking behind "slightly-inflated shapes + distance tests", you end up with a system where you calculate the "skeleton"/medial axis (<a href="http://compgeom.cs.uiuc.edu/~jeffe/open/skeleton.html" class="postlink">http://compgeom.cs.uiuc.edu/~jeffe/open/skeleton.html</a>) of each polygon, with corresponding inflation amounts so that each segment of the skeleton/medial axis becomes a capsule. This will still break, it will just take a larger penetration amount, and things will be horribly rounded. It seems like a geometry-based version of signed-distance-maps.<br><br><br>Has anyone had any luck with concave collision? I thought Novodex has mesh-vs-mesh working, but I can't find anything online about it.<br><br>thanks,<br>raigan<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=748">raigan2</a> — Thu Mar 22, 2007 2:16 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

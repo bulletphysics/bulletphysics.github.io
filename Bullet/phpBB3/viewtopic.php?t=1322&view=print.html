@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Sony Vector Math library and SIMD math library open sourced</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Sony Vector Math library and SIMD math library open sourced</h2>
+		<p><a href="viewtopic.php%3Ft=1322.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1322</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Sony Vector Math library and SIMD math library open sourced</h3>
+				<div class="date">Posted: <strong>Sat Jul 28, 2007 1:19 am</strong></div>
+				<div class="author">by <strong>bullet_team</strong></div>
+				<div class="content">Sony Computer Entertainment Inc. contributed Vector Math library and SIMD math library as open source under the BSD license. Bullet physics SDK will be the main repository. Vector Math was previously only available to licensed PlayStation 3 developers.<br>
+<br>
+Vector Math provides linear algebra useful for 3D graphics (vector, matrix, quaternion). SIMD implementations for PowerPC PPU, Cell SPU and x86 SSE are available, next to a portable generic scalar version. You can read the <a href="http://bulletphysics.com/ftp/pub/test/physics/demos/Vector_Math_Library-Overview.pdf" class="postlink">overview document</a> on-line. Reference manuals and documentation is included in the doc folder.<br>
+Repository:<br>
+<a href="http://bullet.svn.sourceforge.net/viewvc/bullet/trunk/Extras/vectormathlibrary/" class="postlink">http://bullet.svn.sourceforge.net/viewv ... thlibrary/</a><br>
+<br>
+SIMD math library provides 4-way SIMD implementations of common math functions like cos4f, sin4f, floor4f, fabs4f etc. Vector Math depends on this lower level C library on PPU and SPU.<br>
+Repository:<br>
+<a href="http://bullet.svn.sourceforge.net/viewvc/bullet/trunk/Extras/simdmathlibrary/" class="postlink">http://bullet.svn.sourceforge.net/viewv ... thlibrary/</a><br>
+<br>
+Both libraries are included in the Bullet distribution under the Bullet/Extras folder, available from Bullet 2.55. Download <a href="http://sourceforge.net/project/showfiles.php?group_id=147573" class="postlink">Bullet physics SDK</a>.<br>
+<br>
+Feedback, patches for Vector Math and SIMD math library are welcome in this forum.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sony Vector Math library and SIMD math library open sourced</h3>
+				<div class="date">Posted: <strong>Wed Mar 04, 2009 4:08 pm</strong></div>
+				<div class="author">by <strong>lib_team</strong></div>
+				<div class="content">That's a very good news for everybody looking for a well written math lib, especially the SoA one which is quite rare.<br>
+<br>
+Anyway, it seems to me that I'm facing an issue:<br>
+- The sse implementation of boolInVec uses for the == operator the _mm_cmpeq_ps intrinsic (vectormathlibrary\include\vectormath\SSE\cpp\boolInVec.h line 207).<br>
+- The __m128 argument stores either 0xfffffff or 0x0 to reflect a boolean value (respectively true or false). See constructor boolInVec::boolInVec(bool scalar) line 139.<br>
+- As seen as a float value, 0xfffffff is a NAN.<br>
+- According to sse instruction specifications (that I found here : <a href="http://www.cs.cmu.edu/~410/doc/intel-isr.pdf" class="postlink">http://www.cs.cmu.edu/~410/doc/intel-isr.pdf</a>), _mm_cmpeq_ps always returns false when comparing NANs.<br>
+<br>
+Thus comparing 2 boolInVec that are initialized to "true" with the == operator returns false, which is not the expected result.<br>
+<br>
+I've experimented this behavior with those 3 lines of code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1322&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	
+int i = 0xffffffff;
+__m128 a = _mm_set1_ps(*(float*)&amp;i);
+__m128 c = _mm_cmpeq_ps(a, a);
+</code></pre></div>
+
+You'll notice that c equals 0x0 instead of the expected 0xffffffff.<br>
+<br>
+Am I wrong?<br>
+<br>
+Guillaume</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sony Vector Math library and SIMD math library open sourced</h3>
+				<div class="date">Posted: <strong>Thu Jun 04, 2009 12:05 am</strong></div>
+				<div class="author">by <strong>migdalskiy</strong></div>
+				<div class="content">When you compare two numbers in SIMD, you should be always aware of the type of entities you compare. VMX and modern SSE allows you to treat register contents as integers, masks or floats freely, but it doesn't mean you can magically add two numbers when they're float and int. Or compare two masks as if they were floats.<br>
+<br>
+ cmpeq_ps will compare two floating-point numbers. If you have masks in your registers, it is logically a wrong operation to perform. Comparing masks bit-wise would be a NOT-XOR operation, for example.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sony Vector Math library and SIMD math library open sour</h3>
+				<div class="date">Posted: <strong>Tue Aug 31, 2010 2:00 pm</strong></div>
+				<div class="author">by <strong>Guillaume</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I just discovered the lib (yes, 3 years later <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">), and I read the code and found things like this:<br>
+<br>
+(somewhere in scalar/cpp/mat_aos.h, but ti's the same in all implementaiton)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1322&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>inline float Matrix4::getElem( int col, int row ) const
+{
+    return this-&gt;getCol( col ).getElem( row );
+}
+
+inline const Vector4 Matrix4::getCol( int col ) const
+{
+    return *(&amp;mCol0 + col);
+}
+</code></pre></div>
+
+Why do the getter getCol creates a copy of a member variable ? Why can't we return a const reference like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1322&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>inline const Vector4 &amp; Matrix4::getCol( int col ) const
+{
+    return *(&amp;mCol0 + col);
+}
+</code></pre></div>
+
+Because here, each time I want to access 1 element of a matrix, I do a Vector4 copy... not very efficient.<br>
+<br>
+But maybe I'm missing a good reason for this.<br>
+Anyone can clarify this for me ?<br>
+<br>
+Thanks again for making Bullet Open Source, I learn a lot.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sony Vector Math library and SIMD math library open sour</h3>
+				<div class="date">Posted: <strong>Thu Oct 14, 2010 3:06 am</strong></div>
+				<div class="author">by <strong>paul.dubois</strong></div>
+				<div class="content">If the architecture, abi, compiler, and math library all cooperate, then returning a vector by value is cheap -- it goes in a register. Also, the less aliasing means more opportunities for the compiler to optimize.<br>
+<br>
+It's not OK for the api to change between the scalar and simd implementations (the change in semantics is subtle but real). vectormath is really not a great choice if you're not going to use a simd implementation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Sony Vector Math library and SIMD math library open sour</h3>
+				<div class="date">Posted: <strong>Thu Oct 06, 2011 8:34 am</strong></div>
+				<div class="author">by <strong>kiwilex</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I ran some quick SSE tests with a naive c++ implementation, some intrisics on simple float arrays and the sony library. It appears that the prefetch and the cache have a huge impact on the performance. For example, my compiler seems to manage cache optimization on the naive c++ implementation which give better performances than Vectormath::Aos. <br>
+<br>
+Is there any plans to add prefetch call to the library ?<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Vehicle Won't Steer?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Vehicle Won't Steer?</h2>
+		<p><a href="viewtopic.php%3Ft=671.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=671</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Vehicle Won't Steer?</h3>
+				<div class="date">Posted: <strong>Thu Nov 09, 2006 12:49 am</strong></div>
+				<div class="author">by <strong>mmorrison</strong></div>
+				<div class="content">I am trying to set up a simple world with a single vehicle, mostly copied from the VehicleDemo example program in release 2.20b.  I am pretty sure I have cut-and-pasted the code correctly, with the main differences being a different polygonal database and the fact that Z is up in my world rather than Y up.  <br>
+<br>
+I think i have corrected for the coordinate system and gravity correctly because with my MotionState starting point slightly above the terrain my "vehicle" falls a little and appears to come to rest on the wheels with some suspension compression.<br>
+<br>
+When I call applyEngineForce() on the rear wheels, the vehicle begins to move forward.  The problem is, when I call setSteeringValue (with values ranging from -0.3 to 0.3) the vehicle won't steer - it just keeps moving forward as if the tires are not turned.  The indices to applyEngineForce and setSteeringValue should be correct.<br>
+<br>
+Any ideas as to what I am doing wrong?<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Vehicle Won't Steer?</h3>
+				<div class="date">Posted: <strong>Thu Nov 09, 2006 4:05 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>mmorrison wrote:</cite>I am trying to set up a simple world with a single vehicle, mostly copied from the VehicleDemo example program in release 2.20b.  I am pretty sure I have cut-and-pasted the code correctly, with the main differences being a different polygonal database and the fact that Z is up in my world rather than Y up.  <br>
+<br>
+I think i have corrected for the coordinate system and gravity correctly because with my MotionState starting point slightly above the terrain my "vehicle" falls a little and appears to come to rest on the wheels with some suspension compression.<br>
+<br>
+When I call applyEngineForce() on the rear wheels, the vehicle begins to move forward.  The problem is, when I call setSteeringValue (with values ranging from -0.3 to 0.3) the vehicle won't steer - it just keeps moving forward as if the tires are not turned.  The indices to applyEngineForce and setSteeringValue should be correct.<br>
+<br>
+Any ideas as to what I am doing wrong?<br>
+<br>
+Thanks.</div></blockquote>
+
+Did you already hookup the basic debugDrawer to your renderer?<br>
+<br>
+The vehicle demo is hard to debug right now. I just added some debugging rendering for the wheels, to make sure they are in the right place (or are you rendering the wheels already?).<br>
+Are you using an unmodified btRaycastVehicle? Did you set the indices of the vehicle like following?
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=671&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	indexRightAxis = 0;
+	indexUpAxis = 2;
+	indexForwardAxis = 1;
+</code></pre></div>
+
+Please download Bullet 2.24 (for this updated debug rendering of the wheels) and let me know if there are still issues. Bullet 2.25 will have this updated VehicleDemo that let's you choose Z as up axis, so you can verify the setup. No changes in the Bullet sourcecode is necessary. Get it here:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=VehicleDemo.cpp" class="postlink">http://www.continuousphysics.com/ftp/pu ... leDemo.cpp</a><br>
+<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Nov 10, 2006 5:26 pm</strong></div>
+				<div class="author">by <strong>mmorrison</strong></div>
+				<div class="content">The problem, by the way, was that I was not calling m_vehicle-&gt;updateWheelTransform(i) for every wheel every frame like I should have been.  Everything works as expected now.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 8:43 pm</strong></div>
+				<div class="author">by <strong>mmorrison</strong></div>
+				<div class="content">Now my vehicle won't stop. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+There seems to be several issues with braking as of version 2.23.  btRaycastVehicle::setBrake doesn't set m_brake to the brake value supplied as an argument, and btRaycastVehicle::updateFriction does not take the brake value into account anyway.<br>
+<br>
+Is this just not implemented yet?<br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 10:34 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>mmorrison wrote:</cite>Now my vehicle won't stop. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+There seems to be several issues with braking as of version 2.23.  btRaycastVehicle::setBrake doesn't set m_brake to the brake value supplied as an argument, and btRaycastVehicle::updateFriction does not take the brake value into account anyway.<br>
+<br>
+Is this just not implemented yet?<br>
+<br>
+Thanks.</div></blockquote>
+
+Brakes and gears are not implemented yet.<br>
+Please let me know how urgent you need them, so I can plan them in. Shouldn't be too much work for brakes <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 11:26 pm</strong></div>
+				<div class="author">by <strong>mmorrison</strong></div>
+				<div class="content">Brakes would be nice.  Gears are not necessary for me for now.  Not terribly high priority.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

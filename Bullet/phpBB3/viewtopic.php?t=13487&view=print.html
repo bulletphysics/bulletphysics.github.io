@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [ammo] Problems with rigidity of sequential constraints</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[ammo] Problems with rigidity of sequential constraints</h2>
+		<p><a href="viewtopic.php%3Ft=13487.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13487</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[ammo] Problems with rigidity of sequential constraints</h3>
+				<div class="date">Posted: <strong>Sat Oct 15, 2022 12:31 am</strong></div>
+				<div class="author">by <strong>mooflaur</strong></div>
+				<div class="content">I should preface this post by saying that I am working with ammo.js, which is based on a version of Bullet that is several years old now, so maybe this problem is already fixed.<br>
+<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1952" class="postimage" alt="Screen Shot 2022-10-14 at 5.06.32 PM.png" onclick="viewableArea(this);" /></dt>
+						<dd>Screen Shot 2022-10-14 at 5.06.32 PM.png (539.19 KiB) Viewed 17298 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Animated version: <a href="https://youtu.be/mv1f-HllwEI" class="postlink">https://youtu.be/mv1f-HllwEI</a><br>
+<br>
+This scene illustrates a problem I've been having with chaining several constraints together.  The places where blue and purple objects meet are connected by hinge constraints. The colors of the meshes indicate which rigid body they belong to, with the exception of the orange sphere, which shares a rigid body with the two small purple cylinders adjacent to it.  Everything in the scene has a density of 1 and a mass calculated according to its size and density, with the exception of the orange sphere, which has a density of 0.01.  The rigid bodies that contain cubes are kinematic, while all of the others are dynamic.  All of the constraints in the scene have exactly the same parameters, other than the bodies they connect and the pivot point of the connection.<br>
+<br>
+The problem I'm experiencing is that the rigidity of the constraints when chained together like this seems to depend on the relative masses (or perhaps the relative rotational inertias) of the two linked objects.  The center and top examples both work about as expected: there's a little bit of wobble in the constraints but not so much as to be a problem.  On the left, though, the purple body is much less massive than the other two, with the result that the constraint practically falls apart under gravity.  On the right is a similar situation, although either because of the additional mass of the orange sphere, the separation between the constraints, or both, the wobble isn't quite as extreme.<br>
+<br>
+I can produce similar results by having the entire system of constraints be dynamic and balancing it on a static object such that the more massive parts hang off to the sides.  This example happens to use hinges but I've had the same problem with sliders and Generic6Dof constraints as well.<br>
+<br>
+My questions are as follows:<br>
+- Is this problem reproducible in more recent versions of bullet?<br>
+- If so, is there any fix or workaround to this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [ammo] Problems with rigidity of sequential constraints</h3>
+				<div class="date">Posted: <strong>Mon Oct 17, 2022 3:33 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yes, I think you are right: large ratios between the mass/inertia of constrained objects are contributing to the error of the constraint solution.  I believe the problem still reproduces in the latest version of Bullet, but I haven't tested constraints in a while.  Your example is probably using the btSequentialImpulseConstraintSolver which is described in the comments like this:
+<blockquote class="uncited"><div>
+The btSequentialImpulseConstraintSolver is a fast SIMD implementation of the Projected Gauss Seidel (iterative LCP) method.
+</div></blockquote>
+I think it solves a matrix equation <strong class="text-strong">Mb=x</strong> (where <strong class="text-strong">b</strong> is unknown) for each constraint, independently of other constraints.  By iterating over each individual constraint multiple times it converges toward a final solution.  Large mass ratios cause the solution to converge slower so and since the number of iterations is limited... there is still large error at the end.<br>
+<br>
+As to workarounds... I only have one idea when it comes to solving general (e.g. non-fixed) constriants: throw more CPU resources at the problem:<br>
+  <strong class="text-strong">(1)</strong> Reduce the substep duration and take smaller steps --&gt; the result is effectively more constraint solver iterations per second of simulation.<br>
+  <strong class="text-strong">(2)</strong> Looking at the C++... it appears to be possible to increase the number of iterations of the constraint solver (per substep) in two ways:  <strong class="text-strong">(a)</strong> set the btContactSolverInfo::m_numIterations passed to the solver, or <strong class="text-strong">(b)</strong> call Constraint::setOverrideNumSolverIterations() on each constraint.  Dunno if these knobs are exposed in ammo.js.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [ammo] Problems with rigidity of sequential constraints</h3>
+				<div class="date">Posted: <strong>Mon Oct 17, 2022 6:54 pm</strong></div>
+				<div class="author">by <strong>mooflaur</strong></div>
+				<div class="content">Thanks for the reply.  Ammo.js doesn't expose those options, unfortunately.  I tried increasing the number of substeps globally and did get better results that way but that's not a practical long-term solution for performance reasons.<br>
+<br>
+I'm going to see if I can make this work better just by fudging the numbers on mass and/or inertia; it would be better in my case to have inaccurate values for those than to have constraints that don't work as expected.  I'll post an update later with results.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

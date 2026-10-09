@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Stan's cloth simulation demo/discussion - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Stan's cloth simulation demo/discussion</h2>
+		<p><a href="viewtopic.php%3Ft=404.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=404</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>going on</h3>
+				<div class="date">Posted: <strong>Mon Aug 07, 2006 10:23 am</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+Here my status report:<br>
+<br>
+I went on and implemented the full Choi &amp; Ko paper but with the corrected damping forces suggested from Ascher/Boxman.<br>
+<br>
+I also used the IMEX scheme (couldn't find a nice condition for AIMEX with shear/struct springs) since the computation cost for the jacobian bending force is incredible high. <br>
+I also should mention that I figured out why they use BDF-2 instead of BE: Their system gets unstable after a few frames using BE.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> <br>
+<br>
+I also introduced masses in the simulation and used the Baraff approach multiplying the whole equation with M. So i don't need to calculate the inverse (saving divs) and save also some multiplications (the operations are going fine since M*M^-1 = I and M, M^-1 have full rank).<br>
+<br>
+Here the code with mass matrix multiplication:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// multiplying the whole equation from left with M
+// idea taken from Baraff[98] who applied this to the implicit euler formula
+A = M * A; // since A and M are Diag(), it's like A = M
+A -= (dFdV * (2.0f*dt/3.0f) + dFdX * ((4.0f*dt*dt)/9.0f)); // A = I - (dFdV * (2*dt/3) +  dFdX * (4*dt*dt/9))
+			
+[...]
+
+B += ( (V*8.0f -  Vold*2.0f) * (dt/9.0f)); // + (8*V - 2*Vold)*(dt/9);
+
+B = M * B;
+
+[...]
+</code></pre></div>
+The rest of BDF code didn't change.<br>
+<br>
+<br>
+Next thing was implemented some sort of simple PCG:<br>
+And I got the same results as suggested by Boxman/Ascher: For simple cloth the PCG with the approximated P = Diag(A) reduces the computation time about 10-15% but when i have a cloth with wind applied the PCG is slower than the normal CG (I have some verteces pinned/constrained).<br>
+<br>
+Greetings so far!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jan 21, 2007 4:21 am</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Hi!<br>
+The demo is very impressive. <br>
+I am looking for the best method to handle cloth simulation in realtime <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+So I implemented implicit Euler integrator and it gives some very good results, as advertised it is really independent from the time step we are taking - the cloth is very stable, but unfortunately it is quite expensive.<br>
+In the moment I want to finish collision response. <br>
+I have only cloth-solid collisions working at the moment - as it is described in the paper I add position alteration vector and simply alter position of the colliding particles and add penalty force to resolve the collision. This method is working in most cases, but it can't guarantee no interpenetrations - my cloth often penetrates into objects on a small depth. <br>
+<br>
+let dx be our penetration vector, y - position alteration vector<br>
+<br>
+for each particle y = dx // if there is a collision<br>
+or y = 0 // if there is no collision and no correction is required<br>
+<br>
+then formula for computing rhs vector B transforms into:<br>
+h(f0 + h*df/dx*v0 + df/dx*y)<br>
+and integration:<br>
+x += dv + y<br>
+<br>
+May be I missed something?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jan 21, 2007 4:26 am</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">And what gives BDF in compare to implicit Euler?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>realtime cloth</h3>
+				<div class="date">Posted: <strong>Thu Jan 25, 2007 3:16 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+Since you are looking for cloth simulation in realtime you should take a look at verlet integration schemes.<br>
+<br>
+Implicit schemes are mostly used for accuracy (3d rendering/animation), not for speed (games, etc.).<br>
+<br>
+You shouldn't take a too deep look into barraf's collision resolving system from back to 1998. They already published 2 new papers on that issue in 2002/2003 (e.g. "robust treatment of collisions").<br>
+<br>
+Well i tried to implement that paper and got most of it working, but i couldn't get it stable since the changes in velocity also introduced "whackyness".<br>
+<br>
+In the moment my cloth is wortking for a 33x33 grid (1089 in total) using BDF-2 and collision detection (but NO CCD) at arround 300-350ms. I couldn maybe squeetch out another 100-150ms but that is the minimum then. I am already using timesteps like 0,008 sec (or dt=0,2 per frame).<br>
+The CG-algorithm normaly solves the whole system within 1-2 rounds so it's quite fast. My collision detection system normaly uses 10-15 ms per call and the whole solver (BDF-2 with PCG) 30ms per call.<br>
+So that's 5 * 30 + 5*15 = 225ms basic costs.<br>
+<br>
+Regarding BDF-2: <br>
+BDF-2 let's you simulate even more accurate cloth, better wrinkles, etc. But the problem is also that you can't easily apply the collision resolving algorithm from barraf 1998. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+Even when you implement one of the most modern collision papers, you will end up having a simulation with over 150ms (depends on your spring count) which results in non-realtime using implicit integration.<br>
+<br>
+So in total it is like that:<br>
+You have to choose:<br>
+<br>
+Accuracy regarding collisions and simulation <br>
+OR<br>
+speed.<br>
+<br>
+<br>
+Greetings so far!<br>
+Genscher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 4:25 am</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Hi.<br>
+Thanks for the reply! <br>
+Could you tell me how do you handle cloth collisions? Do you simply apply penalty forces or something else?<br>
+As I said position alteration in common with penalty forces works for me, but I can't handle cloth-cloth intersections this way, and I think two way interactions like rigid body - cloth or cloth - deformable may cause instabilities in this case. <br>
+
+<blockquote class="uncited"><div>Since you are looking for cloth simulation in realtime you should take a look at verlet integration schemes. </div></blockquote>
+Yes, you right. Now I'm working with "Position Based Dynamics" paper. Cloth simulation based on that technique is much faster. Only the bending constraints are a headache for me <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+Did you tried that scheme?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 9:00 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I implemented the bending constraints and found them too slow. The visual results with the position based approach rely mainly on the tesselation of the cloth, will say the more triangles the nicer the cloth. So I went for more triangles and speed. Anyway, what is your problem with the bending constraints?<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 10:25 am</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Thanks, Dirk. It is hard to say where the problem is.<br>
+I tryed manys of variants to get my bending constraints work, but it seems to me that it was waste of my time <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+Cloth represented by 26 x 26 grid, fixed at 2 top vertices, after applying an impulse comes to rest in a very strange manner. Its rest state looks like this:<br>
+<a href="http://img266.imageshack.us/my.php?image=bendinghelllu4.png" class="postlink"><img src="http://img266.imageshack.us/img266/2708/bendinghelllu4.th.png" class="postimage" alt="Image"></a><br>
+<br>
+May be you can help me. This is my code on computing initial bending angle 'phi':
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>sPoint3&amp; p1 = m_X[bendEdge-&gt;p1];
+sPoint3&amp; p2 = m_X[bendEdge-&gt;p2];
+sPoint3&amp; p3 = m_X[bendEdge-&gt;p3];
+sPoint3&amp; p4 = m_X[bendEdge-&gt;p4];
+
+sPoint3 n1 = normalize(cross(p2,p3));
+sPoint3 n2 = normalize(cross(p2,p4));
+
+F32 cos_angle = dot(n1, n2);
+			
+bendEdge-&gt;phi = acosf(cos_angle);
+</code></pre></div>
+(p1,p2,p3,p4 indices are 100 % valid, I've checked)<br>
+<br>
+And here is a code projecting bending constraints:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>sPoint3&amp; p1 = m_P[p1i];
+sPoint3&amp; p2 = m_P[p2i];
+sPoint3&amp; p3 = m_P[p3i];
+sPoint3&amp; p4 = m_P[p4i];
+
+sPoint3 n1 = cross(p2,p3);
+sPoint3 n2 = cross(p2,p4);
+
+F32 p2p3 = 1.0f / n1.length();
+F32 p2p4 = 1.0f / n2.length();
+
+n1 *= p2p3;
+n2 *= p2p4;
+
+F32 d = sMATH-&gt;clamp(dot(n1,n2), -1.0f, 1.0f);
+
+sPoint3 cross_p2n2 = cross(p2, n2);
+sPoint3 cross_p2n1 = cross(p2, n1);
+
+sPoint3 q3 = p2p3 * (cross_p2n2 - cross_p2n1*d);
+sPoint3 q4 = p2p4 * (cross_p2n1 - cross_p2n2*d);
+sPoint3 q2 = (-p2p3)*(cross(p3,n2) + cross(n1,p3)*d) -
+			p2p4*(cross(p4,n1) + cross(n2,p4)*d);
+sPoint3 q1 = -q2 - q3 - q4;
+
+F32 angle_diff = acosf(d) - m_bendConstr[j].phi;
+
+F32 sum_w = m_w[p1i] + m_w[p2i] + m_w[p3i] + m_w[p4i];
+F32 sum_q = q1.lengthSquared() + q2.lengthSquared() + q3.lengthSquared() + q4.lengthSquared();
+F32 p_i = -4.0f * k_bend * sMATH-&gt;sqrt(1.0f - d*d) * angle_diff;
+sum_w *= sum_q;
+if( sum_w &gt; fEpsilon )
+   p_i /= sum_w;
+
+p1 += (p_i * m_w[p1i]) * q1;
+p2 += (p_i * m_w[p2i]) * q2;
+p3 += (p_i * m_w[p3i]) * q3;
+p4 += (p_i * m_w[p4i]) * q4;
+</code></pre></div>
+I checked it several times according to the paper.<br>
+May be I misunderstanding something.<br>
+<br>
+And did you face any difficulties with these constraints?<br>
+<br>
+And what cloth simulation model do you consider the best(in your opinion) for realtime applications?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>collision constraints</h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 12:21 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+I tried different ways to solve collisions. <br>
+<br>
+One way i followed was like this:<br>
+1. check for near faces and constrain (using z-vector like in the baraff paper) them not to move any further<br>
+2. simulateStep()<br>
+3. check for in-between collisions during position change x to x+1 <br>
+4. if there where collisions, constrain and solve them<br>
+4. do simulateStep() again with all constraints<br>
+<br>
+this was pretty effective but also time consuming <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+A second way was like baraff said:<br>
+1. enforce constraint like this (cloth against  not moving rigid body ):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float  k      = 5000; // very stiff spring
+	float  L 	  = epsilon; // this is the closest distance they should get
+	
+	float3 f;
+	float3 stretch_force = float3(0,0,0);
+	float3x3 dfdv;
+		
+	if(length&lt;L) // only apply force if distance between points is smaller than epsilon
+	{
+		stretch_force = (k * (L - length)) * dir;		
+		
+		F[i] += stretch_force;
+		
+		dfdv = dfdx_spring_type1(dir,L,length,k);
+		
+		dFdV.blocks[i].m   -= dfdv;  // diagonal chunk dFdX[b,b]
+	}	</code></pre></div>
+
+I inserted some spring constraint between the collision points. But that resulted in very big forces since a particles could get this force applied many times. I also had a solution for this (checking directions in which a particle is constrained already).<br>
+<br>
+In total I wonder how baraff solved the problem of having a non-penetration free state.<br>
+<br>
+It seemed to me that he do it like this:<br>
+1. simulate()<br>
+2. set constraints and position altering to apply them in the NEXT ROUND<br>
+<br>
+so you could easily end up in a non-penetration free state after one step, right?<br>
+My only idea how to solve that would be some additional step(s) like<br>
+1. simulate<br>
+DO UNTIL MAX_ITER OR PENETRATION_FREE<br>
+   2. set delta x and delta y<br>
+   3. simulate with constraints<br>
+END<br>
+<br>
+Did I miss something?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: collision constraints</h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 1:53 pm</strong></div>
+				<div class="author">by <strong>clanzotti</strong></div>
+				<div class="content">Hi<br>
+
+<blockquote><div><cite>Genscher wrote:</cite>Hello!<br>
+<br>
+I tried different ways to solve collisions. <br>
+<br>
+One way i followed was like this:<br>
+1. check for near faces and constrain (using z-vector like in the baraff paper) them not to move any further<br>
+2. simulateStep()<br>
+3. check for in-between collisions during position change x to x+1 <br>
+4. if there where collisions, constrain and solve them<br>
+4. do simulateStep() again with all constraints
+</div></blockquote>
+
+I assume you are applying the constraints at the next timestep instead of rewinding the simulation and restart again. (?)<br>
+
+<blockquote class="uncited"><div>
+A second way was like baraff said:<br>
+1. enforce constraint like this (cloth against  not moving rigid body ):<br>
+[snip]
+</div></blockquote>
+
+This only work well for cloth-cloth contacts/collisions, for cloth rigid body collision you should use the PCG/filtering constraint method.<br>
+
+<blockquote class="uncited"><div>
+In total I wonder how baraff solved the problem of having a non-penetration free state.<br>
+<br>
+It seemed to me that he do it like this:<br>
+1. simulate()<br>
+2. set constraints and position altering to apply them in the NEXT ROUND<br>
+<br>
+so you could easily end up in a non-penetration free state after one step, right?
+</div></blockquote>
+
+Yes, this is the method proposed in the paper and it work quite well in most cases. Also you should check when a constraint need to be released to prevent sticking just at the beginning of the next timestep.<br>
+
+<blockquote class="uncited"><div>
+My only idea how to solve that would be some additional step(s) like<br>
+1. simulate<br>
+DO UNTIL MAX_ITER OR PENETRATION_FREE<br>
+   2. set delta x and delta y<br>
+   3. simulate with constraints<br>
+END
+</div></blockquote>
+
+The problem with this approach is that you have to handle the over-elongation of your springs caused by the position correction you apply at the contact points, otherwise you'll cause other collisions/penetrations to happen in the next timestep. <br>
+<br>
+Maybe a better apporach is to handle the post-correction (for interpenetrations/overelongations) phase with the Bridson's method and then use the Baraff's method to handle colliding/resting contacts at the beginning of the next timestep.<br>
+<br>
+The drawback of the Baraff's method is that the contacts constraints can be applied only to single particles (E.g. edge/edge contacts can not be handled).<br>
+<br>
+Regards,<br>
+<br>
+Carlo Lanzotti</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>bridson</h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 2:15 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Thank you for your detailed answer.<br>
+<br>
+The main problem for me with baraff's approach was, that you can easily end    up having some frame with some penetration because the simulation fixes the penetration at the next timestep (which is also a new frame in my example).<br>
+<br>
+I also implemented Bridson's paper (<a href="http://www.cs.ubc.ca/~rbridson/docs/cloth2002.pdf" class="postlink">http://www.cs.ubc.ca/~rbridson/docs/cloth2002.pdf</a>) but i ended up having problems with instability.  I saved the work and I will see if I can get it up again. Maybe there is some obvious glitch I didn't see.<br>
+<br>
+But in total you're right: I think that an iterational attempt could be the most successfully in solving collisions.<br>
+<br>
+Ah! One thing left: I think that there is a problem with Bridson's attempt: He's moving points and changing velocities without taking the spring forces into account. That can introduce "jumping" behaviour at the next timestep IMHO. <br>
+(Additional: And this method can't be used with second order schemes like BDF-2 since it introduces discontinues. -IMHO)<br>
+<br>
+And now, I'll dig for my implementation of that <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+Greetings so far<br>
+genscher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: collision constraints</h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 2:22 pm</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Thanks you guys, very interesting <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+
+<blockquote><div><cite>clanzotti wrote:</cite>Hi<br>
+
+<blockquote><div><cite>Genscher wrote:</cite>Hello!<br>
+In total I wonder how baraff solved the problem of having a non-penetration free state.<br>
+<br>
+It seemed to me that he do it like this:<br>
+1. simulate()<br>
+2. set constraints and position altering to apply them in the NEXT ROUND<br>
+<br>
+so you could easily end up in a non-penetration free state after one step, right?
+</div></blockquote>
+
+Yes, this is the method proposed in the paper and it work quite well in most cases. Also you should check when a constraint need to be released to prevent sticking just at the beginning of the next timestep.
+</div></blockquote>
+I only dont understand why collision detection, setting the constraints and position alterations are ran after simulation step?<br>
+why dont do like that:<br>
+ 1. detect collisions and set constraints and alterations values<br>
+ 2. simulate<br>
+<br>
+I assume Bridson's method you mean is the method proposed by Robert Bridson in his "Robust Treatment of Collisions, Contact and Friction for Cloth Animation" ?<br>
+I planned to use it within position-based cloth simulator.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 3:34 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content"><blockquote class="uncited"><div>I only dont understand why collision detection, setting the constraints and position alterations are ran after simulation step?<br>
+why dont do like that:<br>
+1. detect collisions and set constraints and alterations values<br>
+2. simulate </div></blockquote>
+
+Well, you can't know where your particles will flow and you will miss all collisions where the objects are in a distance &gt; epsilon.<br>
+You simply can't know where you cloth is heading in advance <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+You can only solve half of the collision response in advance. And that's all collisions within a range of epsilon. If your cloth is moving more than epsilon or any other rigid body in the scene, then you will most likely miss a collision.<br>
+<br>
+You have two chances to prevent this<br>
+1. dynamically reduce the timestep so that your cloth/rigid body only moves &lt; epsilon.<br>
+2. implement some function which calculates the TOI (time of impact). you will need to do a rewind-step to prevent this sort of collisions IMHO<br>
+
+<blockquote class="uncited"><div>
+I assume Bridson's method you mean is the method proposed by Robert Bridson in his "Robust Treatment of Collisions, Contact and Friction for Cloth Animation" ?  </div></blockquote>
+And yes, that's our faourite paper <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+Greetings</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 3:58 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think you forgot to calculate everything w.r.t. p1. In the paper they assume p1 = (0,0,0). This means you have to use:<br>
+<br>
+// Given x1, x2, x3, x4 the vertices of the bending element<br>
+p2 = x2 - x1;<br>
+p3 = x3 - x1;<br>
+p4 = x4 - x1;<br>
+<br>
+Then you proceed as normal to compute the displacements which are applied on the original coordinates (x) again then....<br>
+<br>
+HTH,<br>
+-Dirk<br>
+<br>
+PS: I only skimmed your code, so the question might be already ansered by Genscher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 4:23 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content"><blockquote><div><cite>stbuzer wrote:</cite>Thanks, Dirk. It is hard to say where the problem is.<br>
+I tryed manys of variants to get my bending constraints work, but it seems to me that it was waste of my time <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad">
+</div></blockquote>
+
+I've implemented much of that paper in 2D, and I also had a hard time getting the bending constraints to behave well. In the end, I switched to a different formulation (using atan instead of acos), and things have been working very well. It's possible that there were errors in my acos-based code though.<br>
+<br>
+My constraint function was: C = (atan2(n1) - atan2(n2)) - theta<br>
+Where n1,n2 are the normals you're trying to constrain, and theta is the desired angle.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: bridson</h3>
+				<div class="date">Posted: <strong>Sat Jan 27, 2007 1:07 am</strong></div>
+				<div class="author">by <strong>clanzotti</strong></div>
+				<div class="content">Hi,<br>
+
+<blockquote><div><cite>Genscher wrote:</cite>Thank you for your detailed answer.
+</div></blockquote>
+
+Glad if i can be of help, i'm struggling with cloth simulation for years.<br>
+
+<blockquote class="uncited"><div>
+The main problem for me with baraff's approach was, that you can easily end    up having some frame with some penetration because the simulation fixes the penetration at the next timestep (which is also a new frame in my example).
+</div></blockquote>
+
+In fact you dont. Just give to your graphics pipeline the fake result and 'adjust' the errors in the beginning of the next timestep.<br>
+
+<blockquote class="uncited"><div>
+I also implemented Bridson's paper (<a href="http://www.cs.ubc.ca/~rbridson/docs/cloth2002.pdf" class="postlink">http://www.cs.ubc.ca/~rbridson/docs/cloth2002.pdf</a>) but i ended up having problems with instability.  I saved the work and I will see if I can get it up again. Maybe there is some obvious glitch I didn't see.
+</div></blockquote>
+
+Bridson's paper is targeted at the resolution of cloth/cloth collisions, so for the resolution of the cloth/rigid body collision you should try to apply the Baraff's method.<br>
+<br>
+At least for static objects...<br>
+
+<blockquote class="uncited"><div>
+But in total you're right: I think that an iterational attempt could be the most successfully in solving collisions.
+</div></blockquote>
+
+Actually it is the most 'robust' method we know, but still it needs more research to handle general cases.<br>
+
+<blockquote class="uncited"><div>
+Ah! One thing left: I think that there is a problem with Bridson's attempt: He's moving points and changing velocities without taking the spring forces into account. That can introduce "jumping" behaviour at the next timestep IMHO. 
+</div></blockquote>
+
+Not really, he take into account spring forces implicitly by appling impulses to the velocity during the collision resolving process. <br>
+
+<blockquote class="uncited"><div>
+(Additional: And this method can't be used with second order schemes like BDF-2 since it introduces discontinues. -IMHO)
+</div></blockquote>
+
+BDF-2 solve for position instead of velocity, but at the end of timestep you  can calculate the mean velocity and you can apply the Bridon's method too.<br>
+ 
+<blockquote class="uncited"><div>
+And now, I'll dig for my implementation of that <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">
+</div></blockquote>
+
+Dig more and more! Ehehe, and let we see how it progress <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+Regards,<br>
+<br>
+Carlo Lanzotti</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

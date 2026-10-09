@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Jittering and shaking when moving a rigidBody - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Jittering and shaking when moving a rigidBody</h2>
+		<p><a href="viewtopic.php%3Ft=11255.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11255</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Tue Jan 11, 2022 3:49 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">After a lot of trying I still get the jitter when I set the substeps bigger than 0.<br>
+substeps :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>maxSubsteps = static_cast&lt;int&gt;(delta / (1.f / 60.0f) + 0.5f) + 1;
+</code></pre></div>
+
+motion state :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void SpaceShipMotionState::getWorldTransform(btTransform&amp; worldTrans) const
+{
+	float yaw, pitch, roll;
+	auto p = spaceship-&gt;MotionStateGetPos();
+	auto r = spaceship-&gt;MotionStateGetRotation();
+	spaceship-&gt;MotionStateGetYawPitchRoll(yaw, pitch, roll);
+
+	auto pos = btVector3(p.x, p.y, p.z);
+	worldTrans.setOrigin(pos);
+
+	btQuaternion q;
+	q.setRotation(btVector3(r.x, r.y, r.z), r.w);
+	worldTrans.setRotation(q);
+
+	//q.setEulerZYX(roll, pitch, yaw);
+	//worldTrans.setRotation(q);
+}
+
+void SpaceShipMotionState::setWorldTransform(const btTransform&amp; worldTrans)
+{
+	auto p = worldTrans.getOrigin();
+	glm::vec3 pos = { p.x(), p.y(), p.z() };
+	spaceship-&gt;MotionStateSetPosition(pos);
+
+	static glm::vec4 Rotation;
+	auto q = worldTrans.getRotation();
+	btVector3 v = q.getAxis();
+	Rotation.x = v.x();
+	Rotation.y = v.y();
+	Rotation.z = v.z();
+	Rotation.w = q.getAngle();
+	spaceship-&gt;MotionStateSetRotation(Rotation);
+
+	static btScalar yaw;
+	static btScalar pitch;
+	static btScalar roll;
+	worldTrans.getBasis().getEulerZYX(roll, pitch, yaw, 1);
+	yaw = glm::degrees(yaw);
+	pitch = glm::degrees(pitch);
+	roll = glm::degrees(roll);
+	spaceship-&gt;MotionStateSetYawPitchRoll(yaw, pitch, roll);
+}
+</code></pre></div>
+
+I only get decent results if I lock the frame rate to 60 fps or disable the substeps (0). Any suggestions?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Tue Jan 11, 2022 9:07 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Your quaternion harvesting looks odd to me but if your spaceship expects a <strong class="text-strong">glm::vec4</strong> with the <strong class="text-strong">unnormalized</strong> axis as the <strong class="text-strong">xyz</strong> part and the angle of rotation (in radians) for the <strong class="text-strong">w</strong> part then... I guess it is ok.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	static glm::vec4 Rotation;
+	auto q = worldTrans.getRotation();
+	btVector3 v = q.getAxis();
+	Rotation.x = v.x();
+	Rotation.y = v.y();
+	Rotation.z = v.z();
+	Rotation.w = q.getAngle();
+	spaceship-&gt;MotionStateSetRotation(Rotation);
+</code></pre></div>
+Meanwhile, this code looks kinda redundant with the one above... in that it appears to be trying to set the rotation of the spaceship again but this time using Euler angles.  With a broad opinionated stroke I always advise people to stay away from Euler angles (and degrees) when possible but the only alternative is to have a deeper understanding of rotational math and I'm aware not everyone wants to spend the effort required to fully understand it.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	static btScalar yaw;
+	static btScalar pitch;
+	static btScalar roll;
+	worldTrans.getBasis().getEulerZYX(roll, pitch, yaw, 1);
+	yaw = glm::degrees(yaw);
+	pitch = glm::degrees(pitch);
+	roll = glm::degrees(roll);
+	spaceship-&gt;MotionStateSetYawPitchRoll(yaw, pitch, roll);
+</code></pre></div>
+I don't have a good feel for what your glitch actually looks like, or what the stream of quaternions with embedded glitches look like so I can only speculate:<br>
+<br>
+<strong class="text-strong">(1)</strong> Bullet uses a fancy math trick for its rotation extrapolation that I don't actually understand so I wonder if there is a bug therein that is causing the problem... but you say you also saw glitchy behavior when harvesting the rotation directly from the Body so maybe this is not the problem.<br>
+<br>
+<strong class="text-strong">(2)</strong> Do your glitches only show up at low angular speeds?  Or are they visible even at high speeds?  If only at low speeds then I wonder if angular damping is causing it --&gt; try zeroing all angular damping on the spaceship.<br>
+<br>
+<strong class="text-strong">(3)</strong> Are these really big glitches or are they only visible because you have a rigid camera offset to the spaceship?  That is... really small angular glitches might not be very noticeable from a stable camera watching a rotating object... but a camera that rigidly rotates with the object at a big offset might "magnify" small glitches purely by nature of the camera's long lever arm.  In this case maybe you would need to use smoothed camera motion rather than using the raw data.<br>
+<br>
+<strong class="text-strong">(4)</strong> If your render frame rate is aliasing with the simulation then perhaps you only see the glitches when the simulation takes two substeps instead of just one.  You could use rotation math to measure the angle of movement between each frame and look for patterns in that data that correlate with number of substeps.  Perhaps knowledge gained from that measurement would reveal a solution/workaround.  It occurs to me... if you happen to be using an <strong class="text-strong">applyForce()</strong> method to steer your spaceship and you are NOT using it in every substep via an <strong class="text-strong">Action</strong> then I wouldn't be surprised by a rotation glitch whenever the simulation takes two substeps in one step.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Wed Jan 12, 2022 9:07 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hi Again,<br>
+<br>
+First of all thanks for all your time that you spend on this. You can take a look to see the video <a href="https://www.youtube.com/watch?v=VLHajXpz2VQ" class="postlink">https://www.youtube.com/watch?v=VLHajXpz2VQ</a> with the jitter so that you will have a better understanding of what is happening. I tried some things with the most promising setting the fixedStep = 1/360. Then the jitter is gone but the physics engine is taking all the CPU resources. So no jitter with stepSize = 0 and with very small fixedStep... The movement with applyForce is fine now, no jitter, only on rotation there is jitter... I am frustrated by it</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Thu Jan 13, 2022 3:52 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I watched the video.  It looks like you're driving the camera and pushing the spaceship to follow.  That is, I see the camera movement leading the spaceship, and there was one point where the ship lagged the camera by a lot.  I would conclude: you're moving the camera using different timesteps than the simulation.<br>
+<br>
+Try this hack/test just to see what the movement looks like: slam the camera to be at a rigid fixed point in the ship's local-frame with no flexibility.  If the ship is suffering glitchy rotations then you'll see the starfield and other background objects "glitch", but not the ship.  However know this... when the view angle is very wide it becomes quite hard to detect glitchy movement of the camera with the naked eye... so it may be that with proper camera control any real glitches you have will not be noticeable.<br>
+<br>
+I think the above is worth trying.  If it looks good it should be possible to add some smooth flex of the camera position in the ship's local-frame by adjusting it as a function of ship linear + angular velocities and thereby regain your "leading camera" movement behavior but without the glitches.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Thu Jan 13, 2022 10:50 am</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hello,<br>
+<br>
+Thanks for the reply. I'm actually making the Camera follow the spaceship with a Lerp on the position. That's what makes the spaceship shaking. If I don't use Lerp then the Camera is fixed to the spaceship. Then the spaceship is not jittering but the background is. I'm at work at the moment but in afternoon I'll try to add some timing in the action to measure a delta between steps and see if that helps because I debugged the action and saw that for each invocation the delta was the fixed time step from Bullet which makes sense that will move the spaceship twice or trice depending on the current steps. I will update this post with my findings</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Thu Jan 13, 2022 9:40 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">I tried with a custom delta time but this didn't work either. I reverted to my old settings. The only solution that I have is pass 0 as substeps in the stepSimulation. Now I have decent results. If there is no problem with that we can consider this item as closed. Thanks for all your support, I really appreciate it</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

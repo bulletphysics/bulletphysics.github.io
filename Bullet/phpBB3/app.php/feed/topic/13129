@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13129" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-01-01T23:11:58+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13129</id>
+
+		<entry>
+		<author><name><![CDATA[R3d_protractor]]></name></author>
+		<updated>2021-01-01T23:11:58+00:00</updated>
+
+		<published>2021-01-01T23:11:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43233#p43233</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43233#p43233"/>
+		<title type="html"><![CDATA[Re: CProfileManager::dumpAll() Prints Nothing]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43233#p43233"><![CDATA[
+Thanks drleviathan.<br><br>After looking through that, I've tried different methods like Increment_Frame_Counter(), BT_PROFILE(), and reset(), but to no avail.  These are all recognized (i.e. no undefined reference), but dumpAll() still will not print.<br><br>I said I was most interested in collision detection performance, and today I was looking in btDbvtBroadphase.h and found this right at the top:<div class="codebox"><p>Code: </p><pre><code>//// Compile time config//#define DBVT_BP_PROFILE 0//#define DBVT_BP_SORTPAIRS1#define DBVT_BP_PREVENTFALSEUPDATE 0#define DBVT_BP_ACCURATESLEEPING 0#define DBVT_BP_ENABLE_BENCHMARK 0//#define DBVT_BP_MARGIN(btScalar)0.05extern btScalar gDbvtMargin;#if DBVT_BP_PROFILE#define DBVT_BP_PROFILING_RATE 256#include "LinearMath/btQuickprof.h"#endif</code></pre></div>Then, throughout btDbvtBroadphase.cpp, there are pieces of code protected by #if DBVT_BP_PROFILE.<br><br>I thought this could be an easy fix and changed the value of DBVT_BP_PROFILE to 1, but then the compiler started throwing errors here at the top of btDbvtBroadphase.cpp<div class="codebox"><p>Code: </p><pre><code>#if DBVT_BP_PROFILE || DBVT_BP_ENABLE_BENCHMARK#include &lt;stdio.h&gt;#endif#if DBVT_BP_PROFILEstruct ProfileScope{__forceinline ProfileScope(btClock&amp; clock, unsigned long&amp; value) : m_clock(&amp;clock), m_value(&amp;value), m_base(clock.getTimeMicroseconds()){}__forceinline ~ProfileScope(){(*m_value) += m_clock-&gt;getTimeMicroseconds() - m_base;}btClock* m_clock;unsigned long* m_value;unsigned long m_base;};#define SPC(_value_) ProfileScope spc_scope(m_clock, _value_)#else#define SPC(_value_)#endif</code></pre></div>The compiler (when I rebuilt the libraries) was saying "__forceinline not a valid type" and a bunch of other errors surrounding the ProfileScope class, too.<br>I guess DBVT_BP_PROFILE was set to 0 for a reason.  I'm thinking there must be similar pieces of code at other points in the bullet pipeline preventing the use of profile features for them, too, and thus the dumpIterative() method I mentioned earlier returns immediately because all the places in the pipeline that are supposed to have been set up for profiling are switched off.  It feels like dumpAll() is not supported in the version I have (3.07), or maybe something about my build or system prevents its usage?  Not really sure.<br><br>The good news is I have figured out a workaround.  Since CProfileManager::Reset() and CProfileManager::Get_Time_Since_Reset() work, I have edited the source code and placed them in btDiscreteDynamicsWorld.cpp in the internalSingleStepSimulation() method.  So I can get the ms time that performDiscreteCollisionDetection() takes printed out, if only by editing source which feels a bit jank.<br><br>Thanks for your help drleviathan, it means a lot to us newbs.  I will check here periodically if anyone has or wants more info, but for now I think I'm alright without dumpAll.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13863">R3d_protractor</a> — Fri Jan 01, 2021 11:11 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-01-01T02:09:57+00:00</updated>
+
+		<published>2021-01-01T02:09:57+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43231#p43231</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43231#p43231"/>
+		<title type="html"><![CDATA[Re: CProfileManager::dumpAll() Prints Nothing]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43231#p43231"><![CDATA[
+I looked back at an old project where we were using <strong class="text-strong">CProfileManager</strong> and found code that looks something like the snippets below.  You should consider this as pseudo code: I modified it to remove Qt stuff and make it more clear, but dunno if this compiles and it may well have bugs.  I offer it with hope you find it helpful.  Of particular interest to you: we would call <strong class="text-strong">CProfileManager::Increment_Frame_Counter()</strong> before using the stats.<br><br>Note, we did not find it useful to print stats from every frame but set it up so it could be triggered as manually as a one-off.  We also had a way to print the results to file (see below).<div class="codebox"><p>Code: </p><pre><code>class StatsWriter : public CProfileOperator {public:    StatsWriter(const std::string&amp; filename) {        _stream.open(filename);        if (!_stream.is_open()) {            std::cout &lt;&lt; "StatsWriter unable to open file '" &lt;&lt; filename &lt;&lt; "'" &lt;&lt; std::endl;        }    }    ~StatsWriter() {        _stream.close();    }    void process(CProfileIterator* itr, const std::string&amp; context) final override {        if (_stream.is_open()) {            std::string name = context;            name.append(itr-&gt;Get_Current_Parent_Name());            float time = (btScalar)MSECS_PER_SECOND * itr-&gt;Get_Current_Parent_Total_Time();            _stream &lt;&lt; name &lt;&lt; "=" &lt;&lt; time &lt;&lt; "\n";        }    }protected:    std::ofstream _stream;};void Physics::printPerformanceStatsToFile(const std::string&amp; filename) {    CProfileIterator* itr = CProfileManager::Get_Iterator();    if (itr) {        // hunt for "mainloop" context        itr-&gt;First();        for (int32_t childIndex = 0; !itr-&gt;Is_Done(); ++childIndex) {            std::string current_name = itr-&gt;Get_Current_name();            if (name == "mainloop") {                itr-&gt;Enter_Child(childIndex);                StatsWriter writer(filename);                writer.recurse(itr, "");                break;            }            itr-&gt;Next();        }    }}void Physics::runInThread() {    // setup...    // mainloop    while (_running) {        CProfileManager::Reset();        BT_PROFILE("mainloop");        world-&gt;stepSimulation( timeStep, maxSubSteps, fixedTimeStep);        // do "other stuff" in context and capture its time in the Bullet profiler        {            BT_PROFILE("other stuff");            // other stuff ....        }        // harvest the profile only when _dumpNextStats is set        // (which is done by some other thread)        if (_dumpNextStats) {            _dumpNextStats = false;            CProfileManager::Increment_Frame_Counter();            if (_saveNextStatsToFile) {                _saveNextStatsToFile = false;                printPerformanceStatsToFile(_statsFilename);            }            CProfileManager::dumpAll();        }    }    // shutdown...}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Jan 01, 2021 2:09 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[R3d_protractor]]></name></author>
+		<updated>2020-12-31T21:27:56+00:00</updated>
+
+		<published>2020-12-31T21:27:56+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43229#p43229</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43229#p43229"/>
+		<title type="html"><![CDATA[Re: CProfileManager::dumpAll() Prints Nothing]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43229#p43229"><![CDATA[
+Thanks for your help drleviathan!<br><br>I see that in btQuickprof.h, and in fact the middle line there is what I commented out.<br><br>When I add -DBT_ENABLE_PROFILE to my compile options, it is recognized but does not help dumpAll() (still nothing printing).  That includes if I uncomment out that one line (and I haven't tampered otherwise).  I can't find any build options in the Cmake gui when building the whole library that would address this either.<br><br>I have checked by adding debug print lines to the source code and rebuilding, and when I call dumpAll(), the dumpAll() method is truly being called as well as the function it calls, CProfileManager::dumpRecursive(), right above it in the source.  It seems that it derails here,<div class="codebox"><p>Code: </p><pre><code>void CProfileManager::dumpRecursive(CProfileIterator* profileIterator, int spacing){profileIterator-&gt;First();if (profileIterator-&gt;Is_Done())return;</code></pre></div>right at the start of dumpRecursive in btQuickprof.cpp, which again is successfully called from dumpAll().  I'm not sure why it always returns here rather than going on and printing anything- basically it looks like the profileIterator instantiation passed from dumpAll is empty?<br><br>Does anyone else have this problem?<br><br>Thanks again drleviathan.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13863">R3d_protractor</a> — Thu Dec 31, 2020 9:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-12-31T15:14:23+00:00</updated>
+
+		<published>2020-12-31T15:14:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43228#p43228</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43228#p43228"/>
+		<title type="html"><![CDATA[Re: CProfileManager::dumpAll() Prints Nothing]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43228#p43228"><![CDATA[
+When I look at the code I find this in <strong class="text-strong">src/LinearMath/btQuickprof.h</strong>:<div class="codebox"><p>Code: </p><pre><code>#ifndef BT_ENABLE_PROFILE#define BT_NO_PROFILE 1#endif  //BT_NO_PROFILE</code></pre></div>What that means, I believe, is you need to compile with <strong class="text-strong">-DBT_ENABLE_PROFILE</strong>.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Thu Dec 31, 2020 3:14 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[R3d_protractor]]></name></author>
+		<updated>2020-12-30T19:25:35+00:00</updated>
+
+		<published>2020-12-30T19:25:35+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43225#p43225</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43225#p43225"/>
+		<title type="html"><![CDATA[CProfileManager::dumpAll() Prints Nothing]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43225#p43225"><![CDATA[
+Hello all,<br><br>I am new to bullet physics, and I would like to measure the performance of my simple simulation.  I have read in the user manual and have seen posts here describing the CProfileManager class and the dumpAll() method.  However, while it seems that these should be straightforward to use, I can't get dumpAll() to print anything.<br><br>I built the bullet 3.07 libraries using Cmake on a windows 7 with mingw.<br><br>I have included btQuickprof.h. At first my compiler said CProfileManager had not been defined, and looking in the btQuickprof.h file, I found that BT_NO_PROFILE was defined by default, preventing these classes from compiling.  I commented out BT_NO_PROFILE, and the compiler could find the classes.  Now, although all classes and methods are recognized, CProfileManager::dumpAll() gives no output.  There are no errors or warnings.<br><br>This loop (not my whole program) runs without errors, but prints nothing:<div class="codebox"><p>Code: </p><pre><code>for(int i = 0; i &lt; 100; i++){dynamicsWorld-&gt;stepSimulation(1.f/60.f, 10);CProfileManager::dumpAll();}</code></pre></div>Does anyone know how to make dumpAll() work?  Is it depreciated or something- why would BT_NO_PROFILE be defined by default?<br><br>I am able to use CProfileManager::Reset() and CProfileManager::Get_Time_Since_Reset() to measure dynamicsWorld-&gt;stepSimulation(), as below:<div class="codebox"><p>Code: </p><pre><code>for(int i = 0; i &lt; 100; i++){CProfileManager::Reset();dynamicsWorld-&gt;stepSimulation(1.f/60.f, 10);printf("stepSimulation time (ms): %f\n", CProfileManager::Get_Time_Since_Reset());}</code></pre></div>but I really need to see the breakdown.<br><br>If anyone has any thoughts on how to make dumpAll work, they would be greatly appreciated.  Alternatively, if there is another method I could use to access specifically collision detection performance, I would happily use that instead.<br><br>Thanks!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13863">R3d_protractor</a> — Wed Dec 30, 2020 7:25 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

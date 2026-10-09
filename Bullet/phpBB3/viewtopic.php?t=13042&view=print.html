@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet Dynamics CollisionShapes giving null pointer in CollisionObject</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet Dynamics CollisionShapes giving null pointer in CollisionObject</h2>
+		<p><a href="viewtopic.php%3Ft=13042.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13042</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet Dynamics CollisionShapes giving null pointer in CollisionObject</h3>
+				<div class="date">Posted: <strong>Mon Aug 03, 2020 8:57 am</strong></div>
+				<div class="author">by <strong>vibratingbird</strong></div>
+				<div class="content">Greetings and thanks in advance for your advice!<br>
+<br>
+I have been (trying) to work with Bullet to do collision detection only.<br>
+<br>
+I inherited some code which supposedly worked at some point. I have only slightly modified it to use different collision shapes.<br>
+<br>
+Unfortunately, when I add a collision shape to a collision object, and then attempt to access information about the shape using collisionObject-&gt;getCollisionShape() (for example, to do collision detection or even just see what shape type it is), I receive a null pointer.<br>
+<br>
+This is less than ideal and suggests a deeper problem. I therefore did some digging, and found that the revision counter for the collision shape is not incrementing - suggesting that there is an issue when setting the collisionShape in the collisionObject. Further digging reveals that when creating, say, a box shape, the correct shape type is made and I can see that the shape related information is fine, but that the Aabb and overbounding sphere information is completely random. <br>
+<br>
+For example, if I make a Broadphase using AxisSweep with worldAabbMin (-10, -10, -10) and worldAabbMax (10,10,10) and a box shape of half extents 0.25, the overbounding sphere has a radius of almost 0 and Aabb showing something like (0, -1e-365, -10) and (0,5e-320, 10). If I query the broadphase what it thinks the Aabb should be, it returns an expect min and max.<br>
+<br>
+There must therefore be some deeper issue. I hope that I'm just making a silly mistake with some setting.<br>
+<br>
+I have tried a variety of shape combinations. Before I pass the shape to setCollisionShape, I can still access the name, type and if the shape is convex. But, as I said, the bounds and the margin appear to be nonsense. Once I set the shape, I cannot access any shape info through the collisionObject-&gt;getCollisionShape() - when I do try I get 0. I can add the collisionObject to the collisionWorld, but again, it is as if I just passed it a null pointer. After the shape is created and added to the world, I can successfully update the position and orientation of the shape, but the Aabb, etc info remains random, I get random broadphase activations, and 0 or large negative number collision points in narrow phase. I have scoured the forums for anyone facing the same issues.<br>
+<br>
+Some other issues my colleagues and I have faced which may help deduce the problem:<br>
+
+    <ul><li>Capsule shapes do not work. Linking always fails.</li></ul>
+    <ul><li>A floating point exception can occur when creating the Broadphase.</li></ul>
+    <ul><li>When attempting to compile in Release mode, there is a segmentation fault when adding the collisionShape to the collisionWorld.</li></ul>
+
+If there's any more information that might be helpful, please let me know. Thanks again!<br>
+<br>
+<br>
+<br>
+I provide a reduced code of what I am doing below. My header file declares the variables and includes bullet/btBulletCollisionCommon.h. My source file looks something like this:<br>
+<br>
+//------------------------------------------------------------------------------<br>
+// constructor<br>
+<br>
+bt_collision_detector::bt_collision_detector(const double&amp; leftbound, const double&amp; rightbound, const std::string&amp; collision_type) :<br>
+    safety_margin(0.04),<br>
+    collision_poly_type(0),<br>
+    chaserbusDims(0.,0.,0.),<br>
+    targetbusDims(0.,0.,0.),<br>
+    temp_static_rotation(0.,0.,0., 0.,0.,0., 0.,0.,0.)<br>
+{<br>
+    // Create Bullet World and Collision Objects<br>
+    // Use default collision configuration and dispatcher...<br>
+    btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();<br>
+    collisionConfiguration-&gt;setConvexConvexMultipointIterations(3,3);<br>
+    collisionConfiguration-&gt;setPlaneConvexMultipointIterations(3,3);<br>
+ <br>
+    btCollisionDispatcher *dispatcher = new btCollisionDispatcher(collisionConfiguration);<br>
+<br>
+    // Init broadphase<br>
+    btVector3 worldAabbMin(leftbound,leftbound,leftbound);<br>
+    btVector3 worldAabbMax(rightbound,rightbound,rightbound);<br>
+    btBroadphaseInterface *broadphase = new btAxisSweep3(worldAabbMin,worldAabbMax);//,10,0,false); <br>
+<br>
+    // Create world and load all instantiated objects into it...<br>
+    collisionWorld = new btCollisionWorld(dispatcher, broadphase, collisionConfiguration);<br>
+<br>
+    // Instantiate Object Dimesions<br>
+    chaserbusDims = btVector3(0.5,0.5,0.5);//(0.3175,0.3175,0.3175);<br>
+    targetbusDims = btVector3(0.5,0.5,0.5);//(0.3175,0.3175,0.3175);<br>
+<br>
+    // Instantiate Object Dimesions<br>
+    set_polytopes();<br>
+}<br>
+<br>
+<br>
+//------------------------------------------------------------------------------<br>
+void bt_collision_detector::set_polytopes()<br>
+{<br>
+    //Setting polytopes<br>
+        chaserbusShape = new btBoxShape(0.5*chaserbusDims);//new btSphereShape(0.25);//<br>
+        targetbusShape = new btSphereShape(0.25);<br>
+<br>
+        //Setting collision groups<br>
+       //group, mask    mask must match group of other obj<br>
+    <br>
+    // servicer<br>
+    objectChaserBus = new btCollisionObject;<br>
+    objectChaserBus-&gt;setCollisionShape(chaserbusShape);<br>
+    std::cout&lt;&lt;"OBJ BUS "&lt;&lt;objectChaserBus-&gt;getCollisionShape()&lt;&lt;std::endl;      // Prints 0 to screen!!<br>
+    collisionWorld-&gt;addCollisionObject(objectChaserBus, COL_OBST, COL_TARG);   //COL_OBST and COL_TARG are bit set in header<br>
+    std::cout&lt;&lt;"WORLD "&lt;&lt;collisionWorld-&gt;getNumCollisionObjects()&lt;&lt;std::endl;       // Says there are 0 objects<br>
+<br>
+// bus<br>
+    objectTargetBus= new btCollisionObject;<br>
+    objectTargetBus-&gt;setCollisionShape(targetbusShape);<br>
+    std::cout&lt;&lt;"TAR BUS "&lt;&lt;objectTargetBus-&gt;getCollisionShape()&lt;&lt;std::endl;            // See above<br>
+    collisionWorld-&gt;addCollisionObject(objectTargetBus, COL_TARG, COL_OBST);<br>
+    std::cout&lt;&lt;"WORLD "&lt;&lt;collisionWorld-&gt;getNumCollisionObjects()&lt;&lt;std::endl;<br>
+<br>
+}<br>
+<br>
+<br>
+<br>
+<br>
+//------------------------------------------------------------------------------<br>
+// destructor<br>
+<br>
+bt_collision_detector::~bt_collision_detector()<br>
+{ <br>
+    // remove collision objects and free memory<br>
+       <br>
+    delete targetbusShape;<br>
+    delete chaserbusShape;<br>
+   <br>
+    delete collisionWorld;<br>
+    delete dispatcher;<br>
+    delete collisionConfiguration;<br>
+    delete broadphase;<br>
+}<br>
+<br>
+<br>
+<br>
+<br>
+//------------------------------------------------------------------------------<br>
+//! update object world transform<br>
+void bt_collision_detector::get_pose(const Matrix44&amp; trafo, btCollisionObject* obj_in)<br>
+   {<br>
+      temp_static_rotation.setValue(trafo(0,0), trafo(0,1), trafo(0,2),<br>
+                              trafo(1,0), trafo(1,1), trafo(1,2),<br>
+                              trafo(2,0), trafo(2,1), trafo(2,2));<br>
+ <br>
+    obj_in-&gt;setWorldTransform(btTransform(temp_static_rotation,<br>
+                                      btVector3(trafo(0,3),trafo(1,3),trafo(2,3))));<br>
+<br>
+<br>
+//std::cout&lt;&lt;""&lt;&lt;std::flush;<br>
+}<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+//------------------------------------------------------------------------------<br>
+double bt_collision_detector::check_collision_constraint( Matrix44&amp; tChaser_Bus, const Matrix44&amp; tTarget_Bus, const Matrix44&amp; tTarget_Pan1, const Matrix44 tTarget_Pan2, const Matrix44 tTarget_Ant)<br>
+{<br>
+<br>
+    //std::cout&lt;&lt;"-- -- -- Checking collision constraint"&lt;&lt;std::endl;<br>
+    //std::cout&lt;&lt;"-- -- -- -- updating chaser pose"&lt;&lt;std::endl;<br>
+<br>
+ <br>
+    get_pose(tChaser_Bus, objectChaserBus);<br>
+    get_pose(tTarget_Bus, objectTargetBus);<br>
+    <br>
+    // DISCRETE COLLISION DETECTION<br>
+    btScalar penetration = 0.;<br>
+    btScalar lastpenetration = 0.;<br>
+    collision_data::stdvScalar depths;<br>
+<br>
+    collisionWorld-&gt;getDispatcher();<br>
+<br>
+   //std::cout&lt;&lt;"-- -- -- -- collision detection "&lt;&lt;std::endl;<br>
+    collisionWorld-&gt;performDiscreteCollisionDetection();<br>
+    collisionWorld-&gt;computeOverlappingPairs();<br>
+    //broadphase-&gt;calculateOverlappingPairs();<br>
+  <br>
+int numManifolds=collisionWorld-&gt;getDispatcher()-&gt;getNumManifolds();<br>
+std::cout&lt;&lt;"-- -- -- -- Number of manifolds "&lt;&lt;numManifolds&lt;&lt;std::endl;<br>
+    // number of persistent manifolds (collisions between collision pairs)<br>
+    for (int i=0; i&lt;collisionWorld-&gt;getDispatcher()-&gt;getNumManifolds(); i++) {<br>
+<br>
+<br>
+// Find collision pairs <br>
+        btPersistentManifold* contactManifold = collisionWorld-&gt;getDispatcher()-&gt;getManifoldByIndexInternal(i);<br>
+        const btCollisionObject* obA =  contactManifold-&gt;getBody0();<br>
+        const btCollisionObject* obB =  contactManifold-&gt;getBody1();<br>
+       //std::cout&lt;&lt;"body A "&lt;&lt;obA-&gt;getWorldTransform().getOrigin().getX()&lt;&lt;std::endl;//&lt;&lt;"     body B "&lt;&lt;obB-&gt;getUserIndex()&lt;&lt;std::endl;<br>
+    //btScalar obax = obA-&gt;getWorldTransform().getOrigin().getX();<br>
+<br>
+    int numContacts=contactManifold-&gt;getNumContacts();<br>
+    std::cout&lt;&lt;"-- -- -- -- -- Number of contacts "&lt;&lt;numContacts&lt;&lt;std::endl;<br>
+if (numContacts&gt;10000) numContacts = 10000;<br>
+        for (int j=0; j&lt;numContacts; j++) {<br>
+<br>
+        //std::cout&lt;&lt;"-- -- -- -- -- looping!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11"&lt;&lt;std::endl;<br>
+<br>
+        // detailed info about one contact point within a collision pair<br>
+        //std::cout &lt;&lt; "contact  manifold " &lt;&lt; j &lt;&lt; " of " &lt;&lt; contactManifold-&gt;getNumContacts() &lt;&lt; std::endl;<br>
+        // std::cerr &lt;&lt; "lastpenetration = " &lt;&lt; lastpenetration &lt;&lt; std::endl;<br>
+        //  std::cerr &lt;&lt; "tS:\n";<br>
+        //  std::cerr &lt;&lt; tS &lt;&lt; std::endl;<br>
+        lastpenetration = contactManifold-&gt;getContactPoint(j).getDistance();<br>
+<br>
+        if (j==0) { penetration = lastpenetration; }<br>
+/*<br>
+            if (penetration&lt;(-1.*safety_margin)) {<br>
+            if (lastpenetration &gt; penetration) {<br>
+               penetration = lastpenetration;<br>
+            }<br>
+        }*/<br>
+        <br>
+    }<br>
+    <br>
+    depths.push_back(-1.*penetration);<br>
+}<br>
+// return max pen depth for all collision pairs<br>
+int mindex = 0;<br>
+for (uint k=1; k&lt;depths.size(); ++k) {<br>
+    if (depths[k]&gt;depths[mindex]) {<br>
+        mindex = k;<br>
+    }<br>
+}<br>
+if (depths.size() &lt; 1) {<br>
+    return (0.);<br>
+}<br>
+else {<br>
+    return (depths[mindex]);<br>
+    }<br>
+}</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Dynamics CollisionShapes giving null pointer in CollisionObject</h3>
+				<div class="date">Posted: <strong>Mon Aug 03, 2020 3:06 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Your problems are mysterious but they don't sound like problems with Bullet per-se.  For example consider this bit of code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13042&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>objectChaserBus = new btCollisionObject;
+objectChaserBus-&gt;setCollisionShape(chaserbusShape);
+std::cout&lt;&lt;"OBJ BUS "&lt;&lt;objectChaserBus-&gt;getCollisionShape()&lt;&lt;std::endl; // Prints 0 to screen!!</code></pre></div>
+If your comment about getting zero (nullptr) shape right after setting the shape is true... then something very fundamental (deeper than Bullet itself) is going wrong.  I don't know what it is, but it is terrible and you probably won't get any valid data until you figure out what it is.<br>
+<br>
+To verify the above conclusion I took your <strong class="text-strong">bt_collision_detector</strong> class and pasted it into Bullet's own HelloWorld.cpp example, commented out the unused stuff, stubbed out the class declaration, and compiled the examples.  In the<strong class="text-strong"> main()</strong> method I instantiated one <strong class="text-strong">bt_collision_detector</strong>.  When I ran the <strong class="text-strong">App_HelloWorld</strong> the relevant code in <strong class="text-strong">bt_collision_detector::set_polytopes()</strong> printed out the following on my system:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13042&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    OBJ BUS 0x5603ce5388c0
+    WORLD 1
+    TAR BUS 0x5603ce538930
+    WORLD 2</code></pre></div>
+
+In short: you need to do sanity checking.  My advice: grab a fresh copy of Bullet source code, build it yourself, copy your own custom source code off to the side and write fresh CMake (or whatever build script system you're using) config files and prove to yourself that properly written, compiled, and linked C++ code does what you tell it to.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

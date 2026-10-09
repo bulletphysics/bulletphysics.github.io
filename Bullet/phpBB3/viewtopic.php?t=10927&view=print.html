@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; distance joint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>distance joint</h2>
+		<p><a href="viewtopic.php%3Ft=10927.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10927</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>distance joint</h3>
+				<div class="date">Posted: <strong>Sun Nov 22, 2015 8:38 pm</strong></div>
+				<div class="author">by <strong>Isawyou</strong></div>
+				<div class="content">hi!<br>
+I didn't understand joints, also the code from erin catto GDC 2009<br>
+Mat22 Rot1(body1-&gt;rotation);<br>
+	Mat22 Rot2(body2-&gt;rotation);<br>
+<br>
+	r1 = Rot1 * localAnchor1;<br>
+	r2 = Rot2 * localAnchor2;<br>
+<br>
+	// deltaV = deltaV0 + K * impulse<br>
+	// invM = [(1/m1 + 1/m2) * eye(2) - skew(r1) * invI1 * skew(r1) - skew(r2) * invI2 * skew(r2)]<br>
+	//      = [1/m1+1/m2     0    ] + invI1 * [r1.y*r1.y -r1.x*r1.y] + invI2 * [r1.y*r1.y -r1.x*r1.y]<br>
+	//        [    0     1/m1+1/m2]           [-r1.x*r1.y r1.x*r1.x]           [-r1.x*r1.y r1.x*r1.x]<br>
+	Mat22 K1;<br>
+	K1.col1.x = body1-&gt;invMass + body2-&gt;invMass;	K1.col2.x = 0.0f;<br>
+	K1.col1.y = 0.0f;								K1.col2.y = body1-&gt;invMass + body2-&gt;invMass;<br>
+<br>
+	Mat22 K2;<br>
+	K2.col1.x =  body1-&gt;invI * r1.y * r1.y;		K2.col2.x = -body1-&gt;invI * r1.x * r1.y;<br>
+	K2.col1.y = -body1-&gt;invI * r1.x * r1.y;		K2.col2.y =  body1-&gt;invI * r1.x * r1.x;<br>
+<br>
+	Mat22 K3;<br>
+	K3.col1.x =  body2-&gt;invI * r2.y * r2.y;		K3.col2.x = -body2-&gt;invI * r2.x * r2.y;<br>
+	K3.col1.y = -body2-&gt;invI * r2.x * r2.y;		K3.col2.y =  body2-&gt;invI * r2.x * r2.x;<br>
+	<br>
+	Mat22 K = K1 + K2 + K3;<br>
+what he mean by this part <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: distance joint</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2016 12:57 am</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">He computed effective mass matrix (inverse of it) in the usual way. If you have a constraint C on your (generalized) coordinates you can deduce a velocity constraint by differentiation so Cdot = JV, where V is a colums of (generalized) velocities (velocities components and angular velocities in this case) and J is some matrix. We'll call it a Jacobian matrix. The main idea is to change velocities by such forces which do no work. Such forces have the form of JT \lambda, where JT is J transposed. <br>
+Lets V1 and V2 are velocities on the current iteration and a next one (sought of).<br>
+According to the equations of motion<br>
+M(V2 - V1) = F h = JT p,<br>
+where h is a time step, p = h \lambda.<br>
+So V2 = V1 + Minv JT p.<br>
+We still don't know what p is. But we do know that the correct V2 satisfies J V2 = 0. So<br>
+J V1 + J Minv JT p = 0.<br>
+But J V1 is just a Cdot on a current step. That matrix J Minv JT usually denoted as K. It's inverse can be sought as an effective mass matrix.<br>
+And finally p = -Kinv J V1.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Simulate a rope for ball in the cup task</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Simulate a rope for ball in the cup task</h2>
+		<p><a href="viewtopic.php%3Ft=13035.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13035</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Simulate a rope for ball in the cup task</h3>
+				<div class="date">Posted: <strong>Sat Jul 18, 2020 12:21 pm</strong></div>
+				<div class="author">by <strong>Silversircel</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I am trying to simulate a rope for a ball in the cup scenario, using pyBullet.<br>
+<br>
+Since I am fairly new to pyBullet, I started by simply connecting n spherical joints in a chain, each linked by a small cylinder.<br>
+<br>
+However, I don't manage to tune the friction in these joints correctly to prevent the simulation from 'exploding'.<br>
+I've tested: <br>
+- Setting 'setJointMotorControlMultiDof' to p.POSITION_CONTROL, with a desired Quaternion of [0,0,0,1] and a omega of [0,0,0].<br>
+Then adding a small force [fx, fy, fz] to simulate joint friction.<br>
+- Setting 'setJointMotorControlMultiDof' to p.TORQUE_CONTROL and adding a damping torque = -Damping*omega,<br>
+where omega is the velocity obtained from p.getJointStateMultiDof<br>
+<br>
+If I increase friction coefficients I can sometimes get rid of the instability, but then the chain of cylinders stops behaving like a rope.<br>
+Here is a short example code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13035&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import numpy as np
+from numpy import linalg as la
+import math
+
+p.connect(p.GUI)
+p.createCollisionShape(p.GEOM_PLANE)
+p.createMultiBody(0,0)
+
+# PARAMETERS
+n_links = 30          # num links
+dx_link = 0.02        # length of link segment
+link_mass = 0.005     # 5g
+base_mass = 0.1       # 100g
+
+joint_friction = 0.0005  # rotational joint friction [N/(rad/s)]
+
+# setup shapes
+link_shape = p.createCollisionShape(p.GEOM_CYLINDER, 
+                                    radius=0.005, 
+                                    height=dx_link, 
+                                    collisionFramePosition=[0, 0, -dx_link/2])
+base_shape = p.createCollisionShape(p.GEOM_BOX,
+                                    halfExtents=[0.01, 0.01, 0.01])
+
+linkMasses = [link_mass]*n_links
+linkCollisionShapeIndices=[link_shape]*n_links
+linkVisualShapeIndices=[-1]*n_links
+
+# relative position 
+linkPositions = []
+for i in range(n_links):
+    linkPositions.append([0,0,-dx_link])
+
+# cm positions
+linkOrientations=[[0,0,0,1]]*n_links
+linkInertialFramePositions=[[0,0,0]]*n_links
+linkInertialFrameOrientations=[[0,0,0,1]]*n_links
+
+# connection graph
+indices = range(n_links)
+
+# use spherical joints
+jointTypes = [p.JOINT_SPHERICAL]*n_links
+jointTypes[1] = p.JOINT_FIXED
+
+# rotational axis (dosnt't matter, spherical)
+axis = [[1,0,0]]*n_links
+
+# create rope body
+visualShapeId = -1
+basePosition = [0,0,2]
+baseOrientation = [0,0,0,1]
+rope = p.createMultiBody(base_mass,base_shape,visualShapeId,basePosition,baseOrientation,
+                        linkMasses=linkMasses,
+                        linkCollisionShapeIndices=linkCollisionShapeIndices,
+                        linkVisualShapeIndices=linkVisualShapeIndices,
+                        linkPositions=linkPositions,
+                        linkOrientations=linkOrientations,
+                        linkInertialFramePositions=linkInertialFramePositions,
+                        linkInertialFrameOrientations=linkInertialFrameOrientations,
+                        linkParentIndices=indices,
+                        linkJointTypes=jointTypes,
+                        linkJointAxis=axis)
+                        #flags=p.URDF_USE_SELF_COLLISION)
+
+
+n_joints = p.getNumJoints(rope)
+
+# remove stiffness in motors, add friction force
+
+friction_vec = [joint_friction]*3   # same all axis
+control_mode = p.POSITION_CONTROL   # set pos control mode
+for j in range(n_joints):
+  p.setJointMotorControlMultiDof(rope,j,control_mode,
+                                 targetPosition=[0,0,0,1],
+                                 targetVelocity=[0,0,0],
+                                 positionGain=0,
+                                 velocityGain=1,
+                                 force=friction_vec)
+
+
+p.setGravity(0,0,-9.81)
+
+# fixed constrain to keep root cube in place
+root_robe_c = p.createConstraint(rope, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 2])
+
+# some traj to inject motion
+amplitude_x = 0.3
+amplitude_y = 0.0
+freq = 0.6
+
+# manually simulate joint damping
+Damping = 0.001
+
+t = 0.0
+freq_sim = 240
+while 1:
+  time.sleep(1./freq_sim)
+  t += 1./freq_sim
+
+  # some trajectory
+  ux = amplitude_x*math.sin(2*math.pi*freq*t)
+  uy = amplitude_y*math.cos(2*math.pi*freq*t)
+  
+  # move base arround
+  pivot = [ux, uy, 2]
+  orn = p.getQuaternionFromEuler([0, 0, 0])
+  p.changeConstraint(root_robe_c, pivot, jointChildFrameOrientation=orn, maxForce=500)
+
+  # manually apply viscous friction: f_damping = -Damping*omega
+  '''
+  for j in range(n_joints):
+    q_state = p.getJointStateMultiDof(rope, j)
+    omega = q_state[1]
+    f_dampling = [-Damping*v for v in omega]
+    p.setJointMotorControlMultiDof(rope, j, p.TORQUE_CONTROL, force=f_dampling)
+  '''
+
+  # update
+  p.stepSimulation()
+</code></pre></div>
+
+Is there a better way to simulate stable ropes? Probably switching to bullet instead? Or am I missing some other important parameters that need to be tuned in spherical joints (e.g. in 'changeDynamics')?<br>
+<br>
+Thank you very much<br>
+<br>
+Best Simon</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Simulate a rope for ball in the cup task</h3>
+				<div class="date">Posted: <strong>Thu Aug 20, 2020 3:02 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You can use maximal coordinates for the rope, it is likely more stable. (loadURDF(..., useMaximalCoordinates=True)<br>
+Or use deformable bodies, see <a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/deformable_anchor.py" class="postlink">https://github.com/bulletphysics/bullet ... _anchor.py</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

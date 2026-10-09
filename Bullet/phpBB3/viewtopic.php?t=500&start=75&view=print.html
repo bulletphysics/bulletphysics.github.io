@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet on GPU - Page 6</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet on GPU</h2>
+		<p><a href="viewtopic.php%3Ft=500.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=500</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>6</strong> of <strong>9</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Sep 19, 2006 6:13 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I got some helpful information from an ATI engineer about my ATI X1600.
+<blockquote class="uncited"><div>
+X1K architecture does not support vertex shader samplers (or vertex textures). This could otherwise be done using render to VBO spec, but this extension is not publicly available in openGl drivers on ATI platform for this generation. Also, I suspect that render to vbo is not available on Mac. As you know, the openGL drivers for Mac come from Apple, not ATI. 
+</div></blockquote>
+
+So I will check out the Apple forums/support to see what we can do on a MacBook Pro ATI X1600...<br>
+Also it appear that DirectX has more rich feature support then OpenGL...<br>
+
+<blockquote class="uncited"><div>
+If you downloaded the ATI SDK, there are many R2VB samples on DX. You can check those out.<br>
+<a href="http://www.ati.com/developer/radeonSDK.html" class="postlink">http://www.ati.com/developer/radeonSDK.html</a><br>
+These R2VB samples all compute data using the pixel shader and use them in the vertex pipe without having to read back to system memory.<br>
+There is also a programming guide on how to use R2VB.
+</div></blockquote>
+
+It is a pity OpenGL seems to be lagging with features <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Sep 19, 2006 6:20 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>DevO wrote:</cite>
+The "WARNING: Incomplete FBO setup." is becouse there problems with 1 i this line
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=500&amp;start=75&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>mass  = new FrameBufferObject ( TEX_SIZE, TEX_SIZE, 1, FBO_FLOAT ) ;</code></pre></div>
+
+FrameBufferObject () seems do not work well if you want only Alpha(single laer) textur, but it works with RGB(3 layers).
+</div></blockquote>
+
+Right - I figured that out a little while ago.  The simplest fix for now is to stuff the mass into the Red plane of an RGB map.  Aside from the declaration of 'mass' and the construction and filling of 'massData' (which needs to be 3x bigger), it doesn't seem to have much impact.  The performance is identical.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Sep 19, 2006 8:08 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+It is a pity OpenGL seems to be lagging with features :(
+</div></blockquote>
+
+It's mostly the ATI implementation that's lagging.  nVidia have everything we need - and it all works reasonably well in OpenGL (once you figure out the FBO setups that is!).  But it's rather irrelevent what DirectX can or can't do - OpenGL is the only game in town for Mac, BSD and Linux.  I have no interest in a Windows-olny solution  (although we should obviously support Windows).<br>
+<br>
+For the kinds of things we do here where I work, Windows is essentially useless.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 12:34 am</strong></div>
+				<div class="author">by <strong>Dragonlord</strong></div>
+				<div class="content">Wrong. ATI is not the only always lagging behind. nVidia has also a couple of bugs in the flagships of which I can sing a couple of songs. In fact both drivers have their share of fucked-up-ness and that's annoying.<br>
+<br>
+But why are you so hot about vertex textures? You need 4 floats stored in a texture so why bother with non-standard stuff if you have float-textures ready working ( any game with HDR uses float textures )?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 1:08 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Dragonlord wrote:</cite>Wrong. ATI is not the only always lagging behind. nVidia has also a couple of bugs in the flagships of which I can sing a couple of songs. In fact both drivers have their share of fucked-up-ness and that's annoying.</div></blockquote>
+
+Well, the Linux drivers that ATI provide are uniformly awful - I'm sorry but I live and breathe OpenGL under Linux and I have yet to come across an ATI driver that I could use for my flight simulator boxes...NEVER.   It may be that Windows drivers are better - but I doubt it.  The Mac drivers for ATI are pretty good - but they are written by Apple.<br>
+
+<blockquote class="uncited"><div>But why are you so hot about vertex textures? You need 4 floats stored in a texture so why bother with non-standard stuff if you have float-textures ready working ( any game with HDR uses float textures )?</div></blockquote>
+
+The HDR stuff I've seen uses float textures down in the frag shader - but I need float textures in the vert shader - which is a relatively unusual thing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 1:30 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">OK - there is a brand shiney new cut at my code in the bullet subversion repository (under Extras/GPUphysics).<br>
+<br>
+This time:<br>
+<br>
+* All of the windows patches are in there.<br>
+* I never read and write the same texture at the same time.<br>
+* The FBO incompleteness problem is fixed (the driver evidently doesn't like monochrome float FBO targets).<br>
+* I've eliminated the Z and stencil buffer allocations for the FBO's...I had a suspicion that the stencil buffer was a problem.<br>
+<br>
+So if you non-Linux folks could give it another shot for me - it would be a big help!<br>
+Specifically:  What do you get with:<br>
+<br>
+* GPU_physics_demo -s<br>
+* GPU_physics_demo -p<br>
+* GPU_physics_demo -v -p<br>
+* GPU_physics_demo -f<br>
+* GPU_physics_demo -a<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 1:54 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">A quick try on Mac OS X shows an amazing amount of cubes, floating and rotating  (without arguments). It tells a work around is used due to lack of vertex shader support, but its still amazing. How many cubes are rendered?<br>
+<br>
+On Win32 with Nvidia still the grey screen without error for -c and -f and without arguments. When passing -s or -p static cubes are visible.<br>
+passing -v gives nice moving cubes.<br>
+passing both -v -p gives static cubes, with warnings about an old driver.<br>
+<br>
+Latest Bullet-2.0e sources include GPUphysics, including projectfiles. I had to rename .cxx to .cpp to allow autogeneration of projectfiles...<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 4:19 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I came across these papers at nVidia:<br>
+<br>
+<a href="http://developer.download.nvidia.com/presentations/2006/cedec/2006-cedec-gpu-physics.pdf" class="postlink">http://developer.download.nvidia.com/pr ... hysics.pdf</a><br>
+<a href="http://developer.download.nvidia.com/presentations/2006/siggraph/gpu_physics-siggraph-06.pdf" class="postlink">http://developer.download.nvidia.com/pr ... aph-06.pdf</a><br>
+<br>
+In the "Physics is a parallel task section" they suggest some kind of batching for resolving collisions. Does anybody understand what the mean and could explain this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 9:07 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>A quick try on Mac OS X shows an amazing amount of cubes, floating and rotating  (without arguments). It tells a work around is used due to lack of vertex shader support, but its still amazing. How many cubes are rendered?
+</div></blockquote>
+
+HOORAY!<br>
+<br>
+16,384 cubes.  (The 'physics' is running on a 128x128 texture grid.  Change the constant TEX_SIZE in GPU_physics_demo.cpp to (for example) 256 and you'll get 65536 cubes).<br>
+<br>
+On my systems, with vertex texturing enabled, it runs between three and seven times faster than with vertex texturing forced off with '-v'.  So at whatever frame rate you are currently getting, we could do much better.   A significant part of that lossage is that I was lazy about rendering the cubes in the 'no vertex texturing' case.  We could do better.  However, the point of the demo is not to render cubes efficiently - but to compute physics using massive parallelism.<br>
+<br>
+Either with or without vertex texturing, the frame time is utterly dominated by the time to render the cubes. The time to compute rotations &amp; translations is typically around 1% of the execution time.  I cranked it up to a million cubes(!) and these very basic physics still ran in a couple of milliseconds.<br>
+
+<blockquote class="uncited"><div>
+On Win32 with Nvidia still the grey screen without error for -c and -f and without arguments. When passing -s or -p static cubes are visible.<br>
+passing -v gives nice moving cubes.<br>
+passing both -v -p gives static cubes, with warnings about an old driver.</div></blockquote>
+
+<strong class="text-strong">Aaaaaaarrrrrrrggggggghhhhhhh!</strong><br>
+<br>
+OK - so if cubes move with -v and don't without - then the vertex texture thing is broken just like on the Mac/ATI hardware - but somehow the driver isn't advertising the fact.  I have a test for 'Zero vertex textures supported'.  On startup, I display the number of textures the hardware can support.  On my nVidia/Linux box, it says:<br>
+<br>
+INFO: This hardware supports at most:<br>
+   4 vert  texture samplers<br>
+  16 frag  texture samplers<br>
+  16 total texture samplers<br>
+<br>
+I'm guessing that on your ATI/MacOSX box, you see 0/16/16 or something.  What do you see on this nVidia/Windows machine?<br>
+<br>
+If the number of vertex texture samplers is zero - I turn on the -v flag automatically - and vertex textures are disabled.  Since running without -v doesn't work and running with it does, the 'glGetIntegerv ( GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &amp; nVertTextures )' call  must be returning something non-zero...which is supposed to mean that vertex textures are supported...but then vertex textures aren't working.  That's weird!<br>
+<br>
+I actually use TWO vertex textures (one for translate and another for rotate) - I suppose we might be in a situation where you only have support for one vertex texture....it would be possible to combine those two data sets into one map - but it makes the code ugly.<br>
+<br>
+Oh - no - wait.  I actually turn on '-v' if less than two vert textures are supported...that's not it.<br>
+<br>
+Boy - I'm seriously out of ideas this time around.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 9:08 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>I came across these papers at nVidia:<br>
+<br>
+<a href="http://developer.download.nvidia.com/presentations/2006/cedec/2006-cedec-gpu-physics.pdf" class="postlink">http://developer.download.nvidia.com/pr ... hysics.pdf</a><br>
+<a href="http://developer.download.nvidia.com/presentations/2006/siggraph/gpu_physics-siggraph-06.pdf" class="postlink">http://developer.download.nvidia.com/pr ... aph-06.pdf</a><br>
+<br>
+In the "Physics is a parallel task section" they suggest some kind of batching for resolving collisions. Does anybody understand what the mean and could explain this?</div></blockquote>
+
+Yeah - what I'm thinking of in terms of collision detect would batch up the collision test 'polygons'.  I'll read those papers though - it might stir up some more ideas.  Thanks for the links.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 9:22 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">OK - the two papers are identical - they say:<br>
+<br>
+1) You can do the 'update' step on the GPU (yep - that's what my demo program shows - adding forces, torques, dealing with inertia, mass, accelleration, gravity, friction, velocity and postion/rotation is trivial - give me your equations and the code can maybe be working in a day).<br>
+2) They don't think broadphase is a GPU operation - which agrees with what Erwin believes - but disagrees with what I believe.  That's a bad thing because Erwin understands physics better than I do and Mark Harris understands GPU's better than I do.  If they agree then I'm toast!<br>
+3) They DO think narrowphase is doable on the GPU - which surprises me a lot.<br>
+<br>
+CONCLUSION:  I don't understand enough about collision detection yet.<br>
+<br>
+Please teach me!<br>
+<br>
+Meanwhile, I'm going to try to write collision detection for my cubes example. "Proof by actual demonstration" is a powerful thing - but sadly so is "Education by trying and failing dismally".<br>
+<br>
+  :-)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 9:32 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Having seens the Havok GPU FX demos at a few conferences, SIGGRAPH and GDC, it looks like they use only 1 iteration, it is slightly jittery.<br>
+So they can solve all constraints in parallel, no complicated feedback during between iterations. Problem is writing velocity back into rigidbodies, especially when several constraints are involved. Perhaps they do some batching, where they split the problem in a handy way for this.<br>
+<br>
+On the collision detection part: broadphase is indeed not a data-parallel problem.It requires random access memory, each object touches each other object. Let's focus on the narrowphase and solving first.<br>
+<br>
+It would be great to merge the GPUphysics parts with Bullet code.<br>
+<br>
+Also, Stephen, please prototype your collision detection algorithm in Bullet. You can write custom collision algorithms and custom contact algorithms in the most recent version. So Bullet is already a fully programmable pipeline <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 20, 2006 11:18 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Having seens the Havok GPU FX demos at a few conferences, SIGGRAPH and GDC, it looks like they use only 1 iteration, it is slightly jittery.</div></blockquote>
+
+Er...Do you mean one physics iteration for each graphics iteration?   I'm not sure I understand.<br>
+
+<blockquote class="uncited"><div>
+So they can solve all constraints in parallel, no complicated feedback during between iterations. Problem is writing velocity back into rigidbodies, especially when several constraints are involved. Perhaps they do some batching, where they split the problem in a handy way for this.
+</div></blockquote>
+
+OK - I DEFINITELY don't understand.  As I've explained - I don't know much about physics software.<br>
+
+<blockquote class="uncited"><div>
+On the collision detection part: broadphase is indeed not a data-parallel problem.It requires random access memory, each object touches each other object. Let's focus on the narrowphase and solving first.</div></blockquote>
+
+I think it's only like that because (for performance reasons) you don't want to compare every AABB against every other AABB - right?   If you *could* compare every single AABB against every other efficiently - then it would be a highly parallel algorithm.  My suspicion (although it's hard to back up without evidence) is that if you did just mindlessly compare every single AABB against every other AABB, then that would be efficient on the GPU.<br>
+
+<blockquote class="uncited"><div>
+It would be great to merge the GPUphysics parts with Bullet code.<br>
+<br>
+Also, Stephen, please prototype your collision detection algorithm in Bullet. You can write custom collision algorithms and custom contact algorithms in the most recent version. So Bullet is already a fully programmable pipeline :)
+</div></blockquote>
+
+I don't think I can do that - I have no clue about that stuff.<br>
+<br>
+My plan has always been to provide a robust GPU access layer and let someone else build physics on top of it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 8:57 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Erwin,<br>
+<br>
+if the GPU are so fast, couldn't it be that they use a Jacobi like solver which is by its very nature parallel as opposed to Gauss-Seidel.<br>
+<br>
+Steve:<br>
+The difference between GS and Jacobi is that GS directly changes the state of the rigid bodies while Jacobi changes the state after a complete sweep over the constraints. Jacobi has terrible convergence. But when I take your argumentation of some posts before. With 48 "CPUs" in parallel we could blindly try some more iterations, right?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 1:57 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Erwin,<br>
+<br>
+if the GPU are so fast, couldn't it be that they use a Jacobi like solver which is by its very nature parallel as opposed to Gauss-Seidel.<br>
+<br>
+Steve:<br>
+The difference between GS and Jacobi is that GS directly changes the state of the rigid bodies while Jacobi changes the state after a complete sweep over the constraints. Jacobi has terrible convergence. But when I take your argumentation of some posts before. With 48 "CPUs" in parallel we could blindly try some more iterations, right?</div></blockquote>
+
+OK - that makes a lot of sense.  If the GPU can do Jacobi many, many times faster than the CPU could do GS - then maybe you can do enough iterations to make it worthwhile.  However, the idea here is to use the GPU to do more objects - if we burned too much performance on Jacobi then it might not provide any benefits.<br>
+<br>
+So GS works sequentially through a chain of interactions or something?  Something like "look at object A - fix up it's motion - now look at what that fixing up did to objects B, C &amp; D"?   If that's it then some parallelism might still be possible if we ran GS in parallel on a bunch of objects that are so far apart that they can't possibly interact with each other?<br>
+<br>
+The idea being to (say) split the world into a spatial grid then run GS in parallel by picking one object from every alternate cell and running all of those in parallel.  Since we'd know for sure that those objects could never directly interact - would that be enough to let us run them in parallel?   I could imagine situations where that might not work - maybe a long  row of boxes - all touching each other.  We push on a box on one end - but the consequences of that traverse multiple cells in my hypothetical grid.<br>
+<br>
+Incidentally - when I talk of 48 CPU's in parallel, it's important to bear in mind that these are NOT general-purpose processors (although the programming 'model' makes it look like they are).  There are some things to bear in mind:<br>
+<br>
+1) 48 is the number for the high end nVidia products - the lower end of the range has (IIRC) just 16 processors.  This number will go up over time. One of the reasons that GPU performance growth by *FAR* outstrips CPU performance growth is because the GPU designers can just replicate more shader processors as technology shrinks transistor sizes and we'll get a more or less linear improvement in horsepower without any messy software changes.<br>
+<br>
+2) Each processor has four parallel floating point units - so you can do operations on vectors in a single cycle.  There are some cunning tricks that can be used to speed things up - eg: In a loop in which some operation on a 'float' happens N times, you may find it better to run the loop N/4 times - doing the operation in 4 way parallel - then combine the results into a single float at the end.  We also have stuff like four-way conditional testing resulting in four-way booleans.<br>
+<br>
+3) The processors have very specialised instruction sets - so things like calculating the length of a vector using Pythagoras is a single clock tick, cross and dot products are single cycle instructions, matrix multiplication is accellerated.  On the other hand, they are useless at dealing with complex data structures, they don't implement pointers or anything like that.  Most current systems don't implement arrays other than 1,2,3 or 4 element 'vectors' and 2x2, 3x3 or 4x4 matrices.<br>
+<br>
+4) This is a SIMD (Single-Instruction, Multiple Data) architecture.  All of those processors run in utter lock-step through their programs.   Thus (for example), if you have:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=500&amp;start=75&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> if ( this ) do_that ; else do_something_else ; </code></pre></div>
+...then all of the processors execute BOTH 'do_that' and 'do_something_else' - but the ones that decided not to 'do_that' have write-protected their memory while 'do_that' is being executed, whilst the ones that DID 'do_that' will write-protect when executing "do_something_else".  This means that attempting to use conditional code to save processing time is pointless.   A similar problem exists with loops.   Most current GPU's don't actually have looping instructions and those have to unroll loops at compile time (requiring fixed termination conditions).  Even the ones that do implement proper loops have all of the processors executing the loop as many times as the worst case processor.  This has severe consequences on how you program.<br>
+<br>
+5) When we do these parallel operations, the 'per object' data comes in as textures and 'per object' data goes out as a <strong class="text-strong">single</strong> texture.  Since we can only read about 16 textures into the shader and write only one texture on the output, we'll have to chop up the algorithms into really simple steps.  Fortunately, each texture can contain 1,2,3 or 4 numbers per object.<br>
+<br>
+6) Setup costs are horrendous.  Whilst there may be 'only' 48 processors, it's very inefficient to do things in 48-way parallel 'chunks'. Doing things in ten-thousand-way parallel is much faster because you avoid those repeated setup costs.  A better 'mental model' is to imagine you have a fairly slow 10,000 processor machine rather than a blindingly fast 48 processor machine.<br>
+<br>
+7) There is no persistant memory inside the processors - you have to save your results into a single 4-component texture.  There is also *almost* no communications between processors.  (You can ask what the rate of change of one of your variables is across 'neighbouring' processors - but that's about it).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>6</strong> of <strong>9</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

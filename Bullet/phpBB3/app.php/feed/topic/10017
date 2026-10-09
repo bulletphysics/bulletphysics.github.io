@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10017" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-09-09T22:00:13+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10017</id>
+
+		<entry>
+		<author><name><![CDATA[Granyte]]></name></author>
+		<updated>2014-09-09T22:00:13+00:00</updated>
+
+		<published>2014-09-09T22:00:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33993#p33993</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33993#p33993"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33993#p33993"><![CDATA[
+i do understand i'll have to test how much i can stretch with just those update but in no case i see where telling bullet something happened in the past could help <br><br>because in any case i can just tell the client this happened and now the motion state of those implied is that because i don't get what more can be needed since the player cannot teleport or if they do they should have particle effects in thier faces long enough for everything to go back to place without them seeing it.<br><br>i'm also afraid in massive space battle this would mean they client recalculating the simulation nearly every frame to account for the actions of 10000 player/npc<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8985">Granyte</a> — Tue Sep 09, 2014 10:00 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[KKlouzal]]></name></author>
+		<updated>2014-09-09T19:27:30+00:00</updated>
+
+		<published>2014-09-09T19:27:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33991#p33991</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33991#p33991"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33991#p33991"><![CDATA[
+<blockquote class="uncited"><div>Predicting interactions with programmed events and standard dynamic objects not affected by a second player is easy. The issue is trying to predict player actions that will result in a change in what the predicted physics see. How much would predicting players cost you? 1ms? 100ms? 1 failed update every second?</div></blockquote>Everything I've discussed here hinges on the fact that the client's input is the only thing being used to calculate the predictions.<br><br>Each clients input data would be stored in a vector/list. The amount of inputs stored would be proportional to the individual client's latency + the latency of the client of whom were storing input data on. This allows us to then directly calculate the maximum amount of motion states you would need to store for each rigid body which would be however many motion states would be accumulated during the period of time of the largest value from the previous calculation.<br><br>This allows every client to account for the amount of time it takes to receive all the other clients input updates.<br><br>My Latency = 30ms<br>ClientA Latency = 50ms<br>ClientB latency = 70ms<br><br>Input updates sent every 1ms<br>My client would hold ClientA's 80 most recent inputs<br>My client would hold ClientB's 100 most recent inputs<br><br>Now that this is established My client would hold the most recent motion states that were processed in the previous 100ms<br><br>This would finally allow me to go 'back in time' to any given point that could possibly effect the simulation on any one individual rigid body and recalculate the motion state based off of the new input data and interpolate that into the current motion state.<br><br>This of course does not account for any other rigid bodies that were affected from this one rigid body being updated.<br><br>I figure you could definitely avoid recalculating the entire simulation by doing a couple optimizations.<br><br>Using the previous example calculations, if I need to update a rigid body 50ms ago, after calculating the rigid bodies new motion state I could get the amount of distance the rigid body has moved from it's old position to the new position and update any other rigid bodies that fall within this distance, then loop this process over all the rigid bodies that do happen to fall within this distance.<br><br><br>Don't get me wrong, it will be a lot of work. The gain by far outweighs the work involved.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10757">KKlouzal</a> — Tue Sep 09, 2014 7:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Basroil]]></name></author>
+		<updated>2014-09-09T04:34:12+00:00</updated>
+
+		<published>2014-09-09T04:34:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33985#p33985</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33985#p33985"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33985#p33985"><![CDATA[
+<blockquote class="uncited"><div>To take it a step further would be having clients predict the physics interactions, which in turn would allow you to lower the update rate <em class="text-italics">exponentially</em>. </div></blockquote>Predicting interactions with programmed events and standard dynamic objects not affected by a second player is easy. The issue is trying to predict player actions that will result in a change in what the predicted physics see. How much would predicting players cost you? 1ms? 100ms? 1 failed update every second?<br><blockquote class="uncited"><div>The only real question I'm asking in this thread is where should I begin looking to start implementing such a system? Would this require a new solver? Extending a current solver? Creating a new type of rigid body? etc.. If I'm going to take this task head-on I want to get started on the right foot.</div></blockquote>If you want to rewind a simple system, you'll want to make a copy of the motion states of all dynamic objects for as many frames back as you expect  to rewind. That can be easy enough to do, though performance will suffer from so many memory state copies. You'll also want a copy of all non-physics states for all non-dynamic objects (triggered events, player interactions, etc). You'll then have to decide which states are valid and which must be ignored to keep your players from uninstalling (if you're on a ledge and another player's action that would drop the ledge was scheduled take place after the other player thought he was off that ledge but before it was registered in your system, which event should be the "real" event?). You might want to make a new island dispatcher to improve performance of the system (only update islands affected by a player rather than all), but implementing a solver or body primitive is not an easy task.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9711">Basroil</a> — Tue Sep 09, 2014 4:34 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[KKlouzal]]></name></author>
+		<updated>2014-09-08T22:49:37+00:00</updated>
+
+		<published>2014-09-08T22:49:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33984#p33984</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33984#p33984"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33984#p33984"><![CDATA[
+@Granyte, of course lowering the update rate for far away objects and removing updates for culled objects are basic optimizations that must be implemented. Those two alone will drastically reduce bandwidth consumption. To take it a step further would be having clients predict the physics interactions, which in turn would allow you to lower the update rate <em class="text-italics">exponentially</em>. You of all people making an MMO should be able to fully grasp the benefits of a system I'm proposing.<br><br>The only real question I'm asking in this thread is where should I begin looking to start implementing such a system? Would this require a new solver? Extending a current solver? Creating a new type of rigid body? etc.. If I'm going to take this task head-on I want to get started on the right foot.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10757">KKlouzal</a> — Mon Sep 08, 2014 10:49 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Granyte]]></name></author>
+		<updated>2014-08-15T10:08:54+00:00</updated>
+
+		<published>2014-08-15T10:08:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33817#p33817</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33817#p33817"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33817#p33817"><![CDATA[
+Multi cores and gpu bullet have some serious draw back atm<br><br>bullet gpu does not support double precision nor ghostObject and require a a compatible gpu<br><br>as for multicore well I tried this 2 years ago and it still does the same now<br><a href="https://www.youtube.com/watch?v=svdpP1Z9Ty4&amp;list=UUM_2hzU4_hob3Cd6XtKKGAw" class="postlink">https://www.youtube.com/watch?v=svdpP1Z ... Cd6XtKKGAw</a><br><br><br><br>So maybe the processing power to simulate will not be that cheap<br><br>for my project I hope to get as many player in a map as possible (given that my maps are solar system sized I damn better be able to fit quite a couple of them in there)<br><br>but for no I think my main technique will be cutting the update rate for the object the player cannot see or when they are to far away<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8985">Granyte</a> — Fri Aug 15, 2014 10:08 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[KKlouzal]]></name></author>
+		<updated>2014-08-15T09:17:38+00:00</updated>
+
+		<published>2014-08-15T09:17:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33816#p33816</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33816#p33816"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33816#p33816"><![CDATA[
+Bandwidth is the number one priority but I will admit I'm being quite over zealous in the way I've been stating it.<br><br>You are correct latency is also a big factor, the higher the latency the further back in time you would have to go with any specific physics object (using my proposed idea that is) thus exponentially increasing the amount of needed processing, therefore using the least amount of bandwidth possible without added increase to latency would be the number one priority.<br><br>My reasoning behind this is to allow the most amount of physics bodies to be simulated in a networked environment as possible.<br><br>Again since bullet can be ran multithreaded/gpu the added processing cost seems negligible as well as memory requirements with computers having more and more ram as technology evolves.<br><br>In my opinion the time required to complete such a feature is worth it especially if its done properly the benefits seem to very well outweigh the time requirements. Again this is my opinion as I can't see a more efficient way to do it.<br><br>I very much welcome your suggestions with open arms! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>So I suppose more refined requirements would be the least amount of bandwidth usage possible without added latency to support the greatest amount of simulated physics bodies.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10757">KKlouzal</a> — Fri Aug 15, 2014 9:17 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[STTrife]]></name></author>
+		<updated>2014-08-14T21:38:27+00:00</updated>
+
+		<published>2014-08-14T21:38:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33815#p33815</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33815#p33815"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33815#p33815"><![CDATA[
+I was also wondering why you focus so much on bandwidth. Do you intent to make it work for dialup connections? Where i live everyone has broadband (20 mbit is normal) so bandwitdh is by far not the biggest issue. I guess its more about the whole processing speed of updates, and efficiency and scalability. <br><br>C6burn, what kind of networking algoritshms would you recommend for general networked physics?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9284">STTrife</a> — Thu Aug 14, 2014 9:38 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c6burns]]></name></author>
+		<updated>2014-08-14T14:34:10+00:00</updated>
+
+		<published>2014-08-14T14:34:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33814#p33814</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33814#p33814"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33814#p33814"><![CDATA[
+<blockquote class="uncited"><div>I'm all ears about other methods but saving bandwidth is the #1 priority, <strong class="text-strong"><em class="text-italics">all</em></strong> else comes second.</div></blockquote>*Everything* else is secondary to bandwidth? As in you are willing to incur additional latency to get lower bandwidth? You are willing to do 6 months more work for a 1% decrease in total bandwidth? Each project is going to have their own constraints/priorities based on resources and requirements. I've never been in a position of having lower bandwidth be my *ultimate* goal, always a secondary goal.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10242">c6burns</a> — Thu Aug 14, 2014 2:34 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[KKlouzal]]></name></author>
+		<updated>2014-08-14T09:32:34+00:00</updated>
+
+		<published>2014-08-14T09:32:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33811#p33811</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33811#p33811"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33811#p33811"><![CDATA[
+I'm all ears about other methods but saving bandwidth is the #1 priority, <strong class="text-strong"><em class="text-italics">all</em></strong> else comes second.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10757">KKlouzal</a> — Thu Aug 14, 2014 9:32 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c6burns]]></name></author>
+		<updated>2014-08-13T23:02:07+00:00</updated>
+
+		<published>2014-08-13T23:02:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33804#p33804</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33804#p33804"/>
+		<title type="html"><![CDATA[Re: Telling Bullet That Something Happened In The Past]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33804#p33804"><![CDATA[
+<blockquote class="uncited"><div>... as suggested here this is the best practice to again save as much bandwidth as possible: <a href="http://gafferongames.com/game-physics/networked-physics/" class="postlink">http://gafferongames.com/game-physics/n ... d-physics/</a></div></blockquote>I don't know if I would go so far as to call rewinding client side physics for networking purposes a best practice. It's an interesting idea, but I've never seen a client/server that did that. There are other ways to solve sync issues and minimize bandwidth which consume less resources on the client and are less complex to implement.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10242">c6burns</a> — Wed Aug 13, 2014 11:02 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

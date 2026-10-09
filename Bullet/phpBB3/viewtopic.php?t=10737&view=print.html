@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Persistent Manifold &amp; Contact breaking threshold</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Persistent Manifold &amp; Contact breaking threshold</h2>
+		<p><a href="viewtopic.php%3Ft=10737.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10737</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Persistent Manifold &amp; Contact breaking threshold</h3>
+				<div class="date">Posted: <strong>Wed Aug 05, 2015 9:34 pm</strong></div>
+				<div class="author">by <strong>sir_earl</strong></div>
+				<div class="content">I'm attempting to switch my 2D physics simulation to using GJK/EPA for collision detection, thus I have implemented a persistent manifold which adds at most one new contact point per step. However I'm running into slight instability due to the contact breaking threshold.<br>
+<br>
+My understanding is that a contact point should be removed once the world space points on both bodies drift apart tangentially by some threshold, but this causes my bodies to pop inside each other on the frame that the contact is removed. A new contact point will then be added on the next frame, but at low time steps, this causes a noticeable pop.<br>
+<br>
+The only thing I can think of to solve this issue is to replace the existing contact point before the threshold is reached, but the GJK algorithm might be returning points for the other contact point if it is deeper (I'm only keeping 2 contact points as this is a 2D engine).<br>
+<br>
+How are others dealing with this issue? Is my understanding flawed?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Persistent Manifold &amp; Contact breaking threshold</h3>
+				<div class="date">Posted: <strong>Thu Aug 06, 2015 3:18 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">I myself haven't implemented EPA, but if it's possible to identify the features that produce a point of contact then the caching of data from one point to another can happen through some book-keeping, like a check for matching contact point IDs. This would avoid any annoying threshold tweaking.<br>
+<br>
+As for the manifold not being very stable the first few frames due to the manifold having only one or two points (edit: well in 2D just one point would be unstable a lot of the time, but in 3D sometimes 4 or 5 points is necessary)... This is just a limitation of the GJK/EPA algorithms.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Persistent Manifold &amp; Contact breaking threshold</h3>
+				<div class="date">Posted: <strong>Thu Aug 06, 2015 6:09 am</strong></div>
+				<div class="author">by <strong>sir_earl</strong></div>
+				<div class="content">Yes, I was able to match contact points based on a feature ID when using SAT, but this doesn't seem possible with GJK, MPR, or any algorithms that return a single contact point per step - 1) Multiple runs will return the same point unless you jiggle the bodies and run the algorithm again (which I'd like to avoid for performance reasons) and 2) I'm not convinced that you can rely on any features that GJK could provide.<br>
+<br>
+I'm OK with the fact that GJK takes several frames to build a usable manifold, but oscillating between 1 and 2 points when a box slides down a slope doesn't look great at 30hz - Nor does a settling stack of bodies, so there must be a solution.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Persistent Manifold &amp; Contact breaking threshold</h3>
+				<div class="date">Posted: <strong>Thu Aug 06, 2015 7:01 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think what you describe is a natural limitation of the incremental manifold. There will always be a situation where your thresholds break and you end up with one contact point. For many use cases (e.g. debris) this is no problem.  Alternatively you can also use GJK and clipping to build the full manifold. Use the separating axis directions and query for the witness features. Just push the side planes out before clipping the reference face to account for the margin. This will even give you some extra stability.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Persistent Manifold &amp; Contact breaking threshold</h3>
+				<div class="date">Posted: <strong>Sun Aug 09, 2015 10:52 pm</strong></div>
+				<div class="author">by <strong>sir_earl</strong></div>
+				<div class="content">Thanks for that. Looks like GJK + clipping is probably the best way forward.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

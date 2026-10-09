@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Position control for robot base?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Position control for robot base?</h2>
+		<p><a href="viewtopic.php%3Ft=12114.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12114</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Mon Jun 04, 2018 7:16 pm</strong></div>
+				<div class="author">by <strong>victoriax</strong></div>
+				<div class="content">Hi, new user trying to get started with pyBullet here. What's the best way to move a robot's base to a specified target location?<br>
+<br>
+For context, I have a "floating" robot (I'm only modeling the hand, as I want a simple example that doesn't involve inverse kinematics) and I want to move this robot hand to a specified location via a direct trajectory, possibly pushing other objects out of the way as it moves.<br>
+<br>
+I found a few viable approaches from the pyBullet GitHub examples, but I have reservations about each of them:
+<ul><li>VR examples, such as vrhand.py (<a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/vrhand.py" class="postlink">https://github.com/bulletphysics/bullet ... /vrhand.py</a>), move floating hands around with changeConstraint(), but if I understand correctly this is to account for receiving input in frames, and not the intended way to simulate continuous motion.</li></ul>
+<ul><li>Non-VR examples of robot motion, such as robotcontrol.py (<a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/robotcontrol.py" class="postlink">https://github.com/bulletphysics/bullet ... control.py</a>), use setJointMotorControl2() and velocity control to move robots/vehicles around, but I'd really like position control instead. While setJointMotorControl2() has an option for position control instead of velocity control, it seems to control joint position relative to the robot base, rather than moving the robot base itself.</li></ul>
+<ul><li>Other examples use applyExternalForce() to move the robot base, as in externalTorqueControlledSphere.py (<a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/externalTorqueControlledSphere.py" class="postlink">https://github.com/bulletphysics/bullet ... dSphere.py</a>), but I really prefer position control to force control, as I worry that implementing my own PID controller (or a similar controller) will be finicky.</li></ul>
+
+Which of these three approaches is preferred? Is there some other approach I'm not aware of? Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Tue Jun 05, 2018 7:49 pm</strong></div>
+				<div class="author">by <strong>keithmgould</strong></div>
+				<div class="content">I'm also new.<br>
+<br>
+I _think_ what you want is just resetBasePositionAndOrientation(). Find more detail in the quick-start guide:<br>
+<br>
+<a href="https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.d6og8ua34um1" class="postlink">https://docs.google.com/document/d/10sX ... og8ua34um1</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Wed Jun 06, 2018 2:09 pm</strong></div>
+				<div class="author">by <strong>victoriax</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=40940#p40940"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=12742.html">keithmgould</a> wrote: <a href="viewtopic.php%3Fp=40940.html#p40940" data-post-id="40940" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Tue Jun 05, 2018 7:49 pm</span></cite>
+<br>
+I _think_ what you want is just resetBasePositionAndOrientation(). Find more detail in the quick-start guide:<br>
+<br>
+<a href="https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.d6og8ua34um1" class="postlink">https://docs.google.com/document/d/10sX ... og8ua34um1</a>
+</div></blockquote>
+
+The guide says resetBasePositionAndOrientation() "will override the effect of all physics simulation" which means it cannot be used as part of a simulation where the object being moved around is able to push other objects out of the way -- or at least that's the behavior I'm observing. Am I missing something?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Wed Jun 06, 2018 3:49 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Indeed, you should not call resetBasePositionAndOrientation during the simulation, since it is an abrupt change that ignore and violates all dynamics, and likely give bad simulations and artifacts. If you reset the simulation (right after loading the URDF file or when teleporting a robot back to its original location, to start a new experiment), you can call resetBasePositionAndOrientation.<br>
+<br>
+Using the changeConstraint (as in vrHand) is likely the best to move the hand, and then animate the constraint target.<br>
+<br>
+Just call the changeConstraint with the desired position/orientation right before you call 'stepSimulation' . There will be a small delay to reach the actual position/orientation, but this is a good way to avoid discontinuities inside the physics engine.<br>
+<br>
+Good luck!<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Fri Jun 08, 2018 4:51 pm</strong></div>
+				<div class="author">by <strong>keithmgould</strong></div>
+				<div class="content">Ah, I missed that it was happening *during* the simulation. Sorry for the bad advice! Hope you have it all sorted now <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Wed Feb 27, 2019 5:10 pm</strong></div>
+				<div class="author">by <strong>arpastrana</strong></div>
+				<div class="content">Hi everyone, I wanted to reactivate the discussion since I'm looking for a way to move a robot's base during simulation by specifying <strong class="text-strong">velocities instead of positions</strong>. <br>
+<br>
+So far, the proposed way to go via<strong class="text-strong"> changeConstraint()</strong> currently takes in frame positions and orientations, but not linear or angular velocities. On the other hand, as victoriax pointed out, <strong class="text-strong">setJointMotorControl2()</strong> has an option for velocity control, but it seems to control joint position relative to the robot base, rather than moving the robot base itself.<br>
+<br>
+The way I've temporarily got around this issue is by calling<strong class="text-strong"> resetBaseVelocity()</strong>, although I'm aware that as Erwin stated, these reset commands will override the effects of the physics simulation. <br>
+<br>
+Is there another alternative from your experience to move the robot base with velocities (linear, angular) while keeping the coherency of the simulation? Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Wed Mar 06, 2019 5:33 pm</strong></div>
+				<div class="author">by <strong>richardbloemenkamp</strong></div>
+				<div class="content">If you want to give velocities and angular velocities instead of position and orientation, then I think you can calculate the position and orientation in the next time step from your velocities and angular velocities and the time step duration (delta_t) . e.g.:<br>
+x_new = x_current + delta_t* x_velocity<br>
+y_new = y_current + delta_t* y_velocity<br>
+theta_new = theta_current + delta_t* theta_velocity<br>
+etc.<br>
+Once calculated you can set these values as position and orientation. If you do it each time step then it should result in the object moving with the desired velocity and angular velocity.<br>
+There are library functions for the conversion between Quaternions and Euler-angles back and forth and the order of angles is sometimes important but I think not if the time steps and/or the angular velocities remain small. Also the current position and orientation can be obtained with library functions.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Sat Mar 09, 2019 1:24 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You can attach the base to the (fixed) world frame with a couple of degrees of freedom. Then you can apply setJointMotorContro2 in POSITION_CONTROL mode, or VELOCITY_CONTROL mode to those degrees of freedom to move the base.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Tue May 07, 2019 8:00 am</strong></div>
+				<div class="author">by <strong>arpastrana</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=41919#p41919"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=2.html">Erwin Coumans</a> wrote: <a href="viewtopic.php%3Fp=41919.html#p41919" data-post-id="41919" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Sat Mar 09, 2019 1:24 am</span></cite>
+You can attach the base to the (fixed) world frame with a couple of degrees of freedom. Then you can apply setJointMotorContro2 in POSITION_CONTROL mode, or VELOCITY_CONTROL mode to those degrees of freedom to move the base.
+</div></blockquote>
+We are having a look at applying setJointMotorControl2 in VELOCITY_CONTROL model. How could we implement attaching the base with a couple few degrees of freedom? Would this imply loading a custom urdf with "virtual" joints per degree of freedom, assembling a multiBody, or creating a constraint?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Wed May 08, 2019 7:56 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=41900#p41900"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13224.html">arpastrana</a> wrote: <a href="viewtopic.php%3Fp=41900.html#p41900" data-post-id="41900" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed Feb 27, 2019 5:10 pm</span></cite>
+The way I've temporarily got around this issue is by calling<strong class="text-strong"> resetBaseVelocity()</strong>, although I'm aware that as Erwin stated, these reset commands will override the effects of the physics simulation. 
+</div></blockquote>
+
+hi arpastrana,<br>
+<br>
+    i understand calling the resetBasePositionAndOrientation()  will ignore the dynamic of the simulation, but why the resetBaseVelocity() also "override<br>
+the effects of the physics simulation". it only change the base velocity. i think the resetBaseVelocity() should can meet your requirement.  is it right?  thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Wed May 08, 2019 10:02 am</strong></div>
+				<div class="author">by <strong>arpastrana</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42058#p42058"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13075.html">steven</a> wrote: <a href="viewtopic.php%3Fp=42058.html#p42058" data-post-id="42058" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed May 08, 2019 7:56 am</span></cite>
+hi arpastrana,<br>
+i understand calling the resetBasePositionAndOrientation()  will ignore the dynamic of the simulation, but why the resetBaseVelocity() also "override<br>
+the effects of the physics simulation". it only change the base velocity. i think the resetBaseVelocity() should can meet your requirement.  is it right?  thanks.
+</div></blockquote>
+
+Hi steven. resetBaseVelocity() did move our base nicely, but the problem was that when checking i.e. force-torque sensor readings when colliding our object onto something, these values were very very small. Moreover, the fact that resetBaseVelocity overrides was confirmed by erwin coumans here: <a href="https://github.com/bulletphysics/bullet3/issues/1845#issuecomment-463617025" class="postlink">https://github.com/bulletphysics/bullet ... -463617025</a><br>
+<br>
+On the other hand, we have tried using p.CreateConstraint() at the base to move it around. That worked as well to move the base, and provided with more reasonable force-torque readings, though we had to transform velocities to position and orientations to change the constraint at the base via p.ChangeConstraint() as pointed out earlier in this thread. <br>
+
+<blockquote cite="./viewtopic.php?p=41909#p41909"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13031.html">richardbloemenkamp</a> wrote: <a href="viewtopic.php%3Fp=41909.html#p41909" data-post-id="41909" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed Mar 06, 2019 5:33 pm</span></cite>
+If you want to give velocities and angular velocities instead of position and orientation, then I think you can calculate the position and orientation in the next time step from your velocities and angular velocities and the time step duration (delta_t) . e.g.:<br>
+x_new = x_current + delta_t* x_velocity<br>
+y_new = y_current + delta_t* y_velocity<br>
+theta_new = theta_current + delta_t* theta_velocity
+</div></blockquote>
+
+However, when comparing read vs. sent velocities at the base, they were constantly downscaled by a factor of 5, and rotations around x and y had to be multiplied by -1 to make them comply with the right-hand-rule.<br>
+<br>
+We are now looking into setJointMotorControl2 because we think it is more elegant to send directly velocities to joints (either linear or angular), but we're having a hard time to set this up properly. Any thoughts? Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Wed May 08, 2019 1:33 pm</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42059#p42059"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13224.html">arpastrana</a> wrote: <a href="viewtopic.php%3Fp=42059.html#p42059" data-post-id="42059" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed May 08, 2019 10:02 am</span></cite>
+ Moreover, the fact that resetBaseVelocity overrides was confirmed by erwin coumans here: <a href="https://github.com/bulletphysics/bullet3/issues/1845#issuecomment-463617025" class="postlink">https://github.com/bulletphysics/bullet ... -463617025</a>
+</div></blockquote>
+
+my understanding is that we shouldn't use the resetBaseVelocity ()  during a running simulation, but can be used freely before stepsimulation.<br>
+<br>
+i still think it is weird that we use a constraint to control the velocity, this should be the basic function for a physic engine.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2019 5:29 pm</strong></div>
+				<div class="author">by <strong>richardbloemenkamp</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42059#p42059"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13224.html">arpastrana</a> wrote: <a href="viewtopic.php%3Fp=42059.html#p42059" data-post-id="42059" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed May 08, 2019 10:02 am</span></cite>
+"However, when comparing read vs. sent velocities at the base, they were constantly downscaled by a factor of 5, and rotations around x and y had to be multiplied by -1 to make them comply with the right-hand-rule."
+</div></blockquote>
+Maybe you can add a small piece of code with the strange behavior you see. Preferably code without dependencies on other files that we can try directly. There could be a problems with the delta_t or maybe with some friction or too-small force or secondary contraints or other. The right-hand-rule-issue may be related to the other two angles of your object and the order in which the rotations are applied or something else. So far I have not seen these kinds of issues myself but if there are indeed issues then I'm sure that there is motivation to solve them.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position control for robot base?</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2019 6:39 pm</strong></div>
+				<div class="author">by <strong>arpastrana</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42063#p42063"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13031.html">richardbloemenkamp</a> wrote: <a href="viewtopic.php%3Fp=42063.html#p42063" data-post-id="42063" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Thu May 09, 2019 5:29 pm</span></cite>
+Maybe you can add a small piece of code with the strange behavior you see. Preferably code without dependencies on other files that we can try directly. There could be a problems with the delta_t or maybe with some friction or too-small force or secondary contraints or other. 
+</div></blockquote>
+
+I have attached a folder with some code that replicates the behaviour. If you run base_constraint.py, the script will print out in different colours the sent velocity, the read velocity at the robot base, as well as the division of the two, which is around 5.0 for all the 6 velocity degrees of freedom (linear xyz, angular xyz). <br>
+<br>
+Basically, the environment consists of a shortened cylinder which can be moved around via userDebugParameters. The commanded velocity is then transformed into deltas, added up to the robot base position/orientation, and then used to change the constraint at the base via p.changeConstraint.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

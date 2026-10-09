@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [SOLVED] Position Based Elastic Rods implementation - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[SOLVED] Position Based Elastic Rods implementation</h2>
+		<p><a href="viewtopic.php%3Ft=10993.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10993</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Mon Jan 11, 2016 11:02 am</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Good to hear that. I have made a fix in CMake files to turn the OpenMP off by default.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Mon Jan 11, 2016 1:50 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Korzen,  I think there is at least one place in your code where u r not testing for division by zero which might be the reason the solution diverges. Let me finish my implementation and then I  will let u know.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Jan 12, 2016 6:29 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi Korzen,<br>
+   As expected this was the reason. You are not checking for division by zero in line 88 to 92 in file PositionBasedElasticRod.cpp. These lines 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10993&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float p2pm_mag = p2pm.norm();
+p2pm *= 1.0f / p2pm_mag;
+lambda = (p2pm_mag - ghostEdgeRestLength) / wSum * edgeKs;
+</code></pre></div>
+should be 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10993&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float p2pm_mag = p2pm.norm();
+if (p2pm_mag &gt; EPSILON)
+	p2pm *= 1.0f / p2pm_mag;
+lambda = (p2pm_mag - ghostEdgeRestLength) / wSum * edgeKs;
+</code></pre></div>
+Doing so solves the issue and your code works for openmp as well. <br>
+Also you should also revert the permutation array to match those in the paper lines 29 to 35 in PositionBasedElasticRod.cpp file. 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10993&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const int permutation[3][3] = {
+	0, 1, 2,
+	1, 2, 0,
+	2, 1, 0
+	//0, 2, 1,
+	//1, 0, 2,
+	//2, 1, 0
+};
+</code></pre></div>
+Just a tip you could also replace the need for this array altogether by doing something like this in ComputeDarbouxVector function.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10993&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for (int c = 0; c &lt; 3; ++c)
+{
+//const int i = permutation[c][0];
+//const int j = permutation[c][1];
+//const int k = permutation[c][2];
+const int i = c;
+const int j = (c+1) % 3;
+const int k = (c+2) % 3;
+//...rest of code
+</code></pre></div>
+Thanks for sharing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Jan 12, 2016 10:33 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">A quick question Korzen, in your code in function ComputeMaterialFrameDerivative, you call a function CrossProductMatrix (lines 306, 309, 312). I dont understand why you call it because in the given appendix in eq 43, 44, 45, there is no such thing. In eq. 43 and 44 there is a tensor product for d3 and d2. If I am not wrong, eq. 44 can only be solved if the second argument is a column vector. In that case, it should give me a 3x1 vector not a 3x3 matrix because the identity matrix subtracted from d2 tensor d2 should give me a 3x3 matrix. Then this matrix is multiplied to a 3x1 column vector which should give me a column vector? Why do you use the cross product matrix?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Jan 12, 2016 2:41 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>mobeen wrote:</cite>
+Just a tip you could also replace the need for this array altogether by doing something like this in ComputeDarbouxVector function.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10993&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;snip&gt;
+const int i = c;
+const int j = (c+1) % 3;
+const int k = (c+2) % 3;
+&lt;/snip&gt;
+</code></pre></div>
+</div></blockquote>
+
+Are you trying to make it cleaner or faster? If the performance of that code is critical, the array is probably faster than taking the modulus, depending on compiler optimizations and platform. Faster still (but almost unreadable) would be adjusting your version with some sort of stupid rollover trick to simulate the modulus, like:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10993&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// this code assumes 32-bit int's and that c is always in the range 0-2:
+const int i = c;
+const int j = static_cast&lt; unsigned int &gt;((c+1) * 1431655766) &gt;&gt; 30;
+const int k = static_cast&lt; unsigned int &gt;((c+2) * 1431655766) &gt;&gt; 30;</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Jan 12, 2016 3:40 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi bone,<br>
+  Thanks for that I did not say anything about being faster but the permuted indices appeared straight forward mod with 3 thats why I wrote it but as you say, array indices should be fast so I trust you. Your constant based cryptic mod should be faster than my mod 3 version but that was just my 2 cents <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Jan 12, 2016 4:32 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Ahh, no problem, I see your point.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Jan 12, 2016 6:11 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">I did not have time to optimize the code. From a quick comparison it seems that nearly direct port to Eigen is 5-10 times (!) slower than the original implementation by Serphertoh. This is most likely because the lack of vectorization on Eigen's Vector3f and Matrix3f structures (I don't know why PBD library is not using SIMD optimized structures). Maybe changing layout of some matrices from col-major to row-major will also speed-up the calculations. I will get back to this next month but feel free to make any changes and I will pull them into the repo.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Wed Jan 13, 2016 8:24 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Korzen, I have forked your repo here <a href="https://github.com/mmmovania/PositionBasedDynamics-ElasticRod" class="postlink">https://github.com/mmmovania/PositionBa ... ElasticRod</a> <br>
+I have just removed all possible division by zeros from your fork.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Thu Jan 14, 2016 4:41 pm</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Thanks Mobeen, will merge it together with the OpenMP fix</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Sat Jan 30, 2016 8:03 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi Korzen,<br>
+  I have finally got my own implementation of position based elastic rods. Attached is the snapshot from my demo.
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1377" class="postimage" alt="snap.png" onclick="viewableArea(this);" /></dt>
+						<dd>snap.png (23.3 KiB) Viewed 76599 times</dd>
+		</dl>
+		
+		
+			</div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Sun Jan 31, 2016 3:02 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">I am now onto frame attachment constraint for orienting the tip of rod. I provide the frame attachment's initial frame such that the local z axis is pointing in the direction of world X axis. This way I would expect the rod's tip to be oriented in the direction of the world x axis. I get the desired result as shown below. 
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1378" class="postimage" alt="snap.png" onclick="viewableArea(this);" /></dt>
+						<dd>snap.png (12.22 KiB) Viewed 76575 times</dd>
+		</dl>
+		
+		
+			</div>
+
+<br>
+This works fine but as soon as I move the tip around such that it orients in the opposite direction of initial frame, the rod starts to wiggle around unstably and does not converge. The behavior is like someone has added life to the rod and it wiggles like a snake hard to show in a snapshot but I will try below
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1379" class="postimage" alt="wiggle.png" onclick="viewableArea(this);" /></dt>
+						<dd>wiggle.png (12.49 KiB) Viewed 76575 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Anyone got any clues on what might be causing this. Is there a corner case I need to care about? Note that I store the initial frame which is always oriented such that the local X of initial frame is oriented to the world X axis.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Mon Feb 01, 2016 4:05 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I had tried out Korzen's original demo and also experienced that wiggle exactly once. I couldn't figure out how to reproduce it so I never mentioned it. IIRC, the paper detailed a specific order of solving the constraints ... did you follow that?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Tue Feb 02, 2016 3:03 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi Bone,<br>
+  Thanks for your reply. No i did not follow the interleaving order for solving the constraints. let me try that and revert. Thanks for the pointers.<br>
+<br>
+EDIT: Thanks bone that was the problem I added the interleaving order and the elastic rod is very stable no more wiggles <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Now I will be on triangle attachments and then rigid body attachments to finish this up. <br>
+After all these are done, I will be adding this to my github repository soon for others to try.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [SOLVED] Position Based Elastic Rods implementation</h3>
+				<div class="date">Posted: <strong>Thu Feb 04, 2016 3:46 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Glad I was of some minor help!<br>
+<br>
+I look forward to checking out the implementation (someday, at least - it's not pertinent to my current project but I'd like to fiddle around with it in the near future).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

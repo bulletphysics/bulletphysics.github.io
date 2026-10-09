@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; No hit/collision on convexSweepTest using btBulletWorldImporter</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>No hit/collision on convexSweepTest using btBulletWorldImporter</h2>
+		<p><a href="viewtopic.php%3Ft=13272.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13272</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>No hit/collision on convexSweepTest using btBulletWorldImporter</h3>
+				<div class="date">Posted: <strong>Wed Sep 08, 2021 10:28 pm</strong></div>
+				<div class="author">by <strong>went4lunch</strong></div>
+				<div class="content">Still new to Bullet Physics here. I was able to successfully do a discrete collision detection using a static triangle mesh against a collision object with shapes loaded from a .bcs file using btBulletWorldImporter. But that is not good enough for our application so now I'm giving CCD a try using sweep test. I was able to use btCollisionWorld::convexSweepTest on a simple sphere against my triangle mesh and got collision detected at the correct coordinate. But when loading collision shape from .bcs file, no collision got detected even though the object travels on the same vector as the simple sphere through my trianglemesh. I checked it also visually using debugDrawWorld.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13272&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btCollisionShape* collisionCheck::loadBCS(const char* filename, bool verbose) {
+	btBulletWorldImporter loader(0);//don't store info into the world
+	loader.setVerboseMode(verbose);
+	if (!loader.loadFile(filename)) return NULL;
+	btCollisionShape* shape = NULL;
+	if (loader.getNumCollisionShapes()&gt;0) shape = loader.getCollisionShapeByIndex(0);
+	return shape;
+}
+</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13272&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		
+	MyContactResultCallback crCallback;
+	btCollisionShape* shapeA= loadBCS("Models/Excalibur2_ABAxis.bcs");
+	btConvexShape* myCS= static_cast&lt;btConvexShape*&gt;(shapeA);
+	prevPtA.setOrigin(btVector3(-100, -200, -500));
+	btPtA.setOrigin(btVector3(-500, -200, -500));
+	if (prevPtA.getOrigin() != btPtA.getOrigin())
+		dynamicsWorld-&gt;convexSweepTest(myCS, prevPtA, btPtA, crCallback);
+	if (crCallback.hasHit()) {
+		cout &lt;&lt; "Got a hit!";
+	}
+</code></pre></div>
+
+<br>
+I compared the difference between the simple sphere vs the loaded shape and found that when loading the shape, the collision shape type is int 31 vs. int 8 for simple sphere. <br>
+<br>
+and so this line of code in btGjkPairDetector.cpp returns a very low negative number (don't make sense)<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13272&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btVector3 pInA = m_minkowskiA-&gt;localGetSupportVertexWithoutMarginNonVirtual(seperatingAxisInA);
+</code></pre></div>
+
+<br>
+Is it bad to cast btCollisionShape to btConvexShape? What's the correct way to use convexSweepTest with .bcs file?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: No hit/collision on convexSweepTest using btBulletWorldImporter</h3>
+				<div class="date">Posted: <strong>Thu Sep 09, 2021 2:16 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content"><strong class="text-strong">convexSweepTest()</strong> expects a <strong class="text-strong">btConvexShape</strong> pointer as first argument.  You can only sweep convex shapes.<br>
+<br>
+When I count the <strong class="text-strong">BroadphaseNativeTypes</strong> enums in <strong class="text-strong">btBroadphaseProxy.h</strong> I see that <strong class="text-strong">31</strong> corresponds to <strong class="text-strong">COMPOUND_SHAPE_PROXYTYPE</strong>.  But <strong class="text-strong">btCompoundShape</strong> derives from <strong class="text-strong">btCollisionShape</strong> not <strong class="text-strong">btConvexShape</strong>.  It is not convex and cannot be used by <strong class="text-strong">convexSweepTest()</strong>.<br>
+<br>
+Continuous Collision Detection (CCD) in Bullet is not "accurate" in general because it sweeps a sphere proxy instead of the actual shape.  It is really just an enhancement to the BroadPhase: it  tries to catch tunnel events (using convexSweepTest() on the proxy shape) for fast objects that would otherwise not be noticed by the BroadPhase algorithm.  The CCD sweeps submit a potentially colliding pair to the NarrowPhase with the fast-moving object transformed to where the proxy shape hit the other rather than where it would have been after a full substep forward.  It is the job of the NarrowPhase to compute the actual collision details, if any. But you aren't using CCD per se since you are running your own convexSweepTests; I just point out how CCD works in Bullet for future readers, since you mentioned it.<br>
+<br>
+Now as to  your real problem you say:
+ <blockquote class="uncited"><div>I was able to successfully do a discrete collision detection...but that is not good enough for our application...</div></blockquote>
+Could you elaborate on what that means?  How does the collision detection fail your needs?  What do you actually need?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: No hit/collision on convexSweepTest using btBulletWorldImporter</h3>
+				<div class="date">Posted: <strong>Thu Sep 09, 2021 6:57 pm</strong></div>
+				<div class="author">by <strong>went4lunch</strong></div>
+				<div class="content">I have a list of coordinates that represent the path of the object movement and need to check whether it will collide with the static mesh. When doing discrete collision, I put the objects into btDiscreteDynamicsWorld and then call stepSimulation each time after moving the object to a new coordinate. This works well to get the collision detected on the new position. But if the old position is far from the new position some collisions didn't get detected (tunneling). I tried to decrease the distance between old and new coordinates (increase collision checks) but noticed a significant decrease in performance. Decreasing the timestep helps a little but still miss some collision. That's why I decided to try using convexSweepTests.<br>
+Could you elaborate what you mean with <blockquote class="uncited"><div>you aren't using CCD per se since you are running your own convexSweepTests;</div></blockquote> ?<br>
+<br>
+Maybe my understanding is not clear. I converted a concave mesh object by using the HACD example to generate the .bcs file. I thought the collisionshape loaded from the .bcs file is considered as convex shapes that can be used for convexSweepTest? <br>
+If that's not the case then is the better approach is to first use convexSweepTest using a convex shape representation of the object (not using HACD decomposition) and if there is a hit, do a discrete check using the collisionShape from .bcs file?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: No hit/collision on convexSweepTest using btBulletWorldImporter</h3>
+				<div class="date">Posted: <strong>Thu Sep 09, 2021 8:23 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Perhaps you really are using CCD (which uses <strong class="text-strong">convexSweepTest()</strong> under the hood), I don't know.  But your example snippet code showed you doing a manual <strong class="text-strong">convexSweepTest()</strong> so I thought maybe you were doing manual sweeps only rather than relying on the CCD sweeps.<br>
+<br>
+For the benefit of future readers I will summarize Bullet CCD<br>
+<br>
+In Bullet CCD is enabled in the World by default, however it is disabled by default for each object.  Specifically objects whose CcdMotionThreshold is zero do not get CCD checks.  You must enable CCD per object like so:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13272&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body-&gt;setCcdMotionThreshold(non_zero_min_speed_at_which_to_apply_sweep_test);</code></pre></div>
+No CCD checks are done until the object's linear speed exceeds the threshold.  This to avoid unnecessary CPU cost when normal NarrowPhase checks at step endpoints should suffice.<br>
+<br>
+When the sweep happens the CCD algorithm does not sweep the actual shape of the object.  Instead it sweeps a proxy sphere centered along the object's path.  When the sweep hits something Bullet will advance the object to the fraction of the sweep hit and then (I think) perform narrow-phase collision checks using the object's real shape.<br>
+<br>
+The default initialized radius of the proxy sphere is zero.  That is a bad value to use for a large object since Bullet will advance the object to where the point-like proxy sphere hit, which will already be in a state of penetration for the larger object.  Better to catch the object when its outer edge is near collision.  You would do this by using a non-zero radius for a better proxy approximation of the real shape:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13272&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body-&gt;setCcdSweptSphereRadius(radius);</code></pre></div>
+This works well for compact objects with vaguely spherical hulls, but not necessarily for long skinny convex shapes, or sparse/sharp concave shapes.<br>
+<br>
+You might be tempted to use a very generous bounding sphere for the proxy shape, however in my experience too-large proxies cause visible artifacts where the fast moving object may "stop" early before actually hitting its obstacle: the proxy hits first and somehow contributes contact manifold points which stop the real object too soon.<br>
+<br>
+If your object's shape is not  well approximated by a single sphere then... you might be out of luck when it comes to using Bullet's CCD to prevent most of the tunneling events.  To work around it maybe you could write a custom expensive CCD algorithm (e.g. one that sweeps multiple spheres), or maybe you could redesign your object to be more spherical.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: No hit/collision on convexSweepTest using btBulletWorldImporter</h3>
+				<div class="date">Posted: <strong>Thu Sep 09, 2021 11:21 pm</strong></div>
+				<div class="author">by <strong>went4lunch</strong></div>
+				<div class="content">That explains a lot! Thank you for that clear explanation!<br>
+<br>
+So I tried using Bullet CCD by setting a valid value for the setCcdMotionThreshold and setCcdSweptSphereRadius but still didn't trigger a collision. Perhaps it's because there is no velocity calculated when I just move the object point to point (using setWorldTransform or object-&gt;setOrigin) and does not trigger the Bullet CCD? What is the proper way to move the object for the Bullet CCD? I don't need any dynamics (collision response, etc), just need collision checks.<br>
+
+<blockquote class="uncited"><div>You might be tempted to use a very generous bounding sphere for the proxy shape, however in my experience too-large proxies cause visible artifacts where the fast moving object may "stop" early before actually hitting its obstacle: the proxy hits first and somehow contributes contact manifold points which stop the real object too soon.</div></blockquote>
+
+Yes, I'm very tempted to do so, but if visual representation is not needed but only to check for collision, would giving a generous bounding sphere still work then? Or did you mean it still contributes false contact manifold points that are not real collision, and therefore stop the object too soon?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: No hit/collision on convexSweepTest using btBulletWorldImporter</h3>
+				<div class="date">Posted: <strong>Fri Sep 10, 2021 4:26 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">It sounds like you are moving your object around kinematically: you set its position each step according to some external logic rather than allow the physics engine to integrate its motion forward in time.  I don't believe CCD logic is triggered for objects that have been added to the World as kinematic, so you would want to make sure your object is flagged as dynamic, even if you are moving it in a kinematic fashion.  But if you do that... your object's position might be bumped aside during step when it experiences a collision: this shouldn't be a problem if you override the transform + velocities every step AND if you only ever take one substep per step.<br>
+<br>
+Even for truly kinematic objects it is recommended that you set their velocity to agree with their effective motion.  Bullet will not integrate kinematic objects forward, but the contact points between two objects take velocities into account to compute the results and this makes for more correct collision responses for dynamic objects that come into contact with kinematic.  If you are moving a dynamic object around in a kinematic way but you want CCD logic to kick in correctly then you must similarly set its velocity to agree with its effective motion.<br>
+<br>
+I believe, based on the behavior I've seen, that CCD will add early contact points to the contact manifold based on where the sphere proxy hit, rather than where the real object hit.  However, I have not verified this by examining the code or looking at the contact points very carefully.  Hence, it is possible that CCD will add inexact contact points that do not represent how the true shape collides.<br>
+<br>
+Perhaps what you could do for real-time performance is to set your CCD velocity threshold non-zero but very low so that it ALWAYS triggers, and take very large inexpensive timesteps forward... until you do collide at which point you could back-up and re-step at smaller timestep durations and do a binary search toward where the collision actually occurs.  This would run fast most of the time but would slow down when you hit.  It might be possible to ameliorate the cost across multiple steps by taking cheap predictive steps into the future to alert your logic there is a potential collision happening in the future in which case it should take shorter steps more often.  I speculate here but do not know if such a strategy would be profitable.<br>
+<br>
+For performance you should know: doing a relatively large sweep of a sphere through a dense triangle mesh static shape could be quite expensive.  By "relatively large" I mean mean a sweep that spans several hundred or a few thousand potential triangles of the mesh.  The fewer triangles the sweep might hit the better: a good reason to use smaller spheres and take shorter steps if your ground mesh is complicated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: No hit/collision on convexSweepTest using btBulletWorldImporter</h3>
+				<div class="date">Posted: <strong>Sat Sep 11, 2021 12:38 am</strong></div>
+				<div class="author">by <strong>went4lunch</strong></div>
+				<div class="content">I'll try with using a box convexshape for convexSweepTest and then perform discrete CD. A Box is closer to the actual shape we have. Tested it and yes convexSweepTest works now with a box shape. Will see if this will perform well. Your input has been a great help! Thank you so much!!   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

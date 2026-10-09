@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Hyperstatism with slider joint ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Hyperstatism with slider joint ?</h2>
+		<p><a href="viewtopic.php%3Ft=482.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=482</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Hyperstatism with slider joint ?</h3>
+				<div class="date">Posted: <strong>Thu Aug 24, 2006 8:52 am</strong></div>
+				<div class="author">by <strong>gee</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I have a little problem when I use two slider joints on the same object.<br>
+<br>
+A, B, C are 3 rigid bodies. A and B are fixed and cannot collide with B.<br>
+B have a small linear velocity along the axis of the sliders.<br>
+<br>
+If I have this : <br>
+<br>
+A -------- <br>
+             C<br>
+B --------<br>
+<br>
+It works well.<br>
+<br>
+But it I have this : <br>
+<br>
+A ----- C ----- B<br>
+<br>
+It does not. Well it seems to work but the error correction for the 3 rotations makes  C  go into a rotation to go somewhere else, then the error correction for the position will make it come back to where it should.<br>
+I have tried 2 different error correction for the rotations and I get the same result, but I'm guessing the problem is not there as these calculous do not use the position of A, B, C.<br>
+<br>
+So either I'm getting something wrong somewhere else, or this case can not be done like I thought.<br>
+<br>
+If you have any idea on the matter, I'll be glad to hear them.<br>
+<br>
+Just to clarify, I'm using an interative MLCP (SOR), velocity-based constraint, and Baumgarte error correction. I've tried various small time-steps, precisions and such, but it does not help.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 24, 2006 8:56 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">How do you formulate the constraint?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 24, 2006 9:36 am</strong></div>
+				<div class="author">by <strong>gee</strong></div>
+				<div class="content">Well I've just made a test with B not fixed (which test I should have made earlier) and it works well.<br>
+<br>
+So I'm more thinking of an hyperstatism problem now.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 24, 2006 9:39 am</strong></div>
+				<div class="author">by <strong>gee</strong></div>
+				<div class="content"><blockquote><div><cite>DonDickieD wrote:</cite>How do you formulate the constraint?</div></blockquote>
+Sorry I replied to myself without refreshing the page,<br>
+The constraints are the same used by Kenny in his thesis.<br>
+The difference will come from the way we calculate the error (both angular and linear).<br>
+<br>
+For the rotations, I'm using the rotation matrix to  go from the base of object 1 to the one of object 2. From that I'm getting the sin(phi).v which I approximate to phi.v. I'm using the local axis and local version of the two orthogonals to compute the base.<br>
+<br>
+For the linear error, I save the initial distance between the two gravity centers projected on the two orthogonals, and I calculate them back at each iteration.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 24, 2006 9:55 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I found the formulation of Kenny (which is the same like in the ODE) very unstable, actually I am not sure if it is correct. What you have is a constraint that removes 5 relative DOF.<br>
+<br>
+Given the slider axis n which is stored arbitrarily in body 1. t1 and t2 are two perpendicular vectors to n also stored w.r.t. to body1.  r_i are the leverarms from center of gravity to some attachment points on the bodies. We formulate the constraints as follows. <br>
+<br>
+Linear constraints - assuming t1 and t2 stored w.r.t body1:<br>
+C1 = ( x1 + r1 - x2 - r2 ) * t1  =&gt; dC1/dt = (v1 + omega1 x r1 - v2 - omega2 x r2 ) * t1 + ( x1 + r1 - x2 - r2 ) * ( omega1 x t1 )<br>
+C2 = ( x1 + r1 - x2 - r2 ) * t2  =&gt; dC2/dt =  (v1 + omega1 x r1 - v2 - omega2 x r2 ) * t2 + ( x1 + r1 - x2 - r2 ) * ( omega1 x t2 )<br>
+<br>
+Angular constraints:<br>
+C3 =  v1 * w2   =&gt; (v1 x w2) * omega1 - (v1 x w2) * omega2<br>
+C4 = -u1 * w2   =&gt; (w2 x u1) * omega1 - (w2 x u1) * omega2<br>
+C5 =  u1 * v2    =&gt; (u1 x v2) * omega1 - (u1 x v2) * omega2<br>
+<br>
+From my experience you can't ignore the time derivative of the axes perpendicular to the slider axis, as you do for non-penetration constraints. This gave me rock-solid sliders. Let me know if you can't find the Jacobians by inspection.<br>
+<br>
+HTH,<br>
+-Dirk<br>
+<br>
+Edit:<br>
+u, v, w, define the constraint space, that is three arbitrary perpendicular axes stored w.r.t to body1 and body2<br>
+<br>
+Maybe also interessting to know:<br>
+If you look at the angular constraints and maybe draw the constraint space you will see that the following holds:<br>
+v1 x w2 ~ u<br>
+w2 x u1 ~ v<br>
+u1 x v2 ~ w<br>
+<br>
+This is what the ODE does for the joints that need angular constraints and what makes them very unstable from my experience. You really want to start with the position constraints and find the velocity constraint from there through build the time derivative. Otherwise it is IMO very difficult to find the correct stabilization (Baumgarte) term...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 24, 2006 3:31 pm</strong></div>
+				<div class="author">by <strong>gee</strong></div>
+				<div class="content">Hello,<br>
+<br>
+thanks for the long replied, I read your answer this morning and did not really understood what you need u,v,w. For the base I use my axis, and the 2 orthogonals. Yet I have not read all very carefully, so I may have missed something big.<br>
+<br>
+For now the slider seems okay as long as I don't do some complexe scenes, but I really have to look at your code soon. It seems it'll take me some time to diggest it all, and as I have other joints based on the slider, it might take again more time <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> So I'll see that tomorrow or next week.<br>
+<br>
+Thanks, and if you have other remarks like this on the "easy" joints Kenny is using, I'm interested.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 28, 2006 3:04 pm</strong></div>
+				<div class="author">by <strong>gee</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I have quickly tried with a cylindrical joint instead of the slider, and it seems to work just fine.<br>
+<br>
+So maybe my implementation of the cylindrical as a slider should be better than the one I have for a slider.<br>
+<br>
+I will try more soon and keep you informed on that.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 1:51 pm</strong></div>
+				<div class="author">by <strong>gee</strong></div>
+				<div class="content">Hello,<br>
+<br>
+well the answer was not as soon as I thought sorry.<br>
+<br>
+I've changed a bit my slider implementation (no change on the equations) and I can't get in any of those problems right now, so it seems ok.<br>
+<br>
+Though, I will try to look at the equations you gave me, even if it's just for myself.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

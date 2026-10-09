@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Collision response - solver, penetration recovery - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Collision response - solver, penetration recovery</h2>
+		<p><a href="viewtopic.php%3Ft=10945.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10945</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: Collision response - solver, penetration recovery</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2016 1:48 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Hmm, against how many side planes are you clipping? It should be four not two.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response - solver, penetration recovery</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2016 2:01 am</strong></div>
+				<div class="author">by <strong>Pipirongu</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Hmm, against how many side planes are you clipping? It should be four not two.</div></blockquote>
+
+Yes, it's against four. <br>
+Should I clip the incident face vertices first, and then use the resulting points from the first clipping in the second clipping?<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10945&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	std::vector&lt;Contact&gt; contacts;
+	this-&gt;ClipFaceToSidePlane(incident_face, -1 * normal1, neg_offset1, contacts);
+	this-&gt;ClipFaceToSidePlane(incident_face, normal1, pos_offset1, contacts);
+	this-&gt;ClipFaceToSidePlane(incident_face, -1 * normal2, neg_offset2, contacts);
+	this-&gt;ClipFaceToSidePlane(incident_face, normal2, pos_offset2, contacts);
+</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10945&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void RenderScene::ClipFaceToSidePlane(const Vector3* face, const Vector3&amp; normal, float plane_offset, std::vector&lt;Contact&gt; &amp;contacts)
+{
+	Vector3 Vertex1 = face[3]; //start edge forms from endvertex-&gt;startvertex
+	float Distance1 = Vector3::Dot(Vertex1, normal) - plane_offset;
+
+	for (int i = 0; i &lt; 4; i++)
+	{
+		Vector3 Vertex2 = face[i];
+		float Distance2 = Vector3::Dot(Vertex2, normal) - plane_offset;
+
+		if (Distance1 &lt;= 0.0f &amp;&amp; Distance2 &lt;= 0.0f)
+		{
+			// Both vertices are behind the plane - keep vertex2
+			Contact contact1;
+			contact1.position = Vertex2;
+			contacts.push_back(contact1);
+		}
+		else if (Distance1 &lt;= 0.0f &amp;&amp; Distance2 &gt; 0.0f)
+		{
+			// Vertex1 is behind the plane, vertex2 is in front -&gt; intersection point
+			float Fraction = Distance1 / (Distance1 - Distance2);
+			Vector3 Position = Vertex1 + Fraction * (Vertex2 - Vertex1);
+
+			// Keep intersection point
+			Contact contact1;
+			contact1.position = Position;
+			contacts.push_back(contact1);
+		}
+		else if (Distance2 &lt;= 0.0f &amp;&amp; Distance1 &gt; 0)
+		{
+			// Vertex2 is behind the plane, vertex1 is in front -&gt; intersection point
+			float Fraction = Distance1 / (Distance1 - Distance2);
+			Vector3 Position = Vertex1 + Fraction * (Vertex2 - Vertex1);
+
+			// Keep intersection point 
+			Contact contact1;
+			contact1.position = Position;
+			contacts.push_back(contact1);
+
+			// And also keep vertex2
+			Contact contact2;
+			contact2.position = Vertex2;
+			contacts.push_back(contact2);
+		}
+
+		// Keep vertex2 as starting vertex for next edge
+		Vertex1 = Vertex2;
+		Distance1 = Distance2;
+	}
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response - solver, penetration recovery</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2016 4:37 pm</strong></div>
+				<div class="author">by <strong>Pipirongu</strong></div>
+				<div class="content">Okay, so it looks pretty good now. I first clip the incident face vertices and then use the result from the first clipping in the second clipping. I do the same for the other side planes. This also makes sense to me. A point might be behind a sideplane but still needs to be tested on the others. Reminds me of broadphase collision test with sort and sweep.<br>
+<br>
+I still can't stack cubes though. They are stacked for awhile before they slide off. When they start to slide off, I get 5-6 contact points.<br>
+<br>
+This is my solver and I use baumgarte otherwise they will sink into the ground. I'm not sure how iterations(accumulating impulses) work so I have to research more there.<br>
+Is warmstart something I should look into as well?<br>
+<br>
+Second picture is when the cubes are sliding off.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10945&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void RenderScene::ProcessContact(Contact* contact, float&amp; Pn, Vector3&amp;vel1, Vector3&amp; ang_vel1, Vector3&amp;vel2, Vector3&amp; ang_vel2)
+{
+	const float k_allowedPenetration = 0.01f;
+	float BAUMGARTE = 0.2f;
+	//BAUMGARTE
+	float bias = -BAUMGARTE * 1.f/this-&gt;physics_timestep * std::min(0.0f, -contact-&gt;penetration + k_allowedPenetration);
+
+	RigidBody* ent1 = contact-&gt;one;
+	RigidBody* ent2 = contact-&gt;two;
+
+	const float e = std::min(ent1-&gt;restitution, ent2-&gt;restitution);
+	Vector3 contactPoint = contact-&gt;position;
+	Vector3 contactNormal = contact-&gt;normal;
+
+	Vector3 rA = contactPoint - ent1-&gt;position;
+	Vector3 rB = contactPoint - ent2-&gt;position;
+	Vector3 kA = Vector3::Cross(rA, contactNormal);
+	Vector3 kB = Vector3::Cross(rB, contactNormal);
+
+	Vector3 uA = ent1-&gt;inverse_inertia_tensor_world_space*kA;
+	Vector3 uB = ent2-&gt;inverse_inertia_tensor_world_space*kB;
+
+	float normalMass = ent1-&gt;inverse_mass + ent2-&gt;inverse_mass;
+
+	if (!ent1-&gt;is_kinematic){
+		normalMass += Vector3::Dot(kA, uA);
+	}
+	if (!ent2-&gt;is_kinematic){
+		normalMass += Vector3::Dot(kB, uB);
+	}
+
+	// Relative velocity at contact
+	Vector3 relativeVel = (ent2-&gt;velocity + Vector3::Cross(ent2-&gt;angular_velocity, rB)) - (ent1-&gt;velocity + Vector3::Cross(ent1-&gt;angular_velocity, rA));
+	float numer = -(1 + e)*Vector3::Dot(relativeVel, contactNormal) + bias;
+	float f = numer / normalMass;
+
+	float Pn0 = contact-&gt;accumulated_impulse;
+	contact-&gt;accumulated_impulse = std::fmax(Pn0 + f, 0.0f);
+	f = contact-&gt;accumulated_impulse - Pn0;
+
+	Vector3 impulse = f*contactNormal;
+
+
+	contact-&gt;one-&gt;velocity -= impulse*ent1-&gt;inverse_mass;
+	contact-&gt;two-&gt;velocity += impulse*ent2-&gt;inverse_mass;
+	contact-&gt;one-&gt;angular_velocity -= f*uA;
+	contact-&gt;two-&gt;angular_velocity += f*uB;
+}
+</code></pre></div>
+
+<img src="http://i.imgur.com/22MBEAU.png" class="postimage" alt="Image"><br>
+<br>
+<img src="http://i.imgur.com/33lMR0g.png" class="postimage" alt="Image"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response - solver, penetration recovery</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2016 5:53 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Yes, you clip the clipped polygon with the next planes. <br>
+<br>
+I am not sure about the last picture. Looks wrong to me, but again it is difficult to tell. Try a 45 degrees rotated box and if you get 8 vertices.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response - solver, penetration recovery</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2016 6:13 pm</strong></div>
+				<div class="author">by <strong>Pipirongu</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Yes, you clip the clipped polygon with the next planes. <br>
+<br>
+I am not sure about the last picture. Looks wrong to me, but again it is difficult to tell. Try a 45 degrees rotated box and if you get 8 vertices.</div></blockquote>
+
+Yep, I get 8 vertices.<br>
+<br>
+<img src="http://i.imgur.com/aCsI22r.png" class="postimage" alt="Image"><br>
+<br>
+<img src="http://i.imgur.com/8h17jA8.png" class="postimage" alt="Image"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response - solver, penetration recovery</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2016 7:09 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Looks good! I would add friction next. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response - solver, penetration recovery</h3>
+				<div class="date">Posted: <strong>Thu Jan 21, 2016 7:22 pm</strong></div>
+				<div class="author">by <strong>Pipirongu</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Looks good! I would add friction next. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div></blockquote>
+
+I'll take a look at iterations(accumulating impulses), warmstart and friction.<br>
+I can let go of the clipping part for now. Using the clipped polygon for the next clipping make sense to me, thanks Dirk.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

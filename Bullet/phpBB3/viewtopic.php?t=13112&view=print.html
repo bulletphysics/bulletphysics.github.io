@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Adding forces on collision callback for CCD:</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Adding forces on collision callback for CCD:</h2>
+		<p><a href="viewtopic.php%3Ft=13112.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13112</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Adding forces on collision callback for CCD:</h3>
+				<div class="date">Posted: <strong>Thu Nov 26, 2020 11:24 pm</strong></div>
+				<div class="author">by <strong>rolfvdhulst</strong></div>
+				<div class="content">My problem is as follows: I have a ball of which I need fairly accurate, but fast, physics (basically a CCD solution)<br>
+<br>
+The ball rolls at fairly high speed towards a box (part of compound body). On collision, I want a force to be applied on both the ball and the box (NOT along the normal) ; but the collision itself also has a restitution coefficient. I essentially want the force to be added immediately after the collision is processed e.g. the restitution is taken into account. I've tried directly adding a force in the callback, but this resulted in the colliding contact impulse computed by bullet being very small as the artificial force I added is already sufficient to seperate the bodies.<br>
+<br>
+I'm using btMultiBody with CCD enabled for the ball. <br>
+Right now, I use the gContactAddedCallback to register the collision, and then set a flag for the next tick to add the <br>
+forces. This works better, as then bullet processes the entire collision and then only adds the forces for the next physics tick. This does however mean that the ball/sphere moves a bit after the collision is done at a velocity which is too low (and more importantly, in the wrong direction).<br>
+<br>
+Is there any way to solve this problem nicely? Or do I just have to deal with it?<br>
+Unfortunately, the ball is often also touching the ground (for which all friction types are enabled) and in various states of spinning/sliding/rolling, so I cannot easily write an algorithm myself that from the hitfraction does this small extrapolation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Adding forces on collision callback for CCD:</h3>
+				<div class="date">Posted: <strong>Fri Nov 27, 2020 2:27 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">One idea that occurs to me is: set the flag in the collision callback but harvest it in an Action within the same substep.  If you look inside <strong class="text-strong">btDiscreteDynamicsWorld::internalSingleStepSimulation()</strong> you will see: the collisions are computed and processed before the actions are updated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Adding forces on collision callback for CCD:</h3>
+				<div class="date">Posted: <strong>Sat Nov 28, 2020 1:30 pm</strong></div>
+				<div class="author">by <strong>rolfvdhulst</strong></div>
+				<div class="content">That's a good idea, but unfortunately doesn't work, because integrateTransforms() is already called before that, moving the body. I already tried this with using the post-tick callback, but that doesn't work for exactly the same reason.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Adding forces on collision callback for CCD:</h3>
+				<div class="date">Posted: <strong>Sat Nov 28, 2020 4:28 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Ok.<br>
+<br>
+The good news is: <strong class="text-strong">btDiscreteDynamicsWorld::internalSingleStepSimulation()</strong> is virtual.  You could derive <strong class="text-strong">MyDiscreteDynamicsWorld</strong> from <strong class="text-strong">btDiscreteDynamicsWorld</strong> and override that method to do what you want.  In other words: add <strong class="text-strong">doMySpecialStuff()</strong> between <strong class="text-strong">solveConstraints()</strong> and <strong class="text-strong">integrateTransforms()</strong>.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

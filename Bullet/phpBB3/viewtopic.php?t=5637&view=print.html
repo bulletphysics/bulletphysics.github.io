@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Serializing Multiple Bullet Objects</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Serializing Multiple Bullet Objects</h2>
+		<p><a href="viewtopic.php%3Ft=5637.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5637</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Re: Serializing Multiple Bullet Objects</h3>
+				<div class="date">Posted: <strong>Mon Sep 13, 2010 2:03 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The serialization support multiple objects and multiple constaints. It is not clear what is going wrong. Serializing using unique names for bodies/shapes should work fine.<br>
+It is recommended that you don't use the serializeSingleObject but use the btDynamicsWorld::serialize instead:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=5637&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	//create a large enough buffer. There is no method to pre-calculate the buffer size yet.
+	int maxSerializeBufferSize = 1024*1024*5;
+ 
+	btDefaultSerializer*	serializer = new btDefaultSerializer(maxSerializeBufferSize);
+	dynamicsWorld-&gt;serialize(serializer);
+ 
+	FILE* file = fopen("testFile.bullet","wb");
+	fwrite(serializer-&gt;getBufferPointer(),serializer-&gt;getCurrentBufferSize(),1, file);
+	fclose(file);
+</code></pre></div>
+
+See also <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Bullet_binary_serialization" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... ialization</a><br>
+<br>
+Note that while running most of the (unmodified) Bullet demos, you can press '=' key to serialize to a .bullet file, named "test.bullet". It will serialize all objects and constraints in the dynamics world. Some collision shapes are not supported yet (btHeightfieldTerrainShape for example).<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serializing Multiple Bullet Objects</h3>
+				<div class="date">Posted: <strong>Mon Sep 13, 2010 12:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=5637&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	char* serialName = new char[8];
+</code></pre></div>
+The serialName is shared and overwritten for all bodies/shapes. This is not OK because there is no copy made, so during btDynamicsWorld::serialize, all bodies will have the same name.<br>
+<br>
+Try allocating a name for each body/shape dynamically and don't share the memory.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

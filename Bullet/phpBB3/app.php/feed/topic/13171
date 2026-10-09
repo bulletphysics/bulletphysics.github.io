@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13171" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-04-12T19:43:40+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13171</id>
+
+		<entry>
+		<author><name><![CDATA[Killpippo]]></name></author>
+		<updated>2021-04-12T19:43:40+00:00</updated>
+
+		<published>2021-04-12T19:43:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43389#p43389</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43389#p43389"/>
+		<title type="html"><![CDATA[Re: Hinge vehicle balance]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43389#p43389"><![CDATA[
+After few attempts, I found a cheap but effective solution:<br>- calculate the desired vertical alignment.<br>- calculate the cross product with the actual vehicle alignment<br>- apply a torque, modified by a configured value, with the vector calculated above<div class="codebox"><p>Code: </p><pre><code>btVector3 vehicleUp(_transform.getBasis()[0][TransformConstants::upIndex],_transform.getBasis()[1][TransformConstants::upIndex],_transform.getBasis()[2][TransformConstants::upIndex]);btVector3 vehicleForward(_transform.getBasis()[0][TransformConstants::forwardIndex],_transform.getBasis()[1][TransformConstants::forwardIndex],_transform.getBasis()[2][TransformConstants::forwardIndex]);// the expected up depends on the gravity implementationbtVector3 stableUp = _transform.getOrigin().normalized();btVector3 torqueVector = stableUp.cross(vehicleUp) * _stabilizerFactor;// project the torque to the vehicle forward to ignore the pitch stabilization and deal only with rolling//torqueVector = vehicleForward * vehicleForward.dot(torqueVector);_body.applyTorque(torqueVector);</code></pre></div>The advantage of this solution, over the limited performance impact, is it works good enough even with violent turns.<br><a href="https://youtu.be/HVM3Xihsnw0" class="postlink">https://youtu.be/HVM3Xihsnw0</a><br>In my prototype case, I deal with a spherical world, so the expected up vector is approximated by the vehicle position direction.<br>For a plane world, it can be simple considered the absolute up vector.<br>But, for a prettier result, it should be taken in consideration the ground nature, by storing an analyzing the wheel alignment and their collision results.<br><br>For the general vehicle stability, it still remain the position of the gravity center the most effective source of stability<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13527">Killpippo</a> — Mon Apr 12, 2021 7:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Killpippo]]></name></author>
+		<updated>2021-03-10T21:04:51+00:00</updated>
+
+		<published>2021-03-10T21:04:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43347#p43347</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43347#p43347"/>
+		<title type="html"><![CDATA[Re: Hinge vehicle balance]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43347#p43347"><![CDATA[
+<blockquote class="uncited"><div>(a) artificially high gravity while vehicle is "on the road" --&gt; more friction less sliding<br>(b) suddenly reduced gravity when vehicle is "airborne" --&gt; longer, slower jumps<br>(c) suddenly increased inertia tensor when vehicle goes into a crash --&gt; slower tumbling<br>(d) suddenly introduce extra sky hooks when vehicle is airborne or in a crash --&gt; some control over tumbling</div></blockquote>All valid and inspiring suggestions.<br>Already just applying a force on an imaginary pole, proportional to the angle change speed, gives better result.<div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1866" class="postimage" alt="stabilizer.png" onclick="viewableArea(this);" /></dt></dl></div>Also it could be not needed to calculate each frame if this is applied as an impulse.<br><br>I just need to take in consideration the general speed and disable when wheels are not touching.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13527">Killpippo</a> — Wed Mar 10, 2021 9:04 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-03-09T22:58:36+00:00</updated>
+
+		<published>2021-03-09T22:58:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43344#p43344</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43344#p43344"/>
+		<title type="html"><![CDATA[Re: Hinge vehicle balance]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43344#p43344"><![CDATA[
+Car race-em games often require very tuned "game physics" (as opposed to "accurate physics") in order to make them fun.  The example for this I usually give is: crashes.  Accurate car crashes happen quite fast: you're in control when suddenly the vehicle is tumbling faster than you can understand which direction is "up".  This is why many car race-em games slow down the crashes and introduce non-physical control forces (magic torques and sky hooks): the player has time to react and can get more thrill from the crash rather than pure bewilderment.  The game designers introduce non-physical logic such as:<br><br><strong class="text-strong">(a)</strong> artificially high gravity while vehicle is "on the road" --&gt; more friction less sliding<br><strong class="text-strong">(b)</strong> suddenly reduced gravity when vehicle is "airborne" --&gt; longer, slower jumps<br><strong class="text-strong">(c)</strong> suddenly increased inertia tensor when vehicle goes into a crash --&gt; slower tumbling<br><strong class="text-strong">(d)</strong> suddenly introduce extra sky hooks when vehicle is airborne or in a crash --&gt; some control over tumbling<br><br>Increased gravity would definitely help reduce wheelies but might make jumps and drops too fast --&gt; you might be forced to make gravity dynamic to keep it fun.<br><br>An increased inertia tensor would help you keep your vehicles from doing wheelies, however it would also cause them to be harder to turn and harder to slow down when already turning.<br><br>Dunno about tuning sliding to make it more fun.  I'm guessing it would be affected by all other tunings: gravity, inertia tensor, mass, etc will all influence the final sliding behavior.  Maybe first tune for tumbling and all other things, and then introduce a dynamic friction knob on the wheels that is driven by some other measurements (some formula of speed and radius of turn).<br><br>Good luck.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Mar 09, 2021 10:58 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Killpippo]]></name></author>
+		<updated>2021-03-09T20:38:56+00:00</updated>
+
+		<published>2021-03-09T20:38:56+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43343#p43343</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43343#p43343"/>
+		<title type="html"><![CDATA[Hinge vehicle balance]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43343#p43343"><![CDATA[
+Hello,<br>before my questions, let me spend a word of appreciation about this forum and the people that contribute to help with their answers.<br><br>I'm implementing vehicles based on <strong class="text-strong">btHinge2Contraint</strong>. Throttle is simulated by<strong class="text-strong"> btHinge2Contraint::setTargetVelocity</strong> on the wheel free axis.<br>I'm finding quite challenging to balance the various attributes (mass, gravity, angular velocities) in order to have an enjoyable control of the vehicle:<br>1) hard to avoid wheelie effect when suddenly change throttle direction<br>2) lowered by a lot the mass center to increase stability while turning, but when the vehicle is rolling (for example due to an explosion) the visual effect is awful<br>3) hard to apply the correct friction to have enough grip and allow a bit of enjoyable drifting<br><br>I uploaded a couple of video to show the problem 1) which is the most annoying.<br>tank, six hinges links cylinder colliders:<br><a href="https://youtu.be/TupH95_XmuY" class="postlink">https://youtu.be/TupH95_XmuY</a><br><br>car, four hinges links cylinder colliders:<br><a href="https://youtu.be/whVY2H-4zfM" class="postlink">https://youtu.be/whVY2H-4zfM</a><br><br>For 1) I'll try to apply the velocity progressively and I'm tempted to apply some corrective impulses based on the body orientation.<br>For 2) and 3) I would appreciate if you can share an approach to the problem. I'm actually just playing with the numerous parameters without an effective strategy.<br><br>Thank you<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13527">Killpippo</a> — Tue Mar 09, 2021 8:38 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

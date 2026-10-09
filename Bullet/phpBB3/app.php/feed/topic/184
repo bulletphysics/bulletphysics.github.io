@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/184" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-12-02T07:30:12+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/184</id>
+
+		<entry>
+		<author><name><![CDATA[jiangwei]]></name></author>
+		<updated>2005-12-02T07:30:12+00:00</updated>
+
+		<published>2005-12-02T07:30:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=501#p501</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=501#p501"/>
+		<title type="html"><![CDATA[About matlab's LCP solver]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=501#p501"><![CDATA[
+These is matlab's LCP solver used Lemke's agorithm,but i just don't understand this part :" else                                % otherwise pick among set of max d <br>    theta=max(d(j));        <br>    lvindex=find(d(j)==theta);<br>    lvindex=j(ceil(length(lvindex)*rand));  % if multiple choose randomly<br>  end<br>"<br>why they must choose the max "d" when they had get a minimum ratio .<br>for degenerated problem??? I don't know ,who can tell me .<br> thanks!<br><br><blockquote class="uncited"><div>function [z,err] = lemke(M,q,z0)<br>% syntax: [z,err] = lemke(M,q,z0)<br>% LEMKE    Solves linear complementarity problems (LCPs).<br>% An LCP solves<br>%   Mz+q &gt;=0, z&gt;=0, z'(Mz+q)=0.<br>% The input z0 defines a starting basis; it can be either<br>% an initial guess of the solution or a vector of zeros and ones <br>% with ones representing those z(i) thought to be non-zero in the<br>% solution.  For example, passing z=[1.5;0;2.2] has the same <br>% effect as passing z=[1;0;1]. <br>% If z0 is omitted the origin is used as a starting basis.<br>% ERR returns an error condition:<br>%   0: Solution found<br>%   1: Maximum iterations exceeded<br>%   2: Unbounded ray termination<br>% If NARGOUT==1, a warning message is displayed instead.<br>%<br>% ALGORITHM<br>%   Uses a modified Lemke's algorithm (complementary pivoting)<br>%   with a covering ray of ones.  The algorithm is modified to<br>%   allow a user defined initial basis.<br><br>n = length(q);<br>zer_tol = 1e-5;<br>piv_tol = 1e-8;<br>maxiter = min([1000 25*n]);<br>err=0;<br><br>% Trivial solution exists<br>if all(q &gt;= 0.)<br>  z=zeros(n,1); return;<br>end<br>z = zeros(2*n,1);<br>j = zeros(n,1);<br><br>% Determine initial basis<br>if nargin&lt;3 <br>  bas=(n+1:2*n)'; <br>  B = -speye(n);<br>else<br>  bas=[find(z0&gt;0);n+find(z0&lt;=0)];<br>  B = [sparse(M) -speye(n)];<br>  B = B(:,bas);<br>end<br><br>% Determine initial values<br>x=-(B\q);<br><br>% Check if initial basis provides solution<br>if all(x&gt;=0) <br>  z(bas)=x; z=z(1:n); <br>  return <br>end<br><br>t = 2*n+1;      % Artificial variable<br>entering=t;     % is the first entering variable<br><br>% Determine initial leaving variable<br>[tval,lvindex]=max(-x);<br>leaving=bas(lvindex);<br><br>bas(lvindex)=t;       % pivot in the artificial variable<br>x=x+tval;<br>x(lvindex)=tval;<br>B(:,lvindex)=-B*ones(n,1);<br><br>% Main iterations begin here<br>for iter=1:maxiter<br>  % Check if done; if not, get new entering variable<br>  if (leaving == t) break<br>  elseif (leaving &lt;= n)<br>    entering = n+leaving;<br>    Be = sparse(leaving,1,-1.0,n,1);<br>  else<br>    entering = leaving-n;<br>    Be = M(:,entering);<br>  end<br>  d = B\Be;<br><br>  % Find new leaving variable<br>  j=find(d&gt;piv_tol);                  % indices of d&gt;0<br>  if isempty(j)                       % no new pivots - ray termination  <br>    err=2; <br>    break<br>  end<br>  theta=min((x(j)+zer_tol)./d(j));    % minimal ratios, d&gt;0<br>  j=j(find((x(j)./d(j))&lt;=theta));     % indices of minimal ratios, d&gt;0<br>  lvindex=find(bas(j)==t);            % check if artificial among these<br>  if ~isempty(lvindex)                % Always use artifical if possible<br>    lvindex=j(lvindex);<br>  else                                % otherwise pick among set of max d <br>    theta=max(d(j));        <br>    lvindex=find(d(j)==theta);<br>    lvindex=j(ceil(length(lvindex)*rand));  % if multiple choose randomly<br>  end<br>  leaving=bas(lvindex); <br><br>  % Perform pivot<br>  ratio=x(lvindex)./d(lvindex);<br>  x = x - ratio*d;<br>  x(lvindex) = ratio;<br>  B(:,lvindex) = Be;<br>  bas(lvindex) = entering;<br>end                                   % end of iterations<br>if iter&gt;=maxiter &amp; leaving~=t err=1; end<br><br>z(bas) = x; z = z(1:n); <br><br>% Display warning messages if no error code is returned<br>if nargout&lt;2 &amp; err(1)~=0<br>  s='Warning: solution not found - ';<br>  if err(1)==2<br>    disp([s 'Unbounded ray']);<br>  elseif err(1)==1<br>    disp([f 'Iterations exceeded limit']);<br>  end<br>end</div></blockquote><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=361">jiangwei</a> — Fri Dec 02, 2005 7:30 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

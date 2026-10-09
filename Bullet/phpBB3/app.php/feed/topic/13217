@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13217" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-06-06T15:05:13+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13217</id>
+
+		<entry>
+		<author><name><![CDATA[marsch84]]></name></author>
+		<updated>2021-06-06T15:05:13+00:00</updated>
+
+		<published>2021-06-06T15:05:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43440#p43440</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43440#p43440"/>
+		<title type="html"><![CDATA[Rotation Matrix of Wheels of btRaycastVehicle not special orthogonal]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43440#p43440"><![CDATA[
+I implemented btRaycastVehicle into a driving game. It works quite fine, but I have a problem with the orientation of the vehicle's wheels. After implementing some work-arounds, I realized, that the determinant of the rotation matrix is -1. As far as I understand, that means the matrix is orthogonal, but not special orthogonal. As soon as I converted the matrix to a quaternion or a GL matrix for graphical representation, the result was a very messy behavior of the wheels.<br><br>This is a snippet of my code that shows how the wheels are initialized:<div class="codebox"><p>Code: </p><pre><code>int rightIndex = 0;int upIndex = 2;int forwardIndex = 1;btVector3 wheelDirectionCS0(0, 0, -1);btVector3 wheelAxleCS(1, 0, 0);vehicle-&gt;setCoordinateSystem(rightIndex, upIndex, forwardIndex);connectionpoint = btVector3(0.63, 0.87, 0.0);vehicle-&gt;addWheel(connectionpoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, tuning, true);</code></pre></div>The code uses the btDefaultVehicleRaycaster. The final work-around I developed was to turn the sign of the "right axis" of the wheel like this. After this change the rotation matrix is special orthogonal and all the quaternions derived from it are leading to the expected behavior.<div class="codebox"><p>Code: </p><pre><code>part[i].wheel[j].worldtrans = vehicle-&gt;getWheelTransformWS(j);part[i].wheel[j].worldtrans.getBasis()[0][0] *= -1.0f;part[i].wheel[j].worldtrans.getBasis()[1][0] *= -1.0f;part[i].wheel[j].worldtrans.getBasis()[2][0] *= -1.0f;</code></pre></div>I later saw, that there is a commit to the source file of btRaycastVehicle (link below), that seems to introduce the same operation of inverting the sign of the right axis. This change should also be present in my version of the library (3.06). So it looks like, that I am basically reverting that operation of changing the sign in my code.<br><br><a href="https://github.com/bulletphysics/bullet3/commit/00affd62ac928de2e5a5e3fe84b17c67df47a90a#diff-41982ab025c0d57a56f1625606814c34790943f058e726351772f11abdb31d79" class="postlink">https://github.com/bulletphysics/bullet ... 1abdb31d79</a><br><br>So my question is, whether there is something wrong in how I initialize the wheels or whether the commit linked above introduced some kind of bug.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14000">marsch84</a> — Sun Jun 06, 2021 3:05 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

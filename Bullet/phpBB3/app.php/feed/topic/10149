@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10149" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-10-08T22:06:22+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10149</id>
+
+		<entry>
+		<author><name><![CDATA[SyncViews]]></name></author>
+		<updated>2014-10-08T22:06:22+00:00</updated>
+
+		<published>2014-10-08T22:06:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34125#p34125</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34125#p34125"/>
+		<title type="html"><![CDATA[Pickupable Items (weapons, medpacks, etc.)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34125#p34125"><![CDATA[
+I am trying to work out how best to implement items/entities that players (and possibly) NPC's can drop/pickup.<br><ul><li>They need to be physically simulated in respect to gravity, terrain and certain select large objects (e.g. elevators)</li><li>They should not collide with each other or any objects not above (e.g. players), or maybe more correctly, not react to the collision (e.g. block the btKinematicCharacterController from moving)</li><li>I want to detect whenever a player starts to collide/overlap with them (so when the player runs over them the player picks them up)</li></ul>I worked out how to get the first 2 points to work using the collision filters stuff (based on <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Collision_Filtering" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... _Filtering</a> ), but not how to efficiently then do the 3rd point (since in order to the player physically interacting with them, e.g. blocking doors, etc., there not in the collision filter...).<br><div class="codebox"><p>Code: </p><pre><code>btDiscreteDynamicsWorld *bulletWorld;//Player, uses btPairCachingGhostObject with btKinematicCharacterControllerbulletWorld-&gt;addCollisionObject(&amp;ghostObject, COL_PLAYER, COL_TERRAIN);//Terrain, uses a btRigidBody with a custom btConcaveShapebulletWorld-&gt;addRigidBody(&amp;terrainBody, COL_TERRAIN, (short)(COL_ALL ^ COL_TERRAIN));//ItemEntity, uses btRigidBodybulletWorld-&gt;addRigidBody(&amp;btObject, COL_ITEM, COL_TERRAIN);</code></pre></div>Collision Detection in Player entity class (based on <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Collision_Callbacks_and_Triggers" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... d_Triggers</a>)<div class="codebox"><p>Code: </p><pre><code>btManifoldArray manifoldArray;auto bulletWorld = world-&gt;getPhysics().getBulletWorld();auto &amp;pairArray = ghostObject.getOverlappingPairCache()-&gt;getOverlappingPairArray();for (int i = 0; i &lt; pairArray.size(); ++i){    auto &amp;pair = pairArray[i];    //TODO: Is it possible to look at pair directory for instances I    //only care that an overlapp happened between 2 objects?    btBroadphasePair* collisionPair = bulletWorld-&gt;getPairCache()-&gt;findPair(pair.m_pProxy0, pair.m_pProxy1);    if (collisionPair-&gt;m_algorithm)        collisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(manifoldArray);    for (int j = 0; j &lt; manifoldArray.size(); j++)    {        btPersistentManifold* manifold = manifoldArray[j];        auto otherObject = manifold-&gt;getBody0() != &amp;ghostObject ?            manifold-&gt;getBody0() : manifold-&gt;getBody1();        auto userData = (BulletUserData*)otherObject-&gt;getUserPointer();        if (userData &amp;&amp; userData-&gt;isEntity() &amp;&amp; userData-&gt;asEntity()-&gt;isAlive())        {            //TODO: Come up with a design to avoid the dynamic_cast...            ItemEntity *item = dynamic_cast&lt;ItemStackEntity*&gt;(userData-&gt;asEntity());            if (item)            {                item-&gt;addToInventory(inventory);            }        }    }}</code></pre></div>I think I could do it by having another ghost object mirror the item object with a filter to collide with the player, or maybe using contactPairTest explicitly, but I suspect there is a proper way to do this and I am doing it wrong.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10988">SyncViews</a> — Wed Oct 08, 2014 10:06 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

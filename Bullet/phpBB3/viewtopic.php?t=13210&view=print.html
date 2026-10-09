@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to speed up the deserialization of 'btBvhTriangleMeshShape' object.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to speed up the deserialization of 'btBvhTriangleMeshShape' object.</h2>
+		<p><a href="viewtopic.php%3Ft=13210.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13210</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to speed up the deserialization of 'btBvhTriangleMeshShape' object.</h3>
+				<div class="date">Posted: <strong>Fri May 21, 2021 10:23 am</strong></div>
+				<div class="author">by <strong>guasqui_act</strong></div>
+				<div class="content">Hello everyone!<br>
+<br>
+I am trying to take advantage of the serialization/deserialization feature to speed up the time of constructing a <strong class="text-strong">btBvhTriangleMeshShape</strong> object but for some reason I do not get the result I would expect.<br>
+<br>
+Without using serialization/deserialization, my <strong class="text-strong">btBvhTriangleMeshShape</strong> object is constructed as:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13210&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	////
+	//
+	// Inputs are:
+	//	x - matrix with x-component values
+	//	y - matrix with y-component values
+	//	z - matrix with z-component values
+	//	nRows, nCols - number of rows and columns of the input x, y, and z matrixes
+	//
+	////
+	
+	// populating ground vertices
+	const int totalVerts = nRows * nCols;
+	btVector3 *groundVertices = new btVector3[totalVerts];
+	for (int i = 0; i &lt; nRows; i++)
+	{
+		for (int j = 0; j &lt; nCols; j++)
+		{
+			groundVertices[i * nCols + j].setValue( x[i][j], y[i][j], z[i][j] );
+		}
+	}
+
+	// populating ground indices
+	const int totalTriangles = 2 * (nRows - 1) * (nCols - 1);
+	const int numTriangleIndexes = totalTriangles * 3;
+	int *groundIndices = new int[numTriangleIndexes];
+	int index = 0;
+	for (int i = 0; i &lt; nRows - 1; i++)
+	{
+		for (int j = 0; j &lt; nCols - 1; j++)
+		{
+			groundIndices[index++] = i * nCols + j;
+			groundIndices[index++] = (i + 1) * nCols + j;
+			groundIndices[index++] = i * nCols + j + 1;
+
+			groundIndices[index++] = i * nCols + j + 1;
+			groundIndices[index++] = (i + 1) * nCols + j;
+			groundIndices[index++] = (i + 1) * nCols + j + 1;
+		}
+	}
+
+	// constructing 'btBvhTriangleMeshShape'
+	int vertStride = sizeof(btVector3);
+	int indexStride = 3 * sizeof(int);
+	btTriangleIndexVertexArray *indexVertexArrays = new btTriangleIndexVertexArray(totalTriangles, groundIndices, indexStride, totalVerts, (btScalar*)&amp;groundVertices[0].x(), vertStride);
+	btBvhTriangleMeshShape *groundShape = new btBvhTriangleMeshShape(indexVertexArrays, false);
+</code></pre></div>
+Now, I am willing to speed up the construction of the <strong class="text-strong">btBvhTriangleMeshShape</strong> by serializing/deserializing the <strong class="text-strong">btBvhTriangleMeshShape</strong> object. The following code is how I serialize it:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13210&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btDefaultSerializer serializer;
+	serializer.startSerialization();
+	groundShape-&gt;serializeSingleShape( &amp;serializer );
+	serializer.finishSerialization();
+	FILE* ff = fopen("my_ground_shape.bullet", "wb");
+	if ( !ff )
+	{
+		printf("Unable to open file\n");
+		return;
+	}
+	fwrite(serializer.getBufferPointer(), serializer.getCurrentBufferSize(), 1, ff);
+	fclose(ff);
+</code></pre></div>
+and the deserialization code is as follows:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13210&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btBulletWorldImporter importer(NULL);
+	if ( !importer.loadFile("my_ground_shape.bullet") )
+	{
+		printf("Unable to load file\n");
+		return;
+	}
+	int numShape = importer.getNumCollisionShapes();
+	if (!numShape) {
+		printf("No terrain info found in file\n");
+		return;
+	}
+	btBvhTriangleMeshShape *groundShape = (btBvhTriangleMeshShape*)importer.getCollisionShapeByIndex(0);
+</code></pre></div>
+Let's assume that the serialization process was done offline and therefore that 'my_ground_shape.bullet' file already exists. At this stage, I would expect a speed-up when constructing <strong class="text-strong">btBvhTriangleMeshShape</strong> object using the desirialization approach as opposed to doing this from scratch, but unfortunately it looks like there is no gain in terms of execution time.<br>
+My usual test case has <em class="text-italics">nRows = nCols = 400</em> and has the construction of <strong class="text-strong">btBvhTriangleMeshShape</strong> object being repeated 40 to 50 times. With these parameters the first snippet of code (creating the triangle mesh and allocating <strong class="text-strong">btBvhTriangleMeshShape</strong>) takes around 10 seconds, while the deserialization approach takes about 23.5 seconds (more than double).<br>
+<br>
+I am sure I am missing some implementation point but I really can't get why the deserialization is such an inefficient method here. Can anyone explain this and give me the right implementation to speed-up the construction of <strong class="text-strong">btBvhTriangleMeshShape</strong> object?<br>
+<br>
+Thank you!<br>
+Pierluigi Guasqui</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

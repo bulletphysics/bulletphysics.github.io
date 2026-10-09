@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; C4 Integration</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>C4 Integration</h2>
+		<p><a href="viewtopic.php%3Ft=600.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=600</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>C4 Integration</h3>
+				<div class="date">Posted: <strong>Wed Oct 11, 2006 7:12 pm</strong></div>
+				<div class="author">by <strong>FlashJackson</strong></div>
+				<div class="content">Erwin,<br>
+<br>
+I decided to go ahead and post my questions in this topic.  That way other people can benefit from the questions and answers.<br>
+<br>
+I have played with the code a little more.  I now have a version of C4 with Bullet integrated at a very basic level.  I am trying to modify my function to build the static collision mesh to work with Bullet.  It compiles and runs, but I am getting an exception.<br>
+<br>
+Here is the code I now have for collision registrations:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=600&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void PhysicsMgr::BuildCollisionMesh(World *theWorld)
+{
+
+	Node *root = theWorld-&gt;GetRootNode(); // start at the root 
+	Node *node = root; 
+	while (node) 
+	{ 
+		// Step 1: Check  to make sure that this is a static geometry object
+		if(node-&gt;GetNodeType() == kNodeGeometry &amp;&amp; !node-&gt;GetController()) 
+		{ 
+			btCollisionShape	*collision=new btConvexHullShape(NULL,0,0); 
+		
+			Geometry *geometry = static_cast&lt;Geometry *&gt;(node); 
+			const GeometryLevel *level = geometry-&gt;GetObject()-&gt;GetGeometryLevel(0); 
+			long vertexCount = level-&gt;GetVertexCount(); 
+
+			Point3D *vertex = level-&gt;GetArrayPoint3D(kArrayVertex); 
+			
+			const GeometryObject *object = geometry-&gt;GetObject(); 
+			GeometrySpace space = object-&gt;GetGeometrySpace(); 
+
+			
+			// Step 2: Convert vertex coordinates if necassary and 
+			// put each vertex into the btCollisionShape
+
+			if (space == kGeometrySpaceWorld) 
+			{ 
+				const Transform4D&amp; transform = geometry-&gt;GetInverseWorldTransform(); 
+				const Transform4D&amp; invTransform = geometry-&gt;GetWorldTransform();
+				for (long i = 0; i &lt; vertexCount; i++)
+				{ 
+					// transform to object space
+					vertex[i] = transform * vertex[i]; 
+					// add to collision shape
+					static_cast&lt;btConvexHullShape*&gt;(collision)-&gt;addPoint(btVector3(vertex[i].x,vertex[i].y,vertex[i].z));
+					// return to world space
+					vertex[i] = invTransform * vertex[i];
+				}
+			}
+			else
+			{
+				for (long i = 0; i &lt; vertexCount; i++)
+				{ 
+					// no conversion necassary, just create the point
+					static_cast&lt;btConvexHullShape*&gt;(collision)-&gt;addPoint(btVector3(vertex[i].x,vertex[i].y,vertex[i].z));
+				}
+			}
+			
+			// Step 3: Calcualte the world transform and convert to btTransform
+						
+			const Transform4D&amp; transformC4World = node-&gt;GetWorldTransform();
+			const Matrix3D&amp; mat3= transformC4World.GetMatrix3D();
+			btTransform shapeTransform;
+			shapeTransform.setOrigin(btVector3(transformC4World.GetTranslation().x,transformC4World.GetTranslation().y,transformC4World.GetTranslation().z));
+			shapeTransform.setBasis(btMatrix3x3(mat3.GetRow(0).x,mat3.GetRow(1).x,mat3.GetRow(2).x,mat3.GetRow(0).y,mat3.GetRow(1).y,mat3.GetRow(2).y,mat3.GetRow(0).z,mat3.GetRow(1).z,mat3.GetRow(2).z));
+			
+			// Step 4: use all of this to create rigid body and add to the world.
+
+			btRigidBody* body = new btRigidBody(0.0f,shapeTransform,collision);
+			m_dynamicsWorld-&gt;addRigidBody(body);
+
+			delete collision;
+			delete body;
+
+			
+		} 
+		node = root-&gt;GetNextNode(node); 
+	}
+	 
+}</code></pre></div>
+
+I have traced the code and the conversions I am making from C4 types to Bullet types appear to be working.  However, on about the 2nd body I try to register, I get an exception.  I tried different data sets and got the error in different places.  I tracked the assertion to here:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=600&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void	btCollisionWorld::addCollisionObject(btCollisionObject* collisionObject,short int collisionFilterGroup,short int collisionFilterMask)
+{
+
+	//check that the object isn't already added
+	std::vector&lt;btCollisionObject*&gt;::iterator i =	std::find(m_collisionObjects.begin(), m_collisionObjects.end(), collisionObject);
+	assert(i == m_collisionObjects.end());</code></pre></div>  That assert is throwing the exception.  I am not smart enough to follow what is going on here, so can you tell me what could cause this exception to be thrown?  Do you see something in the above code that would cause the problem?<br>
+<br>
+The dataset I am using for this test is very simple.  It is four walls, a ceiling, and a floor.  Each are planes and have 4 vertexs.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Oct 11, 2006 7:37 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You should not delete the rigidbody and collisionshape, immediately after you add them to the dynamics world.<br>
+<br>
+They can only delete them after the simulation is terminated/when they are removed from the world.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Oct 11, 2006 8:10 pm</strong></div>
+				<div class="author">by <strong>FlashJackson</strong></div>
+				<div class="content">I just asked about this in a PM.  Thanks for the help.   I have to think of an elegant way to handle that.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

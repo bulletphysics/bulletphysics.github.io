@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Problem with multithreading</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Problem with multithreading</h2>
+		<p><a href="viewtopic.php%3Ft=1170.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1170</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Problem with multithreading</h3>
+				<div class="date">Posted: <strong>Thu May 24, 2007 1:14 pm</strong></div>
+				<div class="author">by <strong>jjohansen</strong></div>
+				<div class="content">Hi i'm trying to get two "physics worlds" to run in two different POSIX threads. It all works when i disable one of the threads, but when i enable both and they have both reached:<blockquote class="uncited"><div>dynamicsWorld-&gt;stepSimulation(stepSize)</div></blockquote> <br>
+the program crashes with the following error:<br>
+
+<blockquote class="uncited"><div>Bullet/Source/bullet-2.46/src/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h:95: failed assertion `index &lt; m_cachedPoints'</div></blockquote>
+
+The application is built on the DemoApplication class, from the bullet demos, like this: 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1170&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class JJ_App : public DemoApplication</code></pre></div>
+
+My thread spawning function look like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1170&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void *spawnThread(void* arg)
+{
+	JJ_App* appInstance = NULL;
+
+	char filename[50];
+	switch((int) arg)
+	{
+		case 1:
+			printf("Thread 1 says Hello\n");
+			myJJ_App1 = new JJ_App();
+			appInstance = myJJ_App1;
+			strcpy(filename,"testResult1.jjres");
+			break;
+		case 2:	
+			printf("Thread 2 says Hello\n");		
+			myJJ_App2 = new JJ_App();
+			appInstance = myJJ_App2;
+			strcpy(filename,"testResult2.jjres");
+			break;
+		default:
+			printf("ARRRRGH :)\n");
+			break;
+	}
+		
+	appInstance-&gt;initPhysics();	
+	appInstance-&gt;initTest( (int) arg,0.5f,0.5f,PI/4.0f,0.021227f,filename);
+	appInstance-&gt;threadLoop(); //including stepSimulation() and test analysis
+	
+	return NULL;
+	
+}
+
+</code></pre></div>
+
+I run the application without the openGL part, why I'm only interrested in the results of the physics tests. The reason for me to do this multithreading  is to exploit both kernels on multiprocessor systems. The two physics enviroment (including bullet with use of GIMPACT) is supposed to be created in two completely different instances, but it seems like the two threads are sharing something? Why else would they crash only when they're both executing? Can anybody help? Don't really know what to conclude from the error.<br>
+Btw. the stacksize of the threads has been set to be large enough to room the instances. <br>
+Thx - Jonas</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 24, 2007 1:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Does it work without GIMPACT? For moving concave objects, it is recommended to use btCompoundShape and add convex parts (convex decomposition).<br>
+<br>
+Just to let you know: there is already a parallel Bullet version for Playstation 3 SPUs, with more fine grained parallelism. The planned public version of Bullet 3.0 will include parallelism out-of-the-box.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 25, 2007 3:51 am</strong></div>
+				<div class="author">by <strong>jjohansen</strong></div>
+				<div class="content">Thx for answering...
+<blockquote class="uncited"><div>Does it work without GIMPACT?</div></blockquote>
+
+No, have just tried without GIMPACT, created 10 falling boxes in each world, and only the stepSimulation() in each threadloop. Same error.<br>
+
+<blockquote class="uncited"><div>For moving concave objects, it is recommended to use btCompoundShape and add convex parts (convex decomposition). </div></blockquote>
+
+Yea, I know - but I have to be able to change the shape of my meshes at runtime. Isn't that hard to do fast and precise when you use convex decomposition? I'm really not that familiar with convex decomposition, are you using editors to do that, or do you know libraries that do <strong class="text-strong">PRECISE</strong> decomposition pretty fast? I've done some decomposition with a library, but it was slow and a really poor approximation.<br>
+<strong class="text-strong">UPDATE:</strong> Searched the forum and got my answer <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+
+<blockquote class="uncited"><div>Just to let you know: there is already a parallel Bullet version for Playstation 3 SPUs, with more fine grained parallelism. The planned public version of Bullet 3.0 will include parallelism out-of-the-box. </div></blockquote>
+
+Looking forward to it, but I would still like this to work <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink">[/b]</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

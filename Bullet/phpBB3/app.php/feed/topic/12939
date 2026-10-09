@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12939" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-07-06T20:28:41+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12939</id>
+
+		<entry>
+		<author><name><![CDATA[anthrax11]]></name></author>
+		<updated>2020-07-06T20:28:41+00:00</updated>
+
+		<published>2020-07-06T20:28:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43020#p43020</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43020#p43020"/>
+		<title type="html"><![CDATA[Re: Collision between meshes]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43020#p43020"><![CDATA[
+The GImpact algorithm needs to be explicitly registered:<div class="codebox"><p>Code: </p><pre><code>var collisionDispatcher = new CollisionDispatcher(collisionConfiguration);GImpactCollisionAlgorithm.RegisterAlgorithm(collisionDispatcher);</code></pre></div>Just to confirm what everyone said <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> :<br>BvhTriangleMeshShapes work well as static concave or convex shapes. But since they are meant to be static, there is no algorithm to make them collide with each other.<br>ConvexTriangleMeshShapes are efficient as dynamic convex shapes.<br>GImpact shapes are well optimized for when you need dynamic concave shapes.<br>Convex decomposition can be used to decompose concave shapes into convex shapes. The resulting convex shapes can then be combined into a CompoundShape, which is also an efficient way to model dynamic concave shapes.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6362">anthrax11</a> — Mon Jul 06, 2020 8:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[AlTerz93]]></name></author>
+		<updated>2020-04-25T13:16:42+00:00</updated>
+
+		<published>2020-04-25T13:16:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42804#p42804</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42804#p42804"/>
+		<title type="html"><![CDATA[Re: Collision between meshes]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42804#p42804"><![CDATA[
+<blockquote class="uncited"><div>You are right: two BvhTriangleMeshShape's do not collide. The fact of the matter is: the mesh-vs-mesh collision algorithm is not written.</div></blockquote>Ok there was a reason. Thanks.<br><br>I also tried with GImpactShapes but nothing changes: no collision detected. But a question arose: looking at the GImpactTestDemo, the bunnies are created as GImpactShape and collisions among them are detected. I've tried to use bunnies also in my simulation but there was no collision among them. Could be (but I don't think so) a problem related to the solver in multithreading? <br>This is my configuration:<div class="codebox"><p>Code: </p><pre><code>CreateSchedulers();NextTaskScheduler();using (var collisionConfigurationInfo = new DefaultCollisionConstructionInfo{DefaultMaxPersistentManifoldPoolSize = 80000,        DefaultMaxCollisionAlgorithmPoolSize = 80000}){colConfiguration = new DefaultCollisionConfiguration(collisionConfigurationInfo);};        colDispatcher = new CollisionDispatcherMultiThreaded(colConfiguration);        broadphase = new DbvtBroadphase();_solverPool = new ConstraintSolverPoolMultiThreaded(MaxThreadCount);        _parallelSolver = new SequentialImpulseConstraintSolverMultiThreaded();colWorld = new DiscreteDynamicsWorldMultiThreaded(colDispatcher, broadphase, _solverPool, _parallelSolver, colConfiguration);        colWorld.SolverInfo.SolverMode = SolverModes.Simd | SolverModes.UseWarmStarting;        debugDrawer = new elBulletDebugDrawer(application, this);        colWorld.DebugDrawer = debugDrawer;        colWorld.Gravity = new Vector3(0, 0, -9.81f);</code></pre></div>I also thought of another way: use a softBody and in some way make the object as rigid as possible. I tried but I had some problems with the pose update: is the WorldTransform different wrt the one for rigidBodies?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13517">AlTerz93</a> — Sat Apr 25, 2020 1:16 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-04-24T22:01:41+00:00</updated>
+
+		<published>2020-04-24T22:01:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42801#p42801</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42801#p42801"/>
+		<title type="html"><![CDATA[Re: Collision between meshes]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42801#p42801"><![CDATA[
+You are right: two BvhTriangleMeshShape's do not collide.  The fact of the matter is: the mesh-vs-mesh collision algorithm is not written.<br><br>Options that might work:<br><br>(1) Use a CompoundShape approximation, which is a collection of convex parts, for the dynamic object.  If your approximate shape is very close to the original then perhaps your collision information will suit your purposes.  If you truly don't care about performance, and your dynamic shape doesn't have too many triangles (what is "too many"?  maybe more than a few 100k triangles), then you could just make your convex parts be the triangles themselves -- might work.<br><br>(2) Supposedly concave meshes can mutually collide using the GImpactShapes.  Dunno if they are supported in BulletSharp.  So maybe you could move to C++ to take this path.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Apr 24, 2020 10:01 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[AlTerz93]]></name></author>
+		<updated>2020-04-24T08:20:54+00:00</updated>
+
+		<published>2020-04-24T08:20:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42800#p42800</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42800#p42800"/>
+		<title type="html"><![CDATA[Collision between meshes]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=42800#p42800"><![CDATA[
+Hello everyone!<br><br>I'm trying to create a simulation where I need to check the collision between two meshes. I'm using BulletSharp.<br>For the moment I tried to insert the mesh both as BvhTriangleMeshShape:<div class="codebox"><p>Code: </p><pre><code>var localScaling = new Vector3((float)scale);var _triangleMesh = CreateTriangleMesh(wavefrontModel.Indices, wavefrontModel.Vertices, localScaling);var concaveShape = new BvhTriangleMeshShape(_triangleMesh, true);</code></pre></div>and as GImpactMeshShape, which is more suitable for dynamic objects (true?):<div class="codebox"><p>Code: </p><pre><code>var tri = new TriangleIndexVertexArray(wavefrontModel.Indices, wavefrontModel.Vertices);var g_tri = new GImpactMeshShape(tri);g_tri.Margin = 0;g_tri.UpdateBound();g_tri.LocalScaling = new Vector3((float)scale);</code></pre></div>One of the objects is a container and the other one is an object which falls into it. So the first one is static and the second one dynamic.<br><br>No collision is currently detected. I tried to vary the scale and increase the stepSimulation but nothing has changed.<br><br>I know that collisions among meshes are not optimal but I don't need speed but precision and also I don't have to consider many objects.<br><br>How can I solve this problem?<br><br>Thanks in advance<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13517">AlTerz93</a> — Fri Apr 24, 2020 8:20 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

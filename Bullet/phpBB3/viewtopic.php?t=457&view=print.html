@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; bug on CcdPhysicsController destructor</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>bug on CcdPhysicsController destructor</h2>
+		<p><a href="viewtopic.php%3Ft=457.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=457</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>bug on CcdPhysicsController destructor</h3>
+				<div class="date">Posted: <strong>Fri Aug 11, 2006 8:58 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content">While working on my framework, I found two things that can be potentially dangerous:<br>
+<br>
+The first one is not a bug, but it took me a while to trace the source of the continuous crashes when exiting the app:<br>
+<br>
+On CcdPhysicsDemo, when you define this:<br>
+<br>
+CcdConstructionInfo ccdObjectCi;<br>
+<br>
+There's a parameter missing, that causes a crash if the CcdPhysicsController is called, the parameter is this one:<br>
+<br>
+ccdObjectCi.m_physicsEnv = CurrentPhysicsEnvironmet;<br>
+<br>
+The other problem is also in CcdPhysicsController destructor, the reason is that the destructor deletes the pointer to PHY_IMotionState* . Both in the CcdPhysicsDemo and my framework, the "myMotionState" objects are stored in the stack, not in the heap, so when the destructor of CcdPhysicsController is invoked, it causes a crash.<br>
+<br>
+btw, which is the use of myMotionState?<br>
+<br>
+CcdPhysicsController should not delete the PHY_IMotionState* pointer, since it's the user task to create the object, it is also the user task to destroy it.<br>
+<br>
+Also, I noticed there are several structures in Bullet that require to be filled with correct parameters; I noticed that when filling some of them, there are parameters missing here and there, I figure you know what you're doing, but this can be prone to miss critical parameters, that are hard to trace. What I usually do is to add a "Reset" or "Clear" function that resets the structure values to its default, so I avoid missing to fill them correctly.<br>
+<br>
+Hope it helps<br>
+<br>
+Vic</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Aug 11, 2006 9:22 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+btw, which is the use of myMotionState? 
+</div></blockquote>
+
+Every application needs to provide a derived class of PHY_IMotionState.<br>
+This synchronizes the physics and graphic transform. Typically you would derive your own version for your particular graphics transform class.<br>
+<br>
+I will put the ownership of data / initialization on the TODO.<br>
+Thanks for the useful feedback.<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

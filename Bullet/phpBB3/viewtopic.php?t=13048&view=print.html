@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Batched raycasting wrapper in C</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Batched raycasting wrapper in C</h2>
+		<p><a href="viewtopic.php%3Ft=13048.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13048</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Batched raycasting wrapper in C</h3>
+				<div class="date">Posted: <strong>Wed Aug 12, 2020 4:07 pm</strong></div>
+				<div class="author">by <strong>BluePrintRandom</strong></div>
+				<div class="content">I have a friend maintaining UPBGE - (a fork of blender game engine running in blender 2.9x)<br>
+<br>
+I was wondering what the name of the batched raycast system was under the hood so we can wrap it / more information about it for upbge<br>
+<br>
+note-  we are building using bullet 2.83</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Batched raycasting wrapper in C</h3>
+				<div class="date">Posted: <strong>Thu Aug 13, 2020 4:23 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">By "batched" which one of these do you mean:?<br>
+<br>
+<strong class="text-strong">(1)</strong> "One raycast against the whole (batched) world of objects"<br>
+<strong class="text-strong">(2)</strong> "A batch of raycasts against the whole world of objects"<br>
+<br>
+Item <strong class="text-strong">(1)</strong> does exist as a feature of the BulletPhysics API.  Item <strong class="text-strong">(2)</strong> does not.<br>
+<br>
+Item <strong class="text-strong">(1)</strong> is done through <strong class="text-strong">btCollisionWorld::rayTest()</strong>.  You have to supply a (typically custom) <strong class="text-strong">RayResultCallback</strong> implementation which "does what you want" whenever the ray hits something.<br>
+<br>
+I downloaded what I think is a more recent copy of UPBGE.  All of the "physics" stuff I could find was in python.  Under the hood Bullet is truly C++ but there is a python wrapper.  You might try asking in the <strong class="text-strong">PyBullet Support and Feedback</strong> forum.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Batched raycasting wrapper in C</h3>
+				<div class="date">Posted: <strong>Sat Aug 15, 2020 5:00 pm</strong></div>
+				<div class="author">by <strong>BluePrintRandom</strong></div>
+				<div class="content">This seems to indicate otherwise*<br>
+<br>
+<br>
+<img src="https://i.snipboard.io/49N7PT.jpg" class="postimage" alt="Image"><br>
+<br>
+<a href="viewtopic.php%3Ff=18&amp;t=1907&amp;view=next.html" class="postlink">viewtopic.php?f=18&amp;t=1907&amp;view=next</a><br>
+<br>
+<br>
+<a href="viewtopic.php%3Ft=3790.html" class="postlink">viewtopic.php?t=3790</a><br>
+
+<blockquote class="uncited"><div>"Interesting, I didn't know about this. Look in the Benchmark and ConcaveRaycast demos for #ifdef BATCH_RAYCASTER<br>
+<br>
+I guess you'll have to define that before you can see how it works. Note that this isn't going to make raycasting threadsafe. It looks like it uses a thread barrier to perform raycasts in a large batch, thus the name.<br>
+Top</div></blockquote>
+"</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Batched raycasting wrapper in C</h3>
+				<div class="date">Posted: <strong>Sun Aug 16, 2020 4:03 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Hrm...<br>
+<br>
+True, there is an <strong class="text-strong">#ifdef BATCH_RAYCASTER</strong> inside <strong class="text-strong">examples/Heightfield/HeightfieldExample.cpp</strong> however I don't see any evidence it actually works... in Bullet <strong class="text-strong">2.88</strong> because it relies on a <strong class="text-strong">gBatchRaycaster</strong> being a valid pointer but there is no code that actually declares or sets it.  AFAICT: if you were to define <strong class="text-strong">BATCH_RAYCASTER</strong> then the example would fail to compile.  That code appears to be cruft.<br>
+<br>
+I rolled back to <strong class="text-strong">2.83</strong> to see.  The example code there is more complete.  In one of the Demos <strong class="text-strong">gBatchRaycaster</strong> points to an <strong class="text-strong">SpuBatchRaycaster</strong> instance, however I cannot find the actual implementation of that class.  I can only conclude: at the <strong class="text-strong">2.83</strong> release the "batch raycaster" is cruft but has suffered less bitrot.<br>
+<br>
+I'm just trying to be helpful.  I certainly don't want to discourage you from finding the information you seek.  Unfortunately: I couldn't find the information you are looking for.  Good luck.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Batched raycasting wrapper in C</h3>
+				<div class="date">Posted: <strong>Tue Aug 18, 2020 11:45 pm</strong></div>
+				<div class="author">by <strong>BluePrintRandom</strong></div>
+				<div class="content">it appears to be earlier than that even - it's in the release notes for 2.67</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

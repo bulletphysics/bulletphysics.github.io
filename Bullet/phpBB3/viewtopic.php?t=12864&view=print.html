@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to start a physics simulation in pybullet with a GUI in wxpython</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to start a physics simulation in pybullet with a GUI in wxpython</h2>
+		<p><a href="viewtopic.php%3Ft=12864.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12864</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to start a physics simulation in pybullet with a GUI in wxpython</h3>
+				<div class="date">Posted: <strong>Thu Feb 13, 2020 3:36 pm</strong></div>
+				<div class="author">by <strong>lili</strong></div>
+				<div class="content">I´m trying to open a Python project with an GUI in wxpython via a button-event. The Python project is a physics simulation, which uses pybullet. The following code shows an minimum example, to show my problem to you. The first code is an example for a wxpython application. I import the simulation-project and use the sim.start() function to initialize the pybullet-simulation via the button-event.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12864&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import wx
+import Sim as sim #This is the physics simulation
+
+
+class MainFrame(wx.Frame):
+    def __init__(self):
+        wx.Frame.__init__(self, None, wx.ID_ANY, "Digitaler Zwilling", size=(800, 600))
+
+        self.panel = Panel(self)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.panel, 0, wx.EXPAND, 0)
+        self.SetSizer(self.sizer)
+
+
+class Panel(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent = parent)
+
+        # ____Buttons_____#
+        start_btn = wx.Button(self, -1, label = "Start", pos = (635, 450), size = (95, 55))
+        start_btn.Bind(wx.EVT_BUTTON, self.start)
+
+    def start(self, event):
+       sim.start   
+
+
+if __name__ == '__main__':
+    app = wx.App(False)
+    frame = MainFrame()
+    frame.Show()
+    app.MainLoop()</code></pre></div>
+
+As pybullet project, I choose an example from the internet:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12864&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import pybullet_data as pd
+import time
+
+def start():
+    p.connect(p.GUI)
+    p.setAdditionalSearchPath(pd.getDataPath())
+
+    plane = p.loadURDF("plane.urdf")
+    p.setGravity(0, 0, -9.8)
+    p.setTimeStep(1./500)
+    # p.setDefaultContactERP(0)
+    # urdfFlags = p.URDF_USE_SELF_COLLISION+p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
+    urdfFlags = p.URDF_USE_SELF_COLLISION
+    quadruped = p.loadURDF("laikago/laikago_toes.urdf", [0, 0, .5], [0, 0.5, 0.5, 0],
+                           flags = urdfFlags,
+                           useFixedBase = False)
+
+    # enable collision between lower legs
+
+    for j in range(p.getNumJoints(quadruped)):
+        print(p.getJointInfo(quadruped, j))
+
+    # 2,5,8 and 11 are the lower legs
+    lower_legs = [2, 5, 8, 11]
+    for l0 in lower_legs:
+        for l1 in lower_legs:
+            if (l1 &gt; l0):
+                enableCollision = 1
+                print("collision for pair", l0, l1,
+                      p.getJointInfo(quadruped, l0) [12],
+                      p.getJointInfo(quadruped, l1) [12], "enabled=", enableCollision)
+                p.setCollisionFilterPair(quadruped, quadruped, 2, 5, enableCollision)
+
+    jointIds = []
+    paramIds = []
+    jointOffsets = []
+    jointDirections = [-1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1]
+    jointAngles = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    for i in range(4):
+        jointOffsets.append(0)
+        jointOffsets.append(-0.7)
+        jointOffsets.append(0.7)
+
+    maxForceId = p.addUserDebugParameter("maxForce", 0, 100, 20)
+
+    for j in range(p.getNumJoints(quadruped)):
+        p.changeDynamics(quadruped, j, linearDamping = 0, angularDamping = 0)
+        info = p.getJointInfo(quadruped, j)
+        # print(info)
+        jointName = info [1]
+        jointType = info [2]
+        if (jointType == p.JOINT_PRISMATIC or jointType == p.JOINT_REVOLUTE):
+            jointIds.append(j)
+
+    p.getCameraImage(480, 320)
+    p.setRealTimeSimulation(0)
+
+    joints = []
+
+    with open(pd.getDataPath() + "/laikago/data1.txt", "r") as filestream:
+        for line in filestream:
+            print("line=", line)
+            maxForce = p.readUserDebugParameter(maxForceId)
+            currentline = line.split(",")
+            # print (currentline)
+            # print("-----")
+            frame = currentline [0]
+            t = currentline [1]
+            # print("frame[",frame,"]")
+            joints = currentline [2:14]
+            # print("joints=",joints)
+            for j in range(12):
+                targetPos = float(joints [j])
+                p.setJointMotorControl2(quadruped,
+                                        jointIds [j],
+                                        p.POSITION_CONTROL,
+                                        jointDirections [j]*targetPos + jointOffsets [j],
+                                        force = maxForce)
+            p.stepSimulation()
+            for lower_leg in lower_legs:
+                # print("points for ", quadruped, " link: ", lower_leg)
+                pts = p.getContactPoints(quadruped, -1, lower_leg)
+                # print("num points=",len(pts))
+                # for pt in pts:
+                # print(pt[9])
+            time.sleep(1./500.)
+
+    index = 0
+    for j in range(p.getNumJoints(quadruped)):
+        p.changeDynamics(quadruped, j, linearDamping = 0, angularDamping = 0)
+        info = p.getJointInfo(quadruped, j)
+        js = p.getJointState(quadruped, j)
+        # print(info)
+        jointName = info [1]
+        jointType = info [2]
+        if (jointType == p.JOINT_PRISMATIC or jointType == p.JOINT_REVOLUTE):
+            paramIds.append(p.addUserDebugParameter(jointName.decode("utf-8"), -4, 4,
+                                                    (js [0] - jointOffsets [index])/jointDirections [index]))
+            index = index + 1
+
+    p.setRealTimeSimulation(1)
+
+    while (1):
+
+        for i in range(len(paramIds)):
+            c = paramIds [i]
+            targetPos = p.readUserDebugParameter(c)
+            maxForce = p.readUserDebugParameter(maxForceId)
+            p.setJointMotorControl2(quadruped,
+                                    jointIds [i],
+                                    p.POSITION_CONTROL,
+                                    jointDirections [i]*targetPos + jointOffsets [i],
+                                    force = maxForce)</code></pre></div>
+The pybullet GUI opens and the simulation will start, but then it's stuck (view screenshot) Screenshot of the pybullet GUI<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1791" class="postimage" alt="Stuck pybullet.PNG" onclick="viewableArea(this);" /></dt>
+						<dd>Stuck pybullet.PNG (225.17 KiB) Viewed 11026 times</dd>
+		</dl>
+		
+		
+			</div>
+I think the problem could be, that I started the pybullet simulation with an button-event from wxpython, which can only be triggered with the app.MainLoop(). But I´m actually not sure.<br>
+<br>
+I tried:<br>
+<br>
+to exit the Mainloop before starting the simulation<br>
+to start the simulation with a new thread like:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12864&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>def start(self, event):
+    self.create_thread(sim.start)
+
+def create_thread(self, target):
+    thread = threading.Thread(target=target)
+    thread.daemon = True
+    thread.start()</code></pre></div>
+
+Does anyone know how to start the pybullet simulation with a wxpython GUI, without any sticking of the simulation? Or can me tell someone, what I'm doing wrong? Am I wright with the thought, what might be the problem?<br>
+ I´m thankful for every help!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

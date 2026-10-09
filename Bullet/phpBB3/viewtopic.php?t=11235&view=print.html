@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Motor Control for Physics-Based Character Movement</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Motor Control for Physics-Based Character Movement</h2>
+		<p><a href="viewtopic.php%3Ft=11235.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11235</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Motor Control for Physics-Based Character Movement</h3>
+				<div class="date">Posted: <strong>Sun Jul 10, 2016 11:15 pm</strong></div>
+				<div class="author">by <strong>Aardwolf</strong></div>
+				<div class="content">This question is a bit different from the usual "How do I simulate X?" that gets asked on here... I have the simulation aspect working, and am trying to figure out how to <strong class="text-strong">control</strong> it, i.e. "what values do I need to send to the motors to produce Y behavior?"<br>
+<br>
+If there's another forum that would be more suitable, let me know. Otherwise, here goes:<br>
+<br>
+<br>
+<br>
+<strong class="text-strong">Introduction:</strong><br>
+<br>
+I have a simulated biped with bones and joints like this:<br>
+<br>
+<img src="http://i93.photobucket.com/albums/l77/Aardwolf001/Quick%20Illustrations/soldier%20dood%20bones%20and%20joints%20illustration_zpsl2pxbp4i.png" class="postimage" alt="Image"><br>
+<br>
+I am trying to come up with a control algorithm for it, so that it can do all of the things the player character in an FPS needs to be able to do. Yes, I know this is more sophisticated than what most (any?) FPS games bother to do, but this is the project I have chosen.<br>
+<br>
+<br>
+<br>
+<span style="font-size:75%;line-height:116%">(section added 2016 July 16)</span><br>
+<strong class="text-strong">Problem Formulation:</strong><br>
+<br>
+Given:
+<ul>
+<li>The state of the Dood (that's what I named the class)</li>
+<li>Scalar control states "yaw" and "pitch" (in radians), "forward" and "sidestep" (fraction of max walk speed in a direction, from -1 to 1) and boolean "jump" (doubles as jetpack control)</li>
+<li>Any other information about the world which might be useful, e.g. nearby terrain geometry</li>
+</ul>
+Find:
+<ul><li>Torques to apply on each axis of each joint; there are currently 19 joints = 57 degrees of freedom, subtract 4 because the knees can only rotate/torque on 1 of their 3 axes</li>
+<li>Forces to apply at each of the jetpack nozzles; there are currently 10 (3 in each shoulder and 2 in each foot)</li></ul>
+
+How I define "satisfactory" is subject to change, but the important things are the ability to match target values for the following:
+<ul>
+<li>Head orientation; forward vector is higher priority than other axes</li>
+<li>Gun orientation and position; again forward vector is top priority; other axes of orientation, and position relative to the eye point, are lower priority</li>
+<li>Net acceleration as determined by forward and sidestep controls; eventually if 'jump' or jetpack is engaged it should also account for vertical acceleration</li>
+</ul>
+
+Other intermediate goals may be devised to help satisfy the above. Some possible intermediate goals might be:
+<ul>
+<li>Position and orientation for each foot, and of the pelvis</li>
+<li>Position and orientation of each of <em class="text-italics">all of the bones</em>; alternatively this could be expressed in terms of desired forces and torques on each bone</li>
+<li>Trajectories in joint angle space (I've seen some papers that work in these terms)</li>
+</ul>
+
+However, I am always cautious (perhaps overly so) about the possibility that introducing intermediate goals might over-constrain the problem.<br>
+<br>
+<br>
+<br>
+<strong class="text-strong">The Upper Body Algorithm:</strong><br>
+<br>
+I have an algorithm that works reasonably well for the upper body, allowing him to look and point his gun in various directions, but which relies on being able to dump "extra" torque into something. For example in this video the pos/ori/vel/rot of the pelvis bone is being reset at the beginning of each simulation step:<br>
+<br>
+<a href="https://youtu.be/9Tr52MN3Qjs" class="postlink">https://youtu.be/9Tr52MN3Qjs</a><br>
+<span style="font-size:75%;line-height:116%">(warning: the gunfire sound effect is sudden and loud; consider turning your volume down before watching)</span><br>
+<br>
+However this algorithm is not generalizable to the lower body, because it relies on being able to sink that extra torque into something.<br>
+<br>
+<br>
+<br>
+<strong class="text-strong">Lower Body Algorithm?</strong><br>
+<br>
+I had a solution that worked for the lower body, under a narrow range of initial conditions, but I have made no progress generalizing it. I tried posting on gamedev.net asking for help, but the subject matter seems to be too advanced for anyone there. Description of the algorithm that sort of worked can be found in that thread: <a href="http://www.gamedev.net/topic/673275-motor-control-redux/" class="postlink">Motor Control Redux</a>.<br>
+<br>
+Also <a href="http://www.gamedev.net/topic/660671-motor-control-for-physics-based-character-movement/?view=getnewpost" class="postlink">Motor control for physics-based character movement</a> for previous discussion of the problem.<br>
+<br>
+<br>
+<br>
+<strong class="text-strong">Help Pls?</strong><br>
+<br>
+I am at a loss as to how to proceed (but I am too stubborn to give up and do it the "gamey" way).<br>
+<br>
+Any assistance will be greatly appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Motor Control for Physics-Based Character Movement</h3>
+				<div class="date">Posted: <strong>Wed Jul 13, 2016 5:19 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Isn't this what inverse kinematics is for? I believe that's what is used for robot motion planning, and that's essentially what you're doing (except your "robot" is purely virtual).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Motor Control for Physics-Based Character Movement</h3>
+				<div class="date">Posted: <strong>Wed Jul 13, 2016 11:32 pm</strong></div>
+				<div class="author">by <strong>Aardwolf</strong></div>
+				<div class="content">Inverse kinematics (or any sort of motion planning) will give me per-bone <strong class="text-strong">x</strong>, <strong class="text-strong">v</strong>, <strong class="text-strong">a</strong>, <strong class="text-strong">θ</strong>, <strong class="text-strong">ω</strong>, and <strong class="text-strong">α</strong>, but a simulated character cannot manipulate any of these quantities directly. What I have control over is the per-joint applied torques <strong class="text-strong">τ</strong>.<br>
+<br>
+Consider the seemingly mundane task of <em class="text-italics">maintaining the initial pose</em>, assuming the character starts out in a stable standing pose. No motion planning is required, but it's still non-trivial to figure out what joint torques I need. I can compute the per-bone <strong class="text-strong">F</strong> and <strong class="text-strong">τ</strong> needed, but those are the per-bone <strong class="text-strong">F</strong> and <strong class="text-strong">τ</strong> coming <em class="text-italics">out</em> of the constraint solver, and I only have control of the per-<em class="text-italics">joint</em> <strong class="text-strong">τ</strong> going <em class="text-italics">into</em> the constraint solver ... and there are less joints than bones.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Motor Control for Physics-Based Character Movement</h3>
+				<div class="date">Posted: <strong>Thu Jul 14, 2016 1:40 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">OK, fair enough. I'm not familiar with controlling robot motors, but don't they eventually need to be given power to apply some goal torque or something? Or is it just some PID control on a goal location/angle? If so, could you simulate such a PID yourself?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Motor Control for Physics-Based Character Movement</h3>
+				<div class="date">Posted: <strong>Sat Jul 16, 2016 5:09 pm</strong></div>
+				<div class="author">by <strong>Aardwolf</strong></div>
+				<div class="content">I realize I relied too heavily on the links to do the summarizing for me. I have updated the OP to include a "Problem Overview" section (and also section names).<br>
+<br>
+When I said "motors" I meant it figuratively; I don't actually use volts/watts/amps. I control the torques directly for each of 3 axes of each joint (except the knees which have only 1 axis), and I'm trying to come up with an algorithm to determine what values to use for those torques.<br>
+<br>
+<br>
+<br>
+PID ... from the papers I've looked at on the subject*, people generally don't use an integral term. I think it's because you often end up with the controller trying to accomplish something impossible for an extended period of time, and then the goals change and suddenly it's doing something totally undesirable because of all that built-up integral term.<br>
+<br>
+I tried PID once, a couple of years ago ... granted that was before I started looking at papers. At the time I got frustrated by a) the problems with the integral term, and b) the fact that my goal quantities weren't specified in terms of joint orientations, they were in terms of <strong class="text-strong">bone</strong> orientations. But now I'm wondering if I can rely on the feet loosely "constrained" to their orientation by virtue of the contact forces with the ground, which if it remains consistent would mean I can specify the goal ankle orientation as the goal lower leg ori relative to the constrained foot orientation, and so on up the skeleton until all bones' goal orientations are dealt with.  So maybe I will give PD another shot.<br>
+<br>
+<br>
+<br>
+*There are papers, I just can't understand them well enough. For example:
+<ul>
+<li><a href="http://grail.cs.washington.edu/projects/loco/loco_paper.pdf" class="postlink">This</a> is so far the <strong class="text-strong">only</strong> paper I understood well enough that I thought I could implement it ... and ultimately I failed. But it got me started on the QP idea which eventually led to the first and so-far only marginally-working lower-body solution (see <a href="http://www.gamedev.net/topic/673275-motor-control-redux/" class="postlink">Motor Control Redux</a>)</li>
+<li><a href="https://www.cs.ubc.ca/~van/papers/2010-TOG-gbwc/index.html" class="postlink">This one</a> I discovered more recently and haven't spent as long trying to understand it, but it also looks relevant, and perhaps simpler than the one above.</li></ul></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Motor Control for Physics-Based Character Movement</h3>
+				<div class="date">Posted: <strong>Sun Jul 17, 2016 3:36 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You can use Inverse Dynamics, a constraint solver or PD to compute joint/motor torques. You can control joint motors in position, velocity and/or torque control. When using position or velocity PD control, you can also use constraints to achieve the goal (set the desired joint position and/or velocity). For articulated figures, such as characters and robots, it is convenient to use reduced coordinate multi body simulation, for example using Featherstone articulated body algorithm. Bullet has this implemented, including contact and joint motors that lets you set position and/or velocity targets with P/D tweak values. See <a href="https://github.com/bulletphysics/bullet3/blob/master/src/BulletDynamics/Featherstone/btMultiBodyJointMotor.h" class="postlink">https://github.com/bulletphysics/bullet ... intMotor.h</a><br>
+<br>
+Also, Bullet has some example that compares inverse dynamics based computed torque control with PD control, see the Bullet Example Browser:<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1435" class="postimage" alt="inverse_dyn.png" onclick="viewableArea(this);" /></dt>
+						<dd>inverse_dyn.png (159.44 KiB) Viewed 47986 times</dd>
+		</dl>
+		
+		
+			</div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Motor Control for Physics-Based Character Movement</h3>
+				<div class="date">Posted: <strong>Wed Jul 20, 2016 12:31 pm</strong></div>
+				<div class="author">by <strong>Aardwolf</strong></div>
+				<div class="content">Wow, a lot has changed in Bullet since I was last using it.<br>
+<br>
+I ended up ditching Bullet in 2012 because of performance reasons (no offense, Erwin). When I dropped 2000 balls on a terrain heightfield, no matter what I did to tell the collision detection code "these objects cannot collide with one another", it always ran at 2fps, and IIRC most of that was in collision detection.<br>
+<br>
+<br>
+<br>
+Featherstone... someone mentioned that to me in a PM on the gamedev forum but when I tried to research it I couldn't find a simple enough summary. Reduced coordinate system, you say? So iow it actually removes the degrees of freedom for things like "joints coming out of their sockets"? Neat.<br>
+<br>
+<br>
+<br>
+I gave PD controllers another try this weekend, this time with GA for tuning (versus manual tuning when I did it a couple of years ago) and it's working surprisingly well. For the task of maintaining an initial pose, at least.<br>
+<br>
+I feel stupid for not trying it again more recently... although, the justification I gave myself was that the goal quantities were not in terms of relative joint angles, so it didn't make sense to use PD controllers to map joint angle trajectories to joint torques... and I hadn't realized that if I treat the foot orientations as constrained (by virtue of the contact forces), the orientations of the remaining bones of the character can be expressed in terms of joint angles.<br>
+<br>
+<br>
+<br>
+So for now I'm going to stick with GA+PD, and maybe try to implement some of the other components mentioned in MvdP's <a href="https://www.cs.ubc.ca/~van/papers/2010-TOG-gbwc/index.html" class="postlink">Generalized Biped Walking Control</a> paper.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

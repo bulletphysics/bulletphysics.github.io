@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet Physics resetting rigidbody origin after manually setting</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet Physics resetting rigidbody origin after manually setting</h2>
+		<p><a href="viewtopic.php%3Ft=13057.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13057</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet Physics resetting rigidbody origin after manually setting</h3>
+				<div class="date">Posted: <strong>Wed Aug 26, 2020 3:16 pm</strong></div>
+				<div class="author">by <strong>whitwhoa</strong></div>
+				<div class="content">Working on a character controller in Bullet Physics engine that uses a rigidbody, specifically crouch functionality. I've run into an issue where Bullet is resetting the origin of the world transform for the body back to what it was before I set it manually. This appears to be happening when stepSimulation() is called. It feels like there may be a parameter that I'm not setting, although what it could be evades me at this time. I have uploaded <a href="https://www.youtube.com/watch?v=kV6zbIR0N-0&amp;feature=youtu.be" class="postlink">the following video which shows exactly what I'm trying to explain</a>:<br>
+
+<ul><li>0:00 - 09:00 no input provided</li></ul>
+<ul><li>10:00 crouch key pressed (collision shape scales correctly, then is translated back to origin instead of staying on ground where it was set)</li></ul>
+<ul><li>12:00 crouch key released</li></ul>
+<ul><li>13:00 crouch key pressed</li></ul>
+<ul><li>16:00 forward movement key pressed (applying a force to the body causes it to fall back to ground)</li></ul>
+
+Below is the code where I'm scaling the collision object and transforming the rigidbody origin:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13057&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if (this-&gt;input.keyLeftControl &amp;&amp; !this-&gt;crouching)
+{
+    this-&gt;crouching = true;
+
+    //Set scale
+    btVector3 scale = this-&gt;clientBody-&gt;getCollisionShape()-&gt;getLocalScaling();
+    scale.setY(crouchScale);
+    this-&gt;clientBody-&gt;getCollisionShape()-&gt;setLocalScaling(scale);
+    this-&gt;ghostObject-&gt;getCollisionShape()-&gt;setLocalScaling(scale);
+    this-&gt;collisionWorld-&gt;dynamicsWorld-&gt;updateSingleAabb(this-&gt;clientBody);
+
+
+    auto clientOrigin = this-&gt;clientBody-&gt;getWorldTransform().getOrigin();
+    btVector3 newOrigin = btVector3(clientOrigin.getX(), clientOrigin.getY() - 0.525, clientOrigin.getZ());
+    clientBody-&gt;getWorldTransform().setOrigin(newOrigin);
+    this-&gt;ghostObject-&gt;getWorldTransform().setOrigin(newOrigin);    
+}
+</code></pre></div>
+
+After this code executes, the origin is correct until stepSimulation() executes, at which point the rigidbody object is transformed back to the origin it was at prior to the above code block being executed.<br>
+<br>
+Is there anything glaringlyobvious that stands out to anyone that I may be overlooking?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Physics resetting rigidbody origin after manually setting</h3>
+				<div class="date">Posted: <strong>Wed Aug 26, 2020 3:58 pm</strong></div>
+				<div class="author">by <strong>whitwhoa</strong></div>
+				<div class="content">Resolved this by completely removing, resetting, and readding the rigid body to the dynamics world via the following:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13057&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if (this-&gt;input.keyLeftControl &amp;&amp; !this-&gt;crouching)
+{
+	this-&gt;crouching = true;
+	this-&gt;crouchNeedFall = true;
+
+	//Set scale
+	btVector3 scale = this-&gt;clientBody-&gt;getCollisionShape()-&gt;getLocalScaling();
+	scale.setY(crouchScale);
+	this-&gt;clientBody-&gt;getCollisionShape()-&gt;setLocalScaling(scale);
+	this-&gt;ghostObject-&gt;getCollisionShape()-&gt;setLocalScaling(scale);
+	this-&gt;collisionWorld-&gt;dynamicsWorld-&gt;updateSingleAabb(this-&gt;clientBody);
+
+	auto clientOrigin = this-&gt;clientBody-&gt;getWorldTransform().getOrigin();
+	btVector3 newOrigin = btVector3(clientOrigin.getX(), clientOrigin.getY() - 0.525, clientOrigin.getZ());
+
+	this-&gt;collisionWorld-&gt;dynamicsWorld-&gt;removeRigidBody(this-&gt;clientBody);
+
+	this-&gt;clientBody-&gt;clearForces();
+	this-&gt;clientBody-&gt;setLinearVelocity(btVector3(0, 0, 0));
+	this-&gt;clientBody-&gt;setAngularVelocity(btVector3(0, 0, 0));
+	this-&gt;clientBody-&gt;getWorldTransform().setOrigin(newOrigin);
+
+	this-&gt;ghostObject-&gt;getWorldTransform().setOrigin(newOrigin);
+
+	this-&gt;collisionWorld-&gt;dynamicsWorld-&gt;addRigidBody(this-&gt;clientBody);
+
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

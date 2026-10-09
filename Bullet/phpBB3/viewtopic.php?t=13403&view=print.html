@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; (Solved) Loading mesh with vertex colors</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>(Solved) Loading mesh with vertex colors</h2>
+		<p><a href="viewtopic.php%3Ft=13403.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13403</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>(Solved) Loading mesh with vertex colors</h3>
+				<div class="date">Posted: <strong>Tue Mar 15, 2022 11:59 pm</strong></div>
+				<div class="author">by <strong>zhsh</strong></div>
+				<div class="content">I'm trying to load a mesh created in open3d saved in the usual `.obj` format with vertex information into pybullet. The mesh vertices load fine, but don't have any color (resulting mesh in pybullet looks the same regardless if when saving write_vertex_colors=False or not).<br>
+<br>
+I am loading the mesh in pybullet via
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13403&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                visId = p.createVisualShape(p.GEOM_MESH, fileName=fn)
+                meshId = p.createMultiBody(0, baseVisualShapeIndex=visId, basePosition=[0, 0, 0])</code></pre></div>
+
+First few lines of the saved mesh:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13403&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code># Created by Open3D 
+# object name: test_mesh_2022_03_15_19_28_06_50
+# number of vertices: 4700
+# number of triangles: 9424
+v -0.055 0.0346259 0.36 0.120638 0.625828 0.533488
+v -0.055 0.035 0.358984 0.119699 0.61849 0.536347
+v -0.0552418 0.035 0.36 0.120081 0.622161 0.534946
+v -0.0564281 0.035 0.37 0.132268 0.655014 0.519661
+v 0.095 0.065 0.311799 0.276022 0.044167 0.370164
+v 0.095 0.0663959 0.22 0.252194 0.269783 0.531579
+</code></pre></div>
+
+Does pybullet not support colored vertex obj convention (<a href="http://paulbourke.net/dataformats/obj/colour.html" class="postlink">http://paulbourke.net/dataformats/obj/colour.html</a>)?<br>
+Is there a way to get colored meshes working (converting to texture somehow and applying texture)?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Loading mesh with vertex colors</h3>
+				<div class="date">Posted: <strong>Tue Mar 22, 2022 9:07 pm</strong></div>
+				<div class="author">by <strong>zhsh</strong></div>
+				<div class="content">Ok found a way to bypass this. It's true that pybullet currently can't represent meshes with vertex colors, so I had to automatically generate a UV map and transfer vertex colors to a texture on the UV map. I was able to do this using MeshLab (pymeshlab) with the following (I actually have the vertices and faces as arrays, but if you just have the obj file you can load the mesh instead):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13403&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                m = pymeshlab.Mesh(verts_xyz, faces, v_color_matrix=colrs)
+                ms = pymeshlab.MeshSet()
+                ms.add_mesh(m, "level_set")
+                # UV map and turn vertex coloring into a texture
+                base_name = f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}_{t}"
+                ms.compute_texcoord_parametrization_triangle_trivial_per_wedge()
+                ms.compute_texmap_from_color(textname=f"tex_{base_name}")
+                ms.save_current_mesh(fn)
+
+                visId = p.createVisualShape(p.GEOM_MESH, fileName=fn)
+                meshId = p.createMultiBody(0, baseVisualShapeIndex=visId, basePosition=[0, 0, 0])</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

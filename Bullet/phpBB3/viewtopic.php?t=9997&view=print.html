@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Spring daming in bullet</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Spring daming in bullet</h2>
+		<p><a href="viewtopic.php%3Ft=9997.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9997</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Wed Jul 02, 2014 1:38 pm</strong></div>
+				<div class="author">by <strong>Ehsanizadi</strong></div>
+				<div class="content">Hi,<br>
+<br>
+Does anyone know what formula bullet use for application of damping to an spring?<br>
+<br>
+And what is the unit of damping paramter? or is it dimensionless? (the range of damping is between 0 and 1).<br>
+<br>
+I tried to look at the source code in "btGeneric6DofSpringConstraint.cpp", however, I couldnt understand it.<br>
+e.g.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9997&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for(i = 0; i &lt; 3; i++)
+	{
+		if(m_springEnabled[i])
+		{
+			// get current position of constraint
+			btScalar currPos = m_calculatedLinearDiff[i];
+			// calculate difference
+			btScalar delta = currPos - m_equilibriumPoint[i];
+			// spring force is (delta * m_stiffness) according to Hooke's Law
+			btScalar force = delta * m_springStiffness[i];
+			btScalar velFactor = info-&gt;fps * m_springDamping[i] / btScalar(info-&gt;m_numIterations);
+			m_linearLimits.m_targetVelocity[i] =  velFactor * force;
+			m_linearLimits.m_maxMotorForce[i] =  btFabs(force) / info-&gt;fps;
+		}
+	}</code></pre></div>
+
+What is the "velFactor" ?<br>
+why it is multiplied by force?<br>
+What is target velocity?<br>
+what is max motor force? <br>
+and finally what does btFabs() do?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Wed Jul 02, 2014 8:48 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I assume Bullet uses some kind of soft constraint to model springs. Maybe this explanation in the ODE gives you an idea:<br>
+<a href="http://www.ode.org/ode-latest-userguide.html#sec_3_8_0" class="postlink">http://www.ode.org/ode-latest-userguide.html#sec_3_8_0</a><br>
+<br>
+Erin Catto gave a presentation about soft constraints here:<br>
+<a href="https://box2d.googlecode.com/files/GDC2011_Catto_Erin_Soft_Constraints.pdf" class="postlink">https://box2d.googlecode.com/files/GDC2 ... raints.pdf</a><br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 08, 2014 3:21 pm</strong></div>
+				<div class="author">by <strong>Ehsanizadi</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>I assume Bullet uses some kind of soft constraint to model springs. Maybe this explanation in the ODE gives you an idea:<br>
+<a href="http://www.ode.org/ode-latest-userguide.html#sec_3_8_0" class="postlink">http://www.ode.org/ode-latest-userguide.html#sec_3_8_0</a><br>
+<br>
+Erin Catto gave a presentation about soft constraints here:<br>
+<a href="https://box2d.googlecode.com/files/GDC2011_Catto_Erin_Soft_Constraints.pdf" class="postlink">https://box2d.googlecode.com/files/GDC2 ... raints.pdf</a><br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div></blockquote>
+
+Thanks for the useful links. Actually I was completely unaware of existence of such method. I read it, however, there are some points that I dont understand:<br>
+If Bullet solves constraint springs based on the 'soft constraint' concept, it should solve such equation:<br>
+J*v + erp * C * x / h  + cfm * Lambda= 0<br>
+J: impulse<br>
+v: velocity<br>
+erp: error reduction parameter<br>
+C: position error<br>
+h: time step<br>
+Lambda: constraint force<br>
+cfm: constraint force mixing<br>
+<br>
+But in the code I appended in my previous post, something like this is going to be calculated:<br>
+-------------------<br>
+Force = Δx * K<br>
+    K: spring stiffness<br>
+    Δx: change in the spring length<br>
+-------------------<br>
+velFactor = D / (h * Nt)<br>
+    D: damping<br>
+    Nt: iteration number<br>
+-------------------<br>
+targetVelocity = Force * VelFactor = K * Δx * D / (h * Nt)<br>
+----------------------------------------------------<br>
+<br>
+So my questions are:<br>
+<br>
+Where is cfm?<br>
+How cfm and erp calculated?<br>
+Is that the whole process for solving soft constraints?<br>
+<br>
+Sorry if my questions sound dumb, well, I am new to bullet, c++ and coding.<br>
+Thanks beforehand for your help.<br>
+Ehsan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 08, 2014 4:28 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Sorry, I don't know the internals of Bullet. I think there is a path in Bullet that calls into the ODE quickstep function. You can check there and see how the constraints/joints are setup.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 08, 2014 4:35 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I am wildly guessing now, but maybe Bullet uses motors. Essentially you can have a motor working on free axis of joint. The motor is defined by a target velocity and a maximum force to reach that velocity. E.g. you can define a target velocity of zero and a maximum force based on the joint geometry to model joint friction.<br>
+<br>
+Kenny's PhD talks about motors: <a href="http://image.diku.dk/kenny/download/erleben.05.thesis.pdf" class="postlink">http://image.diku.dk/kenny/download/erl ... thesis.pdf</a><br>
+Helmut provides a good overview as well: <a href="http://www.digitalrune.com/portals/0/documents/a%20unified%20framework%20for%20rigid%20body%20dynamics.pdf" class="postlink">http://www.digitalrune.com/portals/0/do ... namics.pdf</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Tue Jul 08, 2014 7:37 pm</strong></div>
+				<div class="author">by <strong>kingchurch</strong></div>
+				<div class="content">Based on the quoted code from "btGeneric6DofSpringConstraint.cpp" in the original post, the 6Dof spring constraint in Bullet is just a spring force element. It's not soft constraint which is still implicit and still need a solver like the QuickStep to solve the equations. A force element is much simpler and he can just apply a spring force like   f = P * d + D * vel every frame where P is the spring stiffness constant and D is the damping factor.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Wed Jul 09, 2014 2:16 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I don't think so. The code sets the target velocity and maximum force of the limit in the constraint. This indicates to me it goes through the constraint solver which will try to reach the target velocity. A PD controller would just compute the force and use the ApplyForce() interface of the body. I agree with you that you would either use a soft constraint or a PD controller. I have never seen this kind setup and it doesn't make sense to me. But it might work great in practice.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Thu Jul 10, 2014 1:23 pm</strong></div>
+				<div class="author">by <strong>Ehsanizadi</strong></div>
+				<div class="content">Thanks for your responses,<br>
+Actually what I am looking for, is the calculation loop (based on the Bullet code) for springs. For example in which files I can track the calculation loops of the springs.<br>
+<br>
+What I am going to do is to compare the behaviour of hard constraint based springs with soft constraint ones.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Mon Jul 14, 2014 4:54 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Recently someone provided an improved spring implementation in a new btGeneric6DofSpring2Constraint file.<br>
+<br>
+He started with the CFM/ERP conversion formula from the ODE manual (explained later by Erin Catto), but he had some issues.<br>
+So according to him his new implementation is better. You could try it.<br>
+
+<blockquote><div><cite>Gabor Puhr wrote:</cite>
+Originaly I implemented what is in Erin Catto's "Soft Constraints" paper (thoug the original formula is from ODE).<br>
+Unfortunately there are a lot of usefull parameters where the result is not very good. (for example because the CFM is greater than 1)<br>
+Also the energy dissipation it very big, so I couldn't setup a spring that oscillates.<br>
+<br>
+So with my colleague Tamas Umenhoffer we created a new algorithm that works with a wide variation of parameters and the energy loss is minimal.<br>
+<br>
+For the new 6dof:<br>
+<br>
+Pros:<br>
+- Much more accurate and stable in a lot of situation. (Especially when a sleeping chain of RBs connected with 6dof2 is pulled)<br>
+- Stable and accurate spring with minimal energy loss that works with all of the solvers. (latter is not true for the original 6dof spring)<br>
+- Servo motor functionality<br>
+- Much more accurate bouncing. 0 really means zero bouncing (not true for the original 6odf) and there is only a minimal energy loss when the value is 1 (because of the solvers' precision)<br>
+- Rotation order for the Euler system can be set. (One axis' freedom is still limited to pi/2)<br>
+<br>
+Cons:<br>
+- It is slower than the original 6dof. There is no exact ratio, but half speed is a good estimation.<br>
+- At bouncing the correct velocity is calculated, but not the correct position. (it is because of the solver can correct position or velocity, but not both.)<br>
+<br>
+What makes it stable that as we discussed it creates two solver constraint instead of one if the lo limit and the hi limits are not the same.<br>
+Each one is responsible only for one side. This makes possible to create the solver constraints even when the typed constraint is not violated. <br>
+This is important because when an outer force or constraint causes error in this constraint the old 6dof started to fix it only in the second step (not in the one where the error was generated)<br>
+When the hi and lo are the same it generates only one solver constraint, but similarly to the upper case it happens always so it can react to any error immediately.<br>
+Creating everything always may seems a bit overhead, but the fact is once one starts to move a chain of rigidbodies (connected with constraints) there will be a lot of error almost immediately so even the old 6dof would generate the solver constraints (just not from the very beginning).<br>
+When everything is calm the RBs are sleeping so nothing is calculated. (so no overhead)<br>
+<br>
+The spring is considered as a damped harmonic oscillator. As such the balance of forces is: F = -kx - cx' . (where the k is the stiffness and c is the damping)<br>
+It is calculated that what would be the velocity of the affected body (bodies) if this much force affect it. A solver can correct velocity. So the m_constraintError is simply set to a value to try to correct the body(es) velocity to this value.<br>
+There are two fail safe "if" to not overdamp or oversample the spring. Over and above the maximum force that this solver constraint can cause is limited to the F for pulling and -cx' for pushing.<br>
+The logic here is that the spring pull the object with the force of F, but if there is dumping it can cause opposite force if the object is pushed to the equilibrium point with a big enough second force. The maximum of this is the component caused by the damping.<br>
+<br>
+The servo is a very minor modification of the motor functionality. Instead of stopping it at the lo or hi limit this constraints stop it at the servo target. (that is defined by the user)<br>
+Obviously hi, lo and servo target can be positioned relative to each other in a various ways, but it can be handled with a few "if".<br>
+<br>
+I felt the bounce was a small hack in the old 6odf, but it worked (more or less), so I used a similarly approach.<br>
+When the m_constraintError is calculated I check the relative velocity of the two bodies (connected with the current constraint).<br>
+If it would cause a violation of the limits in the next frame (without the correction of the solver) then I assume there is a bounce in the actual step so I just simply calculate an m_constraintError that causes a velocity flip.<br>
+(I have to admit though that it took me some time to find out the correct handling of the stopERP here.)<br>
+<br>
+Changing the rotation order is very strait forward, just have to swap the axises correctly. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Thanks for Tamas to deduce all the variations correctly.<br>
+<br>
+There are a couple of new setter functions for the new functionalities at the end of the class definition. I hope the functions` name are self explaining.
+</div></blockquote>
+
+See attached files. I will integrate this into the Bullet github repository soon (at <a href="http://github.com/bulletphysics/bullet3" class="postlink">http://github.com/bulletphysics/bullet3</a>)<br>
+Thanks!<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Mon Jul 14, 2014 8:35 pm</strong></div>
+				<div class="author">by <strong>kingchurch</strong></div>
+				<div class="content">This looks awesome!<br>
+<br>
+Erwin: Is it straightforward to integrate one of these "soft constraint" springs into btMultiBody ?  Or can we already simulate mobilizer springs (springs along the DoF permitted by the joint) with the current motor constraint for btMultiBody ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Spring daming in bullet</h3>
+				<div class="date">Posted: <strong>Sat Aug 23, 2014 6:25 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kingchurch wrote:</cite>This looks awesome!<br>
+<br>
+Erwin: Is it straightforward to integrate one of these "soft constraint" springs into btMultiBody ?  Or can we already simulate mobilizer springs (springs along the DoF permitted by the joint) with the current motor constraint for btMultiBody ?</div></blockquote>
+
+Only a few specific constraints are working with btMultiBody at the moment indeed.<br>
+<br>
+I plan on adding support for other constraints for btMultiBody, such as btGeneric6DofSpring2Constraint.<br>
+The project just lacks resources/manpower so it could take a little while, hopefully later this year.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

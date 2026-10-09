@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Help with GJK finding contact normal + position</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Help with GJK finding contact normal + position</h2>
+		<p><a href="viewtopic.php%3Ft=591.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=591</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Help with GJK finding contact normal + position</h3>
+				<div class="date">Posted: <strong>Sat Oct 07, 2006 8:00 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">I have watched this tutorial video on the gjk:(<a href="https://mollyrocket.com/forums/viewtopic.php?t=245" class="postlink">https://mollyrocket.com/forums/viewtopic.php?t=245</a>)<br>
+<br>
+it describes the basics of how to detect a collision with a gjk, and i understand it for the most part. What im not so sure about is how I would go about using simplex containing the origin to determine the penetration depth, position of the contacts themselves, and the contact normal. I have tryed to read the papers on GJK, but as he sais in the video, they seem overly complex and I cant understand how to extract this information. Any hints?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Help with GJK finding contact normal + position</h3>
+				<div class="date">Posted: <strong>Sat Oct 07, 2006 11:45 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>I have watched this tutorial video on the gjk:(<a href="https://mollyrocket.com/forums/viewtopic.php?t=245" class="postlink">https://mollyrocket.com/forums/viewtopic.php?t=245</a>)<br>
+<br>
+it describes the basics of how to detect a collision with a gjk, and i understand it for the most part. What im not so sure about is how I would go about using simplex containing the origin to determine the penetration depth, position of the contacts themselves, and the contact normal. I have tryed to read the papers on GJK, but as he sais in the video, they seem overly complex and I cant understand how to extract this information. Any hints?</div></blockquote>
+
+I can recommend the GJK notes/presentation by Christer Ericson, see <a href="http://realtimecollisiondetection.net/pubs/" class="postlink">http://realtimecollisiondetection.net/pubs/</a><br>
+<br>
+GJK doesn't calculate penetration depth by default. You can add a margin to collision shapes, which allows you to use GJK to calculate shallow penetration depth (not deeper then the added margins of the 2 involved objects). For a sphere, you can use the full radius as margin, and use a point as shape. As long as there is no overlap (without the margins) when GJK terminates, the simplex solver (either johnson or 'geometric/voronoi' can be used as world-space contact points.<br>
+For deeper penetrations, use either EPA (expanding polytope algorithm) or sample the pentration depth in several directions, using the support mapping.<br>
+<br>
+Have you tried to learn from Bullet's implementation?<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/btGjkPairDetector_8cpp-source.html#l00046" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00046</a><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 28, 2006 12:15 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">if using a timestep of say, 1/60, is the deep penetration case unlikely enough that i could get by with using only the margin depth calculation method?<br>
+<br>
+I looked at bullets code, but im still a little confused on the overall method. When you generate contact points using only the margins, how do you determine where exactly those are, and how many there are?<br>
+<br>
+ The way I see it, if two body's margins are slightly inside each other there will be an infinite number of points. I see that bullet does some kind of contact reduction based on the 4 most extreme points, which makes sense.<br>
+<br>
+and just so im clear, the only information needed for valid impulse based dynamics are contact position (for both bodys?), as well as the normal from B to A, and a penetration depth</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 29, 2006 5:10 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>if using a timestep of say, 1/60, is the deep penetration case unlikely enough that i could get by with using only the margin depth calculation method?
+</div></blockquote>
+With default gravity and default collision margin (0.04) and units in meters, for resting contact you won't exceed penetrations deeper then 4 centimeter typically. So the deep penetration case only happens for collisions, and there you can sample (approximate) the penetration depth, like Bullet's btMinkowskiPenetrationDepthSolver. If you like you can also use a more accurate penetration depth method, called EPA (expanding polytope algorithm) but this is very complicated.
+<blockquote class="uncited"><div>
+I looked at bullets code, but im still a little confused on the overall method. When you generate contact points using only the margins, how do you determine where exactly those are, and how many there are?<br>
+<br>
+ The way I see it, if two body's margins are slightly inside each other there will be an infinite number of points. I see that bullet does some kind of contact reduction based on the 4 most extreme points, which makes sense.
+</div></blockquote>
+Bullet contains a contact cache and contact reduction. Every frame, the deepest point gets added to the cache, and the old points are updated. Both the reduction (up to 4 points, maximizing the area while keeping the deepest point) Certain heuristic is used to throw away points: points that exceed a certain distance.
+<blockquote class="uncited"><div>
+and just so im clear, the only information needed for valid impulse based dynamics are contact position (for both bodys?), as well as the normal from B to A, and a penetration depth</div></blockquote>
+The contact points position, normal and penetration depth and other information like mass, inertia, friction and restitution is needed. The 2 points are separated by the normal with the given penetration depth.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 02, 2006 6:31 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">I still havent figured out the shallow penetration thing, but im writing a small java program (2d) that shows the shapes, the minkowski difference, simpex and contact info.<br>
+<br>
+I got the basic GJK working that tells me if two bodys are colliding or not, and I have tried to do what bullet does for deep penetrations by sampling the support function and finding the minimum distance, but its not really working how its supposed to (at least I think)<br>
+<br>
+For two spheres, the sampling works perfectly and gives the right results all the time, but whenever I introduce something like a box or convex polygon with defined verticies, it either returns one vertex or the other, never a point on the line connecting them liek it should.<br>
+<br>
+Its hard to explain exactly whats going on, but here is what I have if you would'nt mind taking a look. Its fairly cleanly written so its easy to follow. GJK.java contains the main method. <br>
+CollisionDetection.java contains all the collision detection and closest point code, I suspect my problem is in there somewhere, though it could also be in the support functions for all my shape types..<br>
+<br>
+controls: <br>
+a,s,d,w - move the current shape<br>
+z,x - rotate current shape<br>
+q - change current shape<br>
+<br>
+Link for the code + classes:<br>
+<a href="http://www.upshack.com/./uploaded-files/200611/GJKJava.zip" class="postlink">http://www.upshack.com/./uploaded-files ... JKJava.zip</a><br>
+<br>
+The FindPenetration method in that class is where I most need help.<br>
+(heres the method if you dont have time to download it)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=591&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static Vec2 FindPenetration(Shape s1, Shape s2)
+	{
+		final float iter = 8;
+		Vec2 diff = s2.position.Subtract(s1.position);
+		//diff.Normalise();
+		float ang = (float)Math.atan2(diff.y, diff.x);
+		Vec2 norm = new Vec2();
+		float minNorm = 100000;
+		for (int i=0;i&lt;iter;i++)
+		{
+			Vec2 dir = new Vec2(ang + (float)((i-(iter/2))/iter * Math.PI * 0.25f));
+			//Vec2 dir = new Vec2(ang);
+			Vec2 p1 = s1.Support(dir);
+			Vec2 p2 = s2.Support(dir.Negate());
+			Vec2 s = p1.Subtract(p2);
+			float d = Vec2.Dot(s, dir);
+			if (d &lt; minNorm)
+			{
+				norm = s;
+				minNorm = d;
+				lastPointA = p1;
+				lastPointB = p2;
+			}
+		}
+		return norm;
+	}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 02, 2006 6:55 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>For two spheres, the sampling works perfectly and gives the right results all the time, but whenever I introduce something like a box or convex polygon with defined verticies, it either returns one vertex or the other, never a point on the line connecting them liek it should.
+</div></blockquote>
+
+Hi,<br>
+<br>
+I haven't looked into your code yet, but the sampling penetration depth only finds a minimum translational vector: penetration depth+normal. You still need to run GJK once more to find the actual points as follows:<br>
+<br>
+Separate the two objects by moving one object along this penetration vector so they come into touching contact. You can move this object a bit more, to make sure that GJK finds closest points. Then find the closest points, and project them back along the penetration vector.<br>
+<br>
+See <a href="http://www.continuousphysics.com/Bullet/BulletFull/btMinkowskiPenetrationDepthSolver_8cpp-source.html#l00095" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00095</a><br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=591&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	btGjkPairDetector::ClosestPointInput input;
+		
+	btVector3 newOrg = transA.getOrigin() + offset;
+
+	btTransform displacedTrans = transA;
+	displacedTrans.setOrigin(newOrg);
+
+	input.m_transformA = displacedTrans;
+	input.m_transformB = transB;
+	input.m_maximumDistanceSquared = 1e30f;
+	
+	MyResult res;
+	gjkdet.getClosestPoints(input,res,debugDraw);
+
+	float correctedMinNorm = minProj - res.m_depth;
+	if (res.m_hasResult)
+	{
+	pa = res.m_pointInWorld - minNorm * correctedMinNorm;
+	pb = res.m_pointInWorld;
+	}
+</code></pre></div>
+
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 02, 2006 10:21 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Thanks for your help, I think I see how it works now, I just need to get the depth and normal right.<br>
+<br>
+Does the code I posted above look like it should be returning the correct penetration normal/depth?<br>
+<br>
+The problem only arises with shapes that have define verticies like the shaft of a capsule, sides of a box/polygon, ect.<br>
+Do I need to be returning more than one point in my Support function?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 02, 2006 11:00 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>Thanks for your help, I think I see how it works now, I just need to get the depth and normal right.<br>
+<br>
+Does the code I posted above look like it should be returning the correct penetration normal/depth?<br>
+<br>
+The problem only arises with shapes that have define verticies like the shaft of a capsule, sides of a box/polygon, ect.<br>
+Do I need to be returning more than one point in my Support function?</div></blockquote>
+For sampling the penetration depth you don't need to calculate the actual points. In Bullet they are only kept for debugging. You just measure the minimum translational distance (penetration depth) given your own sampled normal directions (dir).<br>
+<br>
+GJK will take care of finding the actual point, in a more complicated way. Only one support is returned for a given direction, if there are multiple candidates then just pick one.<br>
+<br>
+Did you already implement or port GJK to java for non-overlapping cases?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 02, 2006 11:07 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">At the moment I dont do anything if they do not overlap as I still cant get gjk to return a minimum distance. <br>
+<br>
+But, it does work correctly in determining if they collide, and returns the simplex containing the origin.<br>
+<br>
+Maybe I am getting confused on what exactly the penetration depth is. Im thinking of it as the vector between the origin and the closest point in the minkowski difference to the origin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Nov 03, 2006 12:58 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>Maybe I am getting confused on what exactly the penetration depth is. Im thinking of it as the vector between the origin and the closest point in the minkowski difference to the origin</div></blockquote>
+
+You need GJK or EPA for penetration points that represent the penetration vector in worldspace. You are right, penetration depth is just a distance, penetration vector is the minimum translation that brings objects into contact.<br>
+<br>
+If you just need distance and direction then you are fine.<br>
+If you need points in worldspace, you need GJK. Or EPA but let's not open a can of worms <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+You cannot transform the closest point to the origin in minkowski space into worldspace point. It might represent a 'collapsed feature': for example an edge in worldspace can collapse into one single point in minkowski space. There is no way of telling which point on that edge in worldspace is the right one, unless you measure it using GJK (or EPA).<br>
+<br>
+Thanks,<br>
+Erwin<br>
+<br>
+PS: apart from GJK, there is also SAT, separating axis theorem based approach, but this doesn't work as generic as GJK. If you just deal with polyhedra (that have vertices, edges, faces) you can use that too. Bullet includes an implementation in Extras/SATConvexCollision</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Nov 03, 2006 9:21 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">Thanks for your help, I think I've got it working now <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 4:19 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">I took a look at Bullet's EPA implementation, and as you said, its very complicated <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> <br>
+<br>
+However, how does EPA's speed and accuracy compare with that of the random sampling?<br>
+<br>
+From the looks of it, it seems like it would be faster because you dont need to call the support function many times, but i'm not really sure</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 4:54 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>I took a look at Bullet's EPA implementation, and as you said, its very complicated <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> <br>
+<br>
+However, how does EPA's speed and accuracy compare with that of the random sampling?<br>
+<br>
+From the looks of it, it seems like it would be faster because you dont need to call the support function many times, but i'm not really sure</div></blockquote>
+
+The sampling method in Bullet takes a fixed number of orientations into account, they are uniform distributed over the unit sphere, so not really random. Also the latest Bullet 2.30 adds 'preferred' penetration directions, like the face normals of triangles and cubes, to improve accuracy.<br>
+<br>
+Bullet's sampling method is more reliable then the EPA implementations, but less accurate and less performance indeed. A lot of cases don't require high accuracy: if your objects are fairly moderate sized and have enough collision margin, the penetration depth algorithm will seldomly called in practice. EPA can fail to find a 'starting tetrahedron' that encapsulates the minkowski origin, and also degenerate triangles can become problematic. Pierre Terdiman pointed out problems in EPA (<a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=638" class="postlink">http://www.continuousphysics.com/Bullet ... .php?t=638</a> ) and it is part of Bullet 2.30 in Demos/EPAPenDepthDemo (projectfiles are not in project solution, but can be manually added from msvc/8/ folder).<br>
+<br>
+So in short: the most pragmatic solution is to use enough margin, hybrid GJK method and sampling the penetration depth.<br>
+Or investigate a lot of time in EPA, but still require some safety gap for the degenerate cases (like the sampling method). EPA is work-in-progress for Bullet.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; LookAt function help</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>LookAt function help</h2>
+		<p><a href="viewtopic.php%3Ft=12914.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12914</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>LookAt function help</h3>
+				<div class="date">Posted: <strong>Thu Apr 02, 2020 2:54 pm</strong></div>
+				<div class="author">by <strong>cmon</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I have been trying to get an object to point at the centre while spawning randomly on a sphere in python. Specifically, the object is a gripper for machine learning tasks. I have also tried with a simple elongated rectangular prism.<br>
+<br>
+I've implemented this code in python <a href="https://stackoverflow.com/questions/52413464/look-at-quaternion-using-up-vector/52551983#52551983" class="postlink">https://stackoverflow.com/questions/524 ... 3#52551983</a> as well as tried Euler angles with a restricted domain but neither works consistently.<br>
+<br>
+Has anyone accomplished this? I've been trying for 2 days now and the problems I suspect comes from differing coordinate systems <br>
+ in the URDF and Pybullet. <br>
+<br>
+If the function works properly, perhaps it's something to add to Pybullet?<br>
+<br>
+Euler angle code (works for most postions) 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12914&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>def lookAt(position):
+    zangle = np.arctan(position[1] / position[0])
+    yangle = np.arctan(position[0] / position[2])
+    return p.getQuaternionFromEuler([0, yangle, zangle])</code></pre></div>
+
+Look at function translated from C (never works)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12914&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>def lookAt(centre, target, worldUp):
+    F = (target - centre) / np.linalg.norm(target - centre)
+    R = np.cross(F, worldUp) / np.linalg.norm(np.cross(F, worldUp))
+    U = np.cross(R, F)
+
+    q = Quaternion()
+    trace = R[0] + U[1] + F[2]
+
+    if trace &gt; 0:
+        s = 0.5 / np.sqrt(trace + 1.0)
+        q = Quaternion(0.25 / s, (U[2] - F[1]) * s, (F[0] - R[2]) * s, (R[1] - U[0]) * s)
+    else:
+        if R[0] &gt; U[1] and R[0] &gt; F[2]:
+            s = 2.0 * np.sqrt(1.0 + R[0] - U[1] - F[2])
+            q = Quaternion((U[2] - F[1]) / s, 0.25 * s, (U[0] + R[1]) / s, (F[0] + R[2]) / s)
+        elif U[1] &gt; F[2]:
+            s = 2.0 * np.sqrt(1.0 + U[1] - R[0] - F[2])
+            q = Quaternion((F[0] - R[2]) / s, (U[0] + R[1]) / s, 0.25 * s, (F[1] + U[2]) / s)
+        else:
+            s = 2.0 * np.sqrt(1.0 + F[2] - R[0] - U[1])
+            q = Quaternion((R[1] - U[0]) / s, (F[0] + R[2]) / s, (F[1] + U[2]) / s, 0.25 * s)
+    return q.elements</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

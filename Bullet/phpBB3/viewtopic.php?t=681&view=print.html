@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Help with ball and socket joint separating.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Help with ball and socket joint separating.</h2>
+		<p><a href="viewtopic.php%3Ft=681.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=681</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Help with ball and socket joint separating.</h3>
+				<div class="date">Posted: <strong>Fri Nov 10, 2006 2:48 pm</strong></div>
+				<div class="author">by <strong>MarkZ</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I've been trying to make a ball and socket joint based on constraint impulses.  I do this by calculating the relative velocities at the joint ends on the two connected objects and using this to find an impulse that will make this relative velocity zero. I also add a drift velocity to the relative velocity so that the impulse also corrects drift. The problem is the joint is separating like in the screen shot below.<br>
+<img src="http://yallara.cs.rmit.edu.au/~mzaloumi/rtr/ball.png" class="postimage" alt="Image"><br>
+<br>
+I was hoping someone could have a look at my code and offer some suggestions about why this would be happening as I have no idea where to look.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=681&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void cBallSocketJoint::PreApply(float dt)
+{
+	// Calculate the deviation between the end points and the joint anchor
+	cVector deviation = m_a-&gt;WorldPos(m_ra) - m_b-&gt;WorldPos(m_rb);
+	float deviationMag = deviation.Mag();
+	if (deviationMag &gt; MAX_DEVIATION)
+	{
+		cVector deviationDir = deviation.Unit();
+		m_vrExtra = deviationDir * (deviationMag / dt);
+	}
+	else
+	{
+		m_vrExtra.Zero();
+	}
+}
+
+void cBallSocketJoint::Apply(float dt)
+{
+	// Align joint ends based on current rotation
+	cVector ra = m_a-&gt;Q() * m_ra;
+	cVector rb = m_b-&gt;Q() * m_rb;
+
+	// Get velocity of joint ends
+	cVector va = m_a-&gt;LocalPointVel(ra);
+	cVector vb = m_b-&gt;LocalPointVel(rb);
+
+	cVector vr = m_vrExtra + va - vb;
+
+	if (vr.Mag() &lt; 0.0001f)
+		return;
+
+	cVector normal = vr.Unit();
+
+	float num = -Dot(normal, vr);
+	float term1 = 1.0f / m_a-&gt;Mass();
+	float term2 = 1.0f / m_b-&gt;Mass();
+	float term3 = Dot(normal, Cross(m_a-&gt;IInv() * Cross(ra, normal), ra));
+	float term4 = Dot(normal, Cross(m_b-&gt;IInv() * Cross(rb, normal), rb));
+	float den = term1 + term2 + term3 + term4;
+
+	if (absf(den) &lt; 0.0001f)
+		return;
+
+	cVector impulse = normal * (num / den);
+
+	// Apply constraint impulse
+	m_a-&gt;ApplyLocalImpulse(impulse, ra);
+	m_b-&gt;ApplyLocalImpulse(-impulse, rb);
+}
+</code></pre></div>
+
+Cheers,<br>
+Mark.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Nov 10, 2006 3:15 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I haven't checked, but is the sign of the extra velocity correct? It must be:<br>
+<br>
+K * impulse = -0.1 * deviation / dt - v_rel<br>
+<br>
+Where deviations is x1 + r1 - x2 - r2<br>
+You should also apply the extra velocity always and not only when some MAY_DEVIATION is exceeded...<br>
+<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 6:19 am</strong></div>
+				<div class="author">by <strong>MarkZ</strong></div>
+				<div class="content">Thanks for the reply.<br>
+<br>
+I was wondering what K is and where the -0.1 come from in the equation?<br>
+<br>
+Cheers,<br>
+Mark</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 8:24 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">A Ball-Socket Joint removes 3DOF you have formulated a distance constraint. which is a 1D constraint. Look at Erin Catto's slides from GDC 2006 or Bullet.<br>
+<br>
+K is the 3x3 system matrix<br>
+0.1 is the Baumgarte factor (tau in Bullet and erp in the ODE)<br>
+<br>
+Let me know if you have problems to formulate this.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

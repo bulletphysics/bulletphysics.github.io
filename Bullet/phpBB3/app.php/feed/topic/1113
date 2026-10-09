@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1113" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-04-30T20:37:50+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1113</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-04-30T20:37:50+00:00</updated>
+
+		<published>2007-04-30T20:37:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4112#p4112</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4112#p4112"/>
+		<title type="html"><![CDATA[collision notification callbacks]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4112#p4112"><![CDATA[
+<blockquote class="uncited"><div>Well if a user deletes a body inside a collision callback and the engine tries to defer deletion</div></blockquote>No, the engine just asserts if the user makes such attempt. And the manual tells the user not to move, add or remove rigidbodies during a callback.<br><br>Simple and effective <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Apr 30, 2007 8:37 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2007-04-30T17:18:27+00:00</updated>
+
+		<published>2007-04-30T17:18:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4111#p4111</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4111#p4111"/>
+		<title type="html"><![CDATA[collision notification callbacks]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4111#p4111"><![CDATA[
+Well if a user deletes a body inside a collision callback and the engine tries to defer deletion, the engine will have an orphaned pointer.<br><div class="codebox"><p>Code: </p><pre><code>world-&gt;Remove(body);delete body;</code></pre></div>On the other hand, with reference counting, the user would not call delete.<br><div class="codebox"><p>Code: </p><pre><code>world-&gt;Remove(body);body-&gt;DecrementReferenceCount();</code></pre></div>My current approach is to cache all the collision results during the physics step and then send out the messages after the step. However, there may still be situations where a user needs to modify a collision response. In that context they should not modify the physics world.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Mon Apr 30, 2007 5:18 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-04-30T06:09:31+00:00</updated>
+
+		<published>2007-04-30T06:09:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4109#p4109</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4109#p4109"/>
+		<title type="html"><![CDATA[collision notification callbacks]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4109#p4109"><![CDATA[
+Why does that require reference counting? <br><br>I would prefer not to make a distiguishment between move, add and remove, and let the SDK just assert when the user tries to perform such action during a collision callback. So can't we leave the bookkeeping up to the user to move, add, remove objects outside of the collision callback?<br><br>Wouldn't it be a trivial solution for the user to postpone the removal by storing the pointers of to-be-deleted objects in their own separate array, and let them iterate over this array (and remove the object from the SDK, and then delete the object) once the simulation step is finished?<br><br>Thanks,<br>Erwin<br><br>On a side-note, reference counting can be useful, especially when sharing collision shapes among several rigid bodies. However, the user can also do this bookkeeping their own way. My experience is that providing reference counting to the user can open a can of worms. Distributing the ownership using reference counting can make it more complicated to keep control over object lifetime/memory usage.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Apr 30, 2007 6:09 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2007-04-25T21:40:59+00:00</updated>
+
+		<published>2007-04-25T21:40:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4084#p4084</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4084#p4084"/>
+		<title type="html"><![CDATA[collision notification callbacks]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4084#p4084"><![CDATA[
+Erwin, I'm guessing that solution only works with reference counting. Do you think reference counting is the way to go?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Wed Apr 25, 2007 9:40 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-04-25T18:59:55+00:00</updated>
+
+		<published>2007-04-25T18:59:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4080#p4080</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4080#p4080"/>
+		<title type="html"><![CDATA[Re: collision notification callbacks]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4080#p4080"><![CDATA[
+<blockquote class="uncited"><div>So, how physics engines solve the problem of calling back a user function, while taking care the user does not mess the whole system?<br><br>thanks in advance</div></blockquote>Most physics engines don't allow deletion, adding or moving of rigid bodies during a collision callback. Addition, removal or moving of objects is deferred until the end of the simulation step. You can implement this by storing actions (added/removed/moved objects) in a separate array, and process this array after the simulation step finished.<br><br>Hope this helps,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Apr 25, 2007 6:59 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vicviper]]></name></author>
+		<updated>2007-04-25T18:02:12+00:00</updated>
+
+		<published>2007-04-25T18:02:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4078#p4078</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4078#p4078"/>
+		<title type="html"><![CDATA[collision notification callbacks]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4078#p4078"><![CDATA[
+In my simple collision detection library, I want to notify the objects that collided with a callback, so they can act upon the collision.<br><br>The problem:<br><br>When I process a new simulation test, I create a list of collision pairs, each pair has a pointer to two objects that have collided.<br><br>Then, I iterate the list, solving each collision, AND calling the "OnCollision" of each object.<br><br>Now, what if, in response of a collision, I delete the object that collided?<br><br>the worst case scenario is that, the deleted object was also colliding with<br>another object, and when the next collision pair of the list is computed, it would cast a protection fault on an non existing object!<br><br>So, how physics engines solve the problem of calling back a user function, while taking care the user does not mess the whole system?<br><br>thanks in advance<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=559">vicviper</a> — Wed Apr 25, 2007 6:02 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

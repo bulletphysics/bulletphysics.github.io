@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7677" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2011-12-21T09:09:32+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/7677</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2011-12-21T09:09:32+00:00</updated>
+
+		<published>2011-12-21T09:09:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26527#p26527</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26527#p26527"/>
+		<title type="html"><![CDATA[Re: Rigid bodies not colliding with soft bodies]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26527#p26527"><![CDATA[
+The Bullet soft body implementation has several collision options, and not all combinations are compatible/fully implemented.<br><br>Generally it is best to check out the demos in Bullet/Demos/SoftDemo.<br><br>Thanks a lot for your contribution, your soft body integration has been added to Dynamica here:<br><a href="http://code.google.com/p/dynamica/source/detail?r=129" class="postlink">http://code.google.com/p/dynamica/source/detail?r=129</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Dec 21, 2011 9:09 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Maximalist]]></name></author>
+		<updated>2011-12-14T22:34:31+00:00</updated>
+
+		<published>2011-12-14T22:34:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26461#p26461</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26461#p26461"/>
+		<title type="html"><![CDATA[Re: Rigid bodies not colliding with soft bodies]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26461#p26461"><![CDATA[
+Final word on this  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">:<br><br>The "fix" I posted before does not allow soft bodies to interact with each other. After further experimentation I found that the original cause of my problems was the btSoftBody::fCollision::CL_RS flag.  When this is added soft bodies actually stop interacting with rigid bodies entirely (I'm guessing that this interacts badly with some other setting somewhere else), and as a result I cannot seem to use soft body - rigid body cluster collisions, though other collision detection methods do work (albeit imperfectly).  So I added the cluster generation code along with the btSoftBody::fCollision::CL_SS flag back in.  Things seem fine now except that soft-bodies tend to pass through planes after prolonged contact.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8878">Maximalist</a> — Wed Dec 14, 2011 10:34 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Maximalist]]></name></author>
+		<updated>2011-12-10T14:34:48+00:00</updated>
+
+		<published>2011-12-10T14:34:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26400#p26400</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26400#p26400"/>
+		<title type="html"><![CDATA[Re: Rigid bodies not colliding with soft bodies]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26400#p26400"><![CDATA[
+It looks like I've managed to fix this. I changed the soft-body creation code to match that in the demo bunny constructor exactly.  It now looks like this:<br><div class="codebox"><p>Code: </p><pre><code>bt_soft_body::bt_soft_body(btSoftBodyWorldInfo &amp;worldInfo, const std::vector&lt;float&gt; &amp;triVertexCoords,   const std::vector&lt;int&gt; &amp;triVertexIndices  ){this-&gt;numTriangles = triVertexIndices.size() / 3;this-&gt;numVertices = triVertexCoords.size() / 3;this-&gt;triVertCoords = new btScalar[triVertexCoords.size()];this-&gt;triVertIndices = new int[triVertexIndices.size()];for(int i = 0; i &lt; triVertexCoords.size(); i ++){this-&gt;triVertCoords[i] = static_cast&lt;btScalar&gt;(triVertexCoords[i]);}for(int i = 0; i &lt; triVertexIndices.size(); i ++){this-&gt;triVertIndices[i] = triVertexIndices[i];}this-&gt;m_body.reset( btSoftBodyHelpers::CreateFromTriMesh(worldInfo, this-&gt;triVertCoords, this-&gt;triVertIndices, this-&gt;numTriangles));btSoftBody::Material*pm=this-&gt;m_body-&gt;appendMaterial();pm-&gt;m_kLST=0.5;pm-&gt;m_flags-=btSoftBody::fMaterial::DebugDraw;this-&gt;m_body-&gt;generateBendingConstraints(2,pm);this-&gt;m_body-&gt;m_cfg.piterations=3;this-&gt;m_body-&gt;m_cfg.kDF=0.5;this-&gt;m_body-&gt;scale(btVector3(1,1,1));this-&gt;m_body-&gt;setTotalMass(100, true);this-&gt;m_body-&gt;randomizeConstraints();}</code></pre></div>I've also updated to the latest Bullet source (as of yesterday).  Soft bodies, passive rigid bodies, and active rigid bodies now all seem to be interacting correctly <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy">.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8878">Maximalist</a> — Sat Dec 10, 2011 2:34 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Maximalist]]></name></author>
+		<updated>2011-12-09T18:54:31+00:00</updated>
+
+		<published>2011-12-09T18:54:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26394#p26394</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26394#p26394"/>
+		<title type="html"><![CDATA[Re: Rigid bodies not colliding with soft bodies]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26394#p26394"><![CDATA[
+I've run a few more searches on this topic in the forum archives and it has come up a few times in the past.  See the following for example:<br><br><a href="http://bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=9&amp;t=5523&amp;hilit=soft+rigid+collision" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... +collision</a><br><a href="http://bulletphysics.org/Bullet/phpBB3/viewtopic.php?p=23169#p23169" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... 169#p23169</a><br><br>I've played with some of the ideas in the second URL to no avail (but have not tried changing the collision margins yet).  Other posts suggest that a problem may arise if a rigid body's position is set either at constructor time or if it is updated later - but which one of these is "correct" is not clear to me. I will try playing with the way object positions are set but there's no cause for optimism so far - hopefully I won't have to halt development <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad">.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8878">Maximalist</a> — Fri Dec 09, 2011 6:54 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Maximalist]]></name></author>
+		<updated>2011-12-08T19:45:43+00:00</updated>
+
+		<published>2011-12-08T19:45:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26385#p26385</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26385#p26385"/>
+		<title type="html"><![CDATA[Rigid bodies not colliding with soft bodies]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=26385#p26385"><![CDATA[
+Hello all,<br><br>I'm currently adding Bullet soft bodies to Dynamica as a personal learning exercise (I'll release the code when it's done, along with any documentation that comes out of it).  I've made good progress but I'm currently blocked by the fact that soft bodies do not seem to interact with rigid bodies at all inside the plugin.  Soft bodies do collide with each other, but not rigid bodies.  I was wondering if anyone more familiar with the code might know any "obvious" reasons why this would happen.  My soft body object (class bt_soft_body)  construction code looks something like this:<div class="codebox"><p>Code: </p><pre><code>bt_soft_body::bt_soft_body(btSoftBodyWorldInfo &amp;worldInfo, const std::vector&lt;float&gt; &amp;triVertexCoords,   const std::vector&lt;int&gt; &amp;triVertexIndices  ){this-&gt;numTriangles = triVertexIndices.size() / 3;this-&gt;numVertices = triVertexCoords.size() / 3;this-&gt;triVertCoords = new btScalar[triVertexCoords.size()];this-&gt;triVertIndices = new int[triVertexIndices.size()];for(int i = 0; i &lt; triVertexCoords.size(); i ++){this-&gt;triVertCoords[i] = static_cast&lt;btScalar&gt;(triVertexCoords[i]);}for(int i = 0; i &lt; triVertexIndices.size(); i ++){this-&gt;triVertIndices[i] = triVertexIndices[i];}this-&gt;m_body.reset( btSoftBodyHelpers::CreateFromTriMesh(worldInfo, this-&gt;triVertCoords, this-&gt;triVertIndices, this-&gt;numTriangles ));btSoftBody::Material* pm = this-&gt;m_body-&gt;appendMaterial();pm-&gt;m_kLST = 0.5;this-&gt;m_body-&gt;scale(btVector3(1,1,1));this-&gt;m_body-&gt;setTotalMass(50);this-&gt;m_body-&gt;generateBendingConstraints(2, pm);this-&gt;m_body-&gt;m_cfg.piterations=2;this-&gt;m_body-&gt;m_cfg.kDF = 0.5;this-&gt;m_body-&gt;generateClusters(50); this-&gt;m_body-&gt;m_cfg.collisions += btSoftBody::fCollision::CL_RS;this-&gt;m_body-&gt;m_cfg.collisions += btSoftBody::fCollision::CL_SS;this-&gt;m_body-&gt;randomizeConstraints();}</code></pre></div>I've modified the bt_solver_t constructor code to this:<br><div class="codebox"><p>Code: </p><pre><code>bt_solver_t::bt_solver_t():m_broadphase(new btDbvtBroadphase()),            m_solver(new btSequentialImpulseConstraintSolver),            m_collisionConfiguration(new btSoftBodyRigidBodyCollisionConfiguration()),            m_dispatcher(new btCollisionDispatcher(m_collisionConfiguration.get())),      m_dynamicsWorld(new btSoftRigidDynamicsWorld(m_dispatcher.get(),                                                        m_broadphase.get(),                                                        m_solver.get(),                                                        m_collisionConfiguration.get())),m_worldInfo(){    //register algorithm for concave meshes    btGImpactCollisionAlgorithm::registerAlgorithm(m_dispatcher.get());    m_dynamicsWorld-&gt;setGravity(btVector3(0, -9.81f, 0));m_dynamicsWorld-&gt;getDispatchInfo().m_enableSPU = true;bt_debug_draw* dbgDraw = new bt_debug_draw();m_dynamicsWorld-&gt;setDebugDrawer(dbgDraw);m_worldInfo.m_broadphase = m_broadphase.get();m_worldInfo.m_dispatcher = m_dispatcher.get();m_worldInfo.m_gravity = m_dynamicsWorld-&gt;getGravity();m_worldInfo.m_sparsesdf.Initialize();}</code></pre></div>m_worldInfo is passed in to the bt_soft_body constructor when adding new soft bodies to the solver.<br><br>Thanks in advance for any help.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8878">Maximalist</a> — Thu Dec 08, 2011 7:45 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

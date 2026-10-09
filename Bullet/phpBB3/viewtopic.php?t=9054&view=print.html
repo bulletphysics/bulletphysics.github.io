@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; improving bullet sweep test performance</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>improving bullet sweep test performance</h2>
+		<p><a href="viewtopic.php%3Ft=9054.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9054</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>improving bullet sweep test performance</h3>
+				<div class="date">Posted: <strong>Sat Apr 27, 2013 4:07 pm</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Hello, I've implemented a convex sweep test function(inside blender 3d ) and want to improve the performance of it.<br>
+Is it possible to use multithreading when testing collision against the same meshes somehow? if yes, how?<br>
+thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet performance</h3>
+				<div class="date">Posted: <strong>Wed May 01, 2013 6:06 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There is no out-of-the-box switch to improve performance. Still, improving performance is possible but it will require someone to work on that.<br>
+<br>
+Performance depends on many things, so it is not totally trivial.<br>
+Do you have many sweep queries? What kind of collision shapes are in the world? Are there many static objects, or many moving objects? , and how many static concave triangle meshes? For each case, the optimizations might be different. Most importantly, you need to motivate someone to actually implement those optimizations.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet performance</h3>
+				<div class="date">Posted: <strong>Thu May 02, 2013 12:38 pm</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Thanks for you reply.<br>
+My use case is :<br>
+<br>
+I am testing the same convex shape(so far only sphere, cone, cylinder) many times against a single or maximally several complex not-moving triangle mesh(es)(concave). I am interested only in the first hit. The mesh can have up to hunderds of thousands of triangles.<br>
+Currently, I get almost same performance if testing againtst a moving object, and passive object, but building BVH for static mesh takes a much longer time, so using active object is actually faster. The performance goes down significantly depending on the density of the mesh compared to the size of the convex shape which is "swept"- a tiny body collides fast, with growing diameter the performance decreases rapidly.<br>
+Also, these other things I tried didn't change performance:<br>
+-I tried splitting the object into more meshes.<br>
+- I tried to send the start/end positions just where I estimate from previous sampled position could be the hitpoint.<br>
+These changed performance, but not significantly:<br>
+- removing bottom-facing faces (this is not good if testing from more angles, but so far I tested just from one side.. Still it takes time to search and delete the faces, quite a lot inside blender, so the gain is not so interesting.)<br>
+- choosing dynamic object rather than passive BVH object(this was very surprising), because of BVH building time, and the testing also performed a tiny bit faster(only about 0.2%)<br>
+<br>
+<br>
+To explain my motivation, I am developing a CAM addon(computer aided machining) for Blender, the website is here:<br>
+<a href="https://pybullet.org/Bullet/phpBB3/blendercam.blogspot.com" class="postlink">blendercam.blogspot.com</a>,<br>
+ so the test is performed to test a tool position against an object to be machined. Currently, it's only for 3 axis milling, which means the cutter is dropped on Z axis, but the addon should be extensible also for 4 and 5 axis milling. There are usually several thousand up to more than a million tests against the mesh.<br>
+<br>
+Regarding motivation, I have mostly my enthusiasm to motivate others <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> I could also re-send some, or all of the donations I got so far for the project, which is still rather symbolic for such work.<br>
+<br>
+I was asking because I thought there allready might be a method to achieve better results.  Also, blender's rigid body simulation(in editor not in game engine), is probably not multithreaded, but I thought the convex_sweept_test might be multithreadable somehow, when passing e.g. all start-end positions for the sweep tests in lists.<br>
+<br>
+I will be glad for any hints.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet performance</h3>
+				<div class="date">Posted: <strong>Sun May 12, 2013 10:28 am</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Hello, <br>
+I am still struggling with this, anybody has an idea about how the performance could become better with the way it is currently implemented in bullet?<br>
+thanks..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet performance</h3>
+				<div class="date">Posted: <strong>Tue Aug 13, 2013 12:24 pm</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Hello, I am still trying to find any advice on how to optimize sweep test performance. <br>
+<br>
+Could HACD potentially be used to optimize sweep tests, even when I need best precission possible?<br>
+Is that possible also for non-manifold meshes?<br>
+<br>
+Sorry for asking again, but I just didn't find any solution to this anywhere else.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet sweep test performance</h3>
+				<div class="date">Posted: <strong>Tue Oct 15, 2013 2:25 pm</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Hello, still got no answer, after several months. Am I asking wrong question, or in wrong forum?<br>
+I would be willing to pay for a solution to this...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet sweep test performance</h3>
+				<div class="date">Posted: <strong>Tue Oct 15, 2013 10:35 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">As far as I know, there is no developer with plans to improve the Bullet sweep performance at the moment, so don't expect for a miracle to happen.<br>
+<br>
+Until someone can motivate a developer to improve it, it won't happen. I am busy with other things, so don't count on me.<br>
+If there was a team working on Bullet, it would be nice to assign someone improving it, but there is no such team.<br>
+<br>
+<br>
+You might want to switch to PhysX 3.x, it has faster sweep tests. <br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet sweep test performance</h3>
+				<div class="date">Posted: <strong>Tue Oct 22, 2013 9:37 am</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">Thanks for your reply.<br>
+I am not planning to switch to PhysX, for these reasons:<br>
+I develop in blender, and want to keep my development synced with it's current version. Also, I am mainly python developer, so from your point of view, an amateur <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+I am big fan of open source and bullet too, so I won't switch also for these reasons. <br>
+<br>
+I have saved so far all donations which have gone to my project and that is currently a bit more than 500Euro. I know that's not much, but I am offering this money to anybody wanting to improve this area in bullet -&gt; blender. <br>
+<br>
+the project page is here:<br>
+blendercam.blogspot.com<br>
+<br>
+I totally understand that it is not your priority, and sorry if my questions sounded annoying. I didn't know how many people develop bullet. I just thougth that probably I used the sweep function wrong in some way. Maybe I could use regular collision for the CAM software I am developing, but I am not sure how that could be done, since I simply need to find a path for a cutter, which goes along an axis, e.t.c.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet sweep test performance</h3>
+				<div class="date">Posted: <strong>Tue Oct 22, 2013 7:57 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It helps if we first have some reproduction cases in a Bullet demo, that shows the slow sweep test. Then we file some issue in the issue tracker, <a href="https://code.google.com/p/bullet/issues/list" class="postlink">https://code.google.com/p/bullet/issues/list</a>, and sooner or later it will be addressed.<br>
+<br>
+What kind of collision shapes are involved in the sweep test? Are the basic primitives (box, sphere) against a static triangle mesh?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: improving bullet sweep test performance</h3>
+				<div class="date">Posted: <strong>Wed Oct 23, 2013 10:53 am</strong></div>
+				<div class="author">by <strong>pildanovak</strong></div>
+				<div class="content">The shapes involved are : Sphere, Cone, Cylinder, and will also probably involve convex and combined shape in future. The collision happens against a static triangle mesh. Basically a "cutter" is dropped on the surface of the object to be milled. So, only first hit is important for this code(and I guess many uses of this function will be about first hit).<br>
+The speed is lower when the basic shape is rotated, but I would have to test again to see how this exactly influences performance, I did my tests half a year ago, and didn't save results.<br>
+But I think the test time was growing linearly with the number of faces in the collision mesh.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Some joint torques from getJointState(s) always zeros in pybullet</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Some joint torques from getJointState(s) always zeros in pybullet</h2>
+		<p><a href="viewtopic.php%3Ft=13074.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13074</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Some joint torques from getJointState(s) always zeros in pybullet</h3>
+				<div class="date">Posted: <strong>Fri Sep 25, 2020 2:08 pm</strong></div>
+				<div class="author">by <strong>jwhitman</strong></div>
+				<div class="content">Hello,<br>
+I am using Pybullet for robotics research but I am having some issues with the joint state torque feedback.<br>
+When I use a hexapod model (we use this model in other simulators without issue) I consistently get a block of 0.0 as torque feedback from getJointState(s). In this case it is joints 9-13. I also observe some unrealistically large joint torques (e.g. 240) reported but I am less concerned about those as they are not persistent across all time. The zeros appear to be returned in any joint position and any control mode. <br>
+At first I thought it could be an issue with the urdf, but, all of the legs use the same parts and only some seemingly arbitrary subset of the joints have this problem.<br>
+I also observed that after enabling the enableJointForceTorqueSensor, I can get readings but the joint moment reported does not seem to have any relation to the joint state torque.<br>
+I have tried a few other hexapod models, which are not made from any of the same parts, and observed similar problems. <br>
+I have seen the same thing happen across multiple computers when running this script both in python2 and python3, and across multiple versions of pybullet. My system is Ubuntu 16.04 and is currently up to date with pybullet-3.0.4. I have attached the urdf and its stls in question, and code to reproduce the issue is below.<br>
+This problem is making it difficult for me to use pybullet for my research. Do you have any suggestions of what might be wrong?<br>
+<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13074&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+import pybullet as p
+import pybullet_data
+import os
+import numpy as np
+import time
+physicsClient = p.connect(p.GUI)
+p.resetSimulation() # remove all objects from the world and reset the world to initial conditions. 
+p.configureDebugVisualizer(p.COV_ENABLE_GUI,0,physicsClientId=physicsClient)
+
+p.setGravity(0,0,-9.81)
+planeId = p.loadURDF(os.path.join(pybullet_data.getDataPath(),
+        "plane100.urdf"))
+startPosition=[0,0,0.3] # high enough that nothing touches the ground
+startOrientationRPY = [0,0,0]
+startOrientation = p.getQuaternionFromEuler(startOrientationRPY)   
+
+robotID = p.loadURDF(
+             'misc_urdf/m6.urdf', 
+                   basePosition=startPosition, baseOrientation=startOrientation,
+                   flags= (p.URDF_MAINTAIN_LINK_ORDER 
+                    | p.URDF_USE_SELF_COLLISION 
+                    | p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES))
+
+
+# count all joints, including fixed ones
+num_joints_total = p.getNumJoints(robotID,
+                physicsClientId=physicsClient)
+
+# create lists of the joint names, types, and which ones are actuated
+moving_joint_names = []
+moving_joint_inds = []
+moving_joint_types = []
+moving_joint_limits = []
+moving_joint_centers = []
+for j_ind in range(num_joints_total):
+    j_info = p.getJointInfo(robotID, 
+        j_ind)
+    if j_info[2] != (p.JOINT_FIXED):
+        moving_joint_inds.append(j_ind)
+        moving_joint_names.append(j_info[1])
+        moving_joint_types.append(j_info[2])
+        j_limits = [j_info[8], j_info[9]]
+        j_center = (j_info[8] + j_info[9])/2
+        if j_limits[1]&lt;=j_limits[0]:
+            j_limits = [-np.inf, np.inf]
+            j_center = 0
+        moving_joint_limits.append(j_limits)
+        moving_joint_centers.append(j_center)
+
+# set joint states to a standing up pose
+num_joints = len(moving_joint_names)
+for i in range(num_joints):
+    center = moving_joint_centers[i]
+    if i in [2,5,8]:
+        addition = -np.pi/2
+    elif i in [11,14,17]:
+        addition = np.pi/2
+    else:
+        addition = 0
+    jind = moving_joint_inds[i]
+    p.resetJointState( bodyUniqueId=robotID, 
+        jointIndex = jind,
+        targetValue= center+addition, 
+        targetVelocity = 0 )
+
+# enable joint sensors
+for j in moving_joint_inds:
+    p.enableJointForceTorqueSensor(robotID, j, 1)
+    
+# steps to take with no control input before starting up
+# This drops to robot down to a physically possible resting starting position
+for i in range(200):
+
+    p.stepSimulation()    
+    joint_states = p.getJointStates(robotID,
+            moving_joint_inds,
+            physicsClientId=physicsClient)
+
+    print('----------')
+    print([j[3] for j in joint_states])
+    # print out the joint moments too
+#     print([j[2][3] for j in joint_states])
+#     print([j[2][4] for j in joint_states])
+#     print([j[2][5] for j in joint_states])
+    time.sleep(0.01)
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Some joint torques from getJointState(s) always zeros in pybullet</h3>
+				<div class="date">Posted: <strong>Wed Sep 30, 2020 12:05 pm</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">please apply this patch as below and also remove the flag of p.URDF_USE_SELF_COLLISION to avoid too large torque.<br>
+hope this can help you.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13074&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>diff --git a/examples/SharedMemory/PhysicsServerCommandProcessor.cpp b/examples/SharedMemory/PhysicsServerCommandProcessor.cpp
+index ac67d51a5..6e060bf54 100644
+--- a/examples/SharedMemory/PhysicsServerCommandProcessor.cpp
++++ b/examples/SharedMemory/PhysicsServerCommandProcessor.cpp
+@@ -7562,7 +7562,7 @@ bool PhysicsServerCommandProcessor::processRequestActualStateCommand(const struc
+                        }
+                        for (int d = 0; d &lt; mb-&gt;getLink(l).m_dofCount; d++)
+                        {
+-                               stateDetails-&gt;m_jointMotorForce[totalDegreeOfFreedomU] = 0;
++                               stateDetails-&gt;m_jointMotorForceMultiDof[totalDegreeOfFreedomU] = 0;
+
+                                if (mb-&gt;getLink(l).m_jointType == btMultibodyLink::eSpherical)
+                                {
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

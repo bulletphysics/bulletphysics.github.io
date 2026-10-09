@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13097" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-10-26T20:22:54+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13097</id>
+
+		<entry>
+		<author><name><![CDATA[nero1402]]></name></author>
+		<updated>2020-10-26T20:22:54+00:00</updated>
+
+		<published>2020-10-26T20:22:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43170#p43170</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43170#p43170"/>
+		<title type="html"><![CDATA[Re: Applying a torque to a sphere around a given axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43170#p43170"><![CDATA[
+Thanks for your help drleviathan. I need to understand how applyTorque works. Perhaps I'm going about this the wrong way by thinking of torque as rotation around an axis. <br><br>I'll experiment a bit and see what works best. Thanks again.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13808">nero1402</a> — Mon Oct 26, 2020 8:22 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-10-26T17:47:52+00:00</updated>
+
+		<published>2020-10-26T17:47:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43169#p43169</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43169#p43169"/>
+		<title type="html"><![CDATA[Re: Applying a torque to a sphere around a given axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43169#p43169"><![CDATA[
+As per <a href="https://pybullet.org/Bullet/BulletFull/classbtRigidBody.html" class="postlink">the documentation</a> these methods are available for <strong class="text-strong">btRigidBody</strong> and can apply torque directly:<br><div class="codebox"><p>Code: </p><pre><code>void applyTorque (const btVector3 &amp;torque)void applyTorqueImpulse (const btVector3 &amp;torque)void applyImpulse (const btVector3 &amp;impulse, const btVector3 &amp;rel_pos)</code></pre></div>However, those only apply once (for the simulation step, I think, rather than just for the first substep when there are multiple substeps on the step, but I'm not 100% sure about that).  In any case, to gradually control the ball with torque you'd have to re-apply before each step.<br><br>The units of torque to achieve the results you want are tricky, whether you're using torque proper or torque impulse.  This is ok if your ball is always a finite set of masses: you can tune by trial and error and not care about the units.  An alternative way to do it with simpler units (and possibly mass-agnostic) is to just compute an adjustment to the sphere's angular velocity and slam it:<div class="codebox"><p>Code: </p><pre><code>old_angular_velocity = body-&gt;getAngularVelocity();new_angular_velocity = old_angular_velocity + adjustment;body-&gt;setAngularVelocity(new_angular_velocity);</code></pre></div>If you're applying little torques/impulses/velocities all the time then an easy way to fit your torque calculation/application into the flow of the physics simulation is to implement a <strong class="text-strong">CustomAction</strong> from <strong class="text-strong">btActionInterface</strong> and override its pure virtual <strong class="text-strong">updateAction()</strong> method to do what you want.  If you add that Action to the simulation then Bullet will call its <strong class="text-strong">updateAction()</strong> every substep.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Mon Oct 26, 2020 5:47 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[nero1402]]></name></author>
+		<updated>2020-10-26T16:22:55+00:00</updated>
+
+		<published>2020-10-26T16:22:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43168#p43168</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43168#p43168"/>
+		<title type="html"><![CDATA[Applying a torque to a sphere around a given axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43168#p43168"><![CDATA[
+Hi there<br><br>I'm new to bullet and making a 3d game where you control a rolling ball on a heightmap terrain. I have the collisions all working with a <strong class="text-strong">btHeightfieldTerrainShape</strong>. The ball (a <strong class="text-strong">btSphereShape</strong>) rolls and bounces nicely around the terrain.<br><br>I have a 'camera' that is placed just above the ball and can be moved to face any direction with the mouse.<br><br>Now I want to apply a torque that causes the ball to move in the direction the camera is facing eg. <strong class="text-strong">(1, 1, 0)</strong>. <br><br>By this I mean I take the x and z part of the camera's direction vector (from the player's perspective this is the direction they are 'facing' without the up/down part) which would be <strong class="text-strong">(1, 0, 0)</strong><br><br>I then want to create a vector that lies horizontally, perpendicular to the y axis and the 'xz' vector I mentioned above:<br><br>A clockwise rotation makes it <strong class="text-strong">(0, 0, -1).</strong> Relative to the view on the screen this vector would lie horizontally left to right across the screen.<br><br>Now the bit I can't do.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> <br><br>Can I apply a torque to the sphere clockwise around the vector I've calculated <strong class="text-strong">(0, 0, -1)</strong> through centre of the sphere? Is this possible and what is the best way to do it with bullet?<br><br>I hope that made sense, it's sort of like the torque applied to a car wheel if you are facing in the direction the wheel is rolling.<br><br>Thanks for your help  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13808">nero1402</a> — Mon Oct 26, 2020 4:22 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

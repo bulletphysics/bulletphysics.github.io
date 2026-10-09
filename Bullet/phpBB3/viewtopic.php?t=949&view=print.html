@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Featherstone Stability</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Featherstone Stability</h2>
+		<p><a href="viewtopic.php%3Ft=949.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=949</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Featherstone Stability</h3>
+				<div class="date">Posted: <strong>Tue Jan 30, 2007 2:11 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I've implemented Featherstone's algorithm in 2D and I've observed some stability problems for multi-link pendulums at large angular velocities.<br>
+<br>
+The case I'm using is identical to Demo 0 in Box2D: a 10-link pendulum starting with zero velocity, aligned with the horizontal axis. The pendulum swings down then folds over onto itself (no collision), then starts whipping around and shortly blows up.<br>
+<br>
+My integrator is semi-implicit Euler:<br>
+qDot = qDot + dt * qDotDot<br>
+q = q + dt * qDot<br>
+<br>
+I believe the instability is due to velocity-squared inertia forces. I can't remove the v-squared terms because they are necessary to get a plausible simulation.<br>
+<br>
+Here are some solutions:<br>
+- clamp the joint's relative angular velocity and use damping.<br>
+- if the angular velocity is large then integrate the v-squared terms with sub-steps. This can be viewed as adaptive integration.<br>
+<br>
+Has anyone ran into this problem? Are there any other tricks to deal with the instability?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Featherstone Stability</h3>
+				<div class="date">Posted: <strong>Tue Jan 30, 2007 3:55 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I've implemented Featherstone's algorithm in 2D and I've observed some stability problems for multi-link pendulums at large angular velocities.<br>
+<br>
+The case I'm using is identical to Demo 0 in Box2D: a 10-link pendulum starting with zero velocity, aligned with the horizontal axis. The pendulum swings down then folds over onto itself (no collision), then starts whipping around and shortly blows up.<br>
+<br>
+My integrator is semi-implicit Euler:<br>
+qDot = qDot + dt * qDotDot<br>
+q = q + dt * qDot<br>
+<br>
+I believe the instability is due to velocity-squared inertia forces. I can't remove the v-squared terms because they are necessary to get a plausible simulation.<br>
+<br>
+Here are some solutions:<br>
+- clamp the joint's relative angular velocity and use damping.<br>
+- if the angular velocity is large then integrate the v-squared terms with sub-steps. This can be viewed as adaptive integration.<br>
+<br>
+Has anyone ran into this problem? Are there any other tricks to deal with the instability?</div></blockquote>
+- increase inertia<br>
+- add joint limits . This will definitely fix it<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jan 30, 2007 7:52 pm</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">I had the same problem with Featherstone.  Since the joints are stiff you end up with an effect like cracking a whip; in the demo you described.  So the angular velocity for the last link in your chain gets really high.  Semi-implicit Euler did not seem to be much better than Euler.  I had good results with RK45 and Midpoint, but they are more expensive ( I can't recall if they were better than equivilant substeps of Euler or not ).<br>
+<br>
+Adding joint damping helps.  Most actual applications to constrained systems will have plenty of limits and collisions, so the stability in practice is not a problem.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

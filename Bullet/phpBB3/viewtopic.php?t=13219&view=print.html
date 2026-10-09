@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Gjk support function for arbitrary convex mesh</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Gjk support function for arbitrary convex mesh</h2>
+		<p><a href="viewtopic.php%3Ft=13219.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13219</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Gjk support function for arbitrary convex mesh</h3>
+				<div class="date">Posted: <strong>Thu Jun 10, 2021 5:25 am</strong></div>
+				<div class="author">by <strong>Gumba</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I'm trying to implement my own version of GJK and wasn't sure on how to implement the support function for an arbitrary convex mesh, the one which takes a direction as input and outputs the farthest vertex in that direction. Digging through Bullet's source, I found the functions btTriangleMeshShape::localGetSupportingVertex and btTriangleMeshShape::processAllTriangles in BulletCollision/CollisionShapes/btTriangleMeshShape.cpp, which I think is where it's done.<br>
+<br>
+Do I understand this correctly that it's just brute forcing through all the vertices of the mesh and calculating the dot product for them (after an AABB test) or are there some further optimizations which I'm missing?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Gjk support function for arbitrary convex mesh</h3>
+				<div class="date">Posted: <strong>Thu Jun 10, 2021 2:31 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yes, as I recall (and it has been a few years since I looked at it) it is brute force against the points.  You could imagine writing spatial map lookup logic to optimize search in a large point cloud, however such a strategy would be slower in practice than brute force below some number of points N, due to memory coherence and branching costs. The particular value of N would depend on how clever is the algorithm, however my guess is it would be higher than is typically used by Bullet customers who care deeply about real-time performance.  Non-real-time customers will may be content to wait, or throw more CPU resources at it so they don't have to wait too long.<br>
+<br>
+Also, if you're being clever then you would consider the question: How accurate of an answer is necessary?  Because approximate algorithms will often be faster.<br>
+<br>
+A few years ago I thought we needed a stand-alone GJK algorithm and decided to write my own instead of figuring out how to bend Bullet's implementation to my will.  It was a maze of twisty passages when working out the final bugs but ultimately fun and educational.  Unfortunately we never did end up using it.  If you would like to have a copy I could probably dig it up for you.  I think it lives under an Apache License.<br>
+<br>
+Meanwhile: <strong class="text-strong">btTriangleMeshShape</strong> is a base class for concave shapes and I wouldn't expect it to support the GJK algorithm.  Perhaps you're thinking about <strong class="text-strong">btConvexTriangleMeshShape</strong>?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Gjk support function for arbitrary convex mesh</h3>
+				<div class="date">Posted: <strong>Thu Jun 10, 2021 8:13 pm</strong></div>
+				<div class="author">by <strong>Gumba</strong></div>
+				<div class="content">Ah, that makes sense. I was trying to implement this hill climbing algorithm <a href="https://stackoverflow.com/a/2769176" class="postlink">https://stackoverflow.com/a/2769176</a> but couldn't think of an efficient data structure to store all neighbouring vertices for every vertex. But I agree, while this would probably have to test less vertices, it would also have much worse branch prediction and cache-friendliness. I guess I also go with this O(n) approach then, if it's even fast enough for such a widely used library like Bullet.<br>
+<br>
+I thought of <strong class="text-strong">btTriangleMeshShape</strong>, but I didn't realize that those two functions are overriden in the derived types. I think now this is where the actual work is done with <strong class="text-strong">(int)scaled.maxDot</strong> looping over all vertices:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13219&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 btConvexHullShape::localGetSupportingVertexWithoutMargin(const btVector3&amp; vec) const
+{
+	btVector3 supVec(btScalar(0.), btScalar(0.), btScalar(0.));
+	btScalar maxDot = btScalar(-BT_LARGE_FLOAT);
+
+	// Here we take advantage of dot(a, b*c) = dot(a*b, c).  Note: This is true mathematically, but not numerically.
+	if (0 &lt; m_unscaledPoints.size())
+	{
+		btVector3 scaled = vec * m_localScaling;
+		int index = (int)scaled.maxDot(&amp;m_unscaledPoints[0], m_unscaledPoints.size(), maxDot);  // FIXME: may violate encapsulation of m_unscaledPoints
+		return m_unscaledPoints[index] * m_localScaling;
+	}
+
+	return supVec;
+}</code></pre></div>
+
+I would very much be interested in your version of GJK, if it's not too much of a hassle to find it. Bullet's version seems very abstracted and somewhat hard to find the relevant parts.<br>
+<br>
+Thank you for your help!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Gjk support function for arbitrary convex mesh</h3>
+				<div class="date">Posted: <strong>Fri Jun 11, 2021 5:48 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I was able to dig up the old code.  It turns out: we did use it for something after all.  I had forgotten.<br>
+<br>
+In any  case, I've pulled the relevant files out into a separate github repository so it can become a stand-alone utility.  It is incomplete because there is a missing class called <strong class="text-strong">Transform</strong> whose original code would have dragged unhelpful dependencies so I'm leaving it out for now: its implementation is left as an exercise for the reader.  Also, the unit tests have a Qt dependency which I don't want so I'm leaving those in a non-compiling state.  Someday I'll get around to cleaning up that repo and wrangle it into a more useful example. In the meantime: perhaps you will find it helpful.<br>
+<br>
+Note, this GJK implementation only returns <strong class="text-strong">true</strong> or <strong class="text-strong">false</strong> for convex overlap.  It does not compute closest approach between two convex shapes.<br>
+<br>
+<a href="https://github.com/AndrewMeadows/gjk.git" class="postlink">https://github.com/AndrewMeadows/gjk.git</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Gjk support function for arbitrary convex mesh</h3>
+				<div class="date">Posted: <strong>Fri Jun 11, 2021 9:04 am</strong></div>
+				<div class="author">by <strong>Gumba</strong></div>
+				<div class="content">Thank you a lot!<br>
+<br>
+I will dig into this over the weekend.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

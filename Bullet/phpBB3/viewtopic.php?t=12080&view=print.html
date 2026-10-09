@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; getWorldTransform returns NAN in Debug mode</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>getWorldTransform returns NAN in Debug mode</h2>
+		<p><a href="viewtopic.php%3Ft=12080.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12080</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>getWorldTransform returns NAN in Debug mode</h3>
+				<div class="date">Posted: <strong>Wed May 09, 2018 12:40 pm</strong></div>
+				<div class="author">by <strong>Droid999</strong></div>
+				<div class="content">Hi<br>
+<br>
+When running my program in normal mode - everything works fine - I can control my camera, and world collision is spot on.<br>
+<br>
+When running in Debug mode the same code generates a NAN for each element below:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12080&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//------------------------------------------------------------
+//
+// Return position of the camera after physics world processed
+glm::vec3 bul_returnCameraPosition()
+//------------------------------------------------------------
+{
+	glm::vec3   tempPosition;
+
+	btTransform trans;
+	playerRigidBody-&gt;getMotionState()-&gt;getWorldTransform ( trans );
+
+	tempPosition.x = trans.getOrigin().getX();
+	tempPosition.y = trans.getOrigin().getY();
+	tempPosition.z = trans.getOrigin().getZ();
+
+	return tempPosition;
+}</code></pre></div>
+
+This causes an assertion failure in GLM  as it is passed an invalid value to work with. 'tempPosition' above , when in Debug mode contains three NAN's.<br>
+<br>
+I am using the latest compile version from Github ( as of yesterday ).<br>
+<br>
+My camera starts off with the correct position in Release mode. It starts above the map floor, and gravity brings it down to land on the plane.  Collision detection then keeps it on that plane - but only in Release mode.<br>
+<br>
+My main loop looks like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12080&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>			// Return the direction vector and turn this into velocity for physics
+			bul_setCameraVelocity(cam3_getVelocity());
+
+			bul_processPhysics ( 60.0f );
+
+			vel = bul_returnCameraPosition();	// this contains NAN in Debug mode
+			
+			cam3_Position = vel;
+			
+			cam3_CreateViewMatrix(cam3_Position);	// causing an error in GLM due to bad values
+			
+			</code></pre></div>
+
+Any advice on how to fix this?<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: getWorldTransform returns NAN in Debug mode</h3>
+				<div class="date">Posted: <strong>Fri May 18, 2018 5:37 pm</strong></div>
+				<div class="author">by <strong>JJWong</strong></div>
+				<div class="content">Oh I have heard of this before, I am too wondering</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: getWorldTransform returns NAN in Debug mode</h3>
+				<div class="date">Posted: <strong>Tue Jan 29, 2019 6:45 pm</strong></div>
+				<div class="author">by <strong>Mr.Rabbit</strong></div>
+				<div class="content">I encountered the same bug, but in my case I get NAN in Release mode.<br>
+<br>
+They are generated after stepSimulation().<br>
+<br>
+If I disable compiler optimizations the nan disappears. Have you found the reason for this strange behaviour?<br>
+<br>
+<strong class="text-strong">Edit:</strong> I stumbled upon this remark <a href="https://stackoverflow.com/questions/28159306/libgdx-bullet-3d-and-rolling-friction-causing-nan" class="postlink">https://stackoverflow.com/questions/281 ... ausing-nan</a> . I checked if my local inertia value were correctly setup. They weren't. After I changed it to ensure a default inertia value, the simulation step dosn't generate any NAN's anymore.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

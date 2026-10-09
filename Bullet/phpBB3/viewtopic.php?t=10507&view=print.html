@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How can I rotate an object's velocity?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How can I rotate an object's velocity?</h2>
+		<p><a href="viewtopic.php%3Ft=10507.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10507</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How can I rotate an object's velocity?</h3>
+				<div class="date">Posted: <strong>Tue Apr 21, 2015 9:50 am</strong></div>
+				<div class="author">by <strong>joehot200</strong></div>
+				<div class="content">I would have put a more descriptive title, but the title space is a bit small.<br>
+<br>
+I am developing a ship fighting game, and I would like to move my ship (a RigidBody) around. This works - However, when my ship changes rotation, the RigidBody simply keeps the velocity.<br>
+<br>
+If this, say, is the original velocity, then...<br>
+<img src="http://i.gyazo.com/9b4764cf000253f1f912fbe9be36363c.png" class="postimage" alt="Image"><br>
+the ship would keep that velocity, even when I rotated my ship.<br>
+<img src="http://i.gyazo.com/fc4cba225e52f386c694a10709951221.png" class="postimage" alt="Image"><br>
+<br>
+I would like the ship to have the same velocity, but in a new direction. Like this:<br>
+<img src="http://i.gyazo.com/436a1fc467a9241d6504918fb73a6b49.png" class="postimage" alt="Image"><br>
+<br>
+How can I do that, without directly setting the velocity (setting the velocity overwrites the collision, and the ship will be rotating almost all the time)?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How can I rotate an object's velocity?</h3>
+				<div class="date">Posted: <strong>Thu Apr 23, 2015 3:52 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Directly setting the velocity <strong class="text-strong">IS</strong> how you change it.  I don't see how that "overwrites the collision" as you put it.<br>
+<br>
+If you want to constantly reorient the velocity according to the direction of the ship I would suggest implementing an Action that does just that and then give the action to the btDiscreteDynamicsWorld (which I assume you're using).  Research btActionInterface and how it is used (Huh, I notice there is no simple Action Demo available.)<br>
+<br>
+It is possible to gradually reorient the velocity to match the target velocity rather than setting it suddenly.   Perhaps this wouldn't "overwrite the collision" so bad (whatever that means).  Here is some example code for how to do it:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10507&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const btScalar adjustmentTimescale = 0.5; // seconds for velocity to get within 1/e of its targetVelocity
+btVector3 velocityAdjustment = velocityWeWant - currentVelocity;
+btScalar adjustmentFactor = btMin(1.0, timeStep / adjustmentTimescale);
+// blend current and target velocities
+btVector3 newVelocity = btScalar(1.0 - adjustmentFactor) * currentVelocity + adjustmentFactor * targetVelocity;
+body-&gt;setLinearVelocity(newVelocity);</code></pre></div>
+The nice thing is that you can tweak the strength of your blending by adjusting the adjustmentTimescale.  Shorter timescales make the transition faster.  The btMin is there for stability in case you accidentally provide too small of a timescale, or too large of a timeStep.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How can I rotate an object's velocity?</h3>
+				<div class="date">Posted: <strong>Fri Apr 24, 2015 1:52 pm</strong></div>
+				<div class="author">by <strong>joehot200</strong></div>
+				<div class="content"><blockquote><div><cite>drleviathan wrote:</cite>Directly setting the velocity <strong class="text-strong">IS</strong> how you change it.  I don't see how that "overwrites the collision" as you put it.<br>
+<br>
+If you want to constantly reorient the velocity according to the direction of the ship I would suggest implementing an Action that does just that and then give the action to the btDiscreteDynamicsWorld (which I assume you're using).  Research btActionInterface and how it is used (Huh, I notice there is no simple Action Demo available.)<br>
+<br>
+It is possible to gradually reorient the velocity to match the target velocity rather than setting it suddenly.   Perhaps this wouldn't "overwrite the collision" so bad (whatever that means).  Here is some example code for how to do it:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10507&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const btScalar adjustmentTimescale = 0.5; // seconds for velocity to get within 1/e of its targetVelocity
+btVector3 velocityAdjustment = velocityWeWant - currentVelocity;
+btScalar adjustmentFactor = btMin(1.0, timeStep / adjustmentTimescale);
+// blend current and target velocities
+btVector3 newVelocity = btScalar(1.0 - adjustmentFactor) * currentVelocity + adjustmentFactor * targetVelocity;
+body-&gt;setLinearVelocity(newVelocity);</code></pre></div>
+The nice thing is that you can tweak the strength of your blending by adjusting the adjustmentTimescale.  Shorter timescales make the transition faster.  The btMin is there for stability in case you accidentally provide too small of a timescale, or too large of a timeStep.</div></blockquote>
+I thought that using setLinearVelocity() removes velocities from collisions? Or am I wrong?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How can I rotate an object's velocity?</h3>
+				<div class="date">Posted: <strong>Fri Apr 24, 2015 2:49 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I believe it is safe to change the velocity of an object directly, despite its collisions.  Within reason, of course -- setting the velocity very high or pushing the object deeper into penetration can only cause problems.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

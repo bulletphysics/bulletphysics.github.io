@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13396" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-03-08T14:58:55+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13396</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-03-08T14:58:55+00:00</updated>
+
+		<published>2022-03-08T14:58:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43920#p43920</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43920#p43920"/>
+		<title type="html"><![CDATA[Re: Does different time step also makes different result?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43920#p43920"><![CDATA[
+Yes, a different sub_step will produce different results.  In particular, at longer sub_steps some object-object interactions could tunnel instead of collide.  Even if you turn on continuous collision detection (CCD) the subtle differences introduced by different sub_steps will cause two otherwise identical simulations to drift apart.  In fact, two distinct simulations at the same sub_step will drift apart due to floating point error, randomization in constraint solutions, and different CPU architectures.  Physics simulations can be made reproducible so they always have the exact same result given the exact same input but Bullet is not that way by default.<br><br>It sounds like you're trying to run a distributed simulation: one on the server and one on the client.  This is possible, even at different sub_steps.  To make a fun game the physics doesn't necessarily have to be exactly right, and in a distributed system the various simulations have to have a way to negotiate final results at their boundaries anyway.<br><br>Understand the difference between <strong class="text-strong">time_step</strong> and <strong class="text-strong">sub_step</strong>.  The <strong class="text-strong">time_step</strong> is the time given to the <strong class="text-strong">world-&gt;stepSimulation()</strong> call.  The simulation will only move forward one <strong class="text-strong">sub_step</strong> at a time.  In an attempt to explain the difference I offer this hypothetical scenario:<br><br>Suppose you set  your sub_step to be 1/60 of a second (16.67 msec), but your game loop is running at approximatly 45 Hz (22.22 msec).  Each frame you would measure the time since the last step and feed that to <strong class="text-strong">world-&gt;stepSimulation(time_step)</strong>.  The <strong class="text-strong">world</strong> will advance forward 1/60th of a second and accumulate the remainder (22.22 - 16.67 = 5.55 msec) for later.  Eventually it accumulate enough remainder to take a second sub_step during the step.<br><br>Your simulation could "lose time" when: the number of sub_steps per step is limited AND each step takes more time to compute in the real-world than time advances in the simulation (e.g. you're trying to simulate too many things or your things are too complicated).  The reason it is recommended you limit the number of sub_steps per step is because otherwise you risk the "spiral of death" problem where the sub_steps pile up over subsequent simulations as it takes too long to keep up with real-world time flow --&gt; disaster.<br><br>The reason <strong class="text-strong">motion_state-&gt;setWorldTransform()</strong> provides a different value than <strong class="text-strong">body-&gt;getWorldTransform()</strong> is because of the aforementioned remainder accumulation between time_step and sub_step.  The MotionState will provide an world_transform that has been extrapolated forward by the remainder.  This is a convenience feature which can reduce aliasing effects (e.g. stuttering) when the render framerate is different from the simulation's sub_step framerate.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Mar 08, 2022 2:58 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[tomson0119]]></name></author>
+		<updated>2022-03-07T03:09:15+00:00</updated>
+
+		<published>2022-03-07T03:09:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43916#p43916</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43916#p43916"/>
+		<title type="html"><![CDATA[Does different time step also makes different result?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43916#p43916"><![CDATA[
+I'm currently making online racing game using bullet physics.<br><br>I'm using btDiscreteDynamicsWorld, and calls stepSimulation every update.<br>The timeStep is less than 1/60 but it will be bigger as I bulid more object.<br>I know that it may loses time if time step is bigger than fixed time step, So I gave maxSubStep parameter as 2, <div class="codebox"><p>Code: </p><pre><code>stepSimulation(timeStep, 2)</code></pre></div>This is client side.<br><br>I'm also simulating physics world in server side too. In this case, I manually set duration of physics update to 1/60.<br>So timeStep in stepSimulation is bigger than 1/60.<br><br>These two simulation has to be same, so I can synchronize positions of players.<br>But I'm afraid these may simulating different speed, and gives different result.<br>Do I something wrong about it? Should I change something? <br>By the way, Client and server are updating vehicle component based on timeSteps.<br><br>[edit]<br>I need to sync these two simulation, so if these two are not different, how to get same position of vehicle from both dynamic world.<br>I've tried, motionState-&gt;getWorldTransform, rigidbody-&gt;getWorldTransform, rigidbody-&gt;getInterpolationWorldTransform.. but it doesn't match.<br>I'm using btDefaultMotionState class.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14249">tomson0119</a> — Mon Mar 07, 2022 3:09 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

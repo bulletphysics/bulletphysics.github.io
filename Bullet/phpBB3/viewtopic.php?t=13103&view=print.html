@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Malloc error during creatiion of a soft body from a .vtk</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Malloc error during creatiion of a soft body from a .vtk</h2>
+		<p><a href="viewtopic.php%3Ft=13103.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13103</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Malloc error during creatiion of a soft body from a .vtk</h3>
+				<div class="date">Posted: <strong>Tue Nov 10, 2020 5:30 am</strong></div>
+				<div class="author">by <strong>fwegner</strong></div>
+				<div class="content">Hey guys,<br>
+<br>
+I am currently trying to simulate silicone using the pybullet soft body engine. I have noticed that the examples use .vtk files as meshes and not the .obj commonly used for rigid bodies. After further investigation I think to have understood that .vtk files, when loaded result in a volumetric mesh while .obj yield a hollow shell mesh. Can anybody here confirm this assumption? When loading soft bodies loaded from .obj they indeed behave like an inflated balloon.<br>
+<br>
+Using the python vtk API, I loaded my .obj files and saved them as .vtk. But when loading these .vtk with the following code: <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13103&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>p.connect(p.GUI)
+p.resetSimulation(p.RESET_USE_DEFORMABLE_WORLD)
+p.loadSoftBody(
+    "res/cube1.vtk", basePosition=[0,0,0.01 ], baseOrientation=p.getQuaternionFromEuler([0,0,0]), scale=1, mass=0.1)
+while True:
+    p.stepSimulation()
+</code></pre></div>
+
+pybullet crashes on stepSimulation() with:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13103&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>malloc(): invalid size (unsorted)</code></pre></div>
+
+If I load the torus.vtk from the examples, no crash occures. Therefore I assume, that my .vtk is somehow faulty.<br>
+<br>
+So tld: how to create a .vtk that can be loaded without pybullet crashing?<br>
+<br>
+Thank you in advance, any help is appreciated.<br>
+<br>
+Best,<br>
+Fred</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Malloc error during creatiion of a soft body from a .vtk</h3>
+				<div class="date">Posted: <strong>Fri Nov 13, 2020 10:15 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It could be the vtk file, can you attach (zipped) cube1.vtk?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Malloc error during creatiion of a soft body from a .vtk</h3>
+				<div class="date">Posted: <strong>Sun Nov 22, 2020 5:43 pm</strong></div>
+				<div class="author">by <strong>edwinleonil</strong></div>
+				<div class="content">Hi, I'm trying to load a VTK file to simulate a soft body (a bendable electric cable) but I'm getting this message: "Load deformable failed: Only Tetrahedra are supported in VTK file.<br>
+<br>
+I used Gmsh to generate the VTK format file but it seems that it is not pure tetrahedral mesh. Could anyone advise what is the best way to generate a VTK file for soft body simulation?   Many thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Malloc error during creatiion of a soft body from a .vtk</h3>
+				<div class="date">Posted: <strong>Mon Nov 23, 2020 11:33 am</strong></div>
+				<div class="author">by <strong>fwegner</strong></div>
+				<div class="content">I examined the .vtk and compared it to the torus.vtk from the examples that worked.<br>
+ <br>
+ 1. The cube has type POLYDATA while my torus has type UNSTRUCTURED_GRID<br>
+ 2. The cube1.vtk has version 5.1 while the torus has vtk data file version 2.0<br>
+ 3. The cube1.vtk is not a tetrahedral volumetric mesh. I triangulized it, but I did not tetrahedalize it.<br>
+<br>
+I will try to sort out these issues as they are all possible causes for the error and will post updates.<br>
+The problematic 'cube1.vtk' can be found here: <a href="https://gofile.io/d/tkJ4ue" class="postlink">https://gofile.io/d/tkJ4ue</a><br>
+<br>
+UPDATE:<br>
+I tetrahedralized my original .obj using <a href="https://github.com/Yixin-Hu/TetWild" class="postlink">https://github.com/Yixin-Hu/TetWild</a> resulting in a .msh file.<br>
+Then I used <a href="https://pypi.org/project/meshio/" class="postlink">https://pypi.org/project/meshio/</a> to convert the .msh to .vtk. The resulting .vtk was of data file version 5.1 which is indeed an issue.<br>
+I could not find any tool that would convert between different versions of the vtk data file format.<br>
+Therefore I wrote a script myself that converts from 5.1 to 2.0. Use with cation as some things are hard coded to my files.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13103&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import numpy as np
+import os
+import sys
+
+# load 5.1
+def pad_last(list_of_arrays):
+	forlast = list_of_arrays[-2]
+	last = np.zeros_like(forlast)
+	last[:len(list_of_arrays[-1])] = list_of_arrays[-1]
+	list_of_arrays[-1] = last
+	return list_of_arrays
+
+filename = sys.argv[1]
+outname = "converted".join(os.path.splitext(filename))
+with open(filename, 'r') as f:
+	points = []
+	offsets = []
+	connectivity = []
+	meta = []
+	reading_section = "meta"
+	for l in f.readlines():
+		if "POINTS" in l:
+			reading_section = "points"
+			n_points = int(l.split(" ")[1])
+			continue
+		elif "OFFSET" in l:
+			reading_section = "offsets"
+			continue
+		elif "CONNECTIVITY" in l:
+			reading_section = "connec"
+			continue
+		elif "META" in l or l == "\n":
+			reading_section = "meta"
+		if reading_section == "meta":
+			meta.append(l)
+		if reading_section == "points":
+			points.append(np.array([float(x) for x in l.split(" ") if x not in ["\n", ""]]))
+		if reading_section == "offsets":
+			offsets.append(np.array([int(x) for x in l.split(" ") if x not in ["\n", ""]]))
+		if reading_section == "connec":
+			connectivity.append(np.array([int(x) for x in l.split(" ") if x not in ["\n", ""]], dtype=np.int64))
+
+	points = pad_last(points)
+	offsets = pad_last(offsets)
+	connectivity = pad_last(connectivity)
+
+	points = np.stack(points)
+	offsets = np.stack(offsets)
+	connectivity = np.stack(connectivity)
+
+print(points.shape)
+print(offsets.shape)
+print(connectivity.shape)
+
+# convert to 2.0 format
+points = points.reshape(-1, 3)[:n_points]
+offsets = offsets.reshape(-1)
+offset = offsets[1] - offsets[0]
+cells = connectivity.reshape(-1, offset)
+cells_with_offset = np.zeros((cells.shape[0], offset+1))
+print(cells_with_offset.shape)
+cells_with_offset[:, 1:] = cells
+cells_with_offset[:, 0] = offset
+
+# write 2.0
+with open(outname, 'w') as f:
+	f.write("# vtk DataFile Version 2.0\ncustom vtk output\nASCII\nDATASET UNSTRUCTURED_GRID\n")
+	# write points
+	f.write("POINTS {} double\n".format(n_points))
+	for p in points:
+		f.write(" ".join([str(x) for x in p])+"\n")
+	f.write("\n")
+	f.write("CELLS {} {}\n".format(cells_with_offset.shape[0], cells_with_offset.shape[0] * cells_with_offset.shape[1]))
+	for c in cells_with_offset:
+		f.write(" ".join([str(int(x)) for x in c]) + "\n")
+	f.write("\n")
+	f.write("CELL_TYPES {}\n".format(cells_with_offset.shape[0]))
+	f.writelines(["10\n"]*cells_with_offset.shape[0])
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Malloc error during creatiion of a soft body from a .vtk</h3>
+				<div class="date">Posted: <strong>Wed Nov 25, 2020 8:24 pm</strong></div>
+				<div class="author">by <strong>edwinleonil</strong></div>
+				<div class="content">Hi Fred, thanks for the suggestion. I'll give it a go once more with Gmsh and let you know if I succeeded. If that doesn't work I will try your method.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

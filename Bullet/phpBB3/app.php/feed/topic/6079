@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/6079" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2011-01-21T15:02:47+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/6079</id>
+
+		<entry>
+		<author><name><![CDATA[Topher]]></name></author>
+		<updated>2011-01-21T15:02:47+00:00</updated>
+
+		<published>2011-01-21T15:02:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21828#p21828</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21828#p21828"/>
+		<title type="html"><![CDATA[Re: Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21828#p21828"><![CDATA[
+<blockquote class="uncited"><div>At the moment the only way I can see to do this is to de-serialise every time we use a bullet file associated with one of our entities. Ideally we'd like to only load unique files once and instance the shapes from this de-serialised data for performance. I can't think of a way to do this at the moment because I assume bullet shapes and compound shapes are all linked up via pointers and so on, not owning the data itself.<br><br>Am I going about this the wrong way?</div></blockquote>Would really like to get an answer/suggestion for this. We're implementing projectiles now and this issue has become a problem for us going forward. Any ideas?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7485">Topher</a> — Fri Jan 21, 2011 3:02 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Topher]]></name></author>
+		<updated>2010-12-21T14:20:55+00:00</updated>
+
+		<published>2010-12-21T14:20:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21471#p21471</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21471#p21471"/>
+		<title type="html"><![CDATA[Re: Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21471#p21471"><![CDATA[
+Sorry I didn't get back sooner, we had a shift in the schedule and then I was on holiday <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>I've looked into this some more after reading your comments...<br><blockquote class="uncited"><div>You should be able to export/serialize a single collision object with its shape into its own .bullet file.<br><br>Both should be possible. It is called: export all or export selection.</div></blockquote>I believe initially I was confused because it was exporting (serialising really) a bullet world, including rigid bodies. I ideally just wanted all the shapes, however I realise now this is just as good as my current method is to loop through all rigid bodies, take their shape and transform then add that shape to a compound shape for our object using the .bullet file.<br><br>Essentially this:<div class="codebox"><p>Code: </p><pre><code>// Import shapebtBulletWorldImporter lImporter(0);cScratchFile lFile( lpcCollisionFile );mpBulletSerialisedData = (U8*)lpPartition-&gt;Alloc( lFile.GetSize() );memcpy( mpBulletSerialisedData, lFile.GetBuffer(), lFile.GetSize() );lImporter.loadFileFromMemory( (char*)mpBulletSerialisedData, lFile.GetSize() );// Get imported shapempShape = new(lpPartition-&gt;Alloc( sizeof( btCompoundShape ) ) ) btCompoundShape();for( S32 i = 0; i &lt; lImporter.getNumRigidBodies(); ++i ){    btCollisionObject* lpRigidBody = lImporter.getRigidBodyByIndex(i);    ASSERT(lpRigidBody);    btCollisionShape* lpCollisionShape = lpRigidBody-&gt;getCollisionShape();    ASSERT(lpCollisionShape);    btTransform lLocalTransform = lpRigidBody-&gt;getWorldTransform();    ((btCompoundShape*)mpShape)-&gt;addChildShape( lLocalTransform, lpCollisionShape );}// Define rigidbody and add the compound shape...</code></pre></div><blockquote class="uncited"><div>When you use the btBulletWorldImporter, it will create instances for btCollisionShape. You can instance and re-use those btCollisionShape as many times as you like.</div></blockquote>At the moment the only way I can see to do this is to de-serialise every time we use a bullet file associated with one of our entities. Ideally we'd like to only load unique files once and instance the shapes from this de-serialised data for performance. I can't think of a way to do this at the moment because I assume bullet shapes and compound shapes are all linked up via pointers and so on, not owning the data itself.<br><br>Am I going about this the wrong way?<br><br>Additionally this is another issue for scaling. Our designers and artists can apply scales to our entities that is then applied to any renderables contained within, we'd like this to also apply to the shapes in the bullet file without requiring them to create a new bullet file (we've got a sort of prefab system going on creating instances in an editor).<br><br>With my current understanding the only way to solve this I can see is to have a buffer of the de-serialised data per instance, which also requires de-serialising every time it is instanced.<br><br>Cheers!<br>Christopher<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7485">Topher</a> — Tue Dec 21, 2010 2:20 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2010-12-06T18:42:30+00:00</updated>
+
+		<published>2010-12-06T18:42:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21232#p21232</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21232#p21232"/>
+		<title type="html"><![CDATA[Re: Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21232#p21232"><![CDATA[
+<blockquote class="uncited"><div>I've recently added Bullet to our in-house engine but at present for shapes I've got everything using the same .bullet file I created with the serialiser. I'm curious what a typical or expected pipeline for artists to define the collision shape of a model would be for most people, or how I could make use of dynamica to help this.</div></blockquote>You should be able to export/serialize a single collision object with its shape into its own .bullet file.<blockquote class="uncited"><div>- Is dynamica's bullet export suppose to be used for defining the collision shapes of models, or is it purely for loading an entire bullet world?</div></blockquote>Both should be possible. It is called: export all or export selection.<blockquote class="uncited"><div>- Is there a way to instance shapes from a bullet file rather than just point to the data buffer of the file? For example if we want multiple instances of the same object using the same bullet file, however with different scale values on each instance of the shape. Is the only real solution to load the file into multiple separate buffers?</div></blockquote>When you use the btBulletWorldImporter, it will create instances for btCollisionShape. You can instance and re-use those btCollisionShape as many times as you like.<blockquote class="uncited"><div>- Why does the dynamica bullet export produce a world with lots of shapes and rigidy bodies? If I serialise my own shape for testing, I can serialise just a shape. Dynamica seems to export a lot more than just my current selection.</div></blockquote>Not sure what is happening. Which extra shapes are created? For a btConvexHullShape, Dynamica creates a btCompoundShape for a local offset. We could add an option to disable this.<br>It could help if you attach a zipped Maya .mb and .bullet file, so we can discuss it more in detail.<br><br>.bullet serialization should be the way to go. If there are issues, we can sort them out.<br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Dec 06, 2010 6:42 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Topher]]></name></author>
+		<updated>2010-12-06T14:39:40+00:00</updated>
+
+		<published>2010-12-06T14:39:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21227#p21227</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21227#p21227"/>
+		<title type="html"><![CDATA[Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21227#p21227"><![CDATA[
+Hi,<br><br>I've recently added Bullet to our in-house engine but at present for shapes I've got everything using the same .bullet file I created with the serialiser. I'm curious what a typical or expected pipeline for artists to define the collision shape of a model would be for most people, or how I could make use of dynamica to help this. Our alternative is to create shapes in code with our own defined data exported from Maya for each model, which just seems like a duplication of work if the serialisation features are there.<br><br>- Is dynamica's bullet export suppose to be used for defining the collision shapes of models, or is it purely for loading an entire bullet world?<br><br>- Is there a way to instance shapes from a bullet file rather than just point to the data buffer of the file? For example if we want multiple instances of the same object using the same bullet file, however with different scale values on each instance of the shape. Is the only real solution to load the file into multiple separate buffers?<br><br>- Why does the dynamica bullet export produce a world with lots of shapes and rigidy bodies? If I serialise my own shape for testing, I can serialise just a shape. Dynamica seems to export a lot more than just my current selection.<br><br>- If .bullet serial files and dynamica are not the way to go, what is recommended?<br><br>Thanks in advance!<br>- Christopher<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7485">Topher</a> — Mon Dec 06, 2010 2:39 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

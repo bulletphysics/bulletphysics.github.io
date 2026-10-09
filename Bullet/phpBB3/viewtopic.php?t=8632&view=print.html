@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How is the Persistent Manifold Area computed in Bullet ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How is the Persistent Manifold Area computed in Bullet ?</h2>
+		<p><a href="viewtopic.php%3Ft=8632.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8632</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How is the Persistent Manifold Area computed in Bullet ?</h3>
+				<div class="date">Posted: <strong>Fri Nov 30, 2012 12:46 pm</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I am studying the implementation of the persistent contact manifold in Bullet in the file <a href="http://code.google.com/p/bullet/source/browse/trunk/src/BulletCollision/NarrowPhaseCollision/btPersistentManifold.cpp" class="postlink">btPersistentManifold.cpp</a>.<br>
+<br>
+At some point, if the contact cache is full, we want to keep the new contact point, the contact point with the deepest penetration depth and then, we choose the points that maximize the area of the manifold. As we can see in the btPersistentManifold::sortCachedPoints() method, the magnitude of the cross product is used to compute an area. For instance, we have the following code :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8632&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> if (maxPenetrationIndex != 0)
+ {
+      btVector3 a0 = pt.m_localPointA-m_pointCache[1].m_localPointA;
+      btVector3 b0 = m_pointCache[3].m_localPointA-m_pointCache[2].m_localPointA;
+      btVector3 cross = a0.cross(b0);
+      res0 = cross.length2();
+}
+</code></pre></div>
+
+According to me, we can use the cross product magnitude to compute the area of a triangle ABC using the cross product AB^AC. However, in the above code, we have four different points ABCD and we compute the cross product AB^CD. What kind of area this gives us ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How is the Persistent Manifold Area computed in Bullet ?</h3>
+				<div class="date">Posted: <strong>Fri Nov 30, 2012 4:58 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I would guess this is the area of a convex quadrilateral. See here under "vector formulas":<br>
+<a href="http://en.wikipedia.org/wiki/Quadrilateral" class="postlink">http://en.wikipedia.org/wiki/Quadrilateral</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How is the Persistent Manifold Area computed in Bullet ?</h3>
+				<div class="date">Posted: <strong>Sun Dec 02, 2012 7:11 pm</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content">Thanks a lot for your answer, I didn't know this formula.<br>
+<br>
+According to the Wikipedia page, this formula is used to compute the area of a convex quadrilateral ABCD using the cross product AC^BD where AC and BD are the two diagonals of the quadrilateral. However, I am not sure I understand why we are allowed to use this formula in the case of the contact manifold because we don't know if the quadrilateral is convex and we don't know which points to use for the diagonals. Am I missing something here ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How is the Persistent Manifold Area computed in Bullet ?</h3>
+				<div class="date">Posted: <strong>Mon Dec 03, 2012 6:04 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I totally agree. This is exactly the same conclusion I made when I looked into this code. My guess was that the construction adds the points in such a way that the formula will work, but I never verified this. You can simply add an assert there. Build the cross product between the main diagonal and the manifold normal and check if the two two other points are on different sides. If this triggers there might be a potential bug.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How is the Persistent Manifold Area computed in Bullet ?</h3>
+				<div class="date">Posted: <strong>Tue Dec 04, 2012 6:52 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Indeed, it is only a heuristic to maximize the area under the convex hull of the points,<br>
+it is not the actual area under the quadrilateral so it might not always be the optimal solution.<br>
+<br>
+There is a better way to compute the maximal area of the convex hull, see gContactCalcArea3Points and calcArea4Points,<br>
+but it is slower and I didn't notice improvement so I left it disabled.<br>
+<a href="https://code.google.com/p/bullet/source/browse/trunk/src/BulletCollision/NarrowPhaseCollision/btPersistentManifold.cpp" class="postlink">https://code.google.com/p/bullet/source ... nifold.cpp</a><br>
+<br>
+If you have improvements, please let me know (in the Bullet forum, not general discussion)<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

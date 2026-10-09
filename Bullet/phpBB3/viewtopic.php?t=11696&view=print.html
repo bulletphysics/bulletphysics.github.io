@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; What is the meaning of parameter Kcfm  in PGS Formulation?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>What is the meaning of parameter Kcfm  in PGS Formulation?</h2>
+		<p><a href="viewtopic.php%3Ft=11696.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11696</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>What is the meaning of parameter Kcfm  in PGS Formulation?</h3>
+				<div class="date">Posted: <strong>Wed May 17, 2017 3:11 am</strong></div>
+				<div class="author">by <strong>Jack2016</strong></div>
+				<div class="content">I read K.Erlenben book &lt;&lt;Stable,Robust And Verstile&gt;&gt; Chapter 6  to learn the PGS in Bullet<br>
+<img src="https://pic3.zhimg.com/v2-5d4c969b50737691ca85e915627f154a_b.png" class="postimage" alt="Image"><br>
+<br>
+<img src="download/file.php%3Fid=1348" class="postimage" alt="Image"><br>
+When I see the src code in Bullet, I think the Result of the Equation is the Constraint Force Fc*deltaT = dP (delta Impulse).<br>
+But I can't understand the param 'Kcfm' in the formulation above,constraint force mixing,it's a diagonal matrix in vector form<br>
+Which paper is about 'Kcfm'?<br>
+<br>
+<img src="https://pic1.zhimg.com/v2-02b75daf555ab5ed5b13b13b80eea77c_b.png" class="postimage" alt="Image"><br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11696&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	void tbSequentialImpulseConstraintSolver::ResolveSingleConstraintRowLowerLimit(tbSolverBody&amp; body1, tbSolverBody&amp; body2, const tbSolverConstraint&amp; c)
+	{
+		tbScalar deltaImpulse = c.m_rhs - tbScalar(c.m_appliedImpulse)*c.m_cfm;
+		const tbScalar deltaVel1Dotn = c.m_contactNormal.Dot(body1.m_deltaLinearVelocity) + c.m_relpos1CrossNormal.Dot(body1.m_deltaAngularVelocity);
+		const tbScalar deltaVel2Dotn = -c.m_contactNormal.Dot(body2.m_deltaLinearVelocity) + c.m_relpos2CrossNormal.Dot(body2.m_deltaAngularVelocity);
+
+		deltaImpulse -= deltaVel1Dotn*c.m_jacDiagABInv;
+		deltaImpulse -= deltaVel2Dotn*c.m_jacDiagABInv;
+
+		const tbScalar sum = tbScalar(c.m_appliedImpulse) + deltaImpulse;
+		if (sum &lt; c.m_lowerLimit)
+		{
+			deltaImpulse = c.m_lowerLimit - c.m_appliedImpulse;
+			c.m_appliedImpulse = c.m_lowerLimit;
+		}
+		else
+		{
+			c.m_appliedImpulse = sum;
+		}
+
+		if (body1.m_invMass &gt; tbScalar(0.))
+			body1.ApplyImpulse(c.m_contactNormal*body1.m_invMass, c.m_angularComponentA, deltaImpulse);
+		if (body2.m_invMass &gt; tbScalar(0.))
+			body2.ApplyImpulse(-c.m_contactNormal*body2.m_invMass, c.m_angularComponentB, deltaImpulse);
+	}</code></pre></div>
+
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11696&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>tbScalar restitution = 0.f;
+tbScalar positionalError = solverConstraint.m_rhs;//already filled in by getConstraintInfo2
+tbScalar	velocityError = restitution - rel_vel;// * damping;
+tbScalar	penetrationImpulse = positionalError*solverConstraint.m_jacDiagABInv;
+tbScalar	velocityImpulse = velocityError *solverConstraint.m_jacDiagABInv;
+solverConstraint.m_rhs = penetrationImpulse + velocityImpulse;
+solverConstraint.m_appliedImpulse = 0.f;</code></pre></div>
+
+In the Formulation above,I'm clear about the posErr and velocityErr,But Berror doesn't have the param 'restitution',<br>
+so what's the meaning of 'restitution' and which paper is about it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is the meaning of parameter Kcfm  in PGS Formulatio</h3>
+				<div class="date">Posted: <strong>Thu May 18, 2017 7:49 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><a href="http://box2d.org/files/GDC2011/GDC2011_Catto_Erin_Soft_Constraints.pdf" class="postlink">http://box2d.org/files/GDC2011/GDC2011_ ... raints.pdf</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is the meaning of parameter Kcfm  in PGS Formulatio</h3>
+				<div class="date">Posted: <strong>Fri May 19, 2017 4:48 am</strong></div>
+				<div class="author">by <strong>Jack2016</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite><a href="http://box2d.org/files/GDC2011/GDC2011_Catto_Erin_Soft_Constraints.pdf" class="postlink">http://box2d.org/files/GDC2011/GDC2011_ ... raints.pdf</a></div></blockquote>
+
+Thanks, Drik<br>
+<br>
+The Paper &lt;&lt;Soft Constraints&gt;&gt; by Erin is very helpful to me.<br>
+<br>
+I also find the entire derivation about softness post by Erin <a href="viewtopic.php%3Ft=1354.html" class="postlink">https://bulletphysics.org/Bullet/phpBB3 ... f=4&amp;t=1354</a><br>
+<br>
+v2new = v2damaged + invM * JT * dP <br>
+J * (v2damaged + invM * JT * dP) + softness * P + softness * dP + bias = 0 <br>
+<br>
+(J * invM * JT + softness) * dP = -(J * v2damaged + softness * P + bias)<br>
+<br>
+the softness is CFM<br>
+<br>
+But I'm still not clear about the parameter 'restitution' which is about damping.<br>
+'restitution' is not in the Formula above,any one can make it clear ? thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is the meaning of parameter Kcfm  in PGS Formulatio</h3>
+				<div class="date">Posted: <strong>Fri May 19, 2017 5:27 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">This might be unrelated to the soft parameters. Normally we solve for a relative velocity of zero at a contact point or limit, but you can also imagine to solve to revert some of the approaching velocity to model bouncy contacts (e.g. a ball) or limits.<br>
+<br>
+<a href="https://en.wikipedia.org/wiki/Coefficient_of_restitution" class="postlink">https://en.wikipedia.org/wiki/Coefficie ... estitution</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Box falls on its edge. It doesn't come to rest on its face</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Box falls on its edge. It doesn't come to rest on its face</h2>
+		<p><a href="viewtopic.php%3Ft=1003.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1003</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Box falls on its edge. It doesn't come to rest on its face</h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2007 8:10 pm</strong></div>
+				<div class="author">by <strong>sridhar</strong></div>
+				<div class="content">Hi,<br>
+<br>
+In my application, i have modelled a simple cube as a BOX-PROXY_SHAPE and am using discrete dynamics. The cube falls under gravity on a groundplane and doesnt come to rest on its face.<br>
+<br>
+I tried implementing this by using the ccdphysicsdemo application as my guideline.<br>
+<br>
+The cube comes to rest with its edge in contact with the gorundplane....and not the face. So the simulation is not realistic.<br>
+<br>
+<br>
+Kindly help me in this regard.<br>
+<br>
+Thanx,<br>
+Sridhar.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2007 8:24 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Well in a perfect mathematical world if you drop a box on the edge it comes indeed to rest on the edge.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2007 9:37 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">... assuming the CG is directly above the edge, yes?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2007 9:45 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">yes, otherwise you introduce of course a torque and the box will come to rest on its side</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2007 10:33 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">This is a 'Bullet' specific topic, so I moved it to the Bullet section.<br>
+<br>
+Can you reproduce this in the CcdPhysicsDemo? Do you have any screenshot, or a movie of your simulation?<br>
+<br>
+Is the object deactivated when at rest? Please try to press 'd' to disable sleeping to see what happens.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2007 11:11 pm</strong></div>
+				<div class="author">by <strong>sridhar</strong></div>
+				<div class="content">yes.....the Center of gravity(CG) is not above the edge of the box. Even then it rests on the edge, instead of resting on one of the 6 faces of a cube.<br>
+<br>
+I tried to drop the box such that it makes a point contact with the groud plane. Even then immediately after making the contact, it doesnt topple and doesnt come to rest on one of the faces.<br>
+<br>
+I checked the ccdphysics demo, in that demo, the boxes come to rest on one of the faces. <br>
+<br>
+This is my code,<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1003&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+btCollisionShape* boxShape = new btBoxShape(btVector3((M.x-m.x)*0.5f, (M.y-m.y)*0.5f, (M.z-m.z)*0.5f)); //need to give btVector3 of halfExtents
+					boxShape-&gt;setMargin(gCollisionMargin);
+					s = mObjMgr-&gt;ObjInstances[i]-&gt;Scale;
+					boxShape-&gt;setLocalScaling(btVector3(s, s, s));
+
+
+btRigidBody* BTWorld::LocalCreateRigidBody(float mass, const btTransform&amp; startTransform, btCollisionShape* shape)
+{
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0,0,0);
+	if (isDynamic)
+		shape-&gt;calculateLocalInertia(mass,localInertia);
+	
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+	//btMotionState allows the dynamics world to synchronize the updated world transforms with graphics objects
+
+//#define USE_MOTIONSTATE 1
+//#ifdef USE_MOTIONSTATE
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	myMotionState-&gt;setWorldTransform(startTransform);
+	btRigidBody* body = new btRigidBody(mass,myMotionState,shape,localInertia);
+	body-&gt;setCenterOfMassTransform(startTransform);
+//#else
+//	btRigidBody* body = new btRigidBody(mass,startTransform,shape,localInertia);	
+//#endif
+
+assert(mDynamicsWorld);
+assert(body);
+	mDynamicsWorld-&gt;addRigidBody(body);
+
+	return body;
+}</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

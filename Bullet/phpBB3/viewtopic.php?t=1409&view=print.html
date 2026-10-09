@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; MetaPhysics (2D PBD-based rigid bodies)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>MetaPhysics (2D PBD-based rigid bodies)</h2>
+		<p><a href="viewtopic.php%3Ft=1409.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1409</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>MetaPhysics (2D PBD-based rigid bodies)</h3>
+				<div class="date">Posted: <strong>Sun Aug 19, 2007 9:43 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">Hey,<br>
+We've finally updated our blog with demos of our simulator: <br>
+<a href="http://www.metanetsoftware.com/blog/?p=23" class="postlink">http://www.metanetsoftware.com/blog/?p=23</a><br>
+<a href="http://www.metanetsoftware.com/robotology/prototypes/metaphysics_demo/metaphys01.html" class="postlink">http://www.metanetsoftware.com/robotolo ... hys01.html</a><br>
+<br>
+Right now it's not that impressive; we have lots of other stuff working (collision/friction/motors) however we haven't had time to make decent test-scenes. Soon hopefully..<br>
+<br>
+There is also a lot that remains to be done in terms of design -- the biggest benefit of this approach IMHO is the generality afforded by it.. you can plug together all sorts of different "degrees of freedom", for instance connecting the orientation of bodyA to the distance of a point on bodyB measured along a polyline anchored to bodyC; as B moves relative to C, A will rotate. Sadly we're not experienced enough at software engineering to have properly figured this all out yet, so for now things are more or less limited to the standard rigid-body types of constraints.<br>
+<br>
+In a month or so when we have more time to work on it, we'll be posting more demos including some robotics-related stuff.<br>
+<br>
+Thanks,<br>
+raigan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 20, 2007 11:29 am</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">Very nice.<br>
+<br>
+I've been reading thru these papers. Interesting stuff. One piece I'm not clear on for rigid bodies is how moment of intertia is handled when everything is basically just a bunch of connected points that get re-positioned every frame.<br>
+<br>
+I'm not done with the papers yet so maybe it's in there....<br>
+<br>
+Anyway, very nice work.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 20, 2007 3:28 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">Moment of inertia is definitely the most "ad-hoc" aspect of our simulation, as the dynamics model for each body is a single stick -- which means that the mass distribution will always be symmetrical (reflected across the stick axis).<br>
+<br>
+In practice we just use a stick that's as long as the longest body dimension, it seems to feel fairly natural -- if anyone knows of how to calculate this properly, it would be great.. so far we're just using the stick length to model moment of inertia.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 20, 2007 4:47 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">I don't have a good answer, but it seems like something that could be pre-computed (an estimate anyway) using the vertex points and the assumption that mass is evenly distributted.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Aug 31, 2007 3:27 am</strong></div>
+				<div class="author">by <strong>slembcke</strong></div>
+				<div class="content">You just want to find the moment of inertia for a 2D polygon? That's really easy actually. <br>
+<br>
+Here's how I do it in Chipmunk (cpMomentForPoly):<br>
+<a href="http://aerosol.googlecode.com/svn/trunk/Chipmunk/src/chipmunk.c" class="postlink">http://aerosol.googlecode.com/svn/trunk ... chipmunk.c</a><br>
+<br>
+I'll see if I can dig up a link with the original equation.<br>
+<br>
+edit: Wikipedia is always a good choice. <a href="http://en.wikipedia.org/wiki/List_of_moments_of_inertia" class="postlink">http://en.wikipedia.org/wiki/List_of_moments_of_inertia</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Aug 31, 2007 4:10 am</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">what's needed is, given the moment of inertia of a polygon, find two particle positions which give the same moment of inertia. <br>
+<br>
+i guess this is pretty obvious in hindsight -- it's just really underconstrained.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Aug 31, 2007 5:26 am</strong></div>
+				<div class="author">by <strong>oztune</strong></div>
+				<div class="content">What if you solve this problem by setting up a constraint and solving it with the method presented in the pbd paper?<br>
+<br>
+something like<br>
+<br>
+c(p1,p2) = [moment of intertia of the line] - [moi of polygon]<br>
+<br>
+just an idea.. what do you think? can the moi of a line ever match that of a polygon?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Aug 31, 2007 2:05 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I might be confused, but since it's just a scalar in 2D, it doesn't encode mass distribution at all -- just the "angular mass" (amount that the body will resist torque). <br>
+<br>
+Which means it should be possible to model the center-of-mass and moment-of-inertia exactly with two particles -- just make sure that their COM is located on the polygon's COM, and that their moment of inertia is identical -- which is just a case of finding the correct distance from the COM to the particles. The actual orientation of the stick is arbitrary/irrelevant. At least, as far as i can determine.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: MetaPhysics (2D PBD-based rigid bodies)</h3>
+				<div class="date">Posted: <strong>Fri Sep 07, 2007 9:41 am</strong></div>
+				<div class="author">by <strong>Olivier_uk</strong></div>
+				<div class="content">I have toyed around the idea, what always gets me is how big to make the basis  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_confused.gif" width="15" height="15" alt=":?" title="Confused">  Similarly, if you use a triangle - tetrahedron, how to define it's shape and size? This will obviously affect the moment of inertia perceived. I like the solution, but it has shortcomings and is a bit fuzzy round the edges (friction being a pain). Most of the behaviour is emergent, and that's not really useful for 'realism' and controlling the outcome. Why is nothing SIMPLE!<br>
+<br>
+Also, in 3D, there is the problem of collision detection. You will be working with more than just vertices and faces, for the edge-edge case, I am not too sure if the collision should effect on the  end vertices of the edge, or generate a constraint at the collision point on the edges, which will require you to recompute the barycentric coordinates of the collision point. How expensive is that? How much of a difference will it make? <br>
+<br>
+At the moment, the best solution, in my view is to deal with segment-face collisions alone, then you can classify collisions as point-face, and edge-edge really easily (if the segment crosses the two faces connected by an edge -&gt; edge-edge!), and apply the solver on the collision points, even if it means re-calculating the barycentric coordinates. <br>
+<br>
+Plus, there is the problem of collisions working through intersection and interference. I'm still thinking on how this would work with a swept test. It can also be very costly computationaly, if you want stiffness. <br>
+<br>
+In any case, it's all part of the fun, an it's great from you to share your wealth like that. Ain't the Internet awesome! <img class="smilies" src="images/smilies/icon_mrgreen.gif" width="15" height="15" alt=":mrgreen:" title="Mr. Green"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

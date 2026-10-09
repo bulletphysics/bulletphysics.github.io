@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; trouble with 3D split impulses</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>trouble with 3D split impulses</h2>
+		<p><a href="viewtopic.php%3Ft=1065.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1065</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>trouble with 3D split impulses</h3>
+				<div class="date">Posted: <strong>Sun Mar 18, 2007 5:46 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">I have a working 3D version of sequential impulses. I can have 10 cubes stacked directly on top of each<br>
+other be stable with only 10 iterations. This is with a erp = 0.2 * fps (fps = 60). I have started<br>
+to experiment with splitting the penetration depth correction impulses and I'm not getting good results.<br>
+The simulation becomes very jittery with the cubes tilting back and forth and settling into each other. <br>
+The instability seems to be coming from the angular movement. Has anyone experienced these kinds of<br>
+problems with 3D split impulses. Bullet doesn't use split impulses, is this just not implemented or<br>
+was it found to be problematic? I'm going to post my pseudo code below if anyone notices a problem.<br>
+<br>
+<br>
+<strong class="text-strong">PreImpulse:</strong>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1065&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bias_normal_lambda = 0.0;
+B = depth - DEPTH_SLOP;
+B = B &lt; 0.0 ? 0.0 : B;
+P = J * accumulated_normal_lambda
+apply P
+</code></pre></div>
+
+<strong class="text-strong">Impulse:</strong><br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1065&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>V = non-bias-velocity of both bodies
+lambda = K^-1 * (-( J * v))
+old_lambda = accumulated_normal_lambda
+accumulated_normal_lambda += lambda
+accumulated_normal_lambda = accumulated_normal_lambda &lt; 0.0 ? 0.0 : accumulated_normal_lambda
+lambda = accumulated_normal_lambda - old_lambda
+
+P = J * lambda
+apply P to non-bias velocity
+
+V = bias-velocity of both bodies
+bias_lambda = K^-1 * (-(J * V) + erp * B)
+
+old_bias_lambda = bias_normal_lambda
+bias_normal_lambda += bias_lambda
+bias_normal_lambda = bias_normal_lambda &lt; 0.0 ? 0.0 : bias_normal_lambda
+bias_lambda = bias_normal_lambda - old_bias_lambda
+
+P = J * bias_lambda
+apply P to bias velocity
+</code></pre></div>
+
+<strong class="text-strong">Position Integration code:</strong>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1065&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>lv = linear_velocity + bias_linear_velocity
+av = angular_velocity + bias_angular_velocity
+...
+bias_linear_velocity = 0.0
+bias_angular_velocity = 0.0
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Mar 18, 2007 6:59 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">When you split the impulse you basically have<br>
+<br>
+Velocity impulse:<br>
+P = -invK * (J * v)<br>
+<br>
+Position impulse:<br>
+P = -invK * 0.1 * C / dt<br>
+<br>
+When you use Baumgarte stabilization you combine the relative velocity at the joint (J * v) with the position error at the joint ( C ). This effects the momentum. What you want is that the stabilization doesn't effect the momentum so you cirvcumvent this by splitting up the impulse into a velocity correcting and (pseudo) position correcting impulse. Note that from experience the splitted impulse seems only to work nice with contacts, but not with joints. <br>
+<br>
+Another thing to understand is that the position constraint is non-linear ( e.g. C = u1 * v2 ) so when you add the bias tem 0.1 * C / dt you linearize the position constraint what opens the door to inaccurecies.<br>
+<br>
+Hmm, from skimming over your code I can't see the error, maybe only a sign. Did you try -erp * B?<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 19, 2007 12:07 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Be sure to initialize the bias impulses and velocities to zero before each time step. Test the solver with a sphere on a plane and look at the values in the debugger.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 19, 2007 12:26 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Re Dirk:<br>
+I don't think it's a sign issue because I'm using the same signs as I do when I'm not using splitting.<br>
+<br>
+Re Erin:<br>
+I am setting the bias impulse to zero in <strong class="text-strong">PreImpulse</strong> and I'm setting<br>
+the velocities to zero in <strong class="text-strong">Position Integration</strong>.<br>
+<br>
+Any other suggestions guys? I'm really baffled.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 19, 2007 10:14 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Conceptually it looks correct what you do, so the only thing I can think of is that you forget to clear the velocities or impulses. Maybe a typo somewhere or you mix accidently the bias impulse with the normal impulse. I would say that it is something trivial that you maybe overlook at the moment...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 21, 2007 1:26 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">I found the problem, and it had nothing to do with my code. My body space inverse inertia tensor was wrong. I used the closed form solution for the diagonal inertia tensor for a cube, but I forgot to scale by the mass before inverting it. So the angular impulses weren't being scaled properly.<br>
+<br>
+<br>
+Also, I found upping the depth slop from 0.01 to 0.1 had a huge impact.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

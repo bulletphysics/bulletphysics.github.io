@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Why is the constraint error scaled by the FPS?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Why is the constraint error scaled by the FPS?</h2>
+		<p><a href="viewtopic.php%3Ft=9519.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9519</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Why is the constraint error scaled by the FPS?</h3>
+				<div class="date">Posted: <strong>Sun Nov 03, 2013 11:14 am</strong></div>
+				<div class="author">by <strong>structinf</strong></div>
+				<div class="content">Literally, every physics engine I have seen scales the constraint error by the FPS (1.0 / dt).<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9519&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btScalar k = info-&gt;fps * info-&gt;erp;
+...
+info-&gt;m_constraintError[i * skip] = k * (pivotBInW[i] - pivotAInW[i]);
+</code></pre></div>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9519&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>dReal k = info-&gt;fps * erp;
+info-&gt;c[0] = k*j-&gt;contact.geom.depth;
+</code></pre></div>
+However, from what I understand, the constraint error should be directly proportional to the time step. So, instead of k = fps * erp, k = dt * erp.<br>
+<br>
+What am I missing here?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why is the constraint error scaled by the FPS?</h3>
+				<div class="date">Posted: <strong>Tue Nov 05, 2013 6:31 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">The bias term is a function of position and time. It is my understanding that the constraint error will decay over time if and only if your baumgarte term is as such: 0 &lt; baumgarte &lt; 2 / dt. The function oscillates, and as such will be over damped if baumgarte is less than 1 / dt.<br>
+<br>
+You don't want your solution to converge with an oscillation, you want it to converge smoothly going straight towards the solution. As to why the bias isn't critically damped I imagine is because of the nature of an iterative solver: each constraint is solved in isolation and can affect the results of previously solved constraints.<br>
+<br>
+As such I suppose it would be "safer" to over-damp your function in order to avoid the chance of oscillation. This is why you scale by the frequency of timestepping, and then go a little lower with the baumgarte term. This makes sense and explains, at least to me, why baumgarte converges with a horrid looking oscillation once error gets too large.<br>
+<br>
+I say all of this with the disclaimer that I'm not totally sure if this is correct info, just my current understanding.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why is the constraint error scaled by the FPS?</h3>
+				<div class="date">Posted: <strong>Wed Nov 06, 2013 7:08 pm</strong></div>
+				<div class="author">by <strong>structinf</strong></div>
+				<div class="content">That actually made sense. Thank you!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

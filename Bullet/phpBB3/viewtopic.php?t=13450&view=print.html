@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Visualizing multiple bullet server instances using PyBullet</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Visualizing multiple bullet server instances using PyBullet</h2>
+		<p><a href="viewtopic.php%3Ft=13450.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13450</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Visualizing multiple bullet server instances using PyBullet</h3>
+				<div class="date">Posted: <strong>Mon Jun 27, 2022 1:13 pm</strong></div>
+				<div class="author">by <strong>mkale96</strong></div>
+				<div class="content">Hi, I'd like to spawn multiple instances of the physics server, send them some geometry, start them and then combine their output in a single rendering window. Note that the geometry on "worker" servers might not be the same.<br>
+I'm trying to repurpose the existing 3D rendering infrastructure that pyBullet provides. Here's what I'm trying to do so far:<br>
+<br>
+I'm currently looking into the saveBullet() and restoreState() methods to do this (spawning only 1 worker server for simplicity):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13450&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet_utils.bullet_client as bc
+import pybullet as p
+import pybullet_data
+import time
+STATE_FILE = 'state.bullet'
+
+def setupServer(handle):
+    handle.setAdditionalSearchPath(pybullet_data.getDataPath())
+    handle.setPhysicsEngineParameter(deterministicOverlappingPairs=1)
+
+    startOrientation = handle.getQuaternionFromEuler([0, 0, 0])
+    handle.loadURDF("r2d2.urdf", [0, 0, 1], startOrientation)
+    handle.loadURDF("plane.urdf")
+    handle.setGravity(0, 0, -10)
+
+p1 = bc.BulletClient(connection_mode=p.DIRECT)
+setupServer(p1)
+
+pgui = bc.BulletClient(connection_mode=p.GUI)
+#setupServer(pgui)
+
+while 1:
+    p1.stepSimulation()
+
+    p1.saveBullet(STATE_FILE)
+    pgui.restoreState(fileName=STATE_FILE)
+
+    pgui.stepSimulation()
+
+    time.sleep(1. / 240.)
+</code></pre></div>
+Which gives me the error:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13450&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Traceback (most recent call last):
+  File "C:\Users\m84241864\Desktop\projects\bullet\python\multi_server.py", line 43, in &lt;module&gt;
+    pgui.restoreState(fileName=STATE_FILE)
+pybullet.error: Couldn't restore state.
+</code></pre></div>
+If I load the same geometry as p1 in pgui, I don't get the error. However, I do want p1, p2... to have different geometries and pgui to render all of them. How should I do this? If this is not supported OOTB, I don't mind changing the C++ source code. Some pointers on where to start would be very helpful. Thanks!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

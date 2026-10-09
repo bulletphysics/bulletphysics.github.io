@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Applying custom position based constraints in physics engine</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Applying custom position based constraints in physics engine</h2>
+		<p><a href="viewtopic.php%3Ft=11311.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11311</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Applying custom position based constraints in physics engine</h3>
+				<div class="date">Posted: <strong>Fri Aug 26, 2016 9:01 am</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">Hi, <br>
+<br>
+I need to apply my custom position based constraints (for elastic rod) on a chain of rigidbodies in Unity, which uses PhysX underneath (but the problem concerns any physics engine really). <br>
+To keep things simple let say that I want to apply a simple distance constraint between positions of two rigid bodies governed by PhysX.<br>
+In my PBD framework I predict positions using Explicit Euler integration, then apply constraints to these predicted positions, I update velocity (predictedPositions - positions) / dt, followed by positions = predictedPositions.<br>
+<br>
+The question is how to do the positions and velocity update when the numerical integration is held by PhysX or Bullet or any other physics engine?<br>
+Just to add that the PhysX API is not fully exposed. I can modify things only between full physics update.<br>
+<br>
+I have tried something like this. The constraints are very sloppy, as in my opinion, the momentum is not considered (there is no prediction step)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11311&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                
+            //copy positions from the physics engine
+            for (int i = 0; i &lt; pointsCount; i++)
+                m_predPositions[i] = m_rigidbodies[i].position;
+            
+            //modify predicted position
+            for (int si = 0; si &lt; solverIterations; si++)
+                ProjectDistanceConstraints(m_predPositions[i]);
+            
+            //apply changes back to the engine
+            for (int i = 0; i &lt; pointsCount; i++)
+            {
+                m_rigidbodies[i].velocity = (m_predPositions[i] - m_rigidbodies[i].position) * dtInv;
+                m_rigidbodies[i].position = m_predPositions[i];
+            }
+</code></pre></div>
+
+I have also tried something like below, but this yields weird results (way to stiff and unstable)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11311&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                
+                m_rigidbodies[i].AddForce((m_predPositions[i] - m_rigidbodies[i].position) * dtInv, ForceMode.VelocityChange);
+                m_rigidbodies[i].position = m_predPositions[i];
+</code></pre></div>
+
+Thanks a lot</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Applying custom position based constraints in physics en</h3>
+				<div class="date">Posted: <strong>Fri Aug 26, 2016 11:24 am</strong></div>
+				<div class="author">by <strong>korzen303</strong></div>
+				<div class="content">OK, I solved this by storing the position from the previous time-step and treating the current position as a predicted one.<br>
+Seems to work OK, but it is oscillating much more than the standard PBD. <br>
+And the collisions also often eject rod particles too much. This is probably due to partial overwriting the PhysX collision response.<br>
+<br>
+Is there a way to do it better?<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11311&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void FixedUpdate()
+{
+
+    float dt =  Time.fixedDeltaTime;
+    float dtInv = 1.0f / dt;
+    float dtInv2 = 2.0f / dt;
+
+    for (int i = 0; i &lt; rod.pointsCount; i++)
+    {
+        m_predPositions[i] = m_rigidbodies[i].position;
+        m_predRotations[i] = m_rigidbodies[i].rotation;
+    }
+
+    for (int si = 0; si &lt; solverIterations; si++)
+    {
+        ApplyRodConstraints();
+    }
+
+    for (int i = 0; i &lt; rod.pointsCount; i++)
+    {
+        m_rigidbodies[i].velocity = (m_predPositions[i] - m_prevPositions[i]) * dtInv;
+        m_prevPositions[i] = m_predPositions[i];
+        m_rigidbodies[i].position = m_predPositions[i];
+
+        Quaternion relRot = m_predRotations[i] * Quaternion.Inverse(m_prevRotations[i]) ;
+        m_rigidbodies[i].angularVelocity = new Vector3(relRot.x, relRot.y, relRot.z) * dtInv2;
+        m_prevRotations[i] = m_predRotations[i];
+        m_rigidbodies[i].rotation = m_predRotations[i];
+    }
+
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

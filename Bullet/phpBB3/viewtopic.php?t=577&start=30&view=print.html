@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Ageia paper on position based physics - Page 3</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Ageia paper on position based physics</h2>
+		<p><a href="viewtopic.php%3Ft=577.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=577</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>3</strong> of <strong>5</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Feb 20, 2007 6:57 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You can look for this paper which compares quite some different approaches and should be fairly easy to implement (you will this paper using the link I will provide below):<br>
+<br>
+M?ller - A Versatile and Robust Model for Geometrically Complex Deformable Solids<br>
+<br>
+
+<blockquote class="uncited"><div>
+however if for example we want to parametrize realistic materials in terms of poisson ratio and young modulus that way of preserving the volume wouldn't do it. There is also some coupling between the edge preservation constraints and the volume preservation constraints. So it maybe a good choice for many cases but i would not exclude the other options. <br>
+
+</div></blockquote>
+
+Yes, I agree on this. I find it personally quite hard to model different materials using sequentiel projections. On the other side this method is unconditionally stable. There is another method based on shape matching to model deformable objects which might be used in Ageia 2.6 (I am guessing here). You find a 2D example implementation on M. Muller side:<br>
+<br>
+<a href="http://www.matthiasmueller.info/" class="postlink">http://www.matthiasmueller.info/</a><br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Feb 20, 2007 7:36 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Thank you very much for the guidance.  Sorry, yes I said force but I was really looking at implementing it as a constraint.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Feb 20, 2007 8:09 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Your welcome. Let me know if you need help with the gradients.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Feb 20, 2007 9:15 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>AntonioMartini wrote:</cite>There is also  some coupling between the edge preservation constraints and the volume preservation constraints.</div></blockquote>
+
+Follow-up question on this method: if you scaled the edge lengths in your edge preservation constraint by, say, the ratio of the current-to-original volume, it seems that would help decouple the two constraints.  Right or wrong?<br>
+<br>
+Of course, since the edge is likely shared between several tetrahedrons, I suppose you would need to come up with a combined volume ratio (perhaps the average current-to-original volume ratio), so maybe it's less than practical.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Feb 21, 2007 10:05 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>bone wrote:</cite><blockquote><div><cite>AntonioMartini wrote:</cite>There is also  some coupling between the edge preservation constraints and the volume preservation constraints.</div></blockquote>
+
+Follow-up question on this method: if you scaled the edge lengths in your edge preservation constraint by, say, the ratio of the current-to-original volume, it seems that would help decouple the two constraints.  Right or wrong?<br>
+<br>
+Of course, since the edge is likely shared between several tetrahedrons, I suppose you would need to come up with a combined volume ratio (perhaps the average current-to-original volume ratio), so maybe it's less than practical.</div></blockquote>
+one way to go about this could be to create a constraint that does everything in one go, something like for example:<br>
+<br>
+C(p0,p1,p2,p3) = 1/2*C0(p0,p1,p2,p3)^2 + 1/2*C1(p0,p1)^2 + <br>
+1/2*C2(p0,p2)^2 + 1/2*C3(p0,p3)^2 + 1/2*C4(p1,p2)^2 + 1/2*C5(p2,p3)^2 + 1/2*C6(p3, p0)^2<br>
+<br>
+where the C0 is the volume conservation constraint and the others Ci are the edge length preservation constraints. Whatever form of C we choose the following properties seem to follow:<br>
+<br>
+1. One stiffness value for each tetrahedron. so its easier to switch material between tetrahedra belonging to the same volume.<br>
+2. iteration is over tetrahedra <br>
+3. at each iteration each edge is resized n times, where n is the number of incident tetrahedra<br>
+<br>
+in the end we may even realise that the extra parameter adds some desired flexibility. <br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Feb 21, 2007 10:13 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>On the other side this method is unconditionally stable.</div></blockquote>
+implicit FEM are as well but of course they are a totally different beast:)<br>
+
+<blockquote><div><cite>Dirk Gregorius wrote:</cite>
+There is another method based on shape matching to model deformable objects which might be used in Ageia 2.6 (I am guessing here). You find a 2D example implementation on M. Muller side:
+</div></blockquote>
+to me the problems of shape matching are the following:<br>
+<br>
+1. inferior quality if compared to other methods<br>
+2. collision detection becomes far more complicated. If we have a tetrahedral mesh it's very easy to tell if a point is inside a mesh. <br>
+3. cannot have different materials in a single mesh. See also the skin layer example i made earlier.<br>
+<br>
+now it could well be that<br>
+<br>
+1. The quality is sufficient for the purposes of our application.<br>
+2. we dont have collision detection between deformable bodies. <br>
+3. we dont have the need of switching materials in a single body.  <br>
+4. we want to minimize the storage requirements.<br>
+<br>
+So thats why like i said in my previous post every method has its own place depending on our objectives and constraints.<br>
+<br>
+regarding collision detection and shape matching the paper:<br>
+<br>
+<a href="http://graphics.ethz.ch/~mattmuel/publications/MeshlessDeformations_SIG05.pdf" class="postlink">http://graphics.ethz.ch/~mattmuel/publi ... _SIG05.pdf</a><br>
+<br>
+states(section 6) that they have used <br>
+<br>
+<a href="http://graphics.ethz.ch/~mattmuel/publications/heidelberger_vmv04.pdf" class="postlink">http://graphics.ethz.ch/~mattmuel/publi ... _vmv04.pdf</a><br>
+<br>
+which requires  a tetrahedral mesh. i Actually thought they used: <br>
+<br>
+<a href="http://graphics.ethz.ch/~mattmuel/publications/cd_pba04.pdf" class="postlink">http://graphics.ethz.ch/~mattmuel/publi ... _pba04.pdf</a><br>
+<br>
+of course we can keep the tetrahedral mesh and "shape match" clusters of vertices belonging to the volume, then we can use the connectivity only for collision detection purposes. However doing so we would loose one of the main benefits of shape matching.<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Feb 21, 2007 3:01 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Thanks again Antonio and Dirk.  I'll chew on that for awhile.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Feb 21, 2007 3:15 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Your welcome. Let me know if you need help with the gradients.</div></blockquote>
+
+An easier (but lazy) solution is to use a math program to derive the gradients for you. I can recommend <a href="http://www.livemath.com/" class="postlink">http://www.livemath.com/</a>, but I'm sure Matlab or Maple could do the same thing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Feb 22, 2007 10:57 am</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">I have implemented this method and I should say that I expected something more <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+First, the method suffers from "super-elastic" effect. (I tried to fix this by using semi-rigid approach proposed by X.Provot, but it took no effect).  8 meter cloth behaves pretty good, super-elastic effect appears with size of 1.5 meter(I tested 37x37 cloth grid with 9.8 gravity, 5 solver iterations). Increasing number of iterations helps, but I dont want to use about 15 iterations since it hurts performance.<br>
+<br>
+Second, it's hard to get stable self-collision - "testing continuous collisions is insufficient if cloth gets into a tangled state, so methods like ones proposed in  "Untangling cloth"(David Baraff et al.)".<br>
+By the way, has anyone implemented self-collisions with this or any other approach except implicit Euler("Large steps in cloth simulation")? <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Now I think it would be good to me to take a look at the methods used by Bridson<br>
+(are they suitable for the realtime simulation?, any links are greatly appreciated <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Feb 22, 2007 1:57 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>stbuzer wrote:</cite>I have implemented this method and I should say that I expected something more <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+First, the method suffers from "super-elastic" effect. (I tried to fix this by using semi-rigid approach proposed by X.Provot, but it took no effect).  8 meter cloth behaves pretty good, super-elastic effect appears with size of 1.5 meter(I tested 37x37 cloth grid with 9.8 gravity, 5 solver iterations). Increasing number of iterations helps, but I dont want to use about 15 iterations since it hurts performance.<br>
+<br>
+Second, it's hard to get stable self-collision - "testing continuous collisions is insufficient if cloth gets into a tangled state, so methods like ones proposed in  "Untangling cloth"(David Baraff et al.)".<br>
+By the way, has anyone implemented self-collisions with this or any other approach except implicit Euler("Large steps in cloth simulation")? <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Now I think it would be good to me to take a look at the methods used by Bridson<br>
+(are they suitable for the realtime simulation?, any links are greatly appreciated <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">)</div></blockquote>
+5 iterations for a 37x37 cloth is definitely too low for any iterative method. If you cannot have more than 5 iterations, it's very likely that you cannot have any of the much more expensive things like self collision detection.<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Feb 22, 2007 2:58 pm</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">I planned to use self-collision feature only for some very important clothes, where self-intersections are clearly visible. But for a simple clothes it is too expensive to have 6-7 ms per cloth piece.<br>
+Anyway, this method one of the best I have ever seen for realtime applications.(BTW, pity, but I have only seen many Verlet and some implicit Euler solvers, what other approaches exist(velocity based?)?)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Feb 22, 2007 3:53 pm</strong></div>
+				<div class="author">by <strong>clanzotti</strong></div>
+				<div class="content">Hi,<br>
+
+<blockquote><div><cite>stbuzer wrote:</cite>
+<br>
+...<br>
+<br>
+Now I think it would be good to me to take a look at the methods used by Bridson<br>
+(are they suitable for the realtime simulation?, any links are greatly appreciated <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">)</div></blockquote>
+
+Definitely not, forgot about realtime simulation with complex piece of cloths/garments, especially with self collisions.<br>
+<br>
+Regards,<br>
+<br>
+Carlo Lanzotti</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Feb 22, 2007 4:55 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>stbuzer wrote:</cite>I planned to use self-collision feature only for some very important clothes, where self-intersections are clearly visible. But for a simple clothes it is too expensive to have 6-7 ms per cloth piece.<br>
+Anyway, this method one of the best I have ever seen for realtime applications.(BTW, pity, but I have only seen many Verlet and some implicit Euler solvers, what other approaches exist(velocity based?)?)</div></blockquote>
+
+you may want to consider something like the following:<br>
+<br>
+<a href="http://www.cg.ces.kyutech.ac.jp/paper/ca01.pdf" class="postlink">http://www.cg.ces.kyutech.ac.jp/paper/ca01.pdf</a><br>
+<br>
+a coarser grid will have faster convergence, however this will worsen the collision detection problem, especially if done at vertexVsFace level as you would have longer edges.<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Feb 22, 2007 6:18 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You can really forget about the Bridson stuff. It is really to slow. You can try to use a coarser mesh as Antonio suggested and then either use this to deform a render mesh (something I like to try next since this solves the problem the cloth is always thin like silk) or you subdivide (e.g. Butterfly). For the later see S. Melax post here on the forum</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Feb 23, 2007 8:10 am</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Thank you. I'll take a look at these methods.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>3</strong> of <strong>5</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

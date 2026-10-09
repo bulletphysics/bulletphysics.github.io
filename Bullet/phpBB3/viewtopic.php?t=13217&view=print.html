@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rotation Matrix of Wheels of btRaycastVehicle not special orthogonal</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rotation Matrix of Wheels of btRaycastVehicle not special orthogonal</h2>
+		<p><a href="viewtopic.php%3Ft=13217.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13217</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rotation Matrix of Wheels of btRaycastVehicle not special orthogonal</h3>
+				<div class="date">Posted: <strong>Sun Jun 06, 2021 3:05 pm</strong></div>
+				<div class="author">by <strong>marsch84</strong></div>
+				<div class="content">I implemented btRaycastVehicle into a driving game. It works quite fine, but I have a problem with the orientation of the vehicle's wheels. After implementing some work-arounds, I realized, that the determinant of the rotation matrix is -1. As far as I understand, that means the matrix is orthogonal, but not special orthogonal. As soon as I converted the matrix to a quaternion or a GL matrix for graphical representation, the result was a very messy behavior of the wheels.<br>
+<br>
+This is a snippet of my code that shows how the wheels are initialized:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13217&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int rightIndex = 0;
+int upIndex = 2;
+int forwardIndex = 1;
+btVector3 wheelDirectionCS0(0, 0, -1);
+btVector3 wheelAxleCS(1, 0, 0);
+
+vehicle-&gt;setCoordinateSystem(rightIndex, upIndex, forwardIndex);
+connectionpoint = btVector3(0.63, 0.87, 0.0);
+vehicle-&gt;addWheel(connectionpoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, tuning, true);
+</code></pre></div>
+
+The code uses the btDefaultVehicleRaycaster. The final work-around I developed was to turn the sign of the "right axis" of the wheel like this. After this change the rotation matrix is special orthogonal and all the quaternions derived from it are leading to the expected behavior.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13217&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>part[i].wheel[j].worldtrans = vehicle-&gt;getWheelTransformWS(j);
+part[i].wheel[j].worldtrans.getBasis()[0][0] *= -1.0f;
+part[i].wheel[j].worldtrans.getBasis()[1][0] *= -1.0f;
+part[i].wheel[j].worldtrans.getBasis()[2][0] *= -1.0f;
+</code></pre></div>
+
+I later saw, that there is a commit to the source file of btRaycastVehicle (link below), that seems to introduce the same operation of inverting the sign of the right axis. This change should also be present in my version of the library (3.06). So it looks like, that I am basically reverting that operation of changing the sign in my code.<br>
+<br>
+<a href="https://github.com/bulletphysics/bullet3/commit/00affd62ac928de2e5a5e3fe84b17c67df47a90a#diff-41982ab025c0d57a56f1625606814c34790943f058e726351772f11abdb31d79" class="postlink">https://github.com/bulletphysics/bullet ... 1abdb31d79</a><br>
+<br>
+So my question is, whether there is something wrong in how I initialize the wheels or whether the commit linked above introduced some kind of bug.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

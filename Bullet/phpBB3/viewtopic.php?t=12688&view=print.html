@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Issues with velocity control</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Issues with velocity control</h2>
+		<p><a href="viewtopic.php%3Ft=12688.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12688</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Issues with velocity control</h3>
+				<div class="date">Posted: <strong>Tue May 21, 2019 9:36 pm</strong></div>
+				<div class="author">by <strong>timeforscience</strong></div>
+				<div class="content">Hello all, I'm trying to implement velocity control in one of my simulations, but it doesn't seem to quite work.  I have a 6DOF arm that I apply a velocity to the base joint and set the remaining joints to 0.  The base joint moves, but the other joints sag as if there isn't enough torque to hold them up.  I assumed my torque limits were the issue, but position control works fine without any sagging.  Am I misunderstanding the velocity control or something?<br>
+<br>
+Here are the functions I use to set joint positions and speeds.  self.joint_map is used to get the joint index.  I'm using the default max_force in my test.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12688&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    
+    def set_joint_positions(self, joint_positions: dict, speed: float):
+        for joint, position in joint_positions.items():
+            p.setJointMotorControl2(self.device, self.joint_map[joint], p.POSITION_CONTROL,
+                                    targetPosition=position,
+                                    maxVelocity=speed)
+
+    def set_joint_speeds(self, joint_speeds: dict, max_force: float = 500.0):
+        """Set the speed of each joint in rads/s"""
+        for joint, velocity in joint_speeds.items():
+            p.setJointMotorControl2(self.device, self.joint_map[joint], p.VELOCITY_CONTROL,
+                                    targetVelocity=velocity,
+                                    force=max_force)
+</code></pre></div>
+
+The code to set the velocity is also very simple:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12688&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    u = [0.5, 0.0, 0.0, 0.0, 0.0, 0.0] #np.dot(J.T, v)
+    signals = {name: vel for name, vel in zip(robot.JOINT_NAMES, u)}
+    robot.set_joint_speeds(signals)
+</code></pre></div>
+
+I've attached my urdf file as well.  I'm very frustrated as I feel I'm very close, but can't quite get there.  Any guidance would be appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Issues with velocity control</h3>
+				<div class="date">Posted: <strong>Thu May 23, 2019 7:21 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">Could you attach a complete simple test?  i can debug it with you to find what happened there.<br>
+so far my understanding about the procedure:<br>
+    1. apply the gravity to the multibody then will change the velocity,<br>
+    2. apply the jointMotor constraint that will change the velocity back to the targetVelocity, 0 for your case,<br>
+    3. update the position.<br>
+<br>
+seems that it can get what you expect. i need to debug to get the more details.  thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Issues with velocity control</h3>
+				<div class="date">Posted: <strong>Thu May 23, 2019 4:58 pm</strong></div>
+				<div class="author">by <strong>timeforscience</strong></div>
+				<div class="content">Thanks for your response!  Here is a full working example:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12688&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import numpy as np
+import time
+import pybullet as p
+import pybullet_data
+import os
+
+HOME_POSITION = [0.0, -3.14159/2., 3.14159/2., 0.0, 0, 0.0]
+
+engine = p.connect(p.GUI)
+p.setGravity(0, 0, -9.8)
+p.loadURDF(os.path.join(pybullet_data.getDataPath(), "plane.urdf"))
+
+path = 'ur5_free_base.urdf'
+filepath = path
+device = p.loadURDF(filepath, [0, 0, 0],
+                    [0, 0, 0, 1], flags=p.URDF_USE_SELF_COLLISION)
+
+for i in range(6):
+    p.resetJointState(device, i, HOME_POSITION[i])
+
+p.resetBasePositionAndOrientation(device,
+                                  [0, 0, 0.02],
+                                  [0, 0, 0, 1])
+path = 'baseplate.urdf'
+filepath2 = path
+baseplate = p.loadURDF(filepath2)
+
+base_constraint = p.createConstraint(device,
+                                      -1,
+                                      baseplate, 0,
+                                      p.JOINT_FIXED, [0, 0, 0],
+                                      [0, 0, 0],
+                                      [0, 0, 0])
+while True:
+    u = [0.5, 0.0, 0.0, 0.0, 0.0, 0.0] 
+    max_force = 500
+    for i, velocity in enumerate(u):
+        p.setJointMotorControl2(device, i, p.VELOCITY_CONTROL,
+                                targetVelocity=velocity,
+                                force=max_force)
+    p.stepSimulation()
+    time.sleep(1/250.0)
+
+</code></pre></div>
+
+I've also attached the baseplate urdf as I forgot that last time.  I had to change the file ending from urdf to txt to upload to the site so if you want to test it don't forget to update the file name.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Issues with velocity control</h3>
+				<div class="date">Posted: <strong>Thu May 23, 2019 6:36 pm</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">Could you also attach all the mesh files? thanks.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12688&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>b3Printf: ur5_free_base.urdf:24: cannot find 'meshes/ur5/visual/base.dae' in any directory in urdf path
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Issues with velocity control</h3>
+				<div class="date">Posted: <strong>Fri May 24, 2019 9:19 am</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">download the meshes from <a href="https://github.com/ros-industrial/universal_robot/tree/indigo-devel/ur_description/meshes" class="postlink">https://github.com/ros-industrial/unive ... ion/meshes</a>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Issues with velocity control</h3>
+				<div class="date">Posted: <strong>Sun May 26, 2019 2:12 pm</strong></div>
+				<div class="author">by <strong>steven</strong></div>
+				<div class="content">update the procedure of this case.<br>
+   1. apply the gravity to the multibody then will change the velocity,<br>
+   2. apply the constraints, including
+               <ul>     <li>1&gt; jointMotor constraint that will try to change the velocity back to the targetVelocity, 0 for your case;</li></ul>
+               <ul>     <li>2&gt; Fixed constraint</li></ul>
+               <ul>     <li>3&gt; contact constraint and friction constraint</li></ul>
+    3. update the position.<br>
+after step 2, we can't make sure that the joint velocity reaches its target value, maybe has some errors  which will cause the joint position changed accordingly at step 3. after a long time the accumulative error will become much larger.  but we can make the error be more less by the following two interfaces but it still can't fix this issue, only make it look well in a period of time.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12688&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>p.setPhysicsEngineParameter(numSolverIterations=200)
+p.setPhysicsEngineParameter(solverResidualThreshold=1e-30)
+</code></pre></div>
+so i dont' think we can control the position by the velocity mode.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Multiplication by time step in Sequential Impulses</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Multiplication by time step in Sequential Impulses</h2>
+		<p><a href="viewtopic.php%3Ft=8720.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8720</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Multiplication by time step in Sequential Impulses</h3>
+				<div class="date">Posted: <strong>Thu Jan 03, 2013 10:11 am</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I am studying the Sequential Impulse theory for rigid bodies simulation using the <a href="http://box2d.googlecode.com/files/GDC2009_ErinCatto.zip" class="postlink">slides of Erin Catto from GDC 2009</a>. At the slide 52, it is written that the impulse <strong class="text-strong">P</strong> is equal to the Force <strong class="text-strong">F</strong> times the time step <strong class="text-strong">h</strong> :<br>
+<br>
+<strong class="text-strong">P = h F</strong><br>
+<br>
+with the force :<br>
+<br>
+<strong class="text-strong">F = J^T lambda </strong><br>
+<br>
+Then, at slide 53, it is written that we have tu update the velocity <strong class="text-strong">V2</strong> using the impulse <strong class="text-strong">P</strong>:<br>
+<br>
+<strong class="text-strong">V2 = V2 + M^-1 P</strong><br>
+<br>
+Therefore, according to this equation, the velocity update should be :<br>
+<br>
+<strong class="text-strong">V2 = V2 + M^-1 h J^T lambda</strong><br>
+<br>
+However, at slide 56, we see that the velocity update is :<br>
+<br>
+<strong class="text-strong">V2 = V2 + M^-1 P</strong><br>
+<br>
+with <strong class="text-strong">P = J^T lambda</strong><br>
+<br>
+As you can see here, the multiplication by the time step <strong class="text-strong">h</strong> has disapeared in the last equation. I have also taken a look at the code of the sequential impulse solver in Box2D and it also seem that we never multiply the force by the time step <strong class="text-strong">h</strong> to compute the impulse <strong class="text-strong">P</strong> that we use to update the velocity <strong class="text-strong">V2</strong>.<br>
+<br>
+There is probably something that I don't understand here but I don't see how we can remove the multiplication by the time step <strong class="text-strong">h</strong> to compute the impulse <strong class="text-strong">P</strong>. Does someone has any idea how we can drop this multiplication ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Multiplication by time step in Sequential Impulses</h3>
+				<div class="date">Posted: <strong>Thu Jan 03, 2013 4:16 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You don't drop, but essentially <strong class="text-strong">substitute </strong>F * h = P. All this says is that forces and impulses are linear dependent.<br>
+<br>
+Here is where it comes from:<br>
+<br>
+dv/dt = M^-1 * ( f + JT * lambda )<br>
+J * v = 0<br>
+<br>
+( v2 - v1 ) / h = M^-1 * ( f + JT * lambda )<br>
+v2 = v1 + M^-1 * ( f + JT * lambda ) * h<br>
+<br>
+J * v2 = 0<br>
+J * M^-1 * JT * (lambda * h) = -J * ( v1 + M^-1 * f * h )<br>
+<br>
+Here lambda is a force and we relabel lamba' = lambda * h where lambda' is an impulse now.<br>
+<br>
+J * M^-1 * JT * lambda' = -J * ( v1 + M^-1 * f * h )</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Multiplication by time step in Sequential Impulses</h3>
+				<div class="date">Posted: <strong>Thu Jan 03, 2013 4:56 pm</strong></div>
+				<div class="author">by <strong>Dani3L</strong></div>
+				<div class="content">Ok I see. It makes much more sense that way <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+Thanks a lot Dirk !</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Multiplication by time step in Sequential Impulses</h3>
+				<div class="date">Posted: <strong>Fri Jan 04, 2013 10:50 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">The way I understood it is, since the impulse is applied almost instantly, there is no need to integrate the force over time and assume it occurs instantaneously, therefore making P=JT*lambda rather than JT*lambda*h. Is this a correct assumption or should I multiply by the timestep regardless? <br>
+<br>
+I have excluded h from the suspension bridge demo and the harmonic oscillator behaves fine.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Multiplication by time step in Sequential Impulses</h3>
+				<div class="date">Posted: <strong>Fri Jan 04, 2013 4:58 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You need to multiply by the timestep ratio if you want to support varying timesteps. I don't remember the details, but you can look it up in Box2D. If you don't support varying timesteps forget about it.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

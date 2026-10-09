@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Sweep and Prune optimizations for colliding classes?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Sweep and Prune optimizations for colliding classes?</h2>
+		<p><a href="viewtopic.php%3Ft=328.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=328</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Sweep and Prune optimizations for colliding classes?</h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 5:53 pm</strong></div>
+				<div class="author">by <strong>CuppoJava</strong></div>
+				<div class="content">Hi,<br>
+I just finished a sweep and prune collision detector and I'm using that for detecting collisions between every object in my game. Does anyone know of any optimizations that I can make if I want to disregard collisions between various types of objects?<br>
+<br>
+eg. in an extreme-case: <br>
+there is one player and a million projectiles on the screen.<br>
+Projectiles cannot collide with each other, so then in this case, max a million checks are needed.<br>
+<br>
+However, I don't know how to implement this in a Sweep and Prune approach. Any papers and links that I can visit would be much help to me.<br>
+<br>
+Thanks very much.<br>
+  -Cuppo</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 6:01 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The sweep and prune broadphase is likely to have an 'AddOverlappingPair' and 'RemoveOverlappingPair'. You can insert some filter inside those functions.  See <a href="http://www.continuousphysics.com/Bullet/BulletFull/AxisSweep3_8cpp-source.html" class="postlink">http://www.continuousphysics.com/Bullet ... ource.html</a> for an implementation of the Sweep and Prune space with above AddOverlappingPair and RemoveOverlappingPair.<br>
+<br>
+An easy way would be to add a bitfield/collision mask to the broadphase proxies/handles, and perform a bitwise operator on those bitfields for the filter function inside the AddOverlappingPair.<br>
+<br>
+One example would be to assign '0' for static objects, and then add objects to to collision 'groups' that are represented by each bit in this bitfield/collision mask.  Dependent on your filtering logic, you might use different logical operations, like AND, OR or XOR etc. To avoid collisions of objects in the same group, you can use XOR. To only collide objects when they are in the same group, use AND. Then perform this logical operation on both collision masks, and only collide when it gives non-zero result. You can split the bitfield for the AND part and XOR part.<br>
+<br>
+<br>
+I might add some filter example to demonstrate this fairly straightforward idea. <br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 7:18 pm</strong></div>
+				<div class="author">by <strong>CuppoJava</strong></div>
+				<div class="content">Thanks for the quick reply.<br>
+I have something right now that is similar to the filter idea.<br>
+I assign each object a "type" integer. eg. projectiles =0, player = 1, tiles = 2, etc...<br>
+<br>
+Then in my AddOverlappingPair and RemoveOverlappingPair methods, I check whether two types can collide from a two-dimensional boolean array.<br>
+<br>
+But this still doesn't optimize it as much as I would like.<br>
+In the one player and one million projectiles analogy, the number of checks done <em class="text-italics">can</em> be reduced down to one million. But if I plug that scenario into sweep prune, I'm left still left having to sort a 100001-size list.<br>
+<br>
+BTW: This is unrelated to the original question: but have you considered using a radix sort for your sweep prune routine? I haven't tried it myself yet, but the O(n) efficiency seems very tempting.<br>
+<br>
+Thanks Erwin<br>
+  -Cuppo</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 7:56 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>CuppoJava wrote:</cite>Thanks for the quick reply.<br>
+But if I plug that scenario into sweep prune, I'm left still left having to sort a 100001-size list.
+</div></blockquote>
+
+Can you be more specific? Sweep and prune only does work while swapping begin/end points, so when do you need to perform a 'sort' on your objects? Usually there a very few swaps, so little cpu cost. (except for some unlucky cases, see Note 0 below). So the cost it more likely to be O(1) rather then O(n), presumed a small constant number of swaps due to coherence every frame. Unless your objects move very fast and chaotic. In the case you describe, 1 player versus 1 million rockets that don't collide, it all depends how many swaps the rockets generate.<br>
+<br>
+If you meant the pre-sorting to optimize batch adding lots of objects, then any fast sort can help (merge-/radix-/quick sort).<br>
+<br>
+Erwin<br>
+<br>
+<br>
+Note 0: When a lot of similar sized dynamics objects rest on the ground, there might be a lot of swaps on the world up-axis due to jitter. So you might want to not use the up axis for sweep and prune in such case (so it becomes a 2D sweep and prune).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 8:09 pm</strong></div>
+				<div class="author">by <strong>CuppoJava</strong></div>
+				<div class="content">In a case of a single player and a million projectiles situation.<br>
+<br>
+One way to perform collision detection is just check whether a player has collided with any of the projectiles. This will be in total a million checks.<br>
+<br>
+If I choose to use sweep and prune for this situation however, it's likely to be less efficient than the above method. Any swaps between begin/end points amonst two projectile objects would be unnecessary because projectile objects can't collide with each other, therefore there is no need to keep a sorted list of all the projectile positions.<br>
+<br>
+If the projectiles are going at a fast speed, then there'll be many swaps which are not needed if taken into fact that projectiles can't collide with each other.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 8:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Memory access is likely to be the biggest issue.<br>
+<br>
+So if you are just interested in one object versus a lot of other fast moving objects (without interaction), just traversing the list once (cache friendly) is likely to be fastest.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 09, 2006 10:54 am</strong></div>
+				<div class="author">by <strong>dcoming</strong></div>
+				<div class="content"><blockquote><div><cite>CuppoJava wrote:</cite>
+...have you considered using a radix sort for your sweep prune routine? I haven't tried it myself yet, but the O(n) efficiency seems very tempting.
+</div></blockquote>
+
+Radix sort with sweep and prune actually has been tested by Pierre Terdiman:<br>
+<a href="http://www.codercorner.com/ZCollide.htm" class="postlink">http://www.codercorner.com/ZCollide.htm</a><br>
+I believe this implementation used radix sort for every time step, however I got the impression from his later posts (other forums) that he later only used radix sort for initial sorting.<br>
+<br>
+I think Erwin is referring to expected O(1) sorting per moving object via local insertion sort for updated objects, so O(m) for m moving objects.<br>
+<br>
+Its possible to sort the SAP lists with any (preferrably stable) sorting method you like. However, it may be necessary to rebuild information about overlaps unless you keep track of the changes as you sort. The cost of rebuilding overlaps may exceed any sorting cost savings, depending on the size/distribution of your objects.<br>
+<br>
+Erwin's suggestion with bit masking seems a good approach for filtering collision tests between or among groups. Still, if your situation is as simple as you say (few objects tested against many), you may want to try sweep and prune without the "and prune":<br>
+-- Forego keeping any overlap information between time steps.<br>
+-- Sort the lists with the most efficient method for your situation.<br>
+-- Rebuild only the overlaps for these few objects that may collide with the rest.<br>
+-- Test collisions as usual: between objects with overlapping boxes.<br>
+<br>
+... or maybe skip sweep and prune altogether and keep looking. Maybe you'll find luck in the realm of ray-tracing, since most object pairs are ignored.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 09, 2006 2:12 pm</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Radix sort with sweep and prune actually has been tested by Pierre Terdiman: <br>
+<a href="http://www.codercorner.com/ZCollide.htm" class="postlink">http://www.codercorner.com/ZCollide.htm</a> <br>
+I believe this implementation used radix sort for every time step, however I got the impression from his later posts (other forums) that he later only used radix sort for initial sorting. 
+</div></blockquote>
+
+Well, I had 4 different "sweep and prunes":<br>
+<br>
+1) a "vanilla" sweep-and-prune similar in spirit to the original V-Collide implementation, but faster (re-implemented in a better way). This one has the expected O(1) updates, i.e. expected O(n) running time for n objects. I believe it is similar to what is in Bullet (I didn't check). This indeed uses a radix-sort for initial sorting (I found this to be very slow in V-Collide, so it seemed like a good idea to optimize this case). I believe you can find the initial implementation in Opcode 1.3 (<a href="http://www.codercorner.com/Opcode.htm" class="postlink">http://www.codercorner.com/Opcode.htm</a>). The code has been optimized a bit since then, but not that much.<br>
+<br>
+2) a "radix sort" version, very simple, called "box pruning" in Opcode. The good thing is that it's always O(n), using pretty much the same time regardless of what happened to your objects. For example, if all objects are moving very quickly, the usual sweep-and-prune takes A LOT of time, to the point brute-force becomes faster. This version however pretty much always takes the same time. The drawback is that in many real-world cases, when objects are sleeping for example, it still consumes the same amount of time.<br>
+<br>
+3) a "bipartite" version of 2), where overlaps are found between two different groups of objects (say all missiles against all players). It typically runs faster than 2), because it doesn't do all the collisions within a single group. It's also in Opcode as far as I remember, you can check it out.<br>
+<br>
+4) an experimental "fractal" version, similar to 2), but using a Z-curve (space filling curve) as the projection axis (to minimize the pathological cases happening with just X, Y or Z). This was super weird and experimental but it worked, for various reasons I won't detail. In the end the overhead was too big anyway, and the performance was usually worse than 2), so I dropped it. This is the version used in Z-Collide, the name actually comes from this. But it's completely obsolete.<br>
+<br>
+<br>
+This page had some benchmarks. It's slightly obsolete but most comments are still valid: <a href="http://www.codercorner.com/SweepAndPrune.htm" class="postlink">http://www.codercorner.com/SweepAndPrune.htm</a><br>
+<br>
+One painful problem with SAP is when you have a big world with many many static objects, and then just one moving object. Even if the moving object is in the middle of a single big static object, we still do swaps with distant objects, very far away. It sounds broken that those objects, maybe kilometers away, have an influence on the runtime of the moving object... I didn't bother finding a cure for that but I'm interested, if anybody has ideas...<br>
+<br>
+- Pierre</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 11, 2006 5:52 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">hi Pierre, ca va?<br>
+
+<blockquote><div><cite>Pierre wrote:</cite>
+1) a "vanilla" sweep-and-prune similar in spirit to the original V-Collide implementation, but faster (re-implemented in a better way). This one has the expected O(1) updates, i.e. expected O(n) running time for n objects. I believe it is similar to what is in Bullet (I didn't check). 
+</div></blockquote>
+Bullet adds some optimizations to the vanilla version, like working in (quantized) integer space. Also because the axis are stored as arrays (instead of linked lists), the overlap check can be optimized: comparing axis indices is cheaper and more cache friendly then checking the actual aabb bounds for the axis. See TestOverlap in<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/AxisSweep3_8cpp-source.html#l00256" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00256</a><br>
+
+<blockquote class="uncited"><div>
+One painful problem with SAP is when you have a big world with many many static objects, and then just one moving object. (...) I didn't bother finding a cure for that but I'm interested, if anybody has ideas...
+</div></blockquote>
+One solution for this (that I've seen good results with in practice) is is to chop up one large broadphase into separate (disjunct) broadphases. Then, add some boundaries that deal with overlap between broadphases. Static geometry can just be added to both broadphases. Dynamic objects need to be inserted either in one or the other broadphase, that is the task of the boundary management.<br>
+<br>
+Erwin<br>
+<br>
+Note0:<br>
+This also helps with streaming worlds. A broadphase together with its proxies can be serialized to persistent media. Also, objects can use its broadphase local space, which improves accuracy when far from the world origin. Last but not least, the sweep and prune is optimized for dynamic objects, and cluttering it with lots of static objects is sub optimal. So instead of polluting the sweep and prune broadphase with lots of static colliders, just add them in another acceleration structure, like a kdop tree.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 11, 2006 12:28 pm</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content"><blockquote class="uncited"><div>hi Pierre, ca va? </div></blockquote>
+Ca roule <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+
+<blockquote class="uncited"><div>Bullet adds some optimizations to the vanilla version, like working in (quantized) integer space.</div></blockquote>
+Ok. I have a switch in the latest versions of Opcode to enable this. I found it faster overall, indeed. Using loose bounds also helps.<br>
+
+<blockquote class="uncited"><div>Also because the axis are stored as arrays (instead of linked lists), the overlap check can be optimized: comparing axis indices is cheaper and more cache friendly then checking the actual aabb bounds for the axis.</div></blockquote>
+I also have a switch to use arrays or linked lists. In my tests arrays are faster for slow motions, but slower for fast motions (which makes sense). It's always a good idea to optimize for the worst case, so I kept the LL. Doing the overlap test using the indices is cute, though. I'm not sure it's really faster than comparing quantized bounds? Isn't it the same number of CPU comparisons?<br>
+
+<blockquote class="uncited"><div>One solution for this (that I've seen good results with in practice) is is to chop up one large broadphase into separate (disjunct) broadphases. Then, add some boundaries that deal with overlap between broadphases. Static geometry can just be added to both broadphases. Dynamic objects need to be inserted either in one or the other broadphase, that is the task of the boundary management. </div></blockquote>
+Well, yeah, using multiple broadphases is the obvious solution. The real question is how to efficiently handle the extra "boundary management"... Maybe I just need to think more about it, but last time it seemed quite painful.<br>
+<br>
+
+<blockquote class="uncited"><div>So instead of polluting the sweep and prune broadphase with lots of static colliders, just add them in another acceleration structure, like a kdop tree.</div></blockquote>
+Do you mean you don't put the static objects at all in the SAP? How do you do the dynamic-vs-static collisions?<br>
+<br>
+- Pierre</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 11, 2006 12:42 pm</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content"><blockquote class="uncited"><div>One solution for this (that I've seen good results with in practice) is is to chop up one large broadphase into separate (disjunct) broadphases. Then, add some boundaries that deal with overlap between broadphases. Static geometry can just be added to both broadphases. Dynamic objects need to be inserted either in one or the other broadphase, that is the task of the boundary management. </div></blockquote>
+So, you insert a dynamic object in one or the other broadphases (BPs). I can see why it works when it comes to static-vs-dynamic intersections. But if the dynamic object crosses the boundary, it might touch another dynamic object in the other BP. And this interaction is not detected if the dynamic objects live in a single BP.<br>
+<br>
+So I'm missing something. Or maybe it means you do the static-vs-dynamic and dynamic-vs-dynamic in a completely different way, for example keeping all the dynamic objects in a single BP (giving you dynamic-vs-dynamic interactions), and then doing the static-vs-dynamic using "something else" (maybe the kdop tree you mentioned).<br>
+<br>
+- Pierre</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 11, 2006 3:26 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Pierre wrote:</cite>
+Doing the overlap test using the indices is cute, though. I'm not sure it's really faster than comparing quantized bounds? Isn't it the same number of CPU comparisons? 
+</div></blockquote>
+It should be faster due to cache coherence, especially when your broadphase proxy keeps track of the 3 indices. It depends where you store your quantized bounds. In Bullet's SAP implementation, comparing quantized bounds requires an extra indirection, so cache misses. The old and new code is here for comparison: <a href="http://www.continuousphysics.com/Bullet/BulletFull/AxisSweep3_8cpp-source.html#l00256" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00256</a><br>
+
+<blockquote><div><cite>Pierre wrote:</cite>
+Do you mean you don't put the static objects at all in the SAP? How do you do the dynamic-vs-static collisions? 
+</div></blockquote>
+Static objects are stored in an aabb tree. Then there is a single aabb entry for the entire tree in the broadphase. So you get the reduction by clustering.<br>
+
+<blockquote><div><cite>Pierre wrote:</cite><blockquote class="uncited"><div>One solution for this (that I've seen good results with in practice) is is to chop up one large broadphase into separate (disjunct) broadphases. Then, add some boundaries that deal with overlap between broadphases. Static geometry can just be added to both broadphases. Dynamic objects need to be inserted either in one or the other broadphase, that is the task of the boundary management. </div></blockquote>
+So, you insert a dynamic object in one or the other broadphases (BPs). I can see why it works when it comes to static-vs-dynamic intersections. But if the dynamic object crosses the boundary, it might touch another dynamic object in the other BP. And this interaction is not detected if the dynamic objects live in a single BP.<br>
+So I'm missing something. Or maybe it means you do the static-vs-dynamic and dynamic-vs-dynamic in a completely different way, for example keeping all the dynamic objects in a single BP (giving you dynamic-vs-dynamic interactions), and then doing the static-vs-dynamic using "something else" (maybe the kdop tree you mentioned).<br>
+- Pierre</div></blockquote>
+
+There are a couple of concepts important here, and then all the details.<br>
+<br>
+First the collision detection:<br>
+Start with a collection of broadphases. Make sure there is enough overlap between them (I was wrong using the word "disjunct"). This overlap is the boundary. Then add some trigger on each boundary that handles interaction between one broadphase to the other. When an object is overlapping with the boundary, you create a replicate object on the other broadphase.<br>
+<br>
+Now the dynamics simulation:<br>
+Each broadphase can have its own physics environment. Those physics environments can be simulated in parallel/independent. However, when objects are overlapping the boundary, they are in both broadphases, but only one environment should handle the dynamics. So you should deal with simulation islands in a clever way. <br>
+<br>
+The boundary management should:<br>
+<br>
+- make sure of the replication/insertion when objects enter a boundary and deletion of objects when they leave a boundary. (Take care of areas where several boundaries overlap!)<br>
+- make sure that objects are only in one simulation environment, by moving entire islands in one or the other environment. So some times a simulation island has objects in both broadphases. When all objects eventually move to one broadphase, the boundary management can transfer the entire simulation island to the proper simulation environment.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 11, 2006 7:33 pm</strong></div>
+				<div class="author">by <strong>dcoming</strong></div>
+				<div class="content">Arguably, sweep and prune handles static objects quite well (not to say its better than other methods for statics). Its dynamic objects that cause work, moreso the faster they go. Fortunately, sweep and prune handles moving objects more gracefully than a number of other broad phases.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Static objects are stored in an aabb tree. Then there is a single aabb entry for the entire tree in the broadphase. So you get the reduction by clustering.
+</div></blockquote>
+Doesn't this lead to a rather large AABB for the tree of static objects, particularly in a scene enclosed by static walls? Such a large AABB, even if the scene isn't enclosed, can generally wreak havok on many sweep and prune optimizations. It would not appear to be very good at pruning either (it overlaps most if not all of the other AABBs); wouldn't you be better off just testing all of the dynamics against the static AABB-tree that is left out of sweep and prune? I think I may be missing something if the statics-AABB does a better job of pruning.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Start with a collection of broadphases. Make sure there is enough overlap between them (I was wrong using the word "disjunct"). This overlap is the boundary. Then add some trigger on each boundary that handles interaction between one broadphase to the other. When an object is overlapping with the boundary, you create a replicate object on the other broadphase.
+</div></blockquote>
+So this is a space partitioning with sweep and prune broad phases for each partition? It sounds good for a well-segmented scene like a FPS level or a large streaming world as you mentioned. Still, it may be a matter of personal taste, but there is a certain elegance, efficiency, and space savings of sweep and prune in not replicating objects. Have you measured the degree of replication (and memory implications) relative to how many partitions you have? I'm really more concerned about how many times a single pair of objects gets considered by the individual sweep and prunes. If a pair of objects both overlap the same boundary, how many times are they considered? Once, a small constant, or once per boundary? I know this is more a debate in the realm of theoretical, since you've seen good results in practice, but there may be detrimental cases to know to avoid.<br>
+<br>
+Clustering or swapping endpoints in 1D with objects that are far away is a drawback. There must be a way to avoid this without boundary regions and replication... and I'd love to know it!<br>
+
+<blockquote><div><cite>Pierre wrote:</cite>
+In my tests arrays are faster for slow motions, but slower for fast motions (which makes sense). It's always a good idea to optimize for the worst case, so I kept the LL.
+</div></blockquote>
+Has anyone tried ropes? They would appear to offer a compromise that comfortably handle both fast or slow objects.<br>
+<a href="http://www.sgi.com/tech/stl/Rope.html" class="postlink">http://www.sgi.com/tech/stl/Rope.html</a><br>
+<br>
+--Dan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 11, 2006 8:09 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>dcoming wrote:</cite>Arguably, sweep and prune handles static objects quite well (not to say its better than other methods for statics). Its dynamic objects that cause work, moreso the faster they go. Fortunately, sweep and prune handles moving objects more gracefully than a number of other broad phases.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Static objects are stored in an aabb tree. Then there is a single aabb entry for the entire tree in the broadphase. So you get the reduction by clustering.
+</div></blockquote>
+Doesn't this lead to a rather large AABB for the tree of static objects, particularly in a scene enclosed by static walls? Such a large AABB, even if the scene isn't enclosed, can generally wreak havok on many sweep and prune optimizations. 
+</div></blockquote>
+I'm only aware of the stabbing numbers that don't work nicely with this.<br>
+But as Gino and me already concluded, there are better methods then stabbing, which don't suffer from large AABB's. So apart from this single case, I would love to know a few of those 'many' optimizations that suffer from those large AABB's.
+<blockquote class="uncited"><div>
+It would not appear to be very good at pruning either (it overlaps most if not all of the other AABBs); wouldn't you be better off just testing all of the dynamics against the static AABB-tree that is left out of sweep and prune? I think I may be missing something if the statics-AABB does a better job of pruning.
+</div></blockquote>
+If your implementation of SAP is negatively affected by large AABB's, you can write special code to handle this outside indeed. There is no gain indeed, but for a generic physics SDK, fewer exceptions is better in my experience (as long as it doesn't hurt performance too much).<br>
+
+<blockquote class="uncited"><div>
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Start with a collection of broadphases. Make sure there is enough overlap between them (I was wrong using the word "disjunct"). This overlap is the boundary. Then add some trigger on each boundary that handles interaction between one broadphase to the other. When an object is overlapping with the boundary, you create a replicate object on the other broadphase.
+</div></blockquote>
+So this is a space partitioning with sweep and prune broad phases for each partition? It sounds good for a well-segmented scene like a FPS level or a large streaming world as you mentioned. Still, it may be a matter of personal taste, but there is a certain elegance, efficiency, and space savings of sweep and prune in not replicating objects. Have you measured the degree of replication (and memory implications) relative to how many partitions you have? I'm really more concerned about how many times a single pair of objects gets considered by the individual sweep and prunes. If a pair of objects both overlap the same boundary, how many times are they considered? Once, a small constant, or once per boundary? I know this is more a debate in the realm of theoretical, since you've seen good results in practice, but there may be detrimental cases to know to avoid.<br>
+<br>
+Clustering or swapping endpoints in 1D with objects that are far away is a drawback. There must be a way to avoid this without boundary regions and replication... and I'd love to know it!
+</div></blockquote>
+The boundaries are small compared to the broadphase areas, and their size is at least a dimension smaller then the entire broadphase area. It solves the case for large worlds effectively. Typically the size of the boundary should be chosen to be larger then typical dynamic object sizes. Usually dynamic objects are not that big. <br>
+<br>
+From what I remember, the typical cost of boundary management is neglectable compared to the benefits of the scalability running multiple simulations in parallel and eliminating the effect of far-away objects (on the swaps). However, for every rule there is an exception, and it is easy to come up with some special case that doesn't work well in this scenario.  For a lot of game applications on todays architectures that provide parallel computing (and streaming) I think this is a general efficient and useable solution.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 11, 2006 9:40 pm</strong></div>
+				<div class="author">by <strong>dcoming</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+I'm only aware of the stabbing numbers that don't work nicely with this.<br>
+But as Gino and me already concluded, there are better methods then stabbing, which don't suffer from large AABB's. So apart from this single case, I would love to know a few of those 'many' optimizations that suffer from those large AABB's.
+</div></blockquote>
+I knew I should have provided examples up front, but it was a long-winded post already. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> A large AABB will be re-counted frequently with any method involving rebuilding of overlaps for an object, whether its due to a (re)insertion or a change of sorting algorithm (radix, quicksort, etc) that does not maintain the overlaps via swaps. You mentioned the stabbing-number, but its really just one example of the insertion problem mentioned.<br>
+<br>
+By the way, Larsson and Akenine-Moller tested some different sorting algorithms that they claim 'fix' the clustering problem:<br>
+<a href="http://vcg.isti.cnr.it/vriphys05/material/paper55.pdf" class="postlink">http://vcg.isti.cnr.it/vriphys05/material/paper55.pdf</a><br>
+<br>
+As mentioned, these sorting schemes would count the static AABB many times. Now, you could try to avoid re-counting the static AABB by making it a special case, but you made a good point about that already.<br>
+
+<blockquote class="uncited"><div>
+From what I remember, the typical cost of boundary management is neglectable compared to the benefits of the scalability running multiple simulations in parallel and eliminating the effect of far-away objects (on the swaps). However, for every rule there is an exception, and it is easy to come up with some special case that doesn't work well in this scenario.  For a lot of game applications on todays architectures that provide parallel computing (and streaming) I think this is a general efficient and useable solution.
+</div></blockquote>
+Cool. I think you may be avoiding the really bad case that space partitioning hierarchies (e.g., kd-trees) have for ray-tracing, where almost all triangles get replicated a couple of times or more. This would be because you don't have to subdivide down to a small number of objects per partition.<br>
+<br>
+Also, I thought I saw a paper about performing 1D sweep and prunes in each node of a binary space partition tree. I'll post it if I can find it again.<br>
+<br>
+The problem of avoiding swaps between far-away objects would be a lot easier if there were a simple way to ignore their swaps in other dimensions once you know their projections are disjoint on some axis. Any ideas?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

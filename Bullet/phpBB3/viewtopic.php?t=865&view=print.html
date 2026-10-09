@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Friction in Cline's paper: how to use?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Friction in Cline's paper: how to use?</h2>
+		<p><a href="viewtopic.php%3Ft=865.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=865</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Friction in Cline's paper: how to use?</h3>
+				<div class="date">Posted: <strong>Sat Dec 30, 2006 12:04 am</strong></div>
+				<div class="author">by <strong>FD</strong></div>
+				<div class="content">OK guys, you're in for yet another question you're likely not to give an answer to...<br>
+<br>
+Maybe you're familiar with Michael Cline 's thesis where he describes an approach to physics simulation. In this paper, an interesting way of dealing with friction is desribed. He managed to integrate the dependance between the normal contact force and the friction pyramide into a single LCP. So having solved such an LCP, we get the normal contact forces and friction forces at each contact point simultaneously, having friction forces limited by friction pyramides constructed with respect to the appropriate normal contact force. <br>
+<br>
+There're at least two major drawbacks in his method. First, it requires  a constraint for each direction of each basis vector of the pyramide. That means that if we implement a pyramide with 2 directions only (rectangular pyramide, that's minimum), there must be 4 constraints for friction. Plus 1 contraint for the contact itself, plus 1 for the dependance between the contact normal force and the pyramide. It's quite a lot.     <br>
+<br>
+The second drawback is even worse. The resulting LCP matrix is not symmetric! Neither it is positive-definite. It seems to be PSD, however. For  the exact configuration of the matrix, please refer to the paper, and consider the fact that normally the matrix is transformed to JMJ form in order to reduce the number of unknows, not solved in the form he formulates the matrix. So, this cool matrix is solvable by Lemke, but often not solvable by PGS, when applied without modifications.<br>
+<br>
+So, the question is if there're efficient iterative methods for solving LCPs in real-time.<br>
+<br>
+The second question is whether Cline's approach to fricition is significantly better than more common approaches (such as solving the system without friction, computing the friction pyramides, solving with friction with the friction forces limited by the pre-calculated pyramides, repeating)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Dec 30, 2006 6:48 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">The type of solver you need depends on your application. If you are willing to sacrifice accuracy for speed, you should consider sequential impulses.<br>
+<br>
+AFAIK, solving an exact model of friction requires solving a Nolinear Complementarity Problem (NCP). You won't find many brave enough to tackle that problem.<br>
+<br>
+With an iterative method like sequential impulses, you can easily use <em class="text-italics">weight feeling</em> friction.<br>
+<br>
+BTW, artifacts of using a friction pyramid instead of a cone can be reduced by aligning the friction axes with the relative velocity.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Dec 30, 2006 12:04 pm</strong></div>
+				<div class="author">by <strong>FD</strong></div>
+				<div class="content">Erin,<br>
+<br>
+Just have a look at the paper mentioned above. An exact friction model is solved there with an LCP. Well, not _exact_ because it still uses pyramid not cone. AFAIK one would have to deal with NCP in order to maintain the cone, and if you use the pyramid, LCP is enough. But he however maintains the dependance between the normal contact force and the pyramid within one LCP. Have a look at the paper, it's worth reading. His LCP is solved with Lemke, and solved OK.<br>
+<br>
+You say use sequntial impulses, but it's not what I'm considering. I use PGS and I'm satisfied, but it doesn't fit for non-symmetric non-PD matrices. And the matrix with  Cline's friction is not symmetric. It would take too much space here to describe what it looks like, better refer to the paper. What I want from you is an iterative LCP-solver fit for nonsymmetric matrices, or a direct method that would be faster than O^3(n), or a nice matrix splitting for the matrix mentioned above, or some other approach to solving fast enough the LCP that Cline derrives in his paper.   <br>
+<br>
+PS Thank you for your suggestion about reducing the atrifacts of the pyramid! A bright idea it is.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Dec 30, 2006 6:03 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Yes, I have implemented a system similar to Cline's awhile ago. In my experience, it is difficult to write a robust Lemke solver. Since I work in games now, I usually work with solvers that are O(n).<br>
+<br>
+Okay, so you are using PGS (Projected Gauss-Seidel). It turns out that sequential impulses (SI) with accumulation are equivalent to PGS. So SI does solve an LCP. If you use warm starting the convergence can be improved quite a bit. We had a discussion about the equivalence on this forum.<br>
+<br>
+So why use SI instead of PGS? Using SI makes it easier to handle asymmetry and custom friction models. You are solving constraint-by-constraint, so each type of constraint can be solved differently. Also the math concepts are simpler, making it easier to implement. The downside is that you have lost the LCP framework, so you cannot apply direct (global) solvers as easily.<br>
+<br>
+Here's my write up on sequential impulses along with some demo code:<br>
+<a href="http://www.gphysics.com/files/GDC2006_ErinCatto.zip" class="postlink">http://www.gphysics.com/files/GDC2006_ErinCatto.zip</a><br>
+<br>
+Here's my sketch of a proof of the mathematical equivalence of PGS and SI:<br>
+<br>
+Theorem:<br>
+For bilateral constraints, PGS and SI yield identical velocity updates.<br>
+<br>
+Proof:<br>
+We need to show that the PGS algorithm computes a single constraint<br>
+force update at a time given the current solution for all the<br>
+constraint forces. If the constraint involves two bodies, then the<br>
+current solution for all the constraint forces can be embedded in the<br>
+current velocities of the bodies. So as the constraint forces are<br>
+updated, the result can be immediately applied to the velocities of<br>
+the constrained bodies. This is equivalent to sequential impulses<br>
+where impulse = h * force.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jun 06, 2007 5:41 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">The method Cline described is either Stewart-Trinkle or Anitescu-Potra. The resulting matrix cannot be solved by naive Lemke but can be solved quite efficiently using a specialized Lemke solver.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

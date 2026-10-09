@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Terrain mesh and collision</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Terrain mesh and collision</h2>
+		<p><a href="viewtopic.php%3Ft=326.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=326</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Terrain mesh and collision</h3>
+				<div class="date">Posted: <strong>Thu May 04, 2006 9:00 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content">Hi,<br>
+<br>
+First let me say that I'm no physics expert, just normal game and college math.<br>
+<br>
+I've decided to use Bullet in my game engine and I have a terrain mesh that is split up in many parts. I have taken the base set up from the Concave demo since it also uses a "terrain" mesh.<br>
+<br>
+I have created a separate collision shape, motion state and physics controller for each terrain part and added the controllers to the physics environment. Is this the correct way of doing it?<br>
+<br>
+The mesh parts have a mass of zero and are thus static. No other objects added yet. When I run it, it's very very slow. The time is being used in the collision detection (SimpleBroadphase::FindPair). It seems there are a lot of collisions since the AABB of the mesh parts overlap so I get a lot of collision pairs. What can I do about this? Is there a way to avoid processing these mesh parts since terrain does not collide with itself?<br>
+<br>
+Thanks,<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 05, 2006 1:56 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">you can  add  all parts to  1 static  shape.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 05, 2006 7:34 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content">Erwin, can you explain how to add more meshes to a shape? If the vertices of the shapes were in one big array it could be done but they are of course separated into their own structures and objects.<br>
+I can't see a way to add more triangle arrays after the BvhTriangleMeshShape object is created. I'm new to bullet so I may very well have missed something.<br>
+<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 08, 2006 9:10 pm</strong></div>
+				<div class="author">by <strong>Proctoid</strong></div>
+				<div class="content">kend, I'm new to all this too - but have recently done something similiar to what you want to do - lots of individual objects in one hit mesh...<br>
+<br>
+These are the steps i take...<br>
+<br>
+1. create new index and vertex buffers large enough to contain the collision shapes you need in the collision mesh<br>
+2. manually fill these buffers with the individual objects you have <br>
+(ie. you write functions that append your different individual object types to the new index and vertex buffers)<br>
+3. create a new TriangleIndexVertexArray from the newly filled buffers <br>
+4. create a new collision object using BvhTriangleMeshShape<br>
+5. release unused old collision object <br>
+<br>
+This works so far for me... i would not suggest using this method often as alloc and dealloc of vertex and index buffers will be slow - it maybe an awful method - but at least it's a start!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 09, 2006 9:19 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content">Yes, that approach would work but it means having an extra copy of the vertex data and I don't want to do that. It could be quite a lot in my case.<br>
+Erwin will have a demo later showing how to do it so I'll wait for that.<br>
+<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 2:45 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I've been busy with Bullet Collada 1.4 Physics import, Blender-Bullet integration, ConvexDecomposition demo and other things.<br>
+<br>
+Adding new parts to an existing TriangleMeshSHape requires to either add a new BVH tree, or extending the existing BVH tree. Both are better not done during the simulation, only at startup / preprocessing.<br>
+<br>
+Are all the shapes not available at the start? Do you want to support streaming worlds? It would still be best to create large static meshes each in their own TriangleMeshShape.<br>
+<br>
+Can you provide a bit more info?<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 9:10 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content">The static terrain meshes are all loaded and available when bullet is initialized. The problem is that when each mesh is in its own TriangleIndexVertexArray there are a lot of collisions between these static meshes and this slows it down.<br>
+Basically what I'd like to see is a way to avoid processing these static meshes against each other. The terrain does not move so there can't be any real collision between the terrain parts. They should all be sleeping but right now they are all marked as "wants deactivating" and they remain in that state.<br>
+<br>
+I'd be happy to clarify ths more if needed.<br>
+<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 10:07 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kend wrote:</cite>The static terrain meshes are all loaded and available when bullet is initialized. The problem is that when each mesh is in its own TriangleIndexVertexArray there are a lot of collisions between these static meshes and this slows it down.<br>
+Basically what I'd like to see is a way to avoid processing these static meshes against each other. The terrain does not move so there can't be any real collision between the terrain parts. They should all be sleeping but right now they are all marked as "wants deactivating" and they remain in that state.<br>
+<br>
+I'd be happy to clarify ths more if needed.<br>
+<br>
+Ken</div></blockquote>
+
+I suppose you mean collision time spend in the broadphase? There is no static trimesh versus static trimesh narrowphase.<br>
+<br>
+Do you use 3d axis sweep and prune (AxisSweep3) ?<br>
+<br>
+I'll check what we can do about this extra overhead indeed.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 11:01 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+I suppose you mean collision time spend in the broadphase? There is no static trimesh versus static trimesh narrowphase.<br>
+<br>
+Do you use 3d axis sweep and prune (AxisSweep3) ?<br>
+<br>
+I'll check what we can do about this extra overhead indeed.<br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+Yes, broadphase and I use AxisSweep3. If you can find a way to eliminate the extra overhead that would be really great.<br>
+<br>
+Thanks,<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jun 25, 2006 11:09 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There is new support for both collision filtering in the broadphase (to avoid static-static collision processing, see CcdPhysicsDemo how to use this), and also option to add multiple static meshes using TriangleIndexVertexArray::AddIndexedMesh:<br>
+<br>
+1) First create a TriangleIndexVertexArray<br>
+2)Then add each mesh using AddIndexedMesh. notice this is indexing into existing vertex/index arrays, don't delete those original arrays, no internal copy is made.<br>
+3) Create a TriangleMeshShape, passing this TriangleIndexVertexArray.<br>
+<br>
+Visit <a href="http://www.continuousphysics.com/mediawiki-1.5.8/index.php?title=Download" class="postlink">http://www.continuousphysics.com/mediaw ... e=Download</a> <br>
+<br>
+Let me know if there is problems using it.<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

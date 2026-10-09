@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8676" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2012-12-16T03:16:22+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8676</id>
+
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-16T03:16:22+00:00</updated>
+
+		<published>2012-12-16T03:16:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29505#p29505</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29505#p29505"/>
+		<title type="html"><![CDATA[Re: Point-point constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29505#p29505"><![CDATA[
+Thanks Dirk ! It works great<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sun Dec 16, 2012 3:16 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2012-12-15T19:06:34+00:00</updated>
+
+		<published>2012-12-15T19:06:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29499#p29499</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29499#p29499"/>
+		<title type="html"><![CDATA[Re: Point-point constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29499#p29499"><![CDATA[
+// Start with the position constraint ( 3 x 1 )<br>C = x2 + r2 - x1 - r1<br><br>// Build the time derivative (which is the relative velocity at the joint)<br>dC/dt = J*v = v2 + w2 x r2 - v1 - w1 x r1<br><br>// Identify Jacobian by inspection  ( 3 x 12 ) - here I is the 3x3 identity matrix<br>J = ( -I | skew( r1 ) | I | -skew( r2 ) )<br><br>// Compute *inverse* effective mass matrix ( 3 x 12 * 12 x 12 * 12 x 3 = 3 x 3  )<br>J*M^-1*JT = ( InvM1 + InvM2 ) * I - skew( r1 ) * InvI1 * skew( r1 ) - skew( r2 ) * InvI2 * skew( r2 )<br><br>// Solve 3x3 linear system system for lambda <br>J*M^-1*JT * Lamba = -J*v - beta * C / dt<br><br>// Accumulate for warmstarting (if desired)<br>AccumulatedLambda += Lambda;<br><br>// Apply impulses<br>v1 -= InvM1 * lambda<br>w1 -= InvI1 * ( r1 x lambda )<br>v2 += InvM2 * lambda<br>w2 += InvI2 * ( r2 x lambda )<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sat Dec 15, 2012 7:06 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-15T09:52:27+00:00</updated>
+
+		<published>2012-12-15T09:52:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29498#p29498</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29498#p29498"/>
+		<title type="html"><![CDATA[Re: Point-point constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29498#p29498"><![CDATA[
+Sorry, talkin to myself here ...<br><br>I have got the following equation for JM^-1JT(lambda) = -J*vi for the point-point constraint:<br><br>(Ma^-1 + skew(ra)*Ia^-1*skew(ra)T + Mb^-1 + skew(rb)*Ib^-1*skew(rb)T)*lambda = (-vai - skew(ra)wai + vb + skew(rb)*wbi)<br><br>Where vai, wai etc are the initial linear and angular velocities of each body and T denotes the transpose <br><br>To solve for lambda, there is a 4x4 matrix when summing up all the matrices on the LHS and a 3x1 vector for the RHS of the equation, which means I will end up with a 3x1 vector for lambda when multiplying the RHS with the inverse of the LHS. Therefore, wbf below gets a zero impulse applied to it always.<br><br>In the end I should have:<br><br>vaf = vai + Ma^-1*lambda<br>waf = wai + Ia^-1*skew(ra)T*lambda<br>vbf = vbi - Mb^-1*lambda<br>wbf = wbi - Ib^-1*skew(rb)T*lambda<br><br>What am I doing wrong?<br><br>Thanks for anyone's help !<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Sat Dec 15, 2012 9:52 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-14T08:18:11+00:00</updated>
+
+		<published>2012-12-14T08:18:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29491#p29491</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29491#p29491"/>
+		<title type="html"><![CDATA[Re: Point-point constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29491#p29491"><![CDATA[
+Sorry my bad, I forgot to add the entries in JM^-1JT, so it will be a huge multiplication in 3D. None the less, a good way to confirm both methods.<br><br>Thanks anyway<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Fri Dec 14, 2012 8:18 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-14T04:10:21+00:00</updated>
+
+		<published>2012-12-14T04:10:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29490#p29490</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29490#p29490"/>
+		<title type="html"><![CDATA[Point-point constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29490#p29490"><![CDATA[
+Hi,<br><br>I have followed this process in deriving the jacobian matrix for a point-point constraint:<br><br>C(x)  = xa + ra - xb - rb = 0 where x is the position of each body and r is the distance vector to the anchor point from each body<br>dC/dt = va + cross(wa, ra) - vb - cross(wb, rb) = 0 where w is the angular velocity of each body<br><br>Now that we have this relative velocity, i get the jacobian by inspection as follows:<br><br>dC/dt = Jv = [ 1 skew(ra) -1 skew(rb) ] [ va wa vb wb ] where the velocity vector is a column vector<br><br>Given the jacobian [ 1 skew(ra) -1 skew(rb) ]<br><br>J*M^-1*JT*lambda = -Jva<br><br>Now [1 skew(ra) - 1 skew(rb) ] * M where M is:<br><br>[ Ma^-1 0           0        0       ]<br>[ 0        Ia^-1     0        0       ]<br>[ 0         0         Mb^-1  0       ]<br>[ 0         0           0       Ib^-1 ]<br><br>Gives: <br><br>[ Ma^-1    skew(ra)*Ia^-1    -Mb^-1     -skew(rb)*Ib^-1 ]<br><br>And multiplying this by the transpose of the jacobian [1 skew(ra) - 1 skew(rb) ] which is a column vector with the same entries gives:<br><br>J*M^-1*JT = [ Ma^-1     skew(ra)*skew(ra) *Ia^-1        Mb^-1        skew(rb)*skew(rb)*Ib^-1 ]<br><br>Since I now have a mass matrix(m^-1*Identity) and a tensor matrix inside a matrix, what is the next step? I multiplied the skew with the tensor in each case and this doesnt simplify the problem.<br><br>I can easily do this problem using Erin's derivation which uses impulse momentum and relative velocity but I want to use the lagrange multiplier to put the problem into a common form for the solver.<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Fri Dec 14, 2012 4:10 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

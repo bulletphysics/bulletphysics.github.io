@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; They are falling under the plane :(</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>They are falling under the plane :(</h2>
+		<p><a href="viewtopic.php%3Ft=498.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=498</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>They are falling under the plane :(</h3>
+				<div class="date">Posted: <strong>Thu Aug 31, 2006 12:08 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">Situation:<br>
+Static plane (StaticPlaneShape). Objects (BoxShape, ConvexHullShape or ConvexTriangleMeshShape) are falling from some height down to the plane. They hit plane, simi-penetrate, reflect....hit again....roll/jump...simi-penetrate....and fall completly under the plane <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+If two objects collide, they penetrate deeply. They nearly do not sense each other.<br>
+<br>
+Samples seem to work OK.<br>
+<br>
+What can be wrong in my program?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 31, 2006 5:25 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Without a sample file that is difficult to determine. Do you have a modified Bullet demo that shows similar behaviour?<br>
+<br>
+Many things can be wrong. What is gravity? How large are the objects? What is the collision margin? Do you initialize the inertia tensor? What is the timestep?<br>
+<br>
+Also, the continuous collision detection (CCD) is not enabled by default, which means there is no safety for fast moving objects (moving faster then their own size in one timestep). This CCD is work in progress, and should prevent objects going though eachother.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 31, 2006 7:07 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Without a sample file that is difficult to determine. Do you have a modified Bullet demo that shows similar behaviour?</div></blockquote>
+
+No. Demos from the "bullet-1.9\msvc\8" folder work OK.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Many things can be wrong. What is gravity? How large are the objects? What is the collision margin? Do you initialize the inertia tensor? What is the timestep?</div></blockquote>
+
+1) gravity = 9.8<br>
+2) BoxShape object (half size = 25), ConvexTriangleMeshShape approx. the size of the box object.<br>
+3) margin? what is it? I do not set it in my program...<br>
+4) inertia tensor comes from CalculateLocalInertia<br>
+5) timestep is constant = 1/60. By the way if I set variable timestep, ojects do not move at all (they freeze in the space)<br>
+<br>
+Here is some fragments of my code:<br>
+<br>
+PHYSICS::PHYSICS()<br>
+{<br>
+	SimdVector3 worldAabbMin(-30000,-30000,-30000);<br>
+	SimdVector3 worldAabbMax(30000,30000,30000);<br>
+<br>
+	_pDispatcher	= new CollisionDispatcher;<br>
+	_pBroadPhase	= new AxisSweep3(worldAabbMin, worldAabbMax, 32766, 65535);<br>
+	_pPhysEnv		= new CcdPhysicsEnvironment(_pDispatcher, _pBroadPhase);<br>
+}<br>
+<br>
+void ATOM::Initialize(SHAPE *const pShape, RENDER::ATOM *const pRenderAtom, bool bStatic)<br>
+{<br>
+	assert(pShape);<br>
+	assert(pRenderAtom);<br>
+<br>
+	_pRenderAtom = pRenderAtom;<br>
+<br>
+	_ci.m_MotionState			= this;<br>
+	_ci.m_collisionShape		= pShape-&gt;m_pCollisionShape;<br>
+	if(bStatic)<br>
+	{<br>
+		_ci.m_collisionFlags		= CollisionObject::isStatic;<br>
+		_ci.m_mass					= 0;<br>
+		_ci.m_collisionFilterGroup	= CcdConstructionInfo::StaticFilter;<br>
+		_ci.m_collisionFilterMask	= CcdConstructionInfo::AllFilter ^ CcdConstructionInfo::StaticFilter;<br>
+	}<br>
+	else<br>
+	{<br>
+		SimdVector3 LocalIn;<br>
+		pShape-&gt;m_pCollisionShape-&gt;CalculateLocalInertia(1, LocalIn);<br>
+<br>
+		_ci.m_localInertiaTensor	= LocalIn;<br>
+		_ci.m_mass					= 1;<br>
+		_ci.m_gravity				= SimdVector3(0, -9.8f, 0);<br>
+		_ci.m_collisionFlags		= 0;<br>
+	}<br>
+	_pPhyCtrl = new CcdPhysicsController(_ci);<br>
+}<br>
+<br>
+void STATIC_PLANE_SHAPE::Initialize(const __m128 &amp;vNormal)<br>
+{<br>
+	m_pCollisionShape = new StaticPlaneShape(*(SimdVector3*)&amp;vNormal, vNormal.m128_f32[3]);<br>
+}<br>
+<br>
+void BOX_SHAPE::Initialize(const __m128 &amp;vHalfSize)<br>
+{<br>
+	m_pCollisionShape = new BoxShape(*(SimdVector3*)&amp;vHalfSize);<br>
+}<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Also, the continuous collision detection (CCD) is not enabled by default, which means there is no safety for fast moving objects (moving faster then their own size in one timestep). This CCD is work in progress, and should prevent objects going though eachother.
+</div></blockquote>
+
+Objects fall from height = 100, 150 and 225 (starting speed=0). Their speeds at the surface are small. Sometimes objects do not fall thru the surface plane. They can lie on the surface but approx. 50% of the object is under the surface. <br>
+How to enable CCD?<br>
+<br>
+Also sometimes<br>
+assert(proxy0 != proxy1);<br>
+from the<br>
+OverlappingPairCache::AddOverlappingPair(BroadphaseProxy* proxy0,BroadphaseProxy* proxy1)<br>
+occurs</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 31, 2006 7:48 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">This assert should never fail. It's probably best to try to solve this offline, with a source sample.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 10:31 am</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">I found! It is working now. My testbed is working!!!<br>
+I'll be creating my new game with BULLET now!<br>
+<br>
+BULLET is GREAT!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 1:24 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>I found! It is working now. My testbed is working!!!<br>
+I'll be creating my new game with BULLET now!<br>
+<br>
+BULLET is GREAT!  :D</div></blockquote>
+
+What was wrong?  Maybe someone else can benefit from what you learned?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 1:54 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite><blockquote><div><cite>Jack wrote:</cite>I found! It is working now. My testbed is working!!!<br>
+I'll be creating my new game with BULLET now!<br>
+<br>
+BULLET is GREAT!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div></blockquote>
+
+What was wrong?  Maybe someone else can benefit from what you learned?</div></blockquote>
+
+That was my stupid error:<br>
+<br>
+void ATOM::getWorldScaling(float&amp; scaleX,float&amp; scaleY,float&amp; scaleZ)<br>
+{<br>
+	const D3DXMATRIXA16 *const pmat = &amp;_pRenderAtom-&gt;Final();<br>
+<br>
+	scaleX = 1;//pmat-&gt;_11;<br>
+	scaleY = 1;//pmat-&gt;_22;<br>
+	scaleZ = 1;//pmat-&gt;_33;<br>
+}<br>
+<br>
+I took scale factors from 11,22,33 of the World Martix. It is of course wrong, if rotation is present.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Box2D Demo &amp; Tutorial - Page 3</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Box2D Demo &amp; Tutorial</h2>
+		<p><a href="viewtopic.php%3Ft=273.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=273</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>3</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 14, 2006 10:18 pm</strong></div>
+				<div class="author">by <strong>John Schultz</strong></div>
+				<div class="content">Hey Dirk,<br>
+<br>
+Yes, you must adjust the old position to update the velocity (see <strong class="text-strong">setTotalKineticEnergy</strong>() ). One of the comments regarding Jacobsen's tetrahedral rigid body idea is that it's hard to model controllable restitution. Thinking about just a particle system modeling a tetrahedron, when you project the particle out of the surface, you can adjust the constraints (restore the tetrahedral shape), then restore the kinetic energy (taken before the adjustment) as outline above. Now the tetrahedron will never lose energy and bounce forever (float/round error can allow energy leakage or gain...). To model an inelastic collision (energy is lost), just scale back the energy that is restored a desired amount.<br>
+<br>
+When modeling a rigid body with an embedded Verlet tetrahedron, you'll need routines to convert Verlet particle momentum to and from rigid body momentum. Thus, you can compute standard impulses for a rigid body, update the momentum, then set the Verlet particle momentum to the new rigid body momentum (see my website: I added more source code).<br>
+<br>
+Note: my current rigid body implementation for stacking only uses linear momentum/velocity changes from the Verlet tetrahedral system (in addition to linear and angular position changes). It's been some time since I worked on the code- probably done this way for stability (energy error (to be corrected) primarily from potential energy gain due to gravity).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 16, 2006 5:05 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">John,<br>
+<br>
+Thanks for the info. I'm still not sure how your algorithm is an improvement in the inelastic case. Perhaps you could try running this test:<br>
+<br>
+- 4 1m^3 boxes in a vertical stack<br>
+- time step 1/30<br>
+- gravity 9.8 m/s^2<br>
+- friction 0.3, restitution 0.0<br>
+- no damping or sleeping<br>
+- small vertical offset (say 5 cm)<br>
+- some random horizontal shifting (~ 10 cm)<br>
+- max of 5 iterations</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 16, 2006 6:04 pm</strong></div>
+				<div class="author">by <strong>John Schultz</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>John,<br>
+<br>
+Thanks for the info. I'm still not sure how your algorithm is an improvement in the inelastic case. Perhaps you could try running this test:<br>
+<br>
+- 4 1m^3 boxes in a vertical stack<br>
+- time step 1/30<br>
+- gravity 9.8 m/s^2<br>
+- friction 0.3, restitution 0.0<br>
+- no damping or sleeping<br>
+- small vertical offset (say 5 cm)<br>
+- some random horizontal shifting (~ 10 cm)<br>
+- max of 5 iterations</div></blockquote>
+
+Erin, I won't have time to do new experiments for a while, though I did have versions that were stable with (effectively) the above settings (for damping- I take it you mean artificial/hack damping, as friction and restitution=0 are major dampers <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"> ). The KE corrector caps energy growth (prevents KE gain from effective PE gain), but allows energy loss via the tetrahedral distortions (only), though this is more like a restitution of 0.0 behavior (realistic energy loss through compression/heat).<br>
+<br>
+The current version (in my game demo) <strong class="text-strong">does not require iteration</strong>: it is 1-pass stable at 100Hz (game has been tuned for 100Hz). Additionally, stacks are fairly stiff; see the .mp4 video earlier in this thread- see how when the box stack compresses together, the reaction is stiff, and not springy (8 boxes).<br>
+<br>
+When I have the time to change the code to non-reset-tetrahedron form, I believe a 4-stack will be stable with the above settings @ 2-3 iterations.<br>
+<br>
+Is it possible to run your simulation with the above parameters at 100Hz and no iteration (1-pass)? It may be the case that ~3.33 iterations at 30Hz behaves the same as 1-pass at 100Hz...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 16, 2006 7:45 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I don't have a 3D code available right now, but I was able to modify Box2D to these settings:<br>
+<br>
+- 1m^2 boxes in a vertical stack<br>
+- time step 1/100<br>
+- gravity 9.8 m/s^2<br>
+- friction 0.3, restitution 0.0<br>
+- no damping or sleeping<br>
+- 5cm initial vertical offset between all boxes<br>
+- 5cm initial vertical offset between the lowest box and ground<br>
+- some random horizontal shifting (~ 10 cm)<br>
+- max of 1 iterations<br>
+<br>
+I got 8 boxes stacking stably with about 5-20 seconds of sway.<br>
+<br>
+In my experience, halving the time step is much more effective than doubling the iterations. So I would expect a time step of 1/100 with 1 iteration to have a different result than 1/33 with 3 iterations. At the latter setting, I could not reliably stack 5 boxes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 27, 2006 6:17 pm</strong></div>
+				<div class="author">by <strong>LonelyStar</strong></div>
+				<div class="content">Hello,<br>
+ <br>
+How do prevent objects from jittering? Is it just your algorithem, that does not have the bad side-effect of jittering or is there something you do about it?<br>
+Thanks!<br>
+Nathan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 27, 2006 9:26 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Nathan,<br>
+<br>
+Is it your own simulation that is jittering? Do you have something I can run?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Nov 28, 2006 12:47 pm</strong></div>
+				<div class="author">by <strong>LonelyStar</strong></div>
+				<div class="content">Hello Erin,<br>
+<br>
+Thanks for you response!<br>
+Yes, my own simulation is jittering. I am on a linux system and currently trying to get the cross-compiler to work. As soon as I am done with that, I will upload "somthing to run".<br>
+<br>
+But my simulation has not (yet) much to do with Box2D, other than that it's impulse based.<br>
+I am working with convex polygons.<br>
+In every timestep I am calculating all collisions that will happen in the next dt (using seperating axis). The contact points are calculated (getting 2 for edge-edge collision and 1 for vertex-edge collision) and impulses are applied to them.<br>
+I want to get stacking to work, but before that I have to get rid of the jittering.<br>
+<br>
+Jittering in my case means, that something lying on the ground always rotates a little.<br>
+<br>
+Nathan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Nov 28, 2006 2:38 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Do you use a stabilization term? You should only correct a small fraction of the position error. Usualy around 10%. You should also try to allow some penetration instead of trying to resolve the whole penetration. This will give you better coherence if you use warmstarting...<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 29, 2006 6:39 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Nathan,<br>
+<br>
+It sounds like you changed the formulation a bit by computing impulses for future contacts. Do you still get jitter if you use the original Box2D algorithm?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 26, 2007 11:55 pm</strong></div>
+				<div class="author">by <strong>DanEE</strong></div>
+				<div class="content">@Erin or all the others <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"> :<br>
+Sorry in advance if my question is completly ridiculous, I'm still a beginner with physic based animation...<br>
+<br>
+My ultimate goal is to implement a 3D-Demo based on the ideas on Erins Slides. I am digging through the source-code of Box2D and I think I begin to understand it more or less.<br>
+<br>
+But I have still a conceptual question with the collision detection:<br>
+Why do you make a clipping in the box-box test. What do we actually gain in this clipping step, what we don't already know from the "normal" SAT-Test?<br>
+Therefore I don't really understand additionally what is meant on slide 14:
+<blockquote class="uncited"><div>
+- Clip incident face against reference face side planes (but not the reference face).<br>
+- Consider clip points with positive penetration.
+</div></blockquote>
+
+Another thing is on the slide with the 3D-issues:
+<blockquote class="uncited"><div>
+Align the axes with velocity if it is non-zero.
+</div></blockquote>
+
+I hope you can help me, and that I am able to implement something with your help! (That I am really able to implement it is not sure at all though...  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> )</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jan 27, 2007 12:24 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content"><blockquote><div><cite>DanEE wrote:</cite>
+- Clip incident face against reference face side planes (but not the reference face).<br>
+- Consider clip points with positive penetration.
+</div></blockquote>
+
+SAT can only tell you the features involved in the collision. You need to do clipping to get contact points. If you don't clip then you will get contact points where the two boxes don't even touch.<br>
+
+<blockquote class="uncited"><div>
+Align the axes with velocity if it is non-zero.
+</div></blockquote>
+
+In 3D, friction occurs in a plane. Since it is a plane, friction occurs in two directions (axes). If you align the friction axes with the sliding motion, then you will get more realistic friction.<br>
+<br>
+The problem with using fixed directions for friction is that those directions will have weaker friction than diagonal directions. Thus sliding boxes will steer towards the axial directions. This is bad.<br>
+<br>
+My advice to you is to start simple. First try modifying Box2D. Add a circle shape. Add a distance constraint. When you go to 3D, start simple. For example, just do spheres and planes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jan 27, 2007 9:24 am</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content"><blockquote class="uncited"><div>In 3D, friction occurs in a plane. Since it is a plane, friction occurs in two directions (axes). If you align the friction axes with the sliding motion, then you will get more realistic friction. <br>
+<br>
+The problem with using fixed directions for friction is that those directions will have weaker friction than diagonal directions. Thus sliding boxes will steer towards the axial directions. This is bad. </div></blockquote>
+
+Ahh...so thats what that align axes with velocity meant...That clears things up and explains the wierd motion I was getting. It happened to go off in the axis directions just like you said  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_surprised.gif" width="15" height="15" alt=":o" title="Surprised"> <br>
+<br>
+One question about aligning the axes with velocity:<br>
+if an object is, for example, sliding across a plane, there will only be one axis in which friction will act since velocity only works in one direction, correct? If so, why would we even need the other axis for friction?<br>
+<br>
+You also mentioned in the slides something about using a single point for friction by combining all the others, but would require a "twist friction"<br>
+How is this computed?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jan 27, 2007 5:19 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content"><blockquote><div><cite>coderchris wrote:</cite>if an object is, for example, sliding across a plane, there will only be one axis in which friction will act since velocity only works in one direction, correct? If so, why would we even need the other axis for friction?
+</div></blockquote>
+
+This is an open issue. Initially the friction is aligned with the velocity, but as the constraints are iterated, the velocity might steer away from the initial direction. I'm hesitant to adjust the friction direction during iterations because it might affect convergence. However, it might work.<br>
+<br>
+Twist friction is modeled by requiring the relative angular velocity about the contact normal to be zero. The twist friction impulse torque needs to be clamped by:<br>
+<br>
+max_friction_torque = mu * lever_arm * accumulated_normal_impulse<br>
+<br>
+You should pre-compute the lever_arm as the average distance of all contact points on the manifold from the center of the manifold.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Feb 17, 2007 12:47 pm</strong></div>
+				<div class="author">by <strong>LonelyStar</strong></div>
+				<div class="content">Hello,<br>
+<br>
+It's me again. I posted a question a few posts back and never came back. That was very rude of me, I moved and did not have internet and no time. I am sorry!<br>
+<br>
+I am looking through the source of Box2D, trying to understand it, and I have a question:<br>
+If I see correctly, you find the arbiter (which are something like contact-point manager) once in the Broad Phase. Then you iterate a few times over the arbiter making sure there needs are met.<br>
+<br>
+But what is with this scenario:<br>
+We have lot of boxes (B) lying on the ground (-) side by side and another Box (A) coming from the right with speed:<br>
+<br>
+A -&gt; BBBBBBBBBBBBBBBBBBBB<br>
+-------------------------------------<br>
+<br>
+Now A collides with the first B, a arbiter is created between them. The impulse should propagate through all the B's, but there are no arbiters between the B's.<br>
+<br>
+How does this work in Box2D?<br>
+<br>
+Thanks!<br>
+Nathan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Feb 17, 2007 1:17 pm</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">I think that if there was no collisions between B's at the moment of the A and first B collision there will no impulse propagation, but since the first B got some velocity new collisions will be detected during the next time step and so on.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>3</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

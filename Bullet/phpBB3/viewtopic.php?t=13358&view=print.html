@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to  manually create convex collision mesh for concave meshes instead of vhacd?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to  manually create convex collision mesh for concave meshes instead of vhacd?</h2>
+		<p><a href="viewtopic.php%3Ft=13358.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13358</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to  manually create convex collision mesh for concave meshes instead of vhacd?</h3>
+				<div class="date">Posted: <strong>Sun Jan 23, 2022 11:39 am</strong></div>
+				<div class="author">by <strong>bluefish_</strong></div>
+				<div class="content">Hello! I'm using pybullet to simulate a scene with a few objects chaining together under gravity and the hook object is passing through the box opening:
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1905" class="postimage" alt="Screen Shot 2022-01-23 at 3.30.27 AM.png" onclick="viewableArea(this);" /></dt>
+						<dd>Screen Shot 2022-01-23 at 3.30.27 AM.png (358.32 KiB) Viewed 35769 times</dd>
+		</dl>
+		
+		
+			</div>
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1903" class="postimage" alt="Screen Shot 2022-01-23 at 3.29.22 AM.png" onclick="viewableArea(this);" /></dt>
+						<dd>Screen Shot 2022-01-23 at 3.29.22 AM.png (97.68 KiB) Viewed 35769 times</dd>
+		</dl>
+		
+		
+			</div>
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1904" class="postimage" alt="Screen Shot 2022-01-23 at 3.29.25 AM.png" onclick="viewableArea(this);" /></dt>
+						<dd>Screen Shot 2022-01-23 at 3.29.25 AM.png (95.7 KiB) Viewed 35769 times</dd>
+		</dl>
+		
+		
+			</div>
+I'm using vhacd to generate a convex decomposition of the original box mesh because the original shape is concave (using code <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13358&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>p.vhacd(self.part_obj_path, obj_acd_path, "log.txt", pca=True, mode=1)</code></pre></div>). Somehow vhacd is not working super well for this concave mesh and I tried to create a mesh file with "o convex_#" of different components but it still didn't seem to help. I'm wondering in this case is it because the collision mesh is not correct or because of some other factors?<br>
+<br>
+Below is the rough structure of my code; please let me know if there's anything in my code that might be contributing to this; thanks very much!
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13358&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    
+    p.connect(p.GUI)
+    p.setAdditionalSearchPath(pybullet_data.getDataPath())
+    # disable rendering
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+    p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+    p.configureDebugVisualizer(p.COV_ENABLE_TINY_RENDERER, 0)
+    p.setGravity(0,0,-9.8)
+
+    for id, part in list_of_parts():
+        part_mesh = get_part_mesh()
+        mesh_color = part_mesh.get_color()
+        rgba = list(mesh_color) + [1]
+        quarternion = p.getQuaternionFromEuler(part.frame.radians_rot())
+        visualShapeId = p.createVisualShape(shapeType=p.GEOM_MESH,
+                            fileName=part.collision_obj_path,
+                            rgbaColor=rgba,
+                            visualFramePosition=part.frame.pos,
+                            visualFrameOrientation=quarternion)
+        collisionShapeId = p.createCollisionShape(shapeType=p.GEOM_MESH,
+                            fileName=part.collision_obj_path,
+                            collisionFramePosition=part.frame.pos,
+                            collisionFrameOrientation=quarternion)
+        bodyId = p.createMultiBody(baseMass=part.mass,
+            baseCollisionShapeIndex=collisionShapeId,
+            baseVisualShapeIndex=visualShapeId,
+            useMaximalCoordinates=True)
+        p.changeDynamics(bodyId,-1,activationState=p.ACTIVATION_STATE_ENABLE_SLEEPING,linearDamping=0.5, angularDamping=0.5)
+
+    startPos = [0,0,0]
+    p.resetDebugVisualizerCamera(cameraDistance=800, cameraYaw=60, cameraPitch=-60, cameraTargetPosition=startPos)
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+    p.setRealTimeSimulation(1)
+    
+    while True:
+    	p.stepSimulation()
+ </code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

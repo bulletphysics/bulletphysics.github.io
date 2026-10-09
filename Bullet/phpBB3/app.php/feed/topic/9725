@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9725" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-02-05T17:53:36+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9725</id>
+
+		<entry>
+		<author><name><![CDATA[Numsgil]]></name></author>
+		<updated>2014-02-05T17:53:36+00:00</updated>
+
+		<published>2014-02-05T17:53:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32856#p32856</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32856#p32856"/>
+		<title type="html"><![CDATA[Re: Continuous distance function]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32856#p32856"><![CDATA[
+Yeah, that's actually the approach I'm exploring right now.  I'm sort of off on my own in left field at the moment, though, so I'm looking for some perspective.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2437">Numsgil</a> — Wed Feb 05, 2014 5:53 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[DannyChapman]]></name></author>
+		<updated>2014-02-05T12:06:06+00:00</updated>
+
+		<published>2014-02-05T12:06:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32850#p32850</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32850#p32850"/>
+		<title type="html"><![CDATA[Re: Continuous distance function]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32850#p32850"><![CDATA[
+If performance isn't a concern, you could calculate the Minkowski difference between the polyhedra and then use your generalized barycentric coordinates to get a distance measure between that and the origin which, as you say, will have a well defined derivative, and will handle overlap/separation.<br><br>But this seems too obvious, so perhaps I misunderstood something?!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1517">DannyChapman</a> — Wed Feb 05, 2014 12:06 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Numsgil]]></name></author>
+		<updated>2014-02-01T22:06:24+00:00</updated>
+
+		<published>2014-02-01T22:06:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32785#p32785</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32785#p32785"/>
+		<title type="html"><![CDATA[Continuous distance function]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=32785#p32785"><![CDATA[
+I'm working on a collision detection algorithm, and I'm looking for alternatives to GJK for calculating the "distance" between two convex polyhedra.  At this point performance isn't a concern, as it's very speculative research.  Instead, I want these basic properties:<br><br>1.  The distance function returns a constant value (call it D) if the two polyhedra are *just* touching.  It doesn't matter if this constant is 0 or not.<br>2.  If the two bodies are overlapping the distance function returns a value &lt; D that is proportional to the overlap.<br>3.  If the two bodies are separated, the distance function returns a value &gt; D that is proportional to their separation distance.<br>4.  The distance function is ideally <a href="http://mathworld.wolfram.com/C-InfinityFunction.html" class="postlink">C^infinity</a>.  That is, it has a well defined derivative.  And its derivative has a well defined derivative.  And so on and so on.  cos(t) is C^infinity, for instance.  If I can't get C^infinity I'll settle for as many derivatives as possible.<br><br>If #4 still doesn't make sense, I basically want the value of the distance function to smoothly change as you move either polyhedra, assuming you move it in a way that is itself smooth.  For instance, if you were translate one of the bodies on the curve &lt;t, cos(t)&gt; and track the "distance" of the two polyhedra over time, I'd like it to appear smooth.<br><br>Vanilla GJK falls over on 2 and 4.  The usual refinements to GJK handle 2 but definitely not 4.  As different features of the two polyhedra become the closest pair the distance function gets a kink in it as the first and higher derivatives vanish.  This is going to be true for any algorithm that returns the actual distance between the bodies.  So I want something that works a bit like distance but isn't.<br><br>For instance, in 2D if I were to calculate the signed area of the two polygons connected with a zero area channel (a common technique in CSG algorithms), its value will be less than the actual area of the two polygons iff they're overlapping.  The amount the computed area falls below the actual area, the more they're penetrating.  The signed area performs a lot like penetration distance.  It does really well with #2, but doesn't help at all with #1 and #3, and I suspect #4 fails as well.  Gluing signed area together with GJK would give me everything except #4.<br><br>A more sophisticated idea is to use the gradient of generalized barycentric coordinates.  See <a href="http://cgvr.cs.uni-bremen.de/papers/hormann/Gottingen.2006.pdf" class="postlink">this presentation</a>, page 76.  This satisfies all the criteria above, and even relaxes the convex requirement, but it's only defined for a single point.  So if I were interested in finding the distance between a point and a polygon (polyhedra are possible too with some modifications) this would be perfect!  But it doesn't seem to really generalize to polyhedra vs. polyhedra.  It might be possible to modify this idea to give distance between polyhedra by forming some composite function of all the vertices in one of the polyhedra against the other, but forming a smooth composite function is tricky, and there are collisions that can happen between polyhedra that don't involve any vertices (edge-vs-edge for instance).<br><br>I may just be looking at this problem from a weird direction, so I'm curious if anyone has any other directions to explore?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2437">Numsgil</a> — Sat Feb 01, 2014 10:06 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

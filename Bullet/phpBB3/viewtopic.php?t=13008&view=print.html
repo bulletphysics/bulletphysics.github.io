@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; When the external rigid body moves, the collision objects inside the rigid body leak out</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>When the external rigid body moves, the collision objects inside the rigid body leak out</h2>
+		<p><a href="viewtopic.php%3Ft=13008.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13008</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>When the external rigid body moves, the collision objects inside the rigid body leak out</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2020 7:36 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">I set up a cuboid, and set up a small ball in the inside of the cuboid to fall under the influence of gravity and spring up elastically. I set the Euler angle of the cuboid rotation, but I found that when the Euler angle changes a little, the ball can move normally, but when I increase the degree, the ball can't move with the cuboid but leaks out. How can I solve this problem?<br>
+<br>
+thank you very much indeed</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: When the external rigid body moves, the collision objects inside the rigid body leak out</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2020 8:02 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">When you change the rotation of the hollow box you are effectively "teleporting" it to a new transform.  If its new transform happens to put its walls into penetration with balls that used to be inside --&gt; then Bullet's "penetration resolution" algorithm will kick in and it doesn't care about keeping the balls on the inside of the box.  It just tries to resolve the penetrations as fast as possible and might try to resolve it by pushing balls to the outside.<br>
+<br>
+When "teleporting" the container there is no 100% reliable general way to prevent the balls from tunneling through it using Bullet config.  You can make it less likely to happen by doing things like:<br>
+<br>
+<strong class="text-strong">(1)</strong> Use smaller substeps<br>
+<strong class="text-strong">(2)</strong> Make the walls of the box thicker<br>
+<strong class="text-strong">(3)</strong> Make the box kinematic and always set its velocities (angular and linear) to effectively "agree" with any teleports you're doing<br>
+<strong class="text-strong">(4)</strong> Enable continuous collision detection (CCD) for the balls which will help the case when the balls themselves are moving fast<br>
+<br>
+If you're lucky, and limit how much you rotate the container per-substep then those tricks might solve all tunneling issues for your particular simulation.<br>
+<br>
+Note: if the balls should never ever be outside the box then a suitably aggressive version of <strong class="text-strong">(2)</strong> could solve all your problems. Make the walls of the box really really thick convex shapes, but render them as appropriately "thin" walls that line up with the inner surface.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: When the external rigid body moves, the collision objects inside the rigid body leak out</h3>
+				<div class="date">Posted: <strong>Sun Jun 28, 2020 1:50 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">I really appreciate your help. but how can I increase the thickness of the rigid body?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: When the external rigid body moves, the collision objects inside the rigid body leak out</h3>
+				<div class="date">Posted: <strong>Sun Jun 28, 2020 9:46 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The simplest way would be to use a <strong class="text-strong">btConvexHullShape</strong> for each cuboid wall and assemble them into a <strong class="text-strong">btCompoundShape</strong>.  The points for each convex hull would be the eight corners of the wall box, and you could let all the points be in the local-frame of the <strong class="text-strong">btCompoundShape</strong>, so you could supply identity transform for each subshape's parent-relative transform.  You can make the walls as thick as you like by picking the right points.  Note it is ok, and probably better, if the walls overlap at the corners --&gt; the stuff on the inside will be less likely to escape.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

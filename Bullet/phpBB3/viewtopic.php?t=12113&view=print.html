@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; how to determine rotational velocity relative to direction robot is &quot;facing&quot;</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>how to determine rotational velocity relative to direction robot is &quot;facing&quot;</h2>
+		<p><a href="viewtopic.php%3Ft=12113.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12113</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>how to determine rotational velocity relative to direction robot is &quot;facing&quot;</h3>
+				<div class="date">Posted: <strong>Thu May 31, 2018 6:25 pm</strong></div>
+				<div class="author">by <strong>keithmgould</strong></div>
+				<div class="content">This feels like a common question but I could not find it...<br>
+<br>
+Generally: I'm looking to know rotational velocity relative to world orientation.<br>
+<br>
+Specifically: I have a "balancing robot", (a stick on two wheels), where the stick is the base link. I want to know how fast it's falling "forward", and "forward" is of course relative to the direction the robot is facing. <br>
+<br>
+I tried: `getBaseVelocity` but I believe this returns the velocity relative to the world frame, not the direction the robot is "facing"<br>
+I tried: `getLinkState` but I believe that does not work for '-1' as linkID, so I can't use it.<br>
+<br>
+Do I need to do something like this?: <br>
+1. determine the orientation of the base via `getBasePositionAndOrientation`<br>
+2. determine the rotational velocity of base (relative to world)<br>
+3. some sort of matrix transform here to calculate the base's rotational velocity relative to the direction its facing<br>
+<br>
+Is there an example anywhere?<br>
+<br>
+Thank you!<br>
+<br>
+PS: I found this example, but it feels overly complicated. <a href="https://github.com/bulletphysics/bullet3/blob/c8dc4dc756f1c08bbafbf2972b9ac82150e0fc77/examples/pybullet/gym/pybullet_envs/robot_locomotors.py#L33" class="postlink">https://github.com/bulletphysics/bullet ... ors.py#L33</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: how to determine rotational velocity relative to direction robot is &quot;facing&quot;</h3>
+				<div class="date">Posted: <strong>Thu May 31, 2018 10:07 pm</strong></div>
+				<div class="author">by <strong>keithmgould</strong></div>
+				<div class="content">Believe I've figured it out.<br>
+<br>
+My guess above is correct, or at least, it works, though it might not be the best or most "pybullet/bullet" way to do things.<br>
+<br>
+Below is the code I used to verify. I take R2D2, rotate him about the Z axis a bit, and set him spinning  "forward."<br>
+<br>
+At this point, what I'd want to see for his relative rotational velocity is some mostly constant value for wx, and numbers close to 0 for wy and wz.<br>
+<br>
+The below accomplishes this, and can be seen when looking at the results of the print statement.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12113&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as pb
+import numpy as np
+import time
+import pybullet_data
+import pdb
+physicsClient = pb.connect(pb.GUI)#or pb.DIRECT for non-graphical version
+pb.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+pb.setGravity(0,0,0)
+planeId = pb.loadURDF("plane.urdf")
+r2d2StartPos = [0,0,1] # elevated
+
+# originally facing green. So Z with no rotation points along green (Y)
+# points R2 diagonally (via yaw rotation around Z)
+r2d2StartOrientation = pb.getQuaternionFromEuler([0,0,0.785398163397448])
+
+# load the robot
+r2d2Id = pb.loadURDF("r2d2.urdf",r2d2StartPos, r2d2StartOrientation)
+
+# set rotational velocity same direction as robot is facing.
+pb.resetBaseVelocity(1,(0,0,0),(-1, -1,0))
+
+# goal is to see rot velocity relative to R2's orientation
+# so X should be non-zero, and Y,Z both at zero.
+
+for i in range (10000):
+	pb.stepSimulation()
+	time.sleep(1./240.)
+	r2d2Vel = pb.getBaseVelocity(r2d2Id)
+	r2d2Pos, r2d2Orn = pb.getBasePositionAndOrientation(r2d2Id)
+	r2d2ornEuler = pb.getEulerFromQuaternion(r2d2Orn)
+
+	yaw = r2d2ornEuler[2]
+
+	# I noticed this first in the link mentioned in my first post.
+	# this is a "basic rotation around Z
+	# see https://en.wikipedia.org/wiki/Rotation_matrix "Basic Rotations"
+	rot_around_z = np.array(
+		[[np.cos(-yaw), -np.sin(-yaw), 0],
+		[np.sin(-yaw), np.cos(-yaw), 0],
+		[		0,			 0, 1]]
+	)
+
+	# once we have that, we want to see what the world-frame rotations
+	# are translated via rot_around_z
+	wx, wy, wz = np.dot(rot_around_z, r2d2Vel[1])
+
+	print(wx, wy, wz)
+
+
+pb.disconnect()
+
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

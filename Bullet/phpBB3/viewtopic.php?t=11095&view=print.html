@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Inequality constraints: clamping impulses</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Inequality constraints: clamping impulses</h2>
+		<p><a href="viewtopic.php%3Ft=11095.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11095</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Inequality constraints: clamping impulses</h3>
+				<div class="date">Posted: <strong>Fri Mar 25, 2016 11:13 am</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">Please help me understand the correct way to treat inequality constraints in an NGS numerical scheme. Life is easy if we have only one such constraint: we just clamp the whole accumulated impulse in the velocity correction phase and just clamp every incremental impulse in the position coppection phase. A good exposition is e.g. Erin Catto, "Understanding Constraints", GDC2014, pp. 36-45. But it's more tricky if we want to solve more than one constraint simultaneously.<br>
+<br>
+Let us consider for a certainty angular hinge constraints. There are three of them. Two of them are equality constraints assuring that bodies have a common axis. And one is an inequality constraint limiting their relative angle of rotation aroud that axis. Let us consider a situation where there's only one iteration, so there's no need to accumulate an impulse, for simplicity.<br>
+<br>
+So what do we do? We compule lagrange multipliers corresponding to a reaction force: f = -effMass * Cdot, where f and Cdot are three-dimensional vectors ('cause there are three constraints). Then we clamp f3 (let the inequality constraint be the third) to make sure that it does not <em class="text-italics">suck</em>. And here the subtlety comes: that clamping leads to necessity of correction of another impulse components: f1 and f2. Indeed, f is a solution to
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11095&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>[ K11 K12 K13 ] (f1)     (Cdot1)
+[ K21 K22 K23 ] (f2) = - (Cdot2)
+[ K31 K32 K33 ] (f3)     (Cdot3)
+</code></pre></div>
+If we changed f3 the first two equations are no longer hold true. We does not care about the third because we are already know the correct value of f3 (let us denote that new value f3'). So we need to find new f1' and f2' to make the first two equations hold true for a given f3':
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11095&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>[ K11 K12 K13 ] (f1')     (Cdot1)
+[ K21 K22 K23 ] (f2') = - (Cdot2)
+                (f3')
+</code></pre></div>
+You can look at the implementation of PrismaticJoint in Box2D to see that idea in practice (SolveVelocityConstraints function). And here comes the question: there is such correction of fs in the velocity correction phase but there's not in the position correction phase (SolvePositionConstraints function). There's just fs in my notation, no f's calculation. <strong class="text-strong">Why?</strong> I don't see any reasonable reason. We don't accumulate impulse when correct positions? So what? That correction is needed in that case too. Optimization of the price of a bit accuracy? It's tiny compared to the effective mass matrix computation.<br>
+<br>
+Finaly, a bit more clearly, and less Box2D-related: whether position corrections should be managed the same way as velocities corrections (recompute "equalitiy impulses" f1 and f2 after clamping "inequality impulse" f3)? I'm quite sure they should be treated the same way, but Box2D code made me question it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Inequality constraints: clamping impulses</h3>
+				<div class="date">Posted: <strong>Sat Mar 26, 2016 11:12 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">There is not a strong mathematical basis for how this is handled in Box2D. All I have is a chain of arguments. It is up to you to decide if this is valid. Maybe there is a rock solid mathematical solution out there.<br>
+<br>
+A velocity based solver computes reaction forces (impulses) using the velocity constraint solver. Under this context, the position solver is not there to resolve forces. It is only there to cope with integration error. Therefore, the pseudo impulses in the position solver do not have any physical meaning. Thus it is okay if they suck. Accumulation is meaningless.<br>
+<br>
+We could take the active state from the velocity solver. However, the joint might push past the limit when the velocity solver indicates the limit is inactive. Thus the active state from the velocity solver is not useful.<br>
+<br>
+The implementation in Box2D's prismatic joint position solver is my attempt to deal with these ideas.<br>
+<br>
+Perhaps the prismatic position solver should not bother to include the limit in the block solver. The position solver does not have to follow the same form as the velocity solver. They are completely separate under NGS.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Inequality constraints: clamping impulses</h3>
+				<div class="date">Posted: <strong>Sun Mar 27, 2016 1:51 pm</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">Thanks for the answer!<br>
+<br>
+Ahh, I see, we indeed treat pseudo impulses in a different ways: in velocity solver we compute them and then clamp impulses associated with active inequality constraints, which leads to necessity of correction of other pseudo impulses; in position solver we first clamp constraint function values associated with active inequality constraints, and <em class="text-italics">then</em> calculate pseudo impulses.<br>
+
+<blockquote><div><cite>Erin Catto wrote:</cite>
+Perhaps the prismatic position solver should not bother to include the limit in the block solver. The position solver does not have to follow the same form as the velocity solver. They are completely separate under NGS.</div></blockquote>
+It seems it should, 'cause corrections from active limit constraint and other constraints could fight each other. I.e. the standard argument for a block solvers against sequential ones.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

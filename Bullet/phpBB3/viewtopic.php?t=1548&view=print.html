@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Is SIMD math worth the effort??</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Is SIMD math worth the effort??</h2>
+		<p><a href="viewtopic.php%3Ft=1548.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1548</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Sat Oct 06, 2007 8:29 am</strong></div>
+				<div class="author">by <strong>projectileman</strong></div>
+				<div class="content">Hi.<br>
+<br>
+I was comparing the performance with intensive vector-matrix operations with Bullet linear math and then with the  Sony's SIMD Vectormath library which comes in extras folder. <br>
+<br>
+In my machine (a 32bit Pentium 4) with SSE configuration I've found that the Bullet linear math  is often faster (1.5 - 2 times faster) than Sony's SIMD Vectormath library, even if it claims that it is using SIMD.<br>
+<br>
+Here is the code of the test demo:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1548&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+///Testfile to test differences between vectormath and Bullet LinearMath
+
+
+#include "vectormath_aos.h"
+
+
+#include "LinearMath/btTransform.h"
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+#include "GL/glfw.h"
+
+#define NUM_TESTS 100
+#define NUM_OPERATIONS 10000
+
+//Bullet, a btVector can be used for both points and vectors.
+//it is up to the user/developer to use the right multiplication: btTransform for points, and btQuaternion or btMatrix3x3 for vectors.
+void	BulletTest()
+{
+	btTransform	tr;
+	tr.setIdentity();
+
+	tr.setOrigin(btVector3(10,0,0));
+	//initialization
+	btVector3	pointA(0,0,0);
+	btVector3	pointB,pointC,pointD,pointE;
+		
+	btScalar	x;
+	int i = NUM_OPERATIONS;
+	while(i--)
+	{		
+		//transform over tr
+		pointB = tr(pointA);
+	
+		//inverse transform
+		pointC = tr.inverse() * pointA;
+
+		//dot product
+		x = pointD.dot(pointE);
+		//square length
+		x = pointD.length2();
+		//length
+		x = pointD.length();		
+		//in-place normalize pointD
+		pointD.normalize();
+	}
+	
+}
+
+
+//vectormath makes a difference between point and vector.
+void	VectormathTest()
+{
+
+	Vectormath::Aos::Transform3 tr = Vectormath::Aos::Transform3::identity();
+	tr.setTranslation(Vectormath::Aos::Vector3(10,0,0));
+	//initialization
+	Vectormath::Aos::Point3	pointA(0,0,0);
+	Vectormath::Aos::Point3	pointB,pointC,pointE;
+	Vectormath::Aos::Vector3 pointD;
+	
+	btScalar	x;
+	int i = NUM_OPERATIONS;
+	while(i--)
+	{
+
+		//transform over tr
+		pointB = tr * pointA;
+
+		//transform over tr	
+		//inverse transform
+		pointC = Vectormath::Aos::inverse(tr) * pointA;
+
+		//dot product
+		x = Vectormath::Aos::dot(Vectormath::Aos::Vector3(pointD),Vectormath::Aos::Vector3(pointE));
+		//square length
+		x = Vectormath::Aos::lengthSqr(Vectormath::Aos::Vector3(pointD));
+		//length
+		x = Vectormath::Aos::length(Vectormath::Aos::Vector3(pointD));
+		
+		//in-place normalize pointD
+		pointD = Vectormath::Aos::normalize(Vectormath::Aos::Vector3(pointD));
+	}	
+}
+
+
+
+int main()
+{
+	glfwInit( );
+	
+	
+	double start_time;
+	int i;
+	double end_time;
+
+	start_time = glfwGetTime();	
+
+	
+	
+	printf("Elapsed time : %f ms",end_time-start_time);
+
+	{
+		printf("\n \n Vectormath\n");
+		start_time = glfwGetTime();
+		i = NUM_TESTS;
+		while(i--)
+		{
+			VectormathTest();		
+		}	
+		end_time = glfwGetTime();
+	}
+
+	printf("Elapsed time : %f ms",end_time-start_time);
+
+
+	{
+		printf("\n \n Bullet Linearmath\n");
+		start_time = glfwGetTime();
+		i = NUM_TESTS;
+		while(i--)
+		{
+			BulletTest();		
+		}	
+		end_time = glfwGetTime();
+	}
+	printf("Elapsed time : %f ms",end_time-start_time);
+
+
+	getchar();
+
+	glfwTerminate( );
+
+	return 0;
+}
+</code></pre></div>
+For compile it, you must have glfw for timming routines.<br>
+<br>
+<br>
+Really I don't know if I'm doing it wrong, but with these simple tests (whose include only vector multiplications and matrix transformations) is demonstrated that writting SIMD code doesn't worth the effort!<br>
+<br>
+I have done these kind of tests before, some months ago, with other SIMD libraries such <strong class="text-strong">nvec</strong> and <strong class="text-strong">SIMDx86</strong> and my personal implentation with macros, for finding out that those SIMD libraries are only a bloated code.<br>
+<br>
+With this I can verify that the KISS (keep it simple stupid!! )rule applies to critical performance applications. <br>
+<br>
+Sometime I heard from a programmer a very wise proverb, as he said: "The compiler is always smarter than you... just TRUST IT and don't make any stupid!!" so the compiler does optimizations in an smarter way, and I could be sure that it will use SIMD code even if I didn't ask for it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Sat Oct 06, 2007 11:56 am</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi.<br>
+<br>
+are you using Visual C++ 2005 ?<br>
+Have you enabled  "Streaming SIMD Extensions 2 (/arch:SSE2)" in the options?<br>
+<br>
+Well I have tried to use SIMD optimization too and in some cases it can make you code run twice as fast.<br>
+But some times it is even slower.<br>
+SIMD is not good for all things.<br>
+<br>
+Things line Dot, Length, Normalize can not be coded well with SSE1 or SSE2 and can be even slower as without it.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1548&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//No SSE 
+inline float Dot(const Vector &amp;v0, const Vector &amp;v1)	
+{ 
+	return (v0.x*v1.x + v0.y*v1.y + v0.z*v1.z); 
+}
+
+// SSE2
+inline __m128 DotSSE2(const VectorSIMD &amp;v0,const VectorSIMD &amp;v1)	
+{
+	__m128 a = _mm_mul_ps(v0.m128, v1.m128);
+	return _mm_add_ss(_mm_shuffle_ps(a, a, _MM_SHUFFLE(0,0,0,0)), _mm_add_ss(_mm_shuffle_ps(a, a, _MM_SHUFFLE(1,1,1,1)), _mm_shuffle_ps(a, a, _MM_SHUFFLE(2,2,2,2))));
+}
+
+// SSE3
+inline __m128 DotSSE3(const VectorSIMD &amp;v0,const VectorSIMD &amp;v1)	
+{
+	__m128 vec1;
+	vec1 = _mm_mul_ps(v0.m128, v1.m128);
+	vec1 = _mm_hadd_ps(vec1, vec1);
+	vec1 = _mm_hadd_ps(vec1, vec1);	
+	return vec1;
+}
+</code></pre></div>
+Probably only SSE3 is a bit faster as without SSE at all.<br>
+<br>
+Another thing that must be avoid is to mix SIMD (__m128) and float like you do with btScalar  x; in you tests.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Sat Oct 06, 2007 2:21 pm</strong></div>
+				<div class="author">by <strong>projectileman</strong></div>
+				<div class="content">I've ran that code with Visual C++ 2005 and tried all options (/arch:SSE2,/arch:SSE and without any instruction set), and in all cases Bullet Math library remains stable and faster while the vector math runs slower and fluctues.<br>
+<br>
+May be mixing  SIMD (__m128) and non aligned data are causing that poor performance as you've said. However, I've tried to replace that btScalar <strong class="text-strong">x</strong> variable with a SIMD data type, as shown in this code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1548&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//vectormath makes a difference between point and vector.
+void	VectormathTest()
+{
+	int i = NUM_OPERATIONS;
+
+	Vectormath::Aos::Transform3 tr = Vectormath::Aos::Transform3::identity();
+	tr.setTranslation(Vectormath::Aos::Vector3(10,0,0));
+	//initialization
+	Vectormath::Aos::Point3	pointA(0,0,0);
+	Vectormath::Aos::Point3	pointB,pointC,pointE;
+	Vectormath::Aos::Vector3 pointD;
+
+	Vectormath::Aos::Point3	x;
+
+	while(i--)
+	{
+
+		//transform over tr
+		pointB = tr * pointA;
+
+		//transform over tr
+		//inverse transform
+		pointC = Vectormath::Aos::inverse(tr) * pointA;
+
+		//dot product
+		x[0] = Vectormath::Aos::dot(Vectormath::Aos::Vector3(pointD),Vectormath::Aos::Vector3(pointE));
+		//square length
+		x[0] = Vectormath::Aos::lengthSqr(Vectormath::Aos::Vector3(pointD));
+		//length
+		x[0] = Vectormath::Aos::length(Vectormath::Aos::Vector3(pointD));
+
+		//in-place normalize pointD
+		pointD = Vectormath::Aos::normalize(Vectormath::Aos::Vector3(pointD));
+	}
+}
+</code></pre></div>
+Just for getting the same poor results. <br>
+<br>
+I don't have a SSE3 hardware so I can't determine if that SIMD instruction has a positive effect.<br>
+<br>
+It seems that SIMD is a feature that is not well suited for programmers like me. Really I don't know how getting any advantage of this, and the x86 architecture doesn't offer a reliable solution for this, when comparing with Mac PowerPC and SPU in PS3: x86 doesn't support Structure of Arrays  Processing which could be more efficient.<br>
+<br>
+It's better not to try coding SIMD data if really you don't know exactly what's happen in  your machine.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Sat Oct 06, 2007 3:57 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+It's better not to try coding SIMD data if really you don't know exactly what's happen in your machine.
+</div></blockquote>
+That is true, you need to know on the assembly/intrinsic/registry level, to be able to benefit from SIMD.
+<blockquote class="uncited"><div>
+x86 doesn't support Structure of Arrays Processing which could be more efficient.
+</div></blockquote>
+'Structure of Arrays' and 'Array of Structures' is a choice of the developer, not the hardware. You can reorganize the data and algorithm to process the data in SOA or AOS way. This can be very difficult, so if you are still interested, I can recommend reading this paper based on experiences with SIMD by Jan Paul van Waveren, from idSoftware. It explains how they optimized their animation for SIMD:<br>
+<a href="http://www.intel.com/cd/ids/developer/asmo-na/eng/dc/games/293451.htm" class="postlink">http://www.intel.com/cd/ids/developer/a ... 293451.htm</a><br>
+<br>
+A few other tips here:<br>
+- please try the 'floatInVec' to store the scalar result, that keeps it in the SIMD register. <br>
+- it is best to optimize a bigger part of code/loop entirely in SIMD, do a lot of profiling, and review the assembly code that the compiler generates, and if necessary modify the code, and repeat. Whenever you convert from SIMD to scalar you loose performance. <br>
+- the dot product requires rewriting of the code to be faster, because the horizontal add is not SIMD friendly. It might be better to do 4 or 16 dot products at the same time, instead of a single dot product.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Sat Oct 06, 2007 4:34 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Well SIMD programming is a bit different, you need to know where it make sense to use SIMD and where not.<br>
+<br>
+Using SSE only for dot(), length(), normalize() is not well because all this operations can not be done in parallel. <br>
+But SSE is well for many Vector additions, multiplications and such stuff.<br>
+Of course the best speedup you will get fro Vector4D <br>
+<br>
+Here is simple test I have made in one of the Bullet Demos.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1548&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>///SIMD test --------------------------
+///SIMD test --------------------------
+	m_idle = true;
+
+#define NUM_OPERATIONS 10000000
+
+/// SSE
+	{
+		Vector3 sum = Vector3(0.0,0.0,0.0);
+
+		Vector3 v1 = Vector3(1.11,2.12,3.88);
+		Vector3 v2 = Vector3(3.11,2.12,1.88);
+		Vector3 v3 = Vector3(0.2,0.4,0.5);
+
+		m_clock.reset();
+		int i = NUM_OPERATIONS / 4;
+		//int i = NUM_OPERATIONS;
+		while(i--)
+		{
+			sum += v1 - v2 + v3;
+			sum += v1 - v2 + v3;
+			sum += v1 - v2 + v3;
+			sum += v1 - v2 + v3;
+		}
+		unsigned long int time = m_clock.getTimeMicroseconds();
+		
+		printf("res %f, %f, %f \n",float(sum.getX()),float(sum.getY()),float(sum.getZ()));
+		printf("SSE time %i us \n",time);
+	}
+
+
+/// BT
+	{
+		btVector3 sum = btVector3(0.0,0.0,0.0);
+
+		btVector3 v1 = btVector3(1.11,2.12,3.88);
+		btVector3 v2 = btVector3(3.11,2.12,1.88);
+		btVector3 v3 = btVector3(0.2,0.4,0.5);
+
+		m_clock.reset();
+		int i = NUM_OPERATIONS / 4;
+		//int i = NUM_OPERATIONS;
+		while(i--)
+		{
+			sum += v1 - v2 + v3;
+			sum += v1 - v2 + v3;
+			sum += v1 - v2 + v3;
+			sum += v1 - v2 + v3;
+		}
+		unsigned long int time = m_clock.getTimeMicroseconds();
+		printf("res %f, %f, %f \n",sum.x(),sum.y(),sum.z());
+		printf("Bt time %i us \n",time);
+	}
+
+///SIMD test --------------------------
+</code></pre></div>
+
+On my Core-2 Duo with 2.40 GHz am getting following results.<br>
+SSE  	15.715 Microseconds<br>
+Bullet  37,842 Microseconds<br>
+<br>
+So you can get 2.5 x speed up in this very simple case.<br>
+And do not forget about manual loop unrolling <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+At least Visual C++ 2005 compiler can not do it for you, not sure about GCC. <br>
+<br>
+P.S.:<br>
+Can you please comment this thread about GIMPACT3 ?<br>
+<a href="viewtopic.php%3Ft=1529.html" class="postlink">http://www.bulletphysics.com/Bullet/php ... f=9&amp;t=1529</a><br>
+<br>
+P.P.S:<br>
+I have also mode one small mistake firs and using vectormath_aos.h without define __SSE__.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Sun Oct 07, 2007 3:04 pm</strong></div>
+				<div class="author">by <strong>projectileman</strong></div>
+				<div class="content">Hi. Guess what...I've fixed the problem.<br>
+<br>
+I don't know what was happening before, but know I get running the Sony's Vector Math Library faster that Bullet Linear Math.<br>
+<br>
+My apologies, I was wrong. I have to check what I was doing bad. But this time I've written a more organized and specialized test applications, which guaranties that Vector data is allocated in aligned memory. Now it's using the btAlignedObjectArray class for allocating a vector set.<br>
+<br>
+In my testbed the Sony's Vector Math Library runs more stable and faster than Bullet Linear Math, and its performance doesn't degrade; even in horizontal operations (like dot product, lenght, cross product) is noticeable faster than  Bullet, and it's exceptionally fast in vector normalization. <br>
+<br>
+Also works fine when mixing single scalar values with SIMD vector registers, so I cannot determine what was causing the slow down with that library.<br>
+<br>
+I'm sending you my testbed application code for helping you making your own conclusions. <div class="inline-attachment">
+			
+		
+		
+				<dl class="file">
+			<dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="download/file.php%3Fid=25">main_vmtest.zip</a></dt>
+			<dd><em>Vector Math Library Benchmarking test source code</em></dd>			<dd>(1.65 KiB) Downloaded 1514 times</dd>
+		</dl>
+		
+			</div>
+<div class="inline-attachment">
+			
+		
+		
+				<dl class="file">
+			<dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="download/file.php%3Fid=26">vectormath_testbed_msvc_binary.zip</a></dt>
+			<dd><em>Benchmarking executable</em></dd>			<dd>(5.38 KiB) Downloaded 1421 times</dd>
+		</dl>
+		
+			</div>
+ <br>
+I have to do more tests with quaternions, matrices, and conditional operations (like Min, Max, Clamp). I was planning using Vector Math Library for the next GIMPACT version, so I will use it confidently when I could getting sure that such library would increase the performance in most cases.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Sun Oct 07, 2007 4:33 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi,<br>
+<br>
+thanks!<br>
+Have you do some Win64 bit tests?<br>
+In mu tests with you code Bullet Math in 32-bit mode is 2x slower as 64-bit.<br>
+Sony's Vector Math is equally fast in both cases 32 and 64 bit!<br>
+Why this difference ???<br>
+<br>
+Test number 4 in 64-bit mode:  Sony's Vector Math is about 3.6x faster as Bullet Math.<br>
+Test number 4 in 32-bit mode:  Sony's Vector Math is about 8.0x faster as Bullet Math.<br>
+<br>
+Well but with Floating Point Model set to Fast (/fp:fast) 32-bit Bullet Math is as fast as 64-bit.<br>
+There is no speed difference if /fp:fast is set in 64-bit mode.<br>
+All this is really strange.<br>
+<br>
+But well SIMD seems to be faster!<br>
+How hard it will be to use Sony's Vector Math in Bullet instate of its own???</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Mon Oct 08, 2007 7:41 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I spent a couple weeks trying to improve the performance of my math library using SSE2.  In the end, I simply gave up because the loads into the XMM registers took so long they usually killed any performance benefit.  My 3-float vectors matched or beat aligned 4-float vectors in almost all cases (yes I was comparing disassembly to verify nothing unusual like unnecessary shuffling was happening).  Now this is with my Core 2 (E6600) ... my understanding is that the loading is faster in later chips, so in the near future I think we'll start seeing the supposed benefits of all this SSE stuff.<br>
+<br>
+I'll agree that batch operations can be significantly sped up with SSE2 right now, but if you just need to compute a quick general DotProduct at an arbitrary place in your code, you're not going to see much if any improvement.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is SIMD math worth the effort??</h3>
+				<div class="date">Posted: <strong>Tue Oct 09, 2007 11:37 am</strong></div>
+				<div class="author">by <strong>projectileman</strong></div>
+				<div class="content"><blockquote class="uncited"><div>I spent a couple weeks trying to improve the performance of my math library using SSE2. In the end, I simply gave up because the loads into the XMM registers took so long they usually killed any performance benefit</div></blockquote>
+<blockquote class="uncited"><div>I'll agree that batch operations can be significantly sped up with SSE2 right now, but if you just need to compute a quick general DotProduct at an arbitrary place in your code, you're not going to see much if any improvement.</div></blockquote>
+
+May be you're right. Also I've perceived that using SSE doesn't gives an extraordinary performance as I expected. <br>
+However, at least I get a 10%-20% gaining in performance at most cases, and with operations such square roots and normalizations I could get a 250%-400% in speed.<br>
+<br>
+When operating over SSE is very important working everithing with 128 registers, or the contrary you'll expermient a serious slow down.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

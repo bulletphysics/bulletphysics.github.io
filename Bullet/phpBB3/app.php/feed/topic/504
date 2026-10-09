@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/504" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-09-06T23:12:02+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/504</id>
+
+		<entry>
+		<author><name><![CDATA[Dragonlord]]></name></author>
+		<updated>2006-09-06T23:12:02+00:00</updated>
+
+		<published>2006-09-06T23:12:02+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1675#p1675</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1675#p1675"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1675#p1675"><![CDATA[
+<blockquote class="uncited"><div>the terminology is confusing, because CollisionResponse usually refers to Bullet contact constraints. UserResponse or Trigger would be less confusing.</div></blockquote>I see. It's just that "CollisionResponse" is the name of the method used in my engine to allow the Physics Module to talk to the Scripting Module which most probably caused the problem.<br><blockquote class="uncited"><div>First of all, do you really want to call the CanHit* on EACH interaction? You might want to add your own data in your object (pointed to by userObjectPointer, see below), and only call the CanHit for certain objects.</div></blockquote>My system is very decoupled. The Physics module should always call this function. The Scripting Module is responsible for things like caching such reponseTypes or providing a "filtering" facility like your project provides. The callback is handled in pure C++ for speed. It's up to the Scripting Module to deliver this event to the scripts or dispatching it to a cache written in C++. Hence calling this every frame is no problem and should not slow things down. If slow I can still add an additional filtering facility ( like in the case of the Graphics Module to determine which light hits which object ). I have anyways planed to add a simple grouping rule into the current Scripting Module to keep away those calls. For the time beeing though I use them as this allows me to better debug the system.<br><blockquote class="uncited"><div>Typically games only perform a script callback for objects that register interest. Hence the higher level infrastructure, that just calls back after all work is done.</div></blockquote>I can decide myself as Physics Module when I call those functions. If I want to I can call things before, after or while I'm doing my work. Hence there is no time frame you are restricted to except the one that after you exit from the simulation run that all the work is done.<br><blockquote class="uncited"><div>But if you insist, passing this UserResponse data is up to the user, so you can store it in your own structures, there is a user pointer available:</div></blockquote>This looks like what I'm after. I'll try this one out. So far it looks to me like I have now all pieces together to make a first implementation. Let's see how this turns out.<br><blockquote class="uncited"><div>Also, please keep in mind that calling scripts in the middle of a callback in a running physics engine is dangerous: users are not allowed to change te state of the engine, so they are not allowed to add or remove physics objects, or even change the location of physics objects in that particular script. Scripts called outside of the proceedDeltaTime processing are safe.</div></blockquote>This is not a problem. The Physics Module provides an abstraction layer. The user can request such changes but it's up to the Physics Module to decide when those changes are carried out. Should a user ask for an action that is not allowed at this point in time the module can simply delay the action. Every module has "peers" for engine resources hence it can synchronize the state at the best time.<br><br>Thanks for the help. I've dealed with a couple of libraries and APIs so far but the speed and quality of the help here has been really good.<br><br>- Pl?ss Roland<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=798">Dragonlord</a> — Wed Sep 06, 2006 11:12 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-06T22:13:49+00:00</updated>
+
+		<published>2006-09-06T22:13:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1674#p1674</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1674#p1674"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1674#p1674"><![CDATA[
+the terminology is confusing, because CollisionResponse usually refers to Bullet contact constraints. UserResponse or Trigger would be less confusing.<br><br>First of all, do you really want to call the CanHit* on EACH interaction? You might want to add your own data in your object (pointed to by userObjectPointer, see below), and only call the CanHit for certain objects.<br><br>Typically games only perform a script callback for objects that register interest. Hence the higher level infrastructure, that just calls back after all work is done.<br><br>But if you insist, passing this UserResponse data is up to the user, so you can store it in your own structures, there is a user pointer available:<br><div class="codebox"><p>Code: </p><pre><code>struct CollisionObject{...void* m_userObjectPointer;}</code></pre></div>The current version of Bullet uses this m_userPointer, but that is fixed in Subversion, and in Bullet 1.9f later today. It is renamed from m_userPointer to m_userObjectPointer.<br><br>Also, please keep in mind that calling scripts in the middle of a callback in a running physics engine is dangerous: users are not allowed to change te state of the engine, so they are not allowed to add or remove physics objects, or even change the location of physics objects in that particular script. Scripts called outside of the proceedDeltaTime processing are safe.<br><br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Sep 06, 2006 10:13 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dragonlord]]></name></author>
+		<updated>2006-09-06T20:19:21+00:00</updated>
+
+		<published>2006-09-06T20:19:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1673#p1673</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1673#p1673"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1673#p1673"><![CDATA[
+<blockquote class="uncited"><div>Can you provide more information about 'how the scripter changes the collision behaviour' ? And more info about your CanHit and CollisionResponse?</div></blockquote>In my system the Physics Module has some methods to talk to the Scripting Module where the game designer is located at. If the Physics Module detects a possible collision ( broad phase or narrow phase depending on the module ) it calls CanHit* asking the scripter for the actions he would like to carry out if the collision happens. CanHit* is though used to determine the behaviour in case of a collision and can be called whenever the Physics Module requires this information. The scripter can return 4 values at the time beeing: NoCollision, NoResponse, PhysicsResponse or CustomResponse.<br><em class="text-italics">NoCollision:</em> No collision has to be tracked ( Use Case: Player hits a Holgoraphic projection )<br><em class="text-italics">NoResponse:</em> Track collision and call CollisionResponse but do not generate a response. Hence the collision is reported but the objects continue their trajectories disregarding each other ( Use Case: Player hits a Trigger to open a door )<br><em class="text-italics">PhysicsResponse:</em> Track collision, call CollisionResponse and generate a physical collision response on your own ( Use Case: Some prop hits the ground )<br><em class="text-italics">CustomResponse:</em> Track collision, call CollisionResponse and use the informations set there as the collision response ( Use Case: Box moves up stairs by 'jumping' the steps ). CustomResponse is a kind of Jack of all trades. It should only be used if everything else fails to obtain special behaviour.<br><br>Now in my experimental ODE module I used them in the following way:<div class="codebox"><p>Code: </p><pre><code>Detect all possible collisionsFor Each possible collision:   Call CanHit*   If NoCollision:      Skip   Add CollisionPair with responseType, hitTime, hitNormal ( ... )Sort pairs by hitTimeDermine valid collision pairsFor Each valid collision pair:   If responseType == NoResponse:      Skip   Elif responseType == PhysicsResponse:      Add contact joint   Elif responseType == CustomResponse:      Add force</code></pre></div>I hope this helps a bit to understand. The CanHit* is used to determine the behaviour and CollisionResponse is called for notifying about a valid collision and optionally retrieving the response. Hence what I need is calling CanHit* while testing a possible collision for an early exit ( don't test a huge mesh against another huge mesh if they can not collide ). This value I have to store away. At the stage where a contact joint would be added I have to consult this value to see if I have to add a contact joint, apply only a force or doing nothing at all ( with calling CollisionResponse if required ).<br><br>If I get this correctly I would have to do this:<br><em class="text-italics">Dispatcher::NeedsCollision</em><div class="codebox"><p>Code: </p><pre><code>Calling CanHit*Store away responseTypeIf responseType == NoCollision:   SkipElse   Process collision</code></pre></div><em class="text-italics">Dispatcher::NeedsResponse</em><div class="codebox"><p>Code: </p><pre><code>Fetching responseType from Collision PairIf responseType == PhysicsResponse:   return TrueElif responseType == CustomResponse:   Add Force   return FalseElse   return False</code></pre></div>My first concern about the constant parameters in NeedsResponse would be nullified in this concept. Though I still need to figure out how I can carry this value over from NeedsCollision.<br><br>- Pl?ss Roland<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=798">Dragonlord</a> — Wed Sep 06, 2006 8:19 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-06T17:44:22+00:00</updated>
+
+		<published>2006-09-06T17:44:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1671#p1671</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1671#p1671"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1671#p1671"><![CDATA[
+<blockquote class="uncited"><div>In my system the Physics Module has two main types of methods to work with collisions: CanHit* and CollisionResponse. Before a collision is checked the CanHit* determines how to handle it. This means though that I need to store this result value and the colliding objects away so I can later on decide in the dispatcher if I have to do a collision response at all. I can not use the static flag on the controller as I allow my scripters to change the collision behaviour every frame update if required ( kind of perticularity of my engine ).<br><br>I suspect CollisionObject to be what I need to hack to carry this information across. What troubles me is though that NeedResponse has all parameters as const. I can not change them anymore without pointer-mangling which could be unsafe.</div></blockquote>Bullet should be able to do what you want, and if not, we can add a feature request for next version.<br><br>There are several concepts that need more clarification. User-Response are more Sensors. A sensor gives a callback whenever a collision happened. This is independent wether the collision is handled by Bullet or not. If a ball hits the ground, and a sensor is registered for either ground or ball, then you get the callback. If the ball (or ground) is set to noContactResponse, then Bullet will not add contact constraints.<br><br>You shouldn't modify any data during the 'NeedResponse' callback. It should be done before you call the physics engine proceedDeltaTime.<br><br>It should be possible to change the collision behaviour every frame, but first we need to clarify and map the Bullet concepts into your engine properly. Preferably re-using the matching concepts.<br><br>I will add a feature-request for documentation in the Wiki.<br><br>I think your user CollisionResponse maps best to a CollisionCallback in Bullet (this is a user callback, when a collision contact is determined).<br><br>Can you provide more information about 'how the scripter changes the collision behaviour' ? And more info about your CanHit and CollisionResponse? <br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Sep 06, 2006 5:44 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dragonlord]]></name></author>
+		<updated>2006-09-06T11:38:57+00:00</updated>
+
+		<published>2006-09-06T11:38:57+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1668#p1668</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1668#p1668"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1668#p1668"><![CDATA[
+So my target would be the CollisionDispatcher in that case. Makes sense and it looks like it matches my system somhow. There is one problem and that is that I need certain data persistent over calls.<br><br>In my system the Physics Module has two main types of methods to work with collisions: CanHit* and CollisionResponse. Before a collision is checked the CanHit* determines how to handle it. This means though that I need to store this result value and the colliding objects away so I can later on decide in the dispatcher if I have to do a collision response at all. I can not use the static flag on the controller as I allow my scripters to change the collision behaviour every frame update if required ( kind of perticularity of my engine ).<br><br>I suspect CollisionObject to be what I need to hack to carry this information across. What troubles me is though that NeedResponse has all parameters as const. I can not change them anymore without pointer-mangling which could be unsafe.<br><br>- Pl?ss Roland<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=798">Dragonlord</a> — Wed Sep 06, 2006 11:38 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-06T01:45:39+00:00</updated>
+
+		<published>2006-09-06T01:45:39+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1665#p1665</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1665#p1665"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1665#p1665"><![CDATA[
+<blockquote class="uncited"><div>One more thing I don't understand is how the CollisionDispatcher and company works. In my system I use a special sort of callback which the scripter can use to tell the Physics Module how to deal with collision pairs. Rejecting collisions at all ( ghost collisions ) I can do using this ProcessAllTriangles method. Now there can be two kind of collision responses: Physical or Custom.<br><br>How exactly are the collision pairs handeled? Are they put in a list and then handeled depending on the TOI? Or are the send and I need to build a list myself? I have already a CollisionPairList class around from my ODE experiments which does either create a Contact Joint ( Physical Response ) or applying a force ( Custom Response ). Would CollisionDispatcher be the right place to subclass for that task?</div></blockquote>There is a whole infrastructe to deal with colliding pairs, including basic 'filtering' during broadphase (see CollisionFilterGroups). The Dispatcher will select a response Collision Algorithm, and call the ProcessCollision.  If you need more fine grain per-object decision, override the virtual Dispatcher::NeedsCollision method.<br><div class="codebox"><p>Code: </p><pre><code>virtual boolDispatcher::NeedsCollision(BroadphaseProxy&amp; proxy0,BroadphaseProxy&amp; proxy1);virtual boolDispatcher::NeedsResponse(const CollisionObject&amp; colObj0,const CollisionObject&amp; colObj1);</code></pre></div>The CollisionAlgorithm objects are persistent over frames and they collect multiple contact points. Those are not deleted each frame, and contain solver info (warmstarting). This persistency is a difference with ODE. ODE throws away all contact points every frame.<br><br>You can add a 'ghost' objects, by setting the collision flags in CcdConstructionInfo, during construction:<br><div class="codebox"><p>Code: </p><pre><code>ci.m_collisionFlags |= CollisionObject::noContactResponse;</code></pre></div>For Logic / Custom response, you can get register callbacks in CcdPhysicsEnvironment:<div class="codebox"><p>Code: </p><pre><code>//Methods for gamelogic collision/physics callbacksvirtual void addSensor(PHY_IPhysicsController* ctrl);virtual void removeSensor(PHY_IPhysicsController* ctrl);virtual void addTouchCallback(int response_class, PHY_ResponseCallback callback, void *user);virtual void requestCollisionCallback(PHY_IPhysicsController* ctrl);virtual void removeCollisionCallback(PHY_IPhysicsController* ctrl);</code></pre></div>This is hardly documented yet. These callbacks were added/tested for the Bullet-Blender integration (3d modeling package).<br><br>Hope this helps,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Sep 06, 2006 1:45 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dragonlord]]></name></author>
+		<updated>2006-09-06T01:09:47+00:00</updated>
+
+		<published>2006-09-06T01:09:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1664#p1664</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1664#p1664"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1664#p1664"><![CDATA[
+Sounds good. My Octree already handles AABB overlapping test using Visitors so I can simply make a callback there.<br><br>One more thing I don't understand is how the CollisionDispatcher and company works. In my system I use a special sort of callback which the scripter can use to tell the Physics Module how to deal with collision pairs. Rejecting collisions at all ( ghost collisions ) I can do using this ProcessAllTriangles method. Now there can be two kind of collision responses: Physical or Custom.<br><br>How exactly are the collision pairs handeled? Are they put in a list and then handeled depending on the TOI? Or are the send and I need to build a list myself? I have already a CollisionPairList class around from my ODE experiments which does either create a Contact Joint ( Physical Response ) or applying a force ( Custom Response ). Would CollisionDispatcher be the right place to subclass for that task?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=798">Dragonlord</a> — Wed Sep 06, 2006 1:09 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-05T22:45:04+00:00</updated>
+
+		<published>2006-09-05T22:45:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1662#p1662</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1662#p1662"/>
+		<title type="html"><![CDATA[Re: Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1662#p1662"><![CDATA[
+<blockquote class="uncited"><div>For testing purpose I'm going to use the TriangleIndexVertexArray + BvhTriangleMeshShape but for my system they are not that efficient as I have to duplicate the data in memory.</div></blockquote>Best to get it working first, and then optimize indeed.<br><blockquote class="uncited"><div>Furthermore I have already an Octree structure in place hence there is no need for BvhTriangleMeshShape to create one itself. Can I somehow replace part of the collision routines to use my already existing Octree?</div></blockquote>Good idea to derive your own OctreeTriangleShape straight from ConcaveShape. The main virtual method that is called for each object overlapping with your OctreeTriangleShape is<br><div class="codebox"><p>Code: </p><pre><code>virtual voidProcessAllTriangles(TriangleCallback* callback,const SimdVector3&amp; aabbMin,const SimdVector3&amp; aabbMax) const;</code></pre></div>If your octree implementation can find all triangles overlapping with an axis aligned bounding box (AABB defined by aabbMin/aabbMax), then you just call the TriangleCallback for each triangle that overlaps with the AABB. The data doesn't need to be persistent (so you can discard the triangle after the 'ProcessTriangle' call returns).<br><br>You still need to implement the house-keeping virtual methods, so add a new proxytype OCTREE_CONCAVE_SHAPE after CONCAVE_SHAPES_START_HERE in BroadphaseProxy.h:<br><div class="codebox"><p>Code: </p><pre><code>virtual intGetShapeType() const{return OCTREE_CONCAVE_SHAPE;}virtual void GetAabb(const SimdTransform&amp; t,SimdVector3&amp; aabbMin,SimdVector3&amp; aabbMax) const;</code></pre></div>Perhaps a few more methods need to be implemented, should be straightforward. Let me know if there is a problem. You can borrow/learn from the BvhTriangleMeshShape/TriangleMeshShape implementation.<br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Sep 05, 2006 10:45 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dragonlord]]></name></author>
+		<updated>2006-09-05T18:02:10+00:00</updated>
+
+		<published>2006-09-05T18:02:10+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1660#p1660</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1660#p1660"/>
+		<title type="html"><![CDATA[Question about Height-Field Tutorial]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1660#p1660"><![CDATA[
+For testing purpose I'm going to use the TriangleIndexVertexArray + BvhTriangleMeshShape but for my system they are not that efficient as I have to duplicate the data in memory. Now on the Wiki there is this Height Field Tutorial which talks about a way to stream vertex data. The tutorial mentions two ways for doing this one beeing UserCallbackShape and one beeing a hack on the StridingMeshInterface.<br><br>What is the better way for handling triangle mesh data which is present in a non-striding array? I can make the data strided like for the OpenGL module but every striding requires additional memory which I would like to avoid if possible.<br><br>Furthermore I have already an Octree structure in place hence there is no need for BvhTriangleMeshShape to create one itself. Can I somehow replace part of the collision routines to use my already existing Octree?<br><br>I'm new to this physics libary and do not fully understand the working of the classes yet without having to dig through the source code. I like though the OOP approach of the design as it matches better with the design of my engine than ODE did ( giving me too many problems to be a feasible solution ).<br><br>- Pl?ss Roland<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=798">Dragonlord</a> — Tue Sep 05, 2006 6:02 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

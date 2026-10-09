@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13426" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-04-26T03:42:05+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13426</id>
+
+		<entry>
+		<author><name><![CDATA[tomson0119]]></name></author>
+		<updated>2022-04-26T03:42:05+00:00</updated>
+
+		<published>2022-04-26T03:42:05+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43993#p43993</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43993#p43993"/>
+		<title type="html"><![CDATA[Re: How to remove vehicle/rigidbody from dynamics worlds without deleting memory]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43993#p43993"><![CDATA[
+Thank you so much, That's exactly what I was looking for!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14249">tomson0119</a> — Tue Apr 26, 2022 3:42 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-04-23T16:41:37+00:00</updated>
+
+		<published>2022-04-23T16:41:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43992#p43992</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43992#p43992"/>
+		<title type="html"><![CDATA[Re: How to remove vehicle/rigidbody from dynamics worlds without deleting memory]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43992#p43992"><![CDATA[
+Yes, if you remove a body from the dynamics world then it will not collide.<br><br>There are ways to leave a body in the dynamics world while disabling all or selective collisions.  One way to do this is to assign each object to one or more collision groups and to specify which groups it collides with.  This collision group bits and mask bits are arguments in the <strong class="text-strong">btDiscreteDynamicsWorld::addRigidBody()</strong> method:<div class="codebox"><p>Code: </p><pre><code>void addRigidBody(btRigidBody* body, int group, int mask);</code></pre></div>The group argument has a bit set for each group to which the body belongs and the mask argument has a bit set for each group against which the body collides.  Two objects only collide if both group&amp;mask pairs are non-zero.  That is:<br><br><strong class="text-strong">body_A</strong> and <strong class="text-strong">body_B</strong> collide iff <strong class="text-strong">(group_A &amp; mask_B) &amp;&amp; (group_B &amp; mask_A) != 0</strong>.<br><br>The group and mask are not stored at the body but at the broadphase proxy, which means <strong class="text-strong">(a)</strong> the check is performed in the broadphase, before overlapping pairs are submitted to the narrowphase and <strong class="text-strong">(b)</strong> if you want to dynamically change the group/mask of an object then you must update its broadphase proxy, which typically means removing/re-adding the object to the world.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Sat Apr 23, 2022 4:41 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[tomson0119]]></name></author>
+		<updated>2022-04-23T04:15:33+00:00</updated>
+
+		<published>2022-04-23T04:15:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43991#p43991</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43991#p43991"/>
+		<title type="html"><![CDATA[Re: How to remove vehicle/rigidbody from dynamics worlds without deleting memory]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43991#p43991"><![CDATA[
+Hmm... seems like my game logic was wrong.. Sorry<br>I can prevent collision just by using removeRigidBody/removeVehicle..<br><br>EDIT: One more question. Is removing rigidbody from dynamics world also stop detecting collision?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14249">tomson0119</a> — Sat Apr 23, 2022 4:15 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[tomson0119]]></name></author>
+		<updated>2022-04-23T01:48:36+00:00</updated>
+
+		<published>2022-04-23T01:48:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43990#p43990</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43990#p43990"/>
+		<title type="html"><![CDATA[How to remove vehicle/rigidbody from dynamics worlds without deleting memory]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43990#p43990"><![CDATA[
+I want to remove btRaycastVehicle and btRigidBody from btDiscretDynamicsWorld,<br>so that any other vehicle wouldn't respond to collision with removed vehicle.<br><br>Here's what I did.<div class="codebox"><p>Code: </p><pre><code>if (mRigidBody){auto motionState = mRigidBody-&gt;getMotionState();if (motionState) delete motionState;physicsWorld-&gt;removeRigidBody(mRigidBody);delete mRigidBody;mRigidBody = nullptr;}if (mVehicle) {physicsWorld-&gt;removeVehicle(mVehicle.get());mVehicle.reset();// unique_ptr, this is bad, no point in using smart pointer..mVehicleRayCaster.reset();  // unique_ptr, this is bad, no point in using smart pointer..}</code></pre></div>Which works totally fine.(Let me know this may cause problems)<br>But since rigidbody can be created and destroyed several times, I want to optimize it by minimizing new/delete calls.<br>I tried to use only physicsWorld-&gt;removeRigidBody and physicsWorld-&gt;removeVehicle, and delete memory when program terminated or in specific condition.<br>But vehicle still respond to removed vehicle..<br>How to correctly remove vehicle/rigidbody from dynamics world without deleting rigidbody/motion state..<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14249">tomson0119</a> — Sat Apr 23, 2022 1:48 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

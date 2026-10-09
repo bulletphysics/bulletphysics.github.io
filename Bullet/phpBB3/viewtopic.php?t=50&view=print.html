@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; raycast through the sweep and prune space</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>raycast through the sweep and prune space</h2>
+		<p><a href="viewtopic.php%3Ft=50.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=50</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>raycast through the sweep and prune space</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2005 2:46 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Although Gino van den Bergen's explanation of my idea is better and much more detailed, here is the original posting on comp.graphics.algorithms:<br>
+<br>
+<a href="http://www.erwincoumans.com/p/raycast_on_sweep_and_prune.pdf" class="postlink">http://www.erwincoumans.com/p/raycast_o ... _prune.pdf</a><br>
+<br>
+It is a very efficient way to do raycasting on dynamics scenes. It works best for very long rays (bullets), that do have a hit. See the detailed description in "Collision Detection in Interactive 3D Environments".<br>
+<br>
+For very short ray, it is better to add its aabb inside the Sweep and Prune space, and perform the raycast on the overlapping objects of that aabb.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2005 4:37 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I have implemented this algorithm. I have to say that it is a nice idea. You have to be careful to implement it correctly. A tricky case is when the line segment originates on the side of a box.<br>
+<br>
+Shorter segments are faster than longer ones. Long segments have O(N) complexity where N is the number of boxes in the SAP. It is still usually faster than a brute force approach. I have also found that dynamic objects are usually spread out horizontally, so you can ignore horizontal planes in the traversal.<br>
+<br>
+I have seen little else published on this topic. I'm guessing that many games just do O(N) brute force.<br>
+<br>
+Erwin, did you ever do timing comparisons with brute force. How about for long segments?<br>
+<br>
+As I recall, for my implementation, it is about twice as fast as brute force for segments that span the scene.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2005 4:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Although the time complexity of the Sweep and Prune (SAP) raycast is indeed O(n) for n broaphase entries, for a lot of scenes, the average time complexity for long rays that do have an early hit is much better. For both indoor scenes and city scenes, you will barely traverse the whole scene.<br>
+<br>
+Also, a good implementation can cache the starting point of the ray, deriving it from an existing broadphase entry. There are more optimizations, but I would start by making the implementation cache friendly: storage of the SAP as arrays instead of linked list. This means the SAP raycast can benefit from this too.<br>
+<br>
+I recall some conversation with Pierre Terdiman whose implementation of the ray box is so efficient that it was faster then his implementation of the SAP raycast. But I think he used linked list for the SAP. Perhaps Pierre can shed a light on this ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2005 5:12 pm</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content"><blockquote class="uncited"><div>I recall some conversation with Pierre Terdiman whose implementation of the ray box is so efficient that it was faster then his implementation of the SAP raycast. But I think he used linked list for the SAP. Perhaps Pierre can shed a light on this ?</div></blockquote>
+
+I can use arrays or linked-lists in the SAP with a compile flag. I used arrays to test the raycast.<br>
+<br>
+What I found is that for long rays crossing the whole scene, brute force was indeed faster. That's completely normal since you traverse all the boxes in both cases, but you do more work in the SAP raycast.<br>
+<br>
+However when you cache the start of the ray, and when you're lucky and get an early exit, then the SAP raycast is faster.<br>
+<br>
+The break-even point was somewhere in-between, but not enough in favor of the SAP raycast for my taste <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Overall I didn't use it because I already had extra data structures in place, giving O(log N) raycasts anyway. [So, yes, when a dynamic object moves I update both the SAP and the other structure, but since both of them have O(1) updates it's not really an issue.]<br>
+<br>
+- Pierre</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>loose kdop tree ?</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2005 1:20 pm</strong></div>
+				<div class="author">by <strong>Guest</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+extra data structures in place, giving O(log N) raycasts anyway
+</div></blockquote>
+
+Interesting. What kind of datastructure has O(1) update ? and O(log(n)) complexity for long raycast ?<br>
+<br>
+If it is a tree, like a loose kdop tree, after some motion, the tree might become very unbalanced, which makes the O(log(n)) not valid anymore. Do you rebalance the tree ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2005 1:59 pm</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Interesting. What kind of datastructure has O(1) update ? and O(log(n)) complexity for long raycast ? <br>
+<br>
+If it is a tree, like a loose kdop tree, after some motion, the tree might become very unbalanced, which makes the O(log(n)) not valid anymore. Do you rebalance the tree ?</div></blockquote>
+
+I'm using a loose octree. As far as I know it's still O(log n) after some motion. Actually I don't think there's a difference between what you get after some motion and what you would get by re-building the octree from scratch at this point.<br>
+<br>
+- Pierre</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: raycast through the sweep and prune space</h3>
+				<div class="date">Posted: <strong>Tue May 19, 2009 7:01 am</strong></div>
+				<div class="author">by <strong>shinichikudo</strong></div>
+				<div class="content">I am not so knowledgeable about this matter. So i have to learn it. Thanks for the post. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<a href="http://simulationcreditauto.net/" class="postlink"><span style="color:#ECECEC"><span style="text-decoration:underline">simulation credit auto</span></span></a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

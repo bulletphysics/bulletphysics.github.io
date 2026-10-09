@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Problems with internal types / collision masks</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Problems with internal types / collision masks</h2>
+		<p><a href="viewtopic.php%3Ft=9961.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9961</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Problems with internal types / collision masks</h3>
+				<div class="date">Posted: <strong>Sun May 25, 2014 6:28 pm</strong></div>
+				<div class="author">by <strong>EruFeanor</strong></div>
+				<div class="content">Hallo im new to bullet so my problem may be my current understanding of bit-masks in bullet.<br>
+<br>
+The Problem:<br>
+I created a class, btFractureBody, which inherits from the btRigidbody class and defines a mask for these kind of rigidbodys as internal type.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9961&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>[btFractureBody]#define CUSTOM_FRACTURE_TYPE (btRigidBody::CO_USER_TYPE | btRigidBody::CO_RIGID_BODY | btRigidBody::CO_COLLISION_OBJECT)</code></pre></div>
+When a btFractureBody is initialized i set the internal type to my custom mask.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9961&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>[btFractureBody]
+btFractureBody(const btRigidBodyConstructionInfo&amp; constructionInfo, btDynamicsWorld* world)
+	:btRigidBody(constructionInfo),
+	m_world(world),
+	m_principalAxis(btTransform::getIdentity())
+{
+	m_masses.push_back(constructionInfo.m_mass);
+	m_internalType  = m_internalType | CUSTOM_FRACTURE_TYPE;
+	m_collisionFlags = m_collisionFlags | CollisionFlags::CF_CUSTOM_MATERIAL_CALLBACK;
+}
+</code></pre></div>
+
+in the same class (btFractureBody) i have added a static collision callback method which i set to be a a in the demo.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9961&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>[btFractureBody]
+bool btFractureBody::collisionCallback(btManifoldPoint&amp; cp,const btCollisionObject* colObj0,int partId0,int index0,const btCollisionObject* colObj1,int partId1,int index1)
+{
+	bool isFractureObject0 = (colObj0-&gt;getInternalType() &amp; CUSTOM_FRACTURE_TYPE) == CUSTOM_FRACTURE_TYPE;
+	bool isFractureObject1 = (colObj1-&gt;getInternalType() &amp; CUSTOM_FRACTURE_TYPE) == CUSTOM_FRACTURE_TYPE;
+
+	if(isFractureObject0 || isFractureObject1)
+		printf("obj0: %d idx0: %d\nobj1: %d idx1: %d\n\n", isFractureObject0, index0, isFractureObject1, index1);
+
+	if(isFractureObject0 &amp;&amp; cp.m_appliedImpulse &gt; BREAK_THRESHOLD)
+	{
+		btFractureBody* fb = (btFractureBody*)upcast(colObj0);
+		btScalar radius = cp.m_appliedImpulse/20.f;				
+		btVector3 hitPos	= cp.getPositionWorldOnA();
+
+		btCompoundShape* compoundShape = (btCompoundShape*)colObj0-&gt;getCollisionShape();
+
+		int size = compoundShape-&gt;getNumChildShapes();			
+                printf("num childs: %d\n", size);
+		for(int i=1; i&lt;size; i++)
+		{
+			if( (compoundShape-&gt;getChildTransform(i).getOrigin()-hitPos).length2() &lt; pow(radius,2) )
+				fb-&gt;removeChildBodyByIndex(i);
+		}
+		fb-&gt;shiftToCenterOfMass();
+	}
+	return false;
+}
+
+[Demo:initPhysics]
+gContactAddedCallback = (ContactAddedCallback)btFractureBody::collisionCallback;
+</code></pre></div>
+
+The programm prints for the number of childeren unrealistic values e.g. minus values, which indicates that given collision object does not contain a compound shape, but every btFracturBody must contains a compound shape, only childs are added.<br>
+<br>
+The collision callback as it is does not work, can you tell me why, every kind of advice is appriciated, thanks.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

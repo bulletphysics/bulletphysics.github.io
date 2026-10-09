@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Manual recovery from penetration problem</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Manual recovery from penetration problem</h2>
+		<p><a href="viewtopic.php%3Ft=10843.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10843</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Manual recovery from penetration problem</h3>
+				<div class="date">Posted: <strong>Wed Sep 30, 2015 2:35 am</strong></div>
+				<div class="author">by <strong>Enhex</strong></div>
+				<div class="content">I'm working on a character controller, and it uses manual recovery from penetration which is similar to the one used in the kinematic controller demo - moving back the penetration distance for each contact.<br>
+<br>
+The problem is when there are several contact points at the same direction, the recovery distance gets stacked up and the character gets pushed far too much:<br>
+<img src="http://i.imgur.com/TaJMpxp.png" class="postimage" alt="Image"><br>
+<br>
+Anyone knows a way to properly handle this problem?<br>
+Or perhaps different approach for penetration recovery that works better?<br>
+Help would be greatly appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual recovery from penetration problem</h3>
+				<div class="date">Posted: <strong>Wed Sep 30, 2015 8:29 am</strong></div>
+				<div class="author">by <strong>Ehsanizadi</strong></div>
+				<div class="content">I think two parameters may affect this behaviour:<br>
+<br>
+1) reducing the time increment<br>
+2) increasing the number of iterations of the solver (by default it is set to 20)<br>
+<br>
+Let me know if this work or not.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual recovery from penetration problem</h3>
+				<div class="date">Posted: <strong>Wed Sep 30, 2015 2:25 pm</strong></div>
+				<div class="author">by <strong>Enhex</strong></div>
+				<div class="content">Ehsanizadi, that sounds like something that would affect dynamic objects, but not kinematic ones would it?<br>
+I did have a go with a dynamic character controller and this problem didn't happen.<br>
+But for more advanced controller I need to manually control the movement.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual recovery from penetration problem</h3>
+				<div class="date">Posted: <strong>Wed Sep 30, 2015 4:51 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">You could compute the AABB of all penetration vectors and then chose the corner that is furthest from the origin.  Dunno if it works but is what I would try if I were doing the same thing.<br>
+<br>
+The AABB combined with the sum of all penetration vectors could provide an even fancier solution.  I can imagine scenarios where the AABB extents could be nearly equal along one or two dimensions making it unclear what is really the best direction.  The sum of all penetrations could be used to differentiate.  For example, you could compute the point where the sum vector leaves the AABB and always use that.  I made an image that tries to communicate this: red vectors for all the penetration inputs, blue for their sum, and green for its projection against the AABB of the inputs.<br>
+<br>
+<img src="http://i.imgur.com/hQMibZm.png" class="postimage" alt="Image"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual recovery from penetration problem</h3>
+				<div class="date">Posted: <strong>Wed Sep 30, 2015 8:57 pm</strong></div>
+				<div class="author">by <strong>gameover</strong></div>
+				<div class="content">Just act on the largest penetration and ignore the others?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Manual recovery from penetration problem</h3>
+				<div class="date">Posted: <strong>Sat Oct 03, 2015 3:40 am</strong></div>
+				<div class="author">by <strong>Enhex</strong></div>
+				<div class="content"><blockquote><div><cite>drleviathan wrote:</cite>You could compute the AABB of all penetration vectors and then chose the corner that is furthest from the origin.  Dunno if it works but is what I would try if I were doing the same thing.<br>
+<br>
+The AABB combined with the sum of all penetration vectors could provide an even fancier solution.  I can imagine scenarios where the AABB extents could be nearly equal along one or two dimensions making it unclear what is really the best direction.  The sum of all penetrations could be used to differentiate.  For example, you could compute the point where the sum vector leaves the AABB and always use that.  I made an image that tries to communicate this: red vectors for all the penetration inputs, blue for their sum, and green for its projection against the AABB of the inputs.<br>
+<br>
+<img src="http://i.imgur.com/hQMibZm.png" class="postimage" alt="Image"></div></blockquote>
+
+Thanks, using corners works.<br>
+Using intersection with the sum of penetration isn't a good idea, imagine in my original image having gravity and penetration into the ground - using the intersection with the side of the AABB will only fully recover on the axis of the side's normal.<br>
+Using the corner of the AABB on the other hand makes sure you have full recovery on all axes.<br>
+
+<blockquote><div><cite>gameover wrote:</cite>Just act on the largest penetration and ignore the others?</div></blockquote>
+Imagine having penetration from more than 1 direction, like the gravity &amp; ground example I just gave. Only using the largest doesn't guarantee you'll recover from all penetrations.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

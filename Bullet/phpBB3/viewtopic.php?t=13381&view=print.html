@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; pybullet.calculateInverseKinematics2 memory leak?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>pybullet.calculateInverseKinematics2 memory leak?</h2>
+		<p><a href="viewtopic.php%3Ft=13381.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13381</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>pybullet.calculateInverseKinematics2 memory leak?</h3>
+				<div class="date">Posted: <strong>Sat Feb 19, 2022 6:28 pm</strong></div>
+				<div class="author">by <strong>jsung</strong></div>
+				<div class="content">Hi, I have a problem with the "pybullet.calculateInverseKinematics2" function. Whenever I call it, the memory usage on my PC increases a little bit. I call this method multiple times a second and the memory seems to keep increasing even after I've exited the function. I replaced the function with its single end effector alternative "pybullet.calculateInverseKinematics" and the memory issue is fixed (it no longer increases). The problem with using the regular "pybullet.calculateInverseKinematics" is that there is computational overhead because now I'm manually calculating each end effector in a for loop and that slows down the processing. Is there a way I can use the multi-end-effector IK function without the memory issue? Thanks.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13381&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>def calculateIK3(feet_positions, jointDamping):
+    pos_body = np.array(p.getBasePositionAndOrientation(hexapod_ID)[0])
+    orn_body = p.getBasePositionAndOrientation(hexapod_ID)[1]
+
+    rest_poses = []
+    target_pos = []
+
+    link_indexes = [x for x in range(3, 24, 4)]
+
+    for j in range(6):
+        rest_poses.append(pos_body + p.multiplyTransforms([0, 0, 0], orn_body, baseToEndEffectorConstVec[j], [0, 0, 0, 1])[0])
+        tp = p.multiplyTransforms(rest_poses[j], orn_body, feet_positions[j], [0, 0, 0, 1])
+        target_pos.append(tp[0])
+    ik2 = [0] * 18
+    # ik = p.calculateInverseKinematics2(
+    #     hexapod_ID,
+    #     [link_indexes[0]],
+    #     [target_pos[0]],
+    #     lowerLimits=ll,
+    #     upperLimits=ul,
+    #     jointRanges=jr,
+    #     restPoses=rest_poses
+    # )
+    # print(ik, len(ik))
+    iks = []
+    for j in range(6):
+        temp_ik = p.calculateInverseKinematics(
+            hexapod_ID,
+            link_indexes[j],
+            target_pos[j]
+        )
+        temp_ik = list(temp_ik[(3 * j):3 + (3 * j)])
+        # print(len(temp_ik), temp_ik)
+        iks.extend(temp_ik)
+    # print(iks)
+    # iks = list(temp_ik[:3]) + [0] * 15
+    return iks</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: pybullet.calculateInverseKinematics2 memory leak?</h3>
+				<div class="date">Posted: <strong>Tue Mar 15, 2022 4:40 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">This needs a full minimal reproduction case, not just a small code snippet.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Question about rotational motion</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Question about rotational motion</h2>
+		<p><a href="viewtopic.php%3Ft=12058.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12058</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Question about rotational motion</h3>
+				<div class="date">Posted: <strong>Tue Apr 17, 2018 1:24 pm</strong></div>
+				<div class="author">by <strong>tamubun</strong></div>
+				<div class="content">I made simple model to check free rotational motion.<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1624" class="postimage" alt="model.png" onclick="viewableArea(this);" /></dt>
+						<dd>model.png (4.25 KiB) Viewed 8028 times</dd>
+		</dl>
+		
+		
+			</div>
+
+The masses of Two balls are twice of the mass of white box.<br>
+The initial velocities and angular velocities are all 0, and the gravity is also 0.<br>
+Only the red ball starts to rotate around upper right corner of the white box with axis aligned top line of the box.<br>
+The green ball is fixed to the white box.<br>
+<br>
+When a simulation starts, white box starts to rotate opposite direction of red ball by the counter action, this is natural.<br>
+What seems very unnatural is the motion is too stable. Since the heavy red ball rotates around non centre of mass,<br>
+I think the white box should show wobble motion, but the simulation says white box only rotates smoothly.<br>
+<br>
+The python code and URDF are as follows. Are there some mistakes?<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12058&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+physicsClient = p.connect(p.GUI)
+body = p.loadURDF("b.urdf",0,0,1)
+p.changeDynamics(body, -1, linearDamping = 0.0, angularDamping = 0.0)
+p.changeDynamics(body, 0, linearDamping = 0.0, angularDamping = 0.0)
+p.setJointMotorControl2(
+    body, 0, p.VELOCITY_CONTROL,
+    targetVelocity = 5, force = 1000
+)
+
+while True:
+    p.stepSimulation()
+    time.sleep(0.01)
+</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12058&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;?xml version="0.0" ?&gt;
+&lt;robot name="cube.urdf"&gt;
+  &lt;link name="baseLink"&gt;
+    &lt;inertial&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;mass value="1"/&gt;
+      &lt;inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;box size="1.0 .4 2.0"/&gt;
+      &lt;/geometry&gt;
+       &lt;material name="white"&gt;
+        &lt;color rgba="1 1 1 1"/&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;box size="1.0 .4 2.0"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;link name="ball"&gt;
+    &lt;inertial&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;mass value="2"/&gt;
+      &lt;inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+       &lt;material name="red"&gt;
+        &lt;color rgba="1 0 0 1"/&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="joint_baseLink_ball" type="continuous"&gt;
+    &lt;parent link="baseLink"/&gt;
+    &lt;child link="ball"/&gt;
+    &lt;origin xyz="0.7 0 1"/&gt;
+    &lt;axis xyz="1 0 0"/&gt;
+  &lt;/joint&gt;
+
+  &lt;link name="ball2"&gt;
+    &lt;inertial&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;mass value="2"/&gt;
+      &lt;inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+       &lt;material name="green"&gt;
+        &lt;color rgba="0 1 0 1"/&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="joint_baseLink_ball2" type="fixed"&gt;
+    &lt;parent link="baseLink"/&gt;
+    &lt;child link="ball2"/&gt;
+    &lt;origin xyz="-0.7 0 1"/&gt;
+  &lt;/joint&gt;
+&lt;/robot&gt;
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Question about rotational motion</h3>
+				<div class="date">Posted: <strong>Fri Apr 20, 2018 1:44 pm</strong></div>
+				<div class="author">by <strong>tamubun</strong></div>
+				<div class="content">I made 2 movies to compare the motion of above model between pybullet and ODE.<br>
+<br>
+pybullet: <a href="https://youtu.be/HkX4TijO01c" class="postlink">https://youtu.be/HkX4TijO01c</a><br>
+ODE: <a href="https://youtu.be/kDX32Xembo4" class="postlink">https://youtu.be/kDX32Xembo4</a><br>
+<br>
+I think the simulation of ODE is correct and that of pybullet is not correct.<br>
+Are there some options to control?<br>
+<br>
+The code of ODE is follows (modified demo_hinge.cpp)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12058&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>/*************************************************************************
+ *                                                                       *
+ * Open Dynamics Engine, Copyright (C) 2001,2002 Russell L. Smith.       *
+ * All rights reserved.  Email: russ@q12.org   Web: www.q12.org          *
+ *                                                                       *
+ * This library is free software; you can redistribute it and/or         *
+ * modify it under the terms of EITHER:                                  *
+ *   (1) The GNU Lesser General Public License as published by the Free  *
+ *       Software Foundation; either version 2.1 of the License, or (at  *
+ *       your option) any later version. The text of the GNU Lesser      *
+ *       General Public License is included with this library in the     *
+ *       file LICENSE.TXT.                                               *
+ *   (2) The BSD-style license that is included with this library in     *
+ *       the file LICENSE-BSD.TXT.                                       *
+ *                                                                       *
+ * This library is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the files    *
+ * LICENSE.TXT and LICENSE-BSD.TXT for more details.                     *
+ *                                                                       *
+ *************************************************************************/
+
+#include &lt;ode/ode.h&gt;
+#include &lt;drawstuff/drawstuff.h&gt;
+#include "texturepath.h"
+
+#ifdef _MSC_VER
+#pragma warning(disable:4244 4305)  // for VC++, no precision loss complaints
+#endif
+
+// select correct drawing functions
+#ifdef dDOUBLE
+#define dsDrawBox dsDrawBoxD
+#endif
+
+// dynamics and collision objects
+static dWorldID world;
+static dBodyID body[3];
+static dJointID hinge;
+static dJointID fix;
+
+// start simulation - set viewpoint
+
+static void start()
+{
+  dAllocateODEDataForThread(dAllocateMaskAll);
+
+  static float xyz[3] = {1.6653,-4.1950,1.4700};
+  static float hpr[3] = {114.0000,1.0000,0.0000};
+  dsSetViewpoint (xyz,hpr);
+}
+
+// simulation loop
+
+static void simLoop (int pause)
+{
+  static int count = 0;
+  static int rot = 0;
+  static dReal prev = -1.0;
+
+  if (!pause) {
+    dWorldQuickStep (world,0.01);
+    if ( dJointGetHingeAngle(hinge) &lt; 0 &amp;&amp; prev &gt;= 0 ) {
+      rot += 1;
+      if ( rot &gt;= 2 ) {
+        dsStop();
+        printf("%d\n", count);
+      }
+    }
+    prev = dJointGetHingeAngle(hinge);
+    ++count;
+  }
+
+  dReal sides0[3] = {1.0, 0.2, 2.0};
+  dsSetColor (1,1,1);
+  dsDrawBox (dBodyGetPosition(body[0]),dBodyGetRotation(body[0]),sides0);
+  dsSetColor (1,0,0);
+  dsDrawSphere (dBodyGetPosition(body[1]),dBodyGetRotation(body[1]),0.2);
+  dsSetColor (0,1,0);
+  dsDrawSphere (dBodyGetPosition(body[2]),dBodyGetRotation(body[2]),0.2);
+}
+
+
+int main (int argc, char **argv)
+{
+  // setup pointers to drawstuff callback functions
+  dsFunctions fn;
+  fn.version = DS_VERSION;
+  fn.start = &amp;start;
+  fn.step = &amp;simLoop;
+  fn.stop = 0;
+  fn.path_to_textures = DRAWSTUFF_TEXTURE_PATH;
+
+  // create world
+  dInitODE2(0);
+  world = dWorldCreate();
+
+  dMass m;
+  dMassSetBox (&amp;m, 1, 1.0, 0.4, 2.0);
+  dMassAdjust (&amp;m, 1);
+
+  dQuaternion q;
+  dQFromAxisAndAngle (q,1,1,0,0.25*M_PI);
+
+  body[0] = dBodyCreate (world);
+  dBodySetMass (body[0],&amp;m);
+  dBodySetPosition (body[0],0, 0, 2);
+
+  dMass m2;
+  dMassSetSphere (&amp;m2, 2, 0.2);
+  dMassAdjust (&amp;m, 1);
+
+  body[1] = dBodyCreate (world);
+  dBodySetMass (body[1],&amp;m2);
+  dBodySetPosition (body[1], 0.7, 0, 4);
+  body[2] = dBodyCreate (world);
+  dBodySetMass (body[2],&amp;m2);
+  dBodySetPosition (body[2], -0.7, 0, 4);
+
+  hinge = dJointCreateHinge (world,0);
+  dJointAttach (hinge,body[0],body[1]);
+  dJointSetHingeAnchor (hinge,0.7,0,3);
+  dJointSetHingeAxis (hinge,1,0,0);
+  dJointSetHingeParam(hinge, dParamVel, -5);
+  dJointSetHingeParam(hinge, dParamFMax, 1000);
+
+  fix = dJointCreateFixed (world,0);
+  dJointAttach (fix,body[0],body[2]);
+  dJointSetFixed(fix);
+
+  // run simulation
+  dsSimulationLoop (argc,argv,352,288,&amp;fn);
+
+  dWorldDestroy (world);
+  dCloseODE();
+  return 0;
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Question about rotational motion</h3>
+				<div class="date">Posted: <strong>Tue Apr 24, 2018 3:15 pm</strong></div>
+				<div class="author">by <strong>tamubun</strong></div>
+				<div class="content">Now I FOUND the problem of my URDF  <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"><br>
+<br>
+Inertial origins of red and  green balls were at (0,0,0) but they should match those of collision origins. So when I use the following URDF, the model properly shows wobble motion.  I thought inertial origins were automatically calculated as well as inertia tensors.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12058&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;?xml version="0.0" ?&gt;
+&lt;robot name="cube.urdf"&gt;
+  &lt;link name="baseLink"&gt;
+    &lt;inertial&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;mass value="1"/&gt;
+      &lt;inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;box size="1.0 .4 2.0"/&gt;
+      &lt;/geometry&gt;
+       &lt;material name="white"&gt;
+        &lt;color rgba="1 1 1 1"/&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;box size="1.0 .4 2.0"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;link name="ball"&gt;
+    &lt;inertial&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;mass value="2"/&gt;
+      &lt;inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+       &lt;material name="red"&gt;
+        &lt;color rgba="1 0 0 1"/&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="joint_baseLink_ball" type="continuous"&gt;
+    &lt;parent link="baseLink"/&gt;
+    &lt;child link="ball"/&gt;
+    &lt;origin xyz="0.7 0 1"/&gt;
+    &lt;axis xyz="1 0 0"/&gt;
+  &lt;/joint&gt;
+
+  &lt;link name="ball2"&gt;
+    &lt;inertial&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;mass value="2"/&gt;
+      &lt;inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+       &lt;material name="green"&gt;
+        &lt;color rgba="0 1 0 1"/&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin rpy="0 0 0" xyz="0 0 1"/&gt;
+      &lt;geometry&gt;
+        &lt;sphere radius="0.2"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="joint_baseLink_ball2" type="fixed"&gt;
+    &lt;parent link="baseLink"/&gt;
+    &lt;child link="ball2"/&gt;
+    &lt;origin xyz="-0.7 0 1"/&gt;
+  &lt;/joint&gt;
+&lt;/robot&gt;
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

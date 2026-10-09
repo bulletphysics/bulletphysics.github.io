@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to change Eulerian angle yzx</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to change Eulerian angle yzx</h2>
+		<p><a href="viewtopic.php%3Ft=13040.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13040</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to change Eulerian angle yzx</h3>
+				<div class="date">Posted: <strong>Thu Jul 23, 2020 6:23 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">In the bullet, his Euler angle seems to be YXZ. What should I do to change him into YZX,thank you very much</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to change Eulerian angle yzx</h3>
+				<div class="date">Posted: <strong>Thu Jul 23, 2020 4:18 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I don't know how to do what you asked off the top of my head.  It sounds... possible, but complicated.  There are many different varieties of "Euler angles" and you'd have to define exactly what you mean.  For example... are the axes of your Y, then Z, then X rotations in the world-frame or the object local-frame?  As I recall Euler himself used a strategy which was: local+world-frame (they are the same at the start), then local-frame, then world-frame.  But no one in the games industry uses his formulation and instead use "yaw, pitch, roll" about local-frame axes and call it "Euler angles".<br>
+<br>
+All of that ^^^ just to say: Euler angles are complicated and you haven't clearly defined your system.  Any solution would have to know <strong class="text-strong">exactly</strong> what you mean.<br>
+<br>
+Unless you're doing something very special where Euler angles are a natural coordinate system for your mechanism/application I would advise: don't use them and instead use Quaternions and do  "rotation math".  It may sound intimidating, but from my experience its implementation is simpler than an Eulerian approach.  In particular: there are no gimbal-lock singularities to worry about.<br>
+<br>
+So I would ask:  <strong class="text-strong">What do you really want to do?</strong><br>
+<br>
+<strong class="text-strong">(1)</strong> Are you trying to rotate an object in some fashion?  (e.g. you know where you're going and want rotate toward it) Or...<br>
+<br>
+<strong class="text-strong">(2)</strong> Are you trying to "measure" the rotation of an object?  (e.g. you know where you are but want to know it in a different coordinate space)<br>
+<br>
+If <strong class="text-strong">(1)</strong> then you <strong class="text-strong">definitely</strong> should be using rotation math and should avoid Euler angles.  If <strong class="text-strong">(2)</strong> then <strong class="text-strong">(a)</strong> Really?  Why? and <strong class="text-strong">(b)</strong> you <strong class="text-strong">probably</strong> should use rotation math to compute your Eulerian decomposition.  The only alternative methodology I can think of would be to do a bunch of geometry/trigonometry.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to change Eulerian angle yzx</h3>
+				<div class="date">Posted: <strong>Tue Jul 28, 2020 3:34 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">Thank you very much for your reply. I think I didn't express it clearly, but now I have found a solution.I changed the order of rotation to achieve the effect I wanted<br>
+<br>
+//zxy<br>
+	void setEulerZXY(const btScalar&amp; yaw, const btScalar&amp; pitch, const btScalar&amp; roll)<br>
+	{<br>
+		btScalar halfYaw = btScalar(yaw) * btScalar(0.5);<br>
+		btScalar halfPitch = btScalar(pitch) * btScalar(0.5);<br>
+		btScalar halfRoll = btScalar(roll) * btScalar(0.5);<br>
+		btScalar cosy = btCos(halfYaw);<br>
+		btScalar siny = btSin(halfYaw);<br>
+		btScalar cosx = btCos(halfPitch);<br>
+		btScalar sinx = btSin(halfPitch);<br>
+		btScalar cosz = btCos(halfRoll);<br>
+		btScalar sinz = btSin(halfRoll);<br>
+		/*	setValue(cosRoll * sinPitch * cosYaw + sinRoll * cosPitch * sinYaw,<br>
+		cosRoll * cosPitch * sinYaw - sinRoll * sinPitch * cosYaw,<br>
+		sinRoll * cosPitch * cosYaw - cosRoll * sinPitch * sinYaw,<br>
+		cosRoll * cosPitch * cosYaw + sinRoll * sinPitch * sinYaw);*/<br>
+		setValue(cosz * sinx * cosy - sinz * cosx * siny,<br>
+			cosz * cosx * siny + sinz * sinx * cosy,<br>
+			sinz * cosx * cosy + cosz * sinx * siny,<br>
+			cosz * cosx * cosy - sinz * sinx * siny);<br>
+<br>
+	}<br>
+[/code]</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

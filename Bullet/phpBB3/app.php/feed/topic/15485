@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15485" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2025-05-02T07:25:34+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15485</id>
+
+		<entry>
+		<author><name><![CDATA[otis]]></name></author>
+		<updated>2025-05-02T07:25:34+00:00</updated>
+
+		<published>2025-05-02T07:25:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44520#p44520</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44520#p44520"/>
+		<title type="html"><![CDATA[Re: URDF importing correctly on one machine, incorrectly on another. Same code.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44520#p44520"><![CDATA[
+<a href="https://sprunkigame.org/" class="postlink"><span style="color:#FFFFFF"><span style="font-size:1%;line-height:116%">Sprunki Game</span></span></a> Have you tried compiling Bullet from source with debug flags on Machine B to trace the import process?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14532">otis</a> — Fri May 02, 2025 7:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[DanielSJohnson]]></name></author>
+		<updated>2023-10-12T09:12:36+00:00</updated>
+
+		<published>2023-10-12T09:12:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44458#p44458</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44458#p44458"/>
+		<title type="html"><![CDATA[Re: URDF importing correctly on one machine, incorrectly on another. Same code.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44458#p44458"><![CDATA[
+Ok so, after a lot of tinkering I have now fixed this problem on my end. Posting here in case anyone else experiences this.<br><br>Basically, I was having strange behaviours on machine B with a number of bullet functions. In this example the problems were caused by sim-&gt;getPhysicsEngineParameters(args);, but I also observed some problems elsewhere in my codebase relating to sim-&gt;getDyanmicsInfo. These were caused by the install being a bit bugged. I'm not sure why, but none of the official install options work for me.<br><ul><li>vcpkg does not contain the robotics functions I was interested in</li><li>premake failed to build for reasons I don't entirely understand</li><li>executing ./build_cmake_pybullet_double.sh appeared to work (this is what I did on machine B) but then produced undefined behaviour for several functions.</li></ul>In the end what worked for me was building bullet the good old fashioned way:<div class="codebox"><p>Code: </p><pre><code>mkdir buildcd buildcmake .. -DBUILD_SHARED_LIBS=ONmake</code></pre></div>After doing this, the behaviour of Machine B lined up with what I expected, though I have no idea why. So anyone else having this issue, maybe try that?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14504">DanielSJohnson</a> — Thu Oct 12, 2023 9:12 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[DanielSJohnson]]></name></author>
+		<updated>2023-10-10T10:04:14+00:00</updated>
+
+		<published>2023-10-10T10:04:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44457#p44457</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44457#p44457"/>
+		<title type="html"><![CDATA[URDF importing correctly on one machine, incorrectly on another. Same code.]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44457#p44457"><![CDATA[
+Hi everyone,<br><br>I'm having a strange bug where my code works fine on one machine (Machine A), but on another (Machine B) Bullet fails to load the URDF file correctly. However, when the URDF file is loaded incorrectly it doesn't return a negative ID or throw any errors, it just responds to subsequent calls involving the file incorrectly.<br><br>The following is a minimal example that recreates the problem on my two machines:<br><div class="codebox"><p>Code: </p><pre><code>#include &lt;b3RobotSimulatorClientAPI_NoGUI.h&gt;#include &lt;btBulletDynamicsCommon.h&gt;#include &lt;iostream&gt;using namespace std;int minimal_recreation(){     b3RobotSimulatorClientAPI_NoGUI* sim = new b3RobotSimulatorClientAPI_NoGUI();    bool isConnected = sim-&gt;connect(eCONNECT_SHARED_MEMORY);    if (!isConnected)    {        cout&lt;&lt;"Using direct mode"&lt;&lt;endl;        isConnected = sim-&gt;connect(eCONNECT_DIRECT);    }    else    {        cout&lt;&lt;"Using shared memory"&lt;&lt;endl;    }    sim-&gt;resetSimulation();    sim-&gt;setGravity(btVector3(0, 0, -9.8));    sim-&gt;setNumSolverIterations(100);    b3RobotSimulatorSetPhysicsEngineParameters args;    sim-&gt;getPhysicsEngineParameters(args);    const char* corin_path="basics/models/Drake_Corin.urdf";    int CorinId = sim-&gt;loadURDF(corin_path);    cout&lt;&lt;"loading corin with ID "&lt;&lt;CorinId&lt;&lt;" and path "&lt;&lt;corin_path&lt;&lt;endl;    int numJoints=sim-&gt;getNumJoints(CorinId);    cout&lt;&lt;"    corin has "&lt;&lt;numJoints&lt;&lt;" joints"&lt;&lt;endl;    return 0;}</code></pre></div>On both machines this code compiles and runs without errors. On Machine A this prints:<br><div class="codebox"><p>Code: </p><pre><code>Using direct modeloading corin with ID 0 and path basics/models/Drake_Corin.urdf    corin has 24 joints</code></pre></div>which is correct. Machine B prints:<br><div class="codebox"><p>Code: </p><pre><code>Using direct modeloading corin with ID 0 and path basics/models/Drake_Corin.urdf    corin has 0 joints</code></pre></div>which is incorrect.<br><br>Can anyone advise on why this might be? The URDF file is identical and both machines are running this release of bullet.<br>The only difference I can think of is that Machine A is running Ubuntu 18.04, but Machine B is running Ubuntu 20.04. Though I'm unsure why that would cause this problem.<br><br>If anyone has any advice on what I could try to solve this problem or to learn more i'd be very thankful!<br><br><span style="text-decoration:underline">Additional tests described below:</span><br><br>First i wanted to check if it was something to do with my URDF file, so I tried it with the humanoid.urdf file from the data directory (which I moved to basics/models for consistency) . On machine A i got:<br><div class="codebox"><p>Code: </p><pre><code>Using direct modeloading robot with ID 0 and path basics/models/humanoid.urdf    robot has 33 joints</code></pre></div>Whereas on machine B i got:<br><div class="codebox"><p>Code: </p><pre><code>Using direct modeloading robot with ID 0 and path basics/models/humanoid.urdf    robot has 0 joints</code></pre></div>Which implies to me that this issue isn't being caused by my URDF file<br><br>As a further test, if I use the Python library urdfpy to load the same file it works fine and correctly identifies the links on both machines. I use this code:<br><div class="codebox"><p>Code: </p><pre><code>from urdfpy import URDFrobot=URDF.load('basics/models/Drake_Corin.urdf')for joint in robot.joints:    print(joint.name)robot.show()</code></pre></div>And it correctly prints out the names of the 24 joints and then correctly visualises the robot on both machine A and machine B.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14504">DanielSJohnson</a> — Tue Oct 10, 2023 10:04 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

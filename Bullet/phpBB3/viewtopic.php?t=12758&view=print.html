@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Dynamically attached fixed joint is not fix</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Dynamically attached fixed joint is not fix</h2>
+		<p><a href="viewtopic.php%3Ft=12758.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12758</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Dynamically attached fixed joint is not fix</h3>
+				<div class="date">Posted: <strong>Wed Aug 28, 2019 7:28 am</strong></div>
+				<div class="author">by <strong>kapsl</strong></div>
+				<div class="content">Till now we loaded our robot model through urdf. In the same urdf file we had also the gripper and a peg attached to the gripper. This worked fine, everything was rigid.<br>
+Now we want to change the size of the peg (the tool in the gripper) for every reset. The way we tried this by removing the thing from urdf and dynamically attaching it to the robot with this code: <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12758&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>width = 0.025
+        depth = 0.025
+        height = 0.085
+
+        csId = self._p.createCollisionShape(shapeType=pybullet.GEOM_BOX,
+                                            halfExtents=[width, depth, height],
+                                            )
+
+        vsId = self._p.createVisualShape(shapeType=pybullet.GEOM_BOX,
+                                         halfExtents=[width, depth, height])
+
+        pegId = self._p.createMultiBody(baseMass=0.01,
+                                        baseCollisionShapeIndex=csId,
+                                        baseVisualShapeIndex=vsId,
+                                        flags=pybullet.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS,)
+                                        )
+
+        constId = self._p.createConstraint(parentBodyUniqueId=self.robot_uid,
+                                           parentLinkIndex=self._motor_indices[-1],
+                                           childBodyUniqueId=pegId,
+                                           childLinkIndex=-1,
+                                           jointType=pybullet.JOINT_FIXED,
+                                           jointAxis=[0, 0, 0],
+                                           parentFramePosition=[0, 0, 0],
+                                           childFramePosition=[0.1, 0.1, 0.3])
+        self._p.changeConstraint(userConstraintUniqueId=constId,
+                                 maxForce=9e20,
+                                 erp=1e-20)</code></pre></div>
+
+the problem is the peg is there but it is not rigidly/fixed connected to the robot. If i take the mouse and pull on it, it acts like a spring. The same happens if the peg e.g. colides with the floor. I played around with the changeConstraint function. But no success, so far.<br>
+<br>
+Does anybody have an idea how to attacht the thing completely rigidly?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamically attached fixed joint is not fix</h3>
+				<div class="date">Posted: <strong>Thu Sep 05, 2019 2:35 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Mouse forces are very strong and possibly stronger than the fixed joint constraint forces. It is better to attach a fixed joint as part of the urdf instead of using a constraint.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamically attached fixed joint is not fix</h3>
+				<div class="date">Posted: <strong>Wed Jan 12, 2022 9:22 am</strong></div>
+				<div class="author">by <strong>FredP</strong></div>
+				<div class="content">It's a really old question but I had the same problem and was able to solve it by increasing the number of solver iterations and the number of substeps.<br>
+<br>
+See message from Erwin
+<blockquote cite="./viewtopic.php?p=42914#p42914"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=2.html">Erwin Coumans</a> wrote: <a href="viewtopic.php%3Fp=42914.html#p42914" data-post-id="42914" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Tue Jun 16, 2020 5:49 pm</span></cite>
+Increasing the number of solver iterations, or using a smaller time step, or increase the number of substeps. <br>
+You can also improve convergence by making the masses more similar, if possible (PGS solver converges slower when large mass differences are present, such as 100 kg and 0.1 kg etc)<br>
+<br>
+Another option is using a direct solver, but it may have its own issues. See <a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/switchConstraintSolver.py" class="postlink">https://github.com/bulletphysics/bullet ... tSolver.py</a>
+</div></blockquote>
+
+<a href="viewtopic.php%3Ff=24&amp;t=12985&amp;p=42901.html" class="postlink">viewtopic.php?f=24&amp;t=12985&amp;p=42901</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

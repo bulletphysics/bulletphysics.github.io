@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rendering a snapshot of a Dynamica Rigid Body Array in Maya</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rendering a snapshot of a Dynamica Rigid Body Array in Maya</h2>
+		<p><a href="viewtopic.php%3Ft=9774.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9774</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rendering a snapshot of a Dynamica Rigid Body Array in Maya</h3>
+				<div class="date">Posted: <strong>Mon Feb 17, 2014 6:12 pm</strong></div>
+				<div class="author">by <strong>metaldev</strong></div>
+				<div class="content">I was beating my face against my desk trying to get a Dynamica Rigid Body Array to render in Maya.  Beautiful simulation!  But useless if I couldn't render or bake them.<br>
+<br>
+So I wrote the following MEL script that instances and places a set of objects at the positions of the bodies in the rigid body array so you can render or export or do whatever with them.<br>
+<br>
+It does not handle any animation.<br>
+It's simply for using a rigid body array to place objects in a scene.<br>
+<br>
+Hopefully it will be useful to someone else too,<br>
+enjoy:<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9774&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//This tool instances and places a set of ordered object(s) at the positions of the bodies in a Dynamica rigid body array
+//first select the rigid body array SHAPE,  then select objects that you want instanced at the positions of the bodies 
+//in the rigid body array
+global proc string[] bakeRigidBodyArraySnapshot()
+{ 
+    
+    string $sel[] = `ls -sl`;
+    
+    if (`objectType $sel[0]` != "dRigidBodyArray")
+        error "The Dynamica rigid body array SHAPE must be selected first.";
+    
+    int $bodyCount = `getAttr ( $sel[0] + ".numBodies")`;
+    int $variantCount = `size $sel`;
+    
+    
+    if ($variantCount &lt; 2)
+        error "Select the rigid body SHAPE first,  then select geometry variants that you want instanced at the positions of the rigid bodies.";
+    
+    int $i = 1; //skip the rigid body itself
+    for (; $i &lt; $variantCount; $i++)
+    {
+        if (`objectType $sel[$i]` != "transform")
+        {
+            	string $shapeList[] = `listRelatives -path -s $sel[$i]`;
+            	for($shape in $shapeList)
+            	{
+            		if ( `nodeType $shape` != "mesh" &amp;&amp; `nodeType $shape` != "surface")
+                        error "Select the rigid body SHAPE first,  then select geometry variants. The objects that followed were not detected to be geometry.";
+                        
+                }
+        }
+    }
+    
+    string $newObjects[];
+    
+    int $currentVariant = 1;    
+    for ($i = 0; $i &lt; $bodyCount; $i++)
+    {
+        
+        string $newObj[] = `instance $sel[$currentVariant]`;
+        float $t[] = `getAttr ($sel[0] + ".position[" + $i + "]")`;
+        float $r[] = `getAttr ($sel[0] + ".rotation[" + $i + "]")`;
+        move -absolute $t[0] $t[1] $t[2] $newObj[0];
+        rotate -absolute  $r[0] $r[1] $r[2] $newObj[0];      
+        
+        $newObjects[`size $newObjects`] = $newObj[0];
+        
+        $currentVariant ++;
+        if ($currentVariant &gt;= $variantCount)
+            $currentVariant = 1; // 0 is the rigidBodyArray
+
+    } 
+    
+    return $newObjects;   
+}
+
+select `bakeRigidBodyArraySnapshot`;
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rendering a snapshot of a Dynamica Rigid Body Array in M</h3>
+				<div class="date">Posted: <strong>Tue Aug 25, 2015 2:09 am</strong></div>
+				<div class="author">by <strong>macina11</strong></div>
+				<div class="content">Enter your message here, it may contain no more than 60000 characters. <br>
+<strong class="text-strong"><a href="http://www.detectorall.com/categories/X%252dray-Screening-Systems/" class="postlink">backscatter x-ray scanners</a></strong></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

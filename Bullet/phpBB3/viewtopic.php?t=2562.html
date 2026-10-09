@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Correct computation of inertia for compound and convex mesh - Real-Time Physics Simulation Forum</title>
+
+	<link rel="alternate" type="application/atom+xml" title="Feed - Real-Time Physics Simulation Forum" href="/Bullet/phpBB3/app.php/feed?sid=d7a768dca6826e9720a038829101ec20">		<link rel="alternate" type="application/atom+xml" title="Feed - All forums" href="/Bullet/phpBB3/app.php/feed/forums?sid=d7a768dca6826e9720a038829101ec20">			<link rel="alternate" type="application/atom+xml" title="Feed - Forum - General Bullet Physics Support and Feedback" href="/Bullet/phpBB3/app.php/feed/forum/9?sid=d7a768dca6826e9720a038829101ec20">	<link rel="alternate" type="application/atom+xml" title="Feed - Topic - Correct computation of inertia for compound and convex mesh" href="/Bullet/phpBB3/app.php/feed/topic/2562?sid=d7a768dca6826e9720a038829101ec20">	
+	<link rel="canonical" href="viewtopic.php%3Ft=2562.html">
+
+<!--
+	phpBB style name: prosilver
+	Based on style:   prosilver (this is the default phpBB3 style)
+	Original author:  Tom Beddard ( http://www.subBlue.com/ )
+	Modified by:
+-->
+
+<link href="./assets/css/font-awesome.min.css?assets_version=39" rel="stylesheet">
+<link href="./styles/prosilver/theme/stylesheet.css?assets_version=39" rel="stylesheet">
+<link href="./styles/prosilver/theme/en/stylesheet.css?assets_version=39" rel="stylesheet">
+
+
+
+
+<!--[if lte IE 9]>
+	<link href="./styles/prosilver/theme/tweaks.css?assets_version=39" rel="stylesheet">
+<![endif]-->
+
+
+
+
+
+</head>
+<body id="phpbb" class="nojs notouch section-viewtopic ltr ">
+
+
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+	<div id="page-header">
+		<div class="headerbar" role="banner">
+					<div class="inner">
+                        <div style="text-align: center; margin-bottom: 15px;">
+    <img src="/Bullet/phpBB3/images/cropped-pybullet.png" alt="PyBullet Banner" style="max-width: 100%; height: auto;">
+</div>
+			<div id="site-description" class="site-description">
+		<a id="logo" class="logo" href="./index.php?sid=d7a768dca6826e9720a038829101ec20" title="Board index">
+					<span class="site_logo"></span>
+				</a>
+				<h1>Real-Time Physics Simulation Forum</h1>
+				<p></p>
+				<p class="skiplink"><a href="#start_here">Skip to content</a></p>
+			</div>
+
+			                        <div id="search-box" class="search-box search-header" role="search" style="max-width: 220px;">
+    <script async src="https://cse.google.com/cse.js?cx=7638796233dba4863"></script>
+    <div class="gcse-searchbox-only"></div>
+</div>
+			
+			</div>
+					</div>
+				<div class="navbar" role="navigation">
+	<div class="inner">
+
+	<ul id="nav-main" class="nav-main linklist" role="menubar">
+
+		<li id="quick-links" class="quick-links dropdown-container responsive-menu" data-skip-responsive="true">
+			<a href="#" class="dropdown-trigger">
+				<i class="icon fa-bars fa-fw" aria-hidden="true"></i><span>Quick links</span>
+			</a>
+			<div class="dropdown">
+				<div class="pointer"><div class="pointer-inner"></div></div>
+				<ul class="dropdown-contents" role="menu">
+					
+											<li class="separator"></li>
+																									<li>
+								<a href="./search.php?search_id=unanswered&amp;sid=d7a768dca6826e9720a038829101ec20" role="menuitem">
+									<i class="icon fa-file-o fa-fw icon-gray" aria-hidden="true"></i><span>Unanswered topics</span>
+								</a>
+							</li>
+							<li>
+								<a href="./search.php?search_id=active_topics&amp;sid=d7a768dca6826e9720a038829101ec20" role="menuitem">
+									<i class="icon fa-file-o fa-fw icon-blue" aria-hidden="true"></i><span>Active topics</span>
+								</a>
+							</li>
+							<li class="separator"></li>
+							<li>
+								<a href="./search.php?sid=d7a768dca6826e9720a038829101ec20" role="menuitem">
+									<i class="icon fa-search fa-fw" aria-hidden="true"></i><span>Search</span>
+								</a>
+							</li>
+					
+										<li class="separator"></li>
+
+									</ul>
+			</div>
+		</li>
+
+				<li data-skip-responsive="true">
+			<a href="/Bullet/phpBB3/app.php/help/faq?sid=d7a768dca6826e9720a038829101ec20" rel="help" title="Frequently Asked Questions" role="menuitem">
+				<i class="icon fa-question-circle fa-fw" aria-hidden="true"></i><span>FAQ</span>
+			</a>
+		</li>
+						
+			<li class="rightside"  data-skip-responsive="true">
+			<a href="./ucp.php?mode=login&amp;redirect=viewtopic.php%3Ft%3D2562&amp;sid=d7a768dca6826e9720a038829101ec20" title="Login" accesskey="x" role="menuitem">
+				<i class="icon fa-power-off fa-fw" aria-hidden="true"></i><span>Login</span>
+			</a>
+		</li>
+						</ul>
+
+	<ul id="nav-breadcrumbs" class="nav-breadcrumbs linklist navlinks" role="menubar">
+				
+		
+		<li class="breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
+
+			
+							<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope><a itemprop="item" href="./index.php?sid=d7a768dca6826e9720a038829101ec20" accesskey="h" data-navbar-reference="index"><i class="icon fa-home fa-fw"></i><span itemprop="name">Board index</span></a><meta itemprop="position" content="1" /></span>
+
+											
+								<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope data-forum-id="21"><a itemprop="item" href="./viewforum.php?f=21&amp;sid=d7a768dca6826e9720a038829101ec20"><span itemprop="name">BULLET PHYSICS LIBRARY USERS</span></a><meta itemprop="position" content="2" /></span>
+															
+								<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope data-forum-id="9"><a itemprop="item" href="./viewforum.php?f=9&amp;sid=d7a768dca6826e9720a038829101ec20"><span itemprop="name">General Bullet Physics Support and Feedback</span></a><meta itemprop="position" content="3" /></span>
+							
+					</li>
+
+		
+					<li class="rightside responsive-search">
+				<a href="./search.php?sid=d7a768dca6826e9720a038829101ec20" title="View the advanced search options" role="menuitem">
+					<i class="icon fa-search fa-fw" aria-hidden="true"></i><span class="sr-only">Search</span>
+				</a>
+			</li>
+			</ul>
+
+	</div>
+</div>
+	</div>
+
+	
+	<a id="start_here" class="anchor"></a>
+	<div id="page-body" class="page-body" role="main">
+		
+		
+<h2 class="topic-title"><a href="./viewtopic.php?t=2562&amp;sid=d7a768dca6826e9720a038829101ec20">Correct computation of inertia for compound and convex mesh</a></h2>
+<!-- NOTE: remove the style="display: none" when you want to have the forum description on the topic body -->
+
+
+
+<div class="action-bar bar-top">
+	
+			<a href="./posting.php?mode=reply&amp;t=2562&amp;sid=d7a768dca6826e9720a038829101ec20" class="button" title="Post a reply">
+							<span>Post Reply</span> <i class="icon fa-reply fa-fw" aria-hidden="true"></i>
+					</a>
+	
+			<div class="dropdown-container dropdown-button-control topic-tools">
+		<span title="Topic tools" class="button button-secondary dropdown-trigger dropdown-select">
+			<i class="icon fa-wrench fa-fw" aria-hidden="true"></i>
+			<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+		</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																												<li>
+					<a href="./viewtopic.php?t=2562&amp;sid=d7a768dca6826e9720a038829101ec20&amp;view=print" title="Print view" accesskey="p">
+						<i class="icon fa-print fa-fw" aria-hidden="true"></i><span>Print view</span>
+					</a>
+				</li>
+											</ul>
+		</div>
+	</div>
+	
+			<div class="search-box" role="search">
+			<form method="get" id="topic-search" action="./search.php?sid=d7a768dca6826e9720a038829101ec20">
+			<fieldset>
+				<input class="inputbox search tiny"  type="search" name="keywords" id="search_keywords" size="20" placeholder="Search this topic…" />
+				<button class="button button-search" type="submit" title="Search">
+					<i class="icon fa-search fa-fw" aria-hidden="true"></i><span class="sr-only">Search</span>
+				</button>
+				<a href="./search.php?sid=d7a768dca6826e9720a038829101ec20" class="button button-search-end" title="Advanced search">
+					<i class="icon fa-cog fa-fw" aria-hidden="true"></i><span class="sr-only">Advanced search</span>
+				</a>
+				<input type="hidden" name="t" value="2562" />
+<input type="hidden" name="sf" value="msgonly" />
+<input type="hidden" name="sid" value="d7a768dca6826e9720a038829101ec20" />
+
+			</fieldset>
+			</form>
+		</div>
+	
+			<div class="pagination">
+			4 posts
+							&bull; Page <strong>1</strong> of <strong>1</strong>
+					</div>
+		</div>
+
+
+
+
+			<div id="p10235" class="post has-profile bg2">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10235">
+			<dt class="no-profile-rank no-avatar">
+				<div class="avatar-container">
+																			</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2509&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">ole.k</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2509&amp;sr=posts&amp;sid=d7a768dca6826e9720a038829101ec20">17</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Jun 12, 2008 1:32 pm</dd>		
+		
+						
+						
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10235">
+
+					<h3 class="first">
+						<a href="./viewtopic.php?p=10235&amp;sid=d7a768dca6826e9720a038829101ec20#p10235">Correct computation of inertia for compound and convex mesh</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10235&amp;sid=d7a768dca6826e9720a038829101ec20" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10235&amp;sid=d7a768dca6826e9720a038829101ec20#p10235" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2509&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">ole.k</a></strong> &raquo; </span><time datetime="2008-09-04T12:29:29+00:00">Thu Sep 04, 2008 12:29 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">btCompoundShape and btConvexTriangleMesh currently use an approximation of the moment of inertia (namely, using the bounding box). I wrote code to compute the exact moment of inertia (see below).<br>
+<br>
+One problem which I encountered is that Bullet's rigid bodies use a btVector3 instead of a btMatrix3x3 for the local moment of inertia, which implies that the local coordinate system has to be that of the principal axes of the inertia tensor. While this is true for primitive shapes like btSphereShape (by the way: there is an exception, for btConeShape the origin does not coincide with the center of mass), arbitrary shapes like btCompoundShape and btConvexTriangleMesh do not fulfill this condition. Given that one has computed the inertia matrix J, the principal axis transformation (R,c) (i.e., R^T J R is diagonal and c is the local center of mass) has to be computed and applied to the world transform of the collision object and (inversely) to the shape data. For a btCompoundShape, the latter can be done by applying individually to the child transformations, for a btConvexTriangleMesh one can transform the mesh vertices.<br>
+<br>
+The rotation R can be computed by the robust Jacobi method. I added this method to btMatrix3x3:<br>
+
+<div class="codebox"><p>Code: <a href="#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		///diagonalizes this matrix by the Jacobi method. rot stores the rotation
+		///from the coordinate system in which the matrix is diagonal to the original
+		///coordinate system, i.e., old_this = rot * new_this * rot^T. The iteration
+		///stops when all off-diagonal elements are less than the threshold multiplied
+		///by the sum of the absolute values of the diagonal, or when maxSteps have
+		///been executed. Note that this matrix is assumed to be symmetric.
+		void diagonalize(btMatrix3x3&amp; rot, btScalar threshold, int maxSteps)
+		{
+			rot.setIdentity();
+			for (int step = maxSteps; step &gt; 0; step--)
+			{
+				// find off-diagonal element [p][q] with largest magnitude
+				int p = 0;
+				int q = 1;
+				int r = 2;
+				btScalar max = btFabs(m_el[0][1]);
+				btScalar v = btFabs(m_el[0][2]);
+				if (v &gt; max)
+				{
+					q = 2;
+					r = 1;
+					max = v;
+				}
+				v = btFabs(m_el[1][2]);
+				if (v &gt; max)
+				{
+					p = 1;
+					q = 2;
+					r = 0;
+					max = v;
+				}
+
+				btScalar t = threshold * (btFabs(m_el[0][0]) + btFabs(m_el[1][1]) + btFabs(m_el[2][2]));
+				if (max &lt;= t)
+				{
+					if (max &lt;= SIMD_EPSILON * t)
+					{
+						return;
+					}
+					step = 1;
+				}
+
+				// compute Jacobi rotation J which leads to a zero for element [p][q] 
+				btScalar mpq = m_el[p][q];
+				btScalar theta = (m_el[q][q] - m_el[p][p]) / (2 * mpq);
+				btScalar theta2 = theta * theta;
+				btScalar cos;
+				btScalar sin;
+				if (theta2 * theta2 &lt; btScalar(10 / SIMD_EPSILON))
+				{
+					t = (theta &gt;= 0) ? 1 / (theta + btSqrt(1 + theta2))
+													 : 1 / (theta - btSqrt(1 + theta2));
+					cos = 1 / btSqrt(1 + t * t);
+					sin = cos * t;
+				}
+				else
+				{
+					// approximation for large theta-value, i.e., a nearly diagonal matrix
+					t = 1 / (theta * (2 + btScalar(0.5) / theta2));
+					cos = 1 - btScalar(0.5) * t * t;
+					sin = cos * t;
+				}
+
+				// apply rotation to matrix (this = J^T * this * J)
+				m_el[p][q] = m_el[q][p] = 0;
+				m_el[p][p] -= t * mpq;
+				m_el[q][q] += t * mpq;
+				btScalar mrp = m_el[r][p];
+				btScalar mrq = m_el[r][q];
+				m_el[r][p] = m_el[p][r] = cos * mrp - sin * mrq;
+				m_el[r][q] = m_el[q][r] = cos * mrq + sin * mrp;
+
+				// apply rotation to rot (rot = rot * J)
+				for (int i = 0; i &lt; 3; i++)
+				{
+					btVector3&amp; row = rot[i];
+					mrp = row[p];
+					mrq = row[q];
+					row[p] = cos * mrp - sin * mrq;
+					row[q] = cos * mrq + sin * mrp;
+				}
+			}
+		}
+</code></pre></div>
+
+Using this method, the computation of the exact moment of inertia of a compound shape as a btVector3 can be done as follows:
+<div class="codebox"><p>Code: <a href="#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>///computes the exact moment of inertia and the transform from the coordinate system defined by the principal axes of the moment of inertia
+///and the center of mass to the current coordinate system. "masses" points to an array of masses of the children. The resulting transform
+///"principal" has to be applied inversely to all children transforms in order for the local coordinate system of the compound
+///shape to be centered at the center of mass and to coincide with the principal axes. This also necessitates a correction of the world transform
+///of the collision object by the principal transform.
+void btCompoundShape::calculatePrincipalAxisTransform(btScalar* masses, btTransform&amp; principal, btVector3&amp; inertia) const
+{
+	int n = m_children.size();
+
+	btScalar totalMass = 0;
+	btVector3 center(0, 0, 0);
+	for (int k = 0; k &lt; n; k++)
+	{
+		center += m_children[k].m_transform.getOrigin() * masses[k];
+		totalMass += masses[k];
+	}
+	center /= totalMass;
+	principal.setOrigin(center);
+
+	btMatrix3x3 tensor(0, 0, 0, 0, 0, 0, 0, 0, 0);
+	for (int k = 0; k &lt; n; k++)
+	{
+		btVector3 i;
+		m_children[k].m_childShape-&gt;calculateLocalInertia(masses[k], i);
+
+		const btTransform&amp; t = m_children[k].m_transform;
+		btVector3 o = t.getOrigin() - center;
+		
+		//compute inertia tensor in coordinate system of compound shape
+		btMatrix3x3 j = t.getBasis().transpose();
+		j[0] *= i[0];
+		j[1] *= i[1];
+		j[2] *= i[2];
+		j = t.getBasis() * j;
+		
+		//add inertia tensor
+		tensor[0] += j[0];
+		tensor[1] += j[1];
+		tensor[2] += j[2];
+
+		//compute inertia tensor of pointmass at o
+		btScalar o2 = o.length2();
+		j[0].setValue(o2, 0, 0);
+		j[1].setValue(0, o2, 0);
+		j[2].setValue(0, 0, o2);
+		j[0] += o * -o.x(); 
+		j[1] += o * -o.y(); 
+		j[2] += o * -o.z();
+
+		//add inertia tensor of pointmass
+		tensor[0] += masses[k] * j[0];
+		tensor[1] += masses[k] * j[1];
+		tensor[2] += masses[k] * j[2];
+	}
+
+	tensor.diagonalize(principal.getBasis(), btScalar(0.00001), 20);
+	inertia.setValue(tensor[0][0], tensor[1][1], tensor[2][2]);
+}
+</code></pre></div>
+
+But the principal transformation has to be applied to the child shapes and the world transform afterwards. This is not done by the method.<br>
+<br>
+The computation for a convex triangle mesh is more complicated. It is done by considering a tetrahedron for each triangle with one corner at the center of the mesh, and adding up the contributions of all tetrahedra just like for the compound shape:<br>
+
+<div class="codebox"><p>Code: <a href="#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>///computes the exact moment of inertia and the transform from the coordinate system defined by the principal axes of the moment of inertia
+///and the center of mass to the current coordinate system. A mass of 1 is assumed, for other masses just multiply the computed "inertia"
+///by the mass. The resulting transform "principal" has to be applied inversely to the mesh in order for the local coordinate system of the
+///shape to be centered at the center of mass and to coincide with the principal axes. This also necessitates a correction of the world transform
+///of the collision object by the principal transform. This method also computes the volume of the convex mesh.
+void btConvexTriangleMeshShape::calculatePrincipalAxisTransform(btTransform&amp; principal, btVector3&amp; inertia, btScalar&amp; volume) const
+{
+	class CenterCallback: public btInternalTriangleIndexCallback
+	{
+		bool first;
+		btVector3 ref;
+		btVector3 sum;
+		btScalar volume;
+
+	public:
+
+		CenterCallback() : first(true), ref(0, 0, 0), sum(0, 0, 0), volume(0)
+		{
+		}
+
+		virtual void internalProcessTriangleIndex(btVector3* triangle, int partId, int triangleIndex)
+		{
+			(void) triangleIndex;
+			(void) partId;
+			if (first)
+			{
+				ref = triangle[0];
+				first = false;
+			}
+			else
+			{
+				btScalar vol = btFabs((triangle[0] - ref).triple(triangle[1] - ref, triangle[2] - ref));
+				sum += (btScalar(0.25) * vol) * ((triangle[0] + triangle[1] + triangle[2] + ref));
+				volume += vol;
+			}
+		}
+		
+		btVector3 getCenter()
+		{
+			return (volume &gt; 0) ? sum / volume : ref;
+		}
+
+		btScalar getVolume()
+		{
+			return volume * btScalar(1. / 6);
+		}
+
+	};
+
+	class InertiaCallback: public btInternalTriangleIndexCallback
+	{
+		btMatrix3x3 sum;
+		btVector3 center;
+
+	public:
+
+		InertiaCallback(btVector3&amp; center) : sum(0, 0, 0, 0, 0, 0, 0, 0, 0), center(center)
+		{
+		}
+
+		virtual void internalProcessTriangleIndex(btVector3* triangle, int partId, int triangleIndex)
+		{
+			(void) triangleIndex;
+			(void) partId;
+			btMatrix3x3 i;
+			btVector3 a = triangle[0] - center;
+			btVector3 b = triangle[1] - center;
+			btVector3 c = triangle[2] - center;
+			btVector3 abc = a + b + c;
+			btScalar volNeg = -btFabs(a.triple(b, c)) * btScalar(1. / 6);
+			for (int j = 0; j &lt; 3; j++)
+			{
+				for (int k = 0; k &lt;= j; k++)
+				{
+					i[j][k] = i[k][j] = volNeg * (center[j] * center[k]
+					  + btScalar(0.25) * (center[j] * abc[k] + center[k] * abc[j])
+						+ btScalar(0.1) * (a[j] * a[k] + b[j] * b[k] + c[j] * c[k])
+						+ btScalar(0.05) * (a[j] * b[k] + a[k] * b[j] + a[j] * c[k] + a[k] * c[j] + b[j] * c[k] + b[k] * c[j]));
+				}
+			}
+			btScalar i00 = -i[0][0];
+			btScalar i11 = -i[1][1];
+			btScalar i22 = -i[2][2];
+			i[0][0] = i11 + i22; 
+			i[1][1] = i22 + i00; 
+			i[2][2] = i00 + i11;
+			sum[0] += i[0];
+			sum[1] += i[1];
+			sum[2] += i[2];
+		}
+		
+		btMatrix3x3&amp; getInertia()
+		{
+			return sum;
+		}
+
+	};
+
+	CenterCallback centerCallback;
+	btVector3 aabbMax(btScalar(1e30),btScalar(1e30),btScalar(1e30));
+	m_stridingMesh-&gt;InternalProcessAllTriangles(&amp;centerCallback, -aabbMax, aabbMax);
+	btVector3 center = centerCallback.getCenter();
+	principal.setOrigin(center);
+	volume = centerCallback.getVolume();
+
+	InertiaCallback inertiaCallback(center);
+	m_stridingMesh-&gt;InternalProcessAllTriangles(&amp;inertiaCallback, -aabbMax, aabbMax);
+
+	btMatrix3x3&amp; i = inertiaCallback.getInertia();
+	i.diagonalize(principal.getBasis(), btScalar(0.00001), 20);
+	inertia.setValue(i[0][0], i[1][1], i[2][2]);
+	inertia /= volume;
+}
+</code></pre></div></div>
+
+			
+			
+													<div class="notice">
+					Last edited by <a href="./memberlist.php?mode=viewprofile&amp;u=2509&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">ole.k</a> on Thu Sep 04, 2008 2:21 pm, edited 1 time in total.
+									</div>
+			
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p10236" class="post has-profile bg1">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10236">
+			<dt class="no-profile-rank no-avatar">
+				<div class="avatar-container">
+																			</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2472&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">sparkprime</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2472&amp;sr=posts&amp;sid=d7a768dca6826e9720a038829101ec20">508</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Fri May 30, 2008 2:51 am</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> Ossining, New York</dd>
+							
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact sparkprime">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact sparkprime</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="http://spark.woaf.net/" title="Website" class="last-cell">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10236">
+
+					<h3 >
+						<a href="./viewtopic.php?p=10236&amp;sid=d7a768dca6826e9720a038829101ec20#p10236">Re: Correct computation of inertia for compound and convex mesh</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10236&amp;sid=d7a768dca6826e9720a038829101ec20" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10236&amp;sid=d7a768dca6826e9720a038829101ec20#p10236" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2472&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">sparkprime</a></strong> &raquo; </span><time datetime="2008-09-04T14:11:10+00:00">Thu Sep 04, 2008 2:11 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">Wow, thanks for making this (and other patches) available!  I was kinda suprised to see the bounding box approximation used to calculate the inertia when I first read the code.  Did you notice a significant improvement in realism as a result of this?  <br>
+<br>
+I assume the box approximation is enough for most things.  Is it that you needed a really accurate inertia or were your shapes not well-approximated by a box?</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p10238" class="post has-profile bg2">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10238">
+			<dt class="no-profile-rank no-avatar">
+				<div class="avatar-container">
+																			</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2509&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">ole.k</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2509&amp;sr=posts&amp;sid=d7a768dca6826e9720a038829101ec20">17</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Jun 12, 2008 1:32 pm</dd>		
+		
+						
+						
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10238">
+
+					<h3 >
+						<a href="./viewtopic.php?p=10238&amp;sid=d7a768dca6826e9720a038829101ec20#p10238">Re: Correct computation of inertia for compound and convex mesh</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10238&amp;sid=d7a768dca6826e9720a038829101ec20" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10238&amp;sid=d7a768dca6826e9720a038829101ec20#p10238" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2509&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">ole.k</a></strong> &raquo; </span><time datetime="2008-09-04T14:37:45+00:00">Thu Sep 04, 2008 2:37 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content"><blockquote><div><cite>sparkprime wrote:</cite>Did you notice a significant improvement in realism as a result of this?</div></blockquote>
+
+Well, it depends on the child shapes. If they are sufficiently evenly distributed, you do not notice any improvement. But if you have something like a sunshade with a heavy stand and a lightweight top, it is definitely more realistic.<br>
+
+<blockquote><div><cite>sparkprime wrote:</cite>I assume the box approximation is enough for most things.  Is it that you needed a really accurate inertia or were your shapes not well-approximated by a box?</div></blockquote>
+
+I do not need a really accurate inertia, but I also do not want to have an obviously wrong inertia like in the case of a sunshade. Therefore, to be sure, I implemented the accurate computation.</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p10247" class="post has-profile bg1">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10247">
+			<dt class="has-profile-rank has-avatar">
+				<div class="avatar-container">
+																<a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=d7a768dca6826e9720a038829101ec20" class="avatar"><img class="avatar" src="./download/file.php?avatar=2.gif" width="74" height="71" alt="User avatar" /></a>														</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">Erwin Coumans</a>							</dt>
+
+						<dd class="profile-rank">Site Admin</dd>			
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2&amp;sr=posts&amp;sid=d7a768dca6826e9720a038829101ec20">4221</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Sun Jun 26, 2005 6:43 pm</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> California, USA</dd>
+																	
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact Erwin Coumans">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact Erwin Coumans</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="https://twitter.com/erwincoumans" title="Website">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																																																<a href="https://twitter.com/erwincoumans" title="Twitter">
+										<span class="contact-icon phpbb_twitter-icon">Twitter</span>									</a>
+																																																<a href="https://youtube.com/user/erwincoumans" title="YouTube" class="last-cell">
+										<span class="contact-icon phpbb_youtube-icon">YouTube</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10247">
+
+					<h3 >
+						<a href="./viewtopic.php?p=10247&amp;sid=d7a768dca6826e9720a038829101ec20#p10247">Re: Correct computation of inertia for compound and convex mesh</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10247&amp;sid=d7a768dca6826e9720a038829101ec20" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10247&amp;sid=d7a768dca6826e9720a038829101ec20#p10247" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=d7a768dca6826e9720a038829101ec20" class="username">Erwin Coumans</a></strong> &raquo; </span><time datetime="2008-09-04T18:15:10+00:00">Thu Sep 04, 2008 6:15 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">Great, thanks for the patch. This will be applied for upcoming version.<br>
+<br>
+If you have further patches, can you file them in the <a href="http://code.google.com/p/bullet/issues/list" class="postlink">googlecode issue tracker</a>?<br>
+That makes it much easier to keep track of actual issues that need a fix.<br>
+<br>
+We should keep discussion in this forum, so a cross link can be useful.<br>
+Thanks,<br>
+Erwin</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+	
+
+	<div class="action-bar bar-bottom">
+	
+			<a href="./posting.php?mode=reply&amp;t=2562&amp;sid=d7a768dca6826e9720a038829101ec20" class="button" title="Post a reply">
+							<span>Post Reply</span> <i class="icon fa-reply fa-fw" aria-hidden="true"></i>
+					</a>
+		
+		<div class="dropdown-container dropdown-button-control topic-tools">
+		<span title="Topic tools" class="button button-secondary dropdown-trigger dropdown-select">
+			<i class="icon fa-wrench fa-fw" aria-hidden="true"></i>
+			<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+		</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																												<li>
+					<a href="./viewtopic.php?t=2562&amp;sid=d7a768dca6826e9720a038829101ec20&amp;view=print" title="Print view" accesskey="p">
+						<i class="icon fa-print fa-fw" aria-hidden="true"></i><span>Print view</span>
+					</a>
+				</li>
+											</ul>
+		</div>
+	</div>
+
+			<form method="post" action="./viewtopic.php?t=2562&amp;sid=d7a768dca6826e9720a038829101ec20">
+		<div class="dropdown-container dropdown-container-left dropdown-button-control sort-tools">
+	<span title="Display and sorting options" class="button button-secondary dropdown-trigger dropdown-select">
+		<i class="icon fa-sort-amount-asc fa-fw" aria-hidden="true"></i>
+		<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+	</span>
+	<div class="dropdown hidden">
+		<div class="pointer"><div class="pointer-inner"></div></div>
+		<div class="dropdown-contents">
+			<fieldset class="display-options">
+							<label>Display: <select name="st" id="st"><option value="0" selected="selected">All posts</option><option value="1">1 day</option><option value="7">7 days</option><option value="14">2 weeks</option><option value="30">1 month</option><option value="90">3 months</option><option value="180">6 months</option><option value="365">1 year</option></select></label>
+								<label>Sort by: <select name="sk" id="sk"><option value="a">Author</option><option value="t" selected="selected">Post time</option><option value="s">Subject</option></select></label>
+				<label>Direction: <select name="sd" id="sd"><option value="a" selected="selected">Ascending</option><option value="d">Descending</option></select></label>
+								<hr class="dashed" />
+				<input type="submit" class="button2" name="sort" value="Go" />
+						</fieldset>
+		</div>
+	</div>
+</div>
+		</form>
+	
+	
+	
+			<div class="pagination">
+			4 posts
+							&bull; Page <strong>1</strong> of <strong>1</strong>
+					</div>
+	</div>
+
+
+<div class="action-bar actions-jump">
+		<p class="jumpbox-return">
+		<a href="./viewforum.php?f=9&amp;sid=d7a768dca6826e9720a038829101ec20" class="left-box arrow-left" accesskey="r">
+			<i class="icon fa-angle-left fa-fw icon-black" aria-hidden="true"></i><span>Return to “General Bullet Physics Support and Feedback”</span>
+		</a>
+	</p>
+	
+		<div class="jumpbox dropdown-container dropdown-container-right dropdown-up dropdown-left dropdown-button-control" id="jumpbox">
+			<span title="Jump to" class="button button-secondary dropdown-trigger dropdown-select">
+				<span>Jump to</span>
+				<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+			</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																				<li><a href="./viewforum.php?f=21&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-cat-link"> <span> BULLET PHYSICS LIBRARY USERS</span></a></li>
+																<li><a href="./viewforum.php?f=9&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; General Bullet Physics Support and Feedback</span></a></li>
+																<li><a href="./viewforum.php?f=24&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; PyBullet Support and Feedback</span></a></li>
+																<li><a href="./viewforum.php?f=18&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Release Announcements</span></a></li>
+																<li><a href="./viewforum.php?f=17&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Applications, Games, Demos or Movies using Bullet</span></a></li>
+																<li><a href="./viewforum.php?f=20&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-cat-link"> <span> PHYSICS AUTHORING TOOLS, SERIALIZATION AND STANDARDS</span></a></li>
+																<li><a href="./viewforum.php?f=12&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Physics authoring tools, serialization, standards and related topics</span></a></li>
+																<li><a href="./viewforum.php?f=19&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-cat-link"> <span> RESEARCH AND DEVELOPMENT IN COLLISION DETECTION &amp; PHYSICS. Don't post Bullet support questions here!</span></a></li>
+																<li><a href="./viewforum.php?f=4&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Research and development discussion about Collision Detection and Physics Simulation</span></a></li>
+																<li><a href="./viewforum.php?f=6&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Links, Papers, Libraries, Demos, Movies, Comparisons</span></a></li>
+																<li><a href="./viewforum.php?f=16&amp;sid=d7a768dca6826e9720a038829101ec20" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Career Opportunities</span></a></li>
+											</ul>
+		</div>
+	</div>
+
+	</div>
+
+
+
+			</div>
+
+
+<div id="page-footer" class="page-footer" role="contentinfo">
+	<div class="navbar" role="navigation">
+	<div class="inner">
+
+	<ul id="nav-footer" class="nav-footer linklist" role="menubar">
+		<li class="breadcrumbs">
+									<span class="crumb"><a href="./index.php?sid=d7a768dca6826e9720a038829101ec20" data-navbar-reference="index"><i class="icon fa-home fa-fw" aria-hidden="true"></i><span>Board index</span></a></span>					</li>
+		
+				<li class="rightside">All times are <span title="UTC">UTC</span></li>
+							<li class="rightside">
+				<a href="./ucp.php?mode=delete_cookies&amp;sid=d7a768dca6826e9720a038829101ec20" data-ajax="true" data-refresh="true" role="menuitem">
+					<i class="icon fa-trash fa-fw" aria-hidden="true"></i><span>Delete cookies</span>
+				</a>
+			</li>
+														</ul>
+
+	</div>
+</div>
+
+	<div class="copyright">
+				<p class="footer-row">
+			<span class="footer-copyright">Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited</span>
+		</p>
+						<p class="footer-row" role="menu">
+			<a class="footer-link" href="./ucp.php?mode=privacy&amp;sid=d7a768dca6826e9720a038829101ec20" title="Privacy" role="menuitem">
+				<span class="footer-link-text">Privacy</span>
+			</a>
+			|
+			<a class="footer-link" href="./ucp.php?mode=terms&amp;sid=d7a768dca6826e9720a038829101ec20" title="Terms" role="menuitem">
+				<span class="footer-link-text">Terms</span>
+			</a>
+		</p>
+					</div>
+
+	<div id="darkenwrapper" class="darkenwrapper" data-ajax-error-title="AJAX error" data-ajax-error-text="Something went wrong when processing your request." data-ajax-error-text-abort="User aborted request." data-ajax-error-text-timeout="Your request timed out; please try again." data-ajax-error-text-parsererror="Something went wrong with the request and the server returned an invalid reply.">
+		<div id="darken" class="darken">&nbsp;</div>
+	</div>
+
+	<div id="phpbb_alert" class="phpbb_alert" data-l-err="Error" data-l-timeout-processing-req="Request timed out.">
+		<a href="#" class="alert_close">
+			<i class="icon fa-times-circle fa-fw" aria-hidden="true"></i>
+		</a>
+		<h3 class="alert_title">&nbsp;</h3><p class="alert_text"></p>
+	</div>
+	<div id="phpbb_confirm" class="phpbb_alert">
+		<a href="#" class="alert_close">
+			<i class="icon fa-times-circle fa-fw" aria-hidden="true"></i>
+		</a>
+		<div class="alert_text"></div>
+	</div>
+</div>
+
+</div>
+
+<div>
+	<a id="bottom" class="anchor" accesskey="z"></a>
+	</div>
+
+<script src="./assets/javascript/jquery-3.6.0.min.js?assets_version=39"></script>
+<script src="./assets/javascript/core.js?assets_version=39"></script>
+
+
+
+<script src="./styles/prosilver/template/forum_fn.js?assets_version=39"></script>
+<script src="./styles/prosilver/template/ajax.js?assets_version=39"></script>
+
+
+
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Inverting a matrix of any size</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Inverting a matrix of any size</h2>
+		<p><a href="viewtopic.php%3Ft=8698.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8698</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Inverting a matrix of any size</h3>
+				<div class="date">Posted: <strong>Wed Dec 26, 2012 11:00 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I have managed to implement a Gauss-Jordan elimination function and tested it in inverting a 6x6 matrix successfully. It's a lot faster than cofactors (which I wasted time on) and hopefully it'll help anyone who needs it and save you a lot of pain when dealing with 5 and 6 D.O.F constraint block matrices.<br>
+<br>
+Also, it computes the determinant of the matrix early on in the process.<br>
+<br>
+Here is some sample code, let me know if I can clarify anything, the process is straightforward once you get the hang of it.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8698&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	// 00 01 02 03 ...
+	// 10 11 12 13 ...
+	// 20 21 22 23 ...
+	// 30 31 32 33 ...
+	// .  .  .  .  ...
+	// .  .  .  .  ...
+	// .  .  .  .  ...
+	//
+	// [ A I ]
+	// AA^-1 = I
+
+	// Inverse is the property of a square matrix
+	if(rows!=cols)
+		return;
+
+	// Matrix must be 3x3 minimum
+	if(rows&lt;3)
+		return;
+
+	MatrixRxC A = m;
+
+	MatrixRxC I(rows, cols);
+	I.identity();
+
+	Scalar sDeterminant = 1.0f;
+
+	// Forward pass, triangularize lower matrix
+	for(int i=0; i&lt;cols-1; ++i) {
+		Scalar pivot = A.e[i][i];
+
+		for(int j=i+1; j&lt;rows; ++j) {
+			Scalar factor;
+			if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&lt;0)
+				factor = -fabsf(A.e[j][i]/pivot);
+			else if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&gt;0)
+				factor = fabsf(A.e[j][i]/pivot);
+			else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&lt;0)
+				factor = fabsf(A.e[j][i]/pivot);
+			else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&gt;0)
+				factor = -fabsf(A.e[j][i]/pivot);
+
+			// Complete operation on entire row
+			for(int k=0; k&lt;cols; ++k) {
+				A.e[j][k] = A.e[j][k] + factor*A.e[i][k];
+				I.e[j][k] = I.e[j][k] + factor*I.e[i][k];
+			}
+		}
+	}
+
+	// Check matrix determinant by reduction to triangular form
+	for(int i=0; i&lt;rows; ++i) {
+		// Add the elements on the main diagonal to obtain the determinant
+		sDeterminant *= A.e[i][i];
+	}
+
+	if(sDeterminant==0.0f)
+		return; // Matrix has no inverse
+
+	// Identity pass, triangularize identity diagonal
+	for(int i=0; i&lt;cols; ++i) {
+		Scalar divide = 1/A.e[i][i];
+		
+		// Complete operation on entire row
+		for(int j=0; j&lt;cols; ++j) {
+			A.e[i][j] = A.e[i][j] * divide;
+			I.e[i][j] = I.e[i][j] * divide;
+		}
+	}
+
+	// Backward pass, triangularize upper matrix
+	for(int i=cols-1; i&gt;=1; --i) {
+		Scalar pivot = A.e[i][i];
+
+		for(int j=i-1; j&gt;=0; --j) {		
+			Scalar factor;
+			if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&lt;0)
+				factor = -fabsf(A.e[j][i]/pivot);
+			else if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&gt;0)
+				factor = fabsf(A.e[j][i]/pivot);
+			else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&lt;0)
+				factor = fabsf(A.e[j][i]/pivot);
+			else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&gt;0)
+				factor = -fabsf(A.e[j][i]/pivot);
+
+			// Complete operation on entire row
+			for(int k=0; k&lt;cols; ++k) {
+				A.e[j][k] = A.e[j][k] + factor*A.e[i][k];
+				I.e[j][k] = I.e[j][k] + factor*I.e[i][k];
+			}
+		}
+	}
+
+	*this = I;
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Inverting a matrix of any size</h3>
+				<div class="date">Posted: <strong>Wed Jan 02, 2013 6:29 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I assume you a trying to build the effective mass block matrices. Note that these are symmetric and positive definite. So another option would be Cholesky decomposition. For small matrices I would still use cofactor expansion and since the matrix is symmetric it can be optimized a bit more. Look at the Doom 3 SDK. It has some good examples.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

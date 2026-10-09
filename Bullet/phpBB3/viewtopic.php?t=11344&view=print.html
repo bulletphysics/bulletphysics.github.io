@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btMultiBody unstability problems when using colliders</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btMultiBody unstability problems when using colliders</h2>
+		<p><a href="viewtopic.php%3Ft=11344.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11344</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btMultiBody unstability problems when using colliders</h3>
+				<div class="date">Posted: <strong>Mon Sep 12, 2016 3:43 am</strong></div>
+				<div class="author">by <strong>taesoobear</strong></div>
+				<div class="content">I am a researcher working with motion capture data and complex multi-body characters having 50+ DOFs.<br>
+<br>
+Recently, I tried to port my characters to use the btMultiBody class, <br>
+and it worked well until I added colliders to some links.<br>
+Without using colliders, the simulation worked perfectly.<br>
+Also, the simulation works well for simple models (&lt;10DOFs) which have colliders.<br>
+<br>
+However, it does not when I use more complex models. The simulation simply explodes. <br>
+Strangely, this stability issue appear even when non of the colliders actually collide. <br>
+For example, a 56DOF ragdoll free-falled well when I attached no collider.<br>
+But if I attach a small box to a foot of the ragdoll, the ragdoll simulation explodes within a few hundreds frames even though the ragdoll is falling from very high above the ground, and there there was no contacts involved.<br>
+<br>
+I googled about this issue, and I found one technical paper which reports the same problem.<br>
+<a href="https://homes.cs.washington.edu/~todorov/papers/ErezICRA15.pdf" class="postlink">https://homes.cs.washington.edu/~todoro ... ICRA15.pdf</a><br>
+"We implemented a comparison instance that uses the new Featherstone functionality in Bullet, but this functionality is not  yet  fully  debugged  and  exhibits  unexpected  behavior<br>
+in  some  simulations,  so  we  were  able  to  use  this  new functionality only in tests without contact."<br>
+<br>
+Is this a known problem for the bullet team? Is there any easy way to fix it?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btMultiBody unstability problems when using colliders</h3>
+				<div class="date">Posted: <strong>Mon Sep 12, 2016 8:10 pm</strong></div>
+				<div class="author">by <strong>benelot</strong></div>
+				<div class="content">I never had any issues with the multibodies. I am not sure anymore, but you may know: Can you disable collisions between linked bodies? How do you know that you have no collisions? This sounds strange..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btMultiBody unstability problems when using colliders</h3>
+				<div class="date">Posted: <strong>Thu Oct 13, 2016 1:53 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There should be no problem using btMultiBody, it has been used to simulate many robots with many dofs. Ignore that out-of-date paper reference, it was written by MuJoCo developers a few years ago.<br>
+<br>
+Do the collision issues exist when you disable self-collision?<br>
+<br>
+Do you have a URDF or SDF file you can share? Latest Bullet can load them, so we can easier track down your issue.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btMultiBody unstability problems when using colliders</h3>
+				<div class="date">Posted: <strong>Fri Oct 28, 2016 8:26 pm</strong></div>
+				<div class="author">by <strong>benelot</strong></div>
+				<div class="content">Or if you find yourself more in the situation that you can build a minimal example of your issue within the bullet example browser, that can help too. We then can easily plug the example into our own browser to debug the issue.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btMultiBody unstability problems when using colliders</h3>
+				<div class="date">Posted: <strong>Fri Jan 01, 2021 5:41 am</strong></div>
+				<div class="author">by <strong>taesoobear</strong></div>
+				<div class="content">This thread is very old, but I finally had time to build a minimal example of my issue.<br>
+I cannot make the human character start with zero velocities unless I remove all multibody colliders.<br>
+Also, the box flies, unlike the MultiDofDemo.cpp which this example is based on.<br>
+To disable self-collision tests, I tried combinations of following.<br>
+			pMultiBody-&gt;setHasSelfCollision(false); // disable self collision<br>
+			world-&gt;addMultiBody(pMultiBody, 1&lt;&lt;igrp, ~(1&lt;&lt;igrp) );<br>
+			world-&gt;addCollisionObject(col, 1&lt;&lt;igrp, ~(1&lt;&lt;igrp) );<br>
+                        bool disableParentCollision=true<br>
+but none of these seem to remove the initial instability problem. When using btRigidBody instances or other simulators instead of btMultiBody, there is no such problem. The attached file contains very simple source codes that reproduce this problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btMultiBody unstability problems when using colliders</h3>
+				<div class="date">Posted: <strong>Tue Jan 05, 2021 8:56 am</strong></div>
+				<div class="author">by <strong>taesoobear</strong></div>
+				<div class="content">I did some more tests, and it gets even stranger.<br>
+After downloading the hyunwoodemo.zip attached above,<br>
+I gradually increased the initial height of the box. <br>
+<br>
+		startTransform.setOrigin(btVector3(<br>
+			btScalar(0.0),<br>
+			0.31,   //   here<br>
+			btScalar(0.0)));<br>
+<br>
+When the box height is higher than 0.32 there is no problem.<br>
+Otherwise, the box starts with a strong initial velocity although it does not collide with anything.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Quaternion Integration: velocity and acceleration</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Quaternion Integration: velocity and acceleration</h2>
+		<p><a href="viewtopic.php%3Ft=9017.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9017</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Quaternion Integration: velocity and acceleration</h3>
+				<div class="date">Posted: <strong>Fri Apr 12, 2013 6:12 pm</strong></div>
+				<div class="author">by <strong>SinisterMephisto</strong></div>
+				<div class="content">I was wondering how you guys implemented your rotational integrations.<br>
+I know most books only talk about the first derivative of orientation and most engines only implement the first.<br>
+<br>
+I saw these functions last night and they were in my head all morning. I am currently on the train home and i though i should just ask before i arrive.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9017&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>q'(q,w) = 1/2qw  //W = anglar velocity transformed into quarternion [w,0]. you knew that.</code></pre></div>
+
+But while going through some of Insomniac's publications on their site I read that <br>
+We should not multiply quaternions with scalar values (As quaternions should ideally be unit when we multiply them with other vectors)<br>
+<br>
+Hence 0.5f*q should be
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9017&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>slerp(Quaternion.Identity, q, 0.5f);
+</code></pre></div>
+
+But every one I have seen scaled theirs (Basically a lerp) //I guess the inaccuracy is negligible<br>
+<br>
+Secondly Angular acceleration has me a bit confused.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9017&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//q = orientation
+//W = anglar velocity transformed into Quarternion [w,dot].
+//dot = -2w'.w' //. = dot product
+//w' = q' //first derivative
+q"(q,w,w') = 1/2qw 
+</code></pre></div>
+
+What is the order of operations for  -2w'.w'? <br>
+Do you use Quaternion.Dot(-2w',w') or -2 * Quaternion.Dot(w',w')?<br>
+<br>
+the final code 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9017&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//mimicing s= ut +1/2at^2
+q(t+dt) = q(t) + q'*dt + 1/2q"dt^2; 
+</code></pre></div>
+
+Is there really a need for the angular acceleration (Second derivative)?<br>
+Would all these lerping and damping that occurs after not increase the amount of error in the system?<br>
+If you use the physics for some controlled system would it not save you all that extra control logic if every thing was slerped?<br>
+<br>
+This is probably stupid and I am probably over thinking it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Quaternion Integration: velocity and acceleration</h3>
+				<div class="date">Posted: <strong>Tue Apr 30, 2013 10:56 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">So I use slerp in my engine for animation.  The idea between slerp is that you know where you want to go and you want to go somewhere in between.  For physics, you don't know where you're going to end up, but you have a deltaAngularVelocity.  So you do an Euler integration.  I think Bullet does a straight Quaternion integration.  Here is what Bullet does:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9017&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+btQuaternion dorn (axis.x(),axis.y(),axis.z(),btCos( fAngle*timeStep*btScalar(0.5) ));
+btQuaternion orn0 = curTrans.getRotation();
+
+btQuaternion predictedOrn = dorn * orn0;
+predictedOrn.normalize();
+
+predictedTransform.setRotation(predictedOrn);
+
+</code></pre></div>
+
+This is what I do:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9017&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+   MEHVector4 axisAngle = m_angularVelocity;
+   axisAngle.SetW(0.0);
+   axisAngle.Normalize();
+   axisAngle.SetW(m_angularVelocity.Magnitude() * elapsedSecs);
+   MEHMatrix4 angularMov;
+   angularMov.ToRotateFromAxisAngle(axisAngle);
+   
+   MEHVector3 pos = m_worldMat[3];
+   m_worldMat *= angularMov;
+   m_worldMat[3] = pos;
+
+</code></pre></div>
+
+HTH,<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Quaternion Integration: velocity and acceleration</h3>
+				<div class="date">Posted: <strong>Wed May 01, 2013 6:20 am</strong></div>
+				<div class="author">by <strong>SinisterMephisto</strong></div>
+				<div class="content">Oh, I found the solution to my problem but thanks.<br>
+<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9017&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//Velocity Verlet
+//Rotations
+Vector3 newW = iInv * t;
+
+Quaternion halfQ= PIKHelper.ScaleQ(q, 0.5f);
+Quaternion qDot = halfQ * (new Quaternion(w.x, w.y, w.z, 0));
+
+float qd = Quaternion.Dot(qDot,qDot)* -2.0f;
+Quaternion qDotDot = halfQ * (new Quaternion(newW.x, newW.y, newW.z, qd));
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

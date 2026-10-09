@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; View Frustum Culling GLM &amp; btDbvtBroadphase</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>View Frustum Culling GLM &amp; btDbvtBroadphase</h2>
+		<p><a href="viewtopic.php%3Ft=13480.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13480</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>View Frustum Culling GLM &amp; btDbvtBroadphase</h3>
+				<div class="date">Posted: <strong>Sun Sep 18, 2022 5:30 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Used this post as a basis to hook into btDbvtBroadphase for View Frustum Culling: <a href="viewtopic.php%3Ff=9&amp;t=7575.html" class="postlink">viewtopic.php?f=9&amp;t=7575</a><br>
+<br>
+Not sure if this is still accurate, but here's what I've come up with:<br>
+<br>
+Main stuct for btDbvt handling:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13480&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		struct	DbvtBroadphaseFrustumCulling : btDbvt::ICollide {
+			btAlignedObjectArray&lt;btCollisionObject*&gt;* m_pCollisionObjectArray;
+			short int m_collisionFilterMask;
+			btCollisionObject* m_additionalCollisionObjectToExclude;	// Unused in this demo
+
+			DbvtBroadphaseFrustumCulling(btAlignedObjectArray&lt;btCollisionObject*&gt;* _pArray = NULL)
+				: m_pCollisionObjectArray(_pArray), m_collisionFilterMask(btBroadphaseProxy::AllFilter &amp; ~btBroadphaseProxy::SensorTrigger), m_additionalCollisionObjectToExclude(NULL)
+			{}
+			void Process(const btDbvtNode* node, btScalar depth) { Process(node); }
+			void Process(const btDbvtNode* leaf)
+			{
+				btBroadphaseProxy* proxy = static_cast &lt;btBroadphaseProxy*&gt; (leaf-&gt;data);
+				btCollisionObject* co = static_cast &lt;btCollisionObject*&gt; (proxy-&gt;m_clientObject);
+				if ((proxy-&gt;m_collisionFilterGroup &amp; m_collisionFilterMask) != 0 &amp;&amp; co != m_additionalCollisionObjectToExclude)
+				{
+					m_pCollisionObjectArray-&gt;push_back(co);
+				}
+			}
+		} g_DBFC;</code></pre></div>
+Function called after each simulation step to compute collision objects within view:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13480&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		void performFrustumCulling(glm::mat4 &amp;Mat) {
+
+			m_objectsInFrustum.resize(0);	// clear() is probably slower
+
+			Frustum Frst(Mat);
+			btVector3 planes_n[5]{};
+			btScalar  planes_o[5]{};
+
+			for (int i = 0; i &lt; 5; i++)
+			{
+				planes_n[i].setX(Frst.planes[i].normal.x);
+				planes_n[i].setY(Frst.planes[i].normal.y);
+				planes_n[i].setZ(Frst.planes[i].normal.z);
+
+				planes_o[i] = Frst.planes[i].d;
+			}
+
+			//=======================================================
+			// OK, now the pure btDbvt code starts here:
+			//=======================================================
+
+			g_DBFC.m_pCollisionObjectArray = &amp;m_objectsInFrustum;
+			g_DBFC.m_collisionFilterMask = btBroadphaseProxy::AllFilter &amp; ~btBroadphaseProxy::SensorTrigger;	// This won't display sensors...
+			g_DBFC.m_additionalCollisionObjectToExclude = NULL;
+
+			btDbvt::collideKDOP(broadphase_-&gt;m_sets[1].m_root, planes_n, planes_o, 5, g_DBFC);
+			btDbvt::collideKDOP(broadphase_-&gt;m_sets[0].m_root, planes_n, planes_o, 5, g_DBFC);
+			// btDbvt::collideKDOP(root,normals,offsets,count,icollide):
+		}</code></pre></div>
+Class to handle computing Frustum Planes:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13480&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class Plane
+{
+
+public:
+	Plane() {}
+
+	Plane(const glm::vec4&amp; abcd)
+		: normal(abcd.x, abcd.y, abcd.z), d(abcd.w) {}
+
+	void normalize()
+	{
+		float mag = glm::length(normal);
+		normal /= mag;
+		d /= mag;
+	}
+
+	glm::vec3 normal;
+	float d;        // distance from origin
+};
+
+class Frustum
+{
+public:
+	Frustum(const glm::mat4&amp; mat, bool normalize_planes = true)
+		// create frustum from  matrix
+		// if extracted from projection matrix only, planes will be in eye-space
+		// if extracted from view*projection, planes will be in world space
+		// if extracted from model*view*projection planes will be in model space
+	{
+		// create non-normalized clipping planes
+		planes[0] = Plane(mat[3] - mat[0]);       // right
+		planes[1] = Plane(mat[3] + mat[0]);       // left
+		planes[2] = Plane(mat[3] - mat[1]);       // top
+		planes[3] = Plane(mat[3] + mat[1]);       // bottom
+		planes[4] = Plane(mat[3] - mat[2]);       // far
+		planes[5] = Plane(mat[3] + mat[2]);       // near
+		// normalize the plane equations, if requested
+		if (normalize_planes)
+		{
+			planes[0].normalize();
+			planes[1].normalize();
+			planes[2].normalize();
+			planes[3].normalize();
+			planes[4].normalize();
+			planes[5].normalize();
+		}
+	}
+
+	Plane planes[6];        // plane normals point into frustum
+};</code></pre></div>
+
+I'm having an issue where objects are not appropriately marked as being within the view frustum. I'm not sure if I'm calculating the frustum planes correctly, or if I'm not passing them into btDbvt::collideKDOP properly. The objects inside the m_objectsInFrustum container do change, but not based on the cameras view correctly. Moving the view from looking straight down to straight up acts like the view is rotating 360 degrees from left to right. Left to right movement acts like the frustum is moving up and down, and some odd combinations of the two together.<br>
+<br>
+Any suggestions as to what I might be doing wrong..?<br>
+<br>
+Called every frame to compute View Projection matrix:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13480&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	const CameraPushConstant&amp; GetCPC(const float&amp; ScrWidth, const float&amp; ScrHeight, const float&amp; zNear, const float&amp; zFar, const float&amp; FOV)
+	{
+		CPC.view_proj = glm::perspective(glm::radians(FOV), ScrWidth/ScrHeight, zNear, zFar);
+		CPC.view_proj[1][1] *= -1;
+
+		CPC.view_proj *= View;
+		View_Proj = CPC.view_proj;
+
+		CPC.pos = glm::vec4(Pos.x, Pos.y, Pos.z, 0.0f);
+		return CPC;
+	}</code></pre></div>
+
+View_Proj is what gets passed into performFrustumCulling() each frame after simulation step:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13480&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>				if (deltaFrame &gt; 0.0f)
+				{
+					//if (isWorld) {
+						dynamicsWorld-&gt;stepSimulation(deltaFrame, 5, 1.f/66.f);
+					//}
+					SceneGraph::updateUniformBuffer(currentFrame);
+					//
+					//	Frustum Culling
+					performFrustumCulling(SceneGraph::GetCamera().View_Proj);
+					if (m_objectsInFrustum.size() &gt; 0)
+					//printf("Frustum %i\n", m_objectsInFrustum.size());
+					for (int i = 0; i &lt; m_objectsInFrustum.size(); i++)
+					{
+						btCollisionObject* Obj = m_objectsInFrustum[i];
+						SceneNode* Nd = reinterpret_cast&lt;SceneNode*&gt;(Obj-&gt;getUserPointer());
+						printf("Frustum Name: %s\n", Nd-&gt;Name.c_str());
+					}
+					//
+					//	Draw Frame
+					Render();
+				}</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/212" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-03-30T08:29:46+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/212</id>
+
+		<entry>
+		<author><name><![CDATA[Stephane Redon]]></name></author>
+		<updated>2006-03-30T08:29:46+00:00</updated>
+
+		<published>2006-03-30T08:29:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=818#p818</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=818#p818"/>
+		<title type="html"><![CDATA[Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=818#p818"><![CDATA[
+Hey there, <br><br>I'm not the least unbiased person regarding point 1., so I'll pass <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">. It seems we see more and more continuous collision detection in various forms, however, in games and engines around.<br><br>About 2., are you using hierarchies of OBBs (typically done when objects are complex), or just 1 OBB (that wasn't clear to me).<br><br>For 3., yes, it's true that with nearly parallel edges, the bounds on scalar0 and scalar 1 are going to be very far apart. One possibility is to do some kind of "multiparameter" interval arithmetic, and taking a somewhat reversed approach. I.e., you bound point0 and point1 by replacing scalar0 and scalar1 by the interval [0,1], and do a search for potential contacts by refining on all three intervals (time, scalar0 and scalar1). Other ways of culling the edges could be to use a specialized form of continuous OBB/OBB overlap tests maybe (an edge is really a box <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6">Stephane Redon</a> — Thu Mar 30, 2006 8:29 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[michael]]></name></author>
+		<updated>2006-03-29T17:42:01+00:00</updated>
+
+		<published>2006-03-29T17:42:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=816#p816</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=816#p816"/>
+		<title type="html"><![CDATA[Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=816#p816"><![CDATA[
+I have a few more questions about interval arithmetic collision detection - this time performance issues.<br><br>1. This is meant for whoever has any experience with simulators that use interval arithmetic - what sort of performance should I expect from my simulator? Is this method suitable for real time simulation? Can it compete with modern simulation engines, or is it doomed to be significantly slower?<br><br>2. Are there any optimization methods (e.g. for culling) that are typically used along with interval arithmetic collision detection? One example is an interval version of the separating axis OBB test. I wonder if there are more typical algorithms, which are used after bodies pass the basic interval OBB test (algorithms to cut down on collision tests inside bodies with many vertices and triangles).<br><br>3. Regarding (nearly) parallel edges:<br><br>I use continuous interval "vertex in triangle" and "edge edge" tests, like Redon suggested in the previous post in this thread. In other words: in the case of edges (segments), if I define the points of minimal distance between the lines like this:<br>point0 = vertex0 + scalar0 * edge_vector0<br>point1 = vertex1 + scalar1 * edge_vector1<br>(the vertices and the edge vectors are known)<br>then I compute an interval version of scalar0 and scalar1, and stop iterating only when they are bound inside [0,1] or somewhere outside.<br><br>The problem is with parallel edges: it takes too many iterations to decide if the closest points are really inside the edges. This is because scalar0 and scalar1 begin with a very low minimum and a very high maximum, and gradually become more specific and end up either inside or outside [0,1].<br><br>My question is: what should I do to prevent the simulator from slowing down significantly when I have many close parallel edges, like in the case of stacking boxes?<br><br><br>Thanks again.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=406">michael</a> — Wed Mar 29, 2006 5:42 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Stephane Redon]]></name></author>
+		<updated>2006-01-20T09:40:03+00:00</updated>
+
+		<published>2006-01-20T09:40:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=648#p648</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=648#p648"/>
+		<title type="html"><![CDATA[Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=648#p648"><![CDATA[
+Hey Christer, <br><br>The answer seems simple enough <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">. It seems you just have to do a continuous version of the "vertex in triangle test" (not "vertex in plane test"), that is, for example, to do an interval version of the computation of the barycentric coordinates of the projection of the vertex on the plane containing the triangle. Combined with a continuous version of the "point in plane" triangle, this should solve the problem. Actually you could also have a parametric representation of your two triangles, and do an interval test with multiple parameters instead of just time. This might even be faster than doing nine edge/edge tests and six vertex/face tests, and would also solve the problem. Note that this problem is very degenerate anyway and would rarely occur, esp. with articulated models (nothing moves straight <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">), plus the bounding volumes would help cull those problems before they occur (acting as conservative bounds on the barycentric coordinates). In my code for articulated models I haven't implemented the solutions above, because I don't recall ever encountering the case, but they're easy to code if needed.<br><br>Regards, <br><br>Stephane<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6">Stephane Redon</a> — Fri Jan 20, 2006 9:40 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Christer Ericson]]></name></author>
+		<updated>2006-01-20T06:46:58+00:00</updated>
+
+		<published>2006-01-20T06:46:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=647#p647</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=647#p647"/>
+		<title type="html"><![CDATA[Re: Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=647#p647"><![CDATA[
+<blockquote class="uncited"><div>2. Why is it preferable to check whether the point of impact is inside the edge/triangle only after the time of impact (with the infinite line/plane) has been determined? The way I see it, this allows some collisions to be missed. For example, a vertex that's supposed to collide with a triangle might be stopped a little too soon, when the closest point in the plane is still outside the triangle. Why not compute the point of impact continuously with interval arithmetic and stop only when there's no chance of collision?</div></blockquote>If I understand the question correctly, you are refering to the method used by Provot, Bridson, and others, where for e.g. moving point vs. moving triangle you first solve for the time t the point lies in the plane of the triangle, and then check if the point also lies inside the triangle. Is that correct? If so, that approach is used in an attempt to reduce the complexity, so that you can (algebraically) solve a cubic to find the time t, and then do a simple geometric test to test triangle containment (rather than numerically solve higher-order polynomials to determine intersection).<br><br>However, note that that approach has a fundamental flaw. Consider what happens if the point and the triangle are moving together <strong class="text-strong">in the same plane</strong>. That means you cannot find a single time t at which point the point lies in the plane of the triangle and the method breaks down.<br><br>Actually, since Stephane uses the very same "Provot" approach in <em class="text-italics">Fast Continuous Collision Detection for Articulated Models</em>, I'm curious to hear his comments on how this flaw affects his code and what he does to rectify the problem. Stephane?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8">Christer Ericson</a> — Fri Jan 20, 2006 6:46 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Stephane Redon]]></name></author>
+		<updated>2006-01-18T08:57:49+00:00</updated>
+
+		<published>2006-01-18T08:57:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=635#p635</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=635#p635"/>
+		<title type="html"><![CDATA[Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=635#p635"><![CDATA[
+Hey Michael, <br><br>If you mean the solver that Baraff proposed at SIGGRAPH 1994, it really is a constraint-based solver, which handles simultaneous non-penetration constraints. <br><br>Contact points returned by a discrete or continuous collision detection solver are typically split in three categories: "vanishing" contact points, which have a positive normal velocity (normal directed towards the outside of the obstacle), "colliding" contact points, which have a negative normal velocity, and "resting" contact points with a zero normal velocity ("zero", i.e. with a tolerance). The resting contact points are the ones handled simultaneously by the constraint-based solver. The colliding contact points are handled before the resting contact points, with various approaches (sequential application of impulses, quadratic programming, etc.). The vanishing contact points are going to disappear, and it's ok.<br><br>Resting contact points do tend to accumulate. For example, after having used a constraint-based solver to compute the constrained accelerations of your objects, the objects positions are updated, and each contact point is updated and examined to determine whether it is still active or not. Using CCD, each contact point is stored as a pair of vertices, which are the closest elements on the two colliding features (for edge/edge, the two closest points on the edges, for vertex/face, the vertex and its projection on the face). Updating the contact points means updating the positions of these closest features after the positions of the objects have been updated. A contact point remain valid only if the distance between the corresponding closest features is smaller than a threshold, else the contact point is discarded. <br><br>In brief, a possible simulation loop is something like:<br>1- deal with colliding contact points <br>2- compute the constrained objects accelerations <br>3- update the objects positions and the contact points using CCD<br><br><br>Step 1 changes the objects velocities so that only resting or disappearing contact points remain. Step 2 computes the constrained accelerations using the resting contact points only. Step 3 updates the existing contact points, potentially discarding some of them, and potentially create new ones. <br><br>Hope this helps, <br><br>Stephane<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6">Stephane Redon</a> — Wed Jan 18, 2006 8:57 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[michael]]></name></author>
+		<updated>2006-01-16T17:27:53+00:00</updated>
+
+		<published>2006-01-16T17:27:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=634#p634</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=634#p634"/>
+		<title type="html"><![CDATA[Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=634#p634"><![CDATA[
+Thank you both for your detailed replies.<br><br>There's just one more thing I don't understand: how do I feed the contact points, detected by the continuous algorithm, into a constraint solver such as the one proposed by Baraff? (I'm not sure I should call it a constraint solver because I don't think he mentioned constraints or Jacobians anywhere - I'm a little confused.)<br>If I understand correctly, a discrete collision detection algorithm produces several contact points at each time step. The continuous one I'm using gives only a single contact point every once in a while, and the point remains valid only for an infinitesimally small period of time (the time it takes to dispatch the collision) because bodies never interpenetrate. But constraint forces act over a long period of time - either forever (in the case of a joint) or for as long as two objects remain touching (in the case of resting contact). So what do I do with a bunch of collisions that occur at arbitrary times, and have no duration? Currently I just apply impulses to the two bodies involved in a collision, whenever one is detected. But if I wanted to enforce a minimal distance between several bodies I'd have to keep a bunch of consistent contact points and use them to enforce the distance, without waiting for collision to be detected. Should I just keep a few contact points with a low normal relative velocity until they no longer seem valid? Should I compute the minimal distance between every two bodies and use that to compute constraint forces? Should constraint forces be applied only when collisions are detected, or should they be handled independently in a different loop? Should I use a contact manifold? (I'm not sure what that is.)<br>Another way to put it: how can I put several contacts (constraints) in a single matrix equation, when each contact occurs at a different time?<br><br>Thanks again.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=406">michael</a> — Mon Jan 16, 2006 5:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Stephane Redon]]></name></author>
+		<updated>2006-01-15T17:27:01+00:00</updated>
+
+		<published>2006-01-15T17:27:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=631#p631</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=631#p631"/>
+		<title type="html"><![CDATA[Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=631#p631"><![CDATA[
+Hey all, <br><br>I won't add much to Erwin's reply since it's already extremely thorough <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">. I believe indeed you shouldn't worry about screw motions but use yours instead (and not worry about the resulting simplicity of implementing CCD with interval arithmetic <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">).<br><br>Just about repositioning: to handle repositioning at simultaneous contact points, I've been using essentially the same approach as constrained dynamics (i.e. LCP/Quadratic programming, as has been proposed by Baraff). In essence, each non-penetration constraint v(C).n&gt;=0 is replaced by something like v(C).n&gt;=d, where v(C) is the velocity of the contact point, n is the outward contact normal, and d is a real number proportional to the security distance you are trying to enforce.  <br><br>Regards, <br><br>Stephane<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6">Stephane Redon</a> — Sun Jan 15, 2006 5:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-01-14T23:13:13+00:00</updated>
+
+		<published>2006-01-14T23:13:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=627#p627</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=627#p627"/>
+		<title type="html"><![CDATA[Re: Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=627#p627"><![CDATA[
+<blockquote class="uncited"><div>Hello all.<br><br>I guess this question seems relevant mostly to Redon, but since I'm a newbie I believe almost anyone will be able to resolve my confusion.</div></blockquote>I'll ask if Stephane Redon is available for some feedback.<blockquote class="uncited"><div>1. I use interval arithmetic for continuous collision detection. However, I don't use screwing motion as described by Redon in some of his papers, but rather a trivial axis/angle representation, which seems easier to implement (I simply compute the perpendicular and parallel components of each vertex relative to the axis of rotation, and use the most basic trigonometric equations with interval arithmetic). I wonder why screwing motion is preferable - I'm pretty sure it is, since my implementation is too trivial.</div></blockquote>You are doing ok, by chosing your own motion. Screwing motion is just useful if you want to solve the roots algebraically. I left the algebraic implementation of Redon's first ccd paper in Bullet, as you can see here: <a href="http://www.continuousphysics.com/Bullet/BulletFull/BU__EdgeEdge_8cpp-source.html#l00275" class="postlink">http://www.continuousphysics.com/Bullet ... tml#l00275</a><br>Once you use interval arithmetic, there is no need for screwing motion anymore. In fact, it is best to use another motion that doesn't have such bad artifacts. Stephane Redon also doesn't use screwing motion in his later papers (when he introduces interval arithmetic).<br><blockquote class="uncited"><div>2. Why is it preferable to check whether the point of impact is inside the edge/triangle only after the time of impact (with the infinite line/plane) has been determined? The way I see it, this allows some collisions to be missed. For example, a vertex that's supposed to collide with a triangle might be stopped a little too soon, when the closest point in the plane is still outside the triangle. Why not compute the point of impact continuously with interval arithmetic and stop only when there's no chance of collision?</div></blockquote>You are referring to numerical inaccuracies of doing 'inside-triangle'test' of the the projected intersection point? In that case, you are very right, this is indeed a problem, and the calculations need to be consistent. One approach is to use Pluecker coordinates, which can help determining on which side of the triangle-edge your moving vertex is passing. A more detailed explanation is beyond the scope of this reply <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><blockquote class="uncited"><div>3. How is repositioning done when the distance at the time of impact is smaller than a certain value (and there are more than 2 bodies)? I'd be grateful if someone could direct me to some relevant papers, preferably ones that don't require a very strong physical background.</div></blockquote>The best solution in my opinion is Time Warp. Brian Mirtich has written a paper of this concept applied to rigid body dynamics.<br>One link is here:<br><a href="http://202.113.12.9/resource/SIGGRAPH/2000/p193-mirtich.pdf" class="postlink">http://202.113.12.9/resource/SIGGRAPH/2 ... irtich.pdf</a><br>and also<br><a href="http://palantir.swarthmore.edu/maxwell/classes/e126/S01/outline/wk11_timewarp.pdf" class="postlink">http://palantir.swarthmore.edu/maxwell/ ... mewarp.pdf</a><blockquote class="uncited"><div>4. When I have only 2 bodies, and do some repositioning to keep a minimal distance between them, I get no interpenetration. However, without this repositioning step, the simulator usually halts (as expected), but seldom I also get some interpenetration. Is this to be expected as well, or did I definitely make a mistake somewhere? (According to Redon interval arithmetic should not allow any interpenetration.) I wonder where my mistake could be, because in 98% of the cases interpenetration is prevented.</div></blockquote>Redon, and others, suggest maintaining a couple of security distances/margins. This gives the objects some room to move, even on contact, and it prevents 0.0 impact times on between contacting bodies. <br>Once the object passes the most deep security/repositioning distance, you can do a repositioning, but even this repositioning needs to be 'safe', so still using the time of impact. Also, once the object is inside this security margin, only allow object motion that makes the distance bigger.<br><br>Notice that you can use a hybrid system using penetration depth and time of impact. This allows recovery and a more forgiving system. So once the time of impact got violated, the penetration depth will help out.<br><blockquote class="uncited"><div>5. Regarding the main simulation loop: should I only handle the first collision found, or should I handle a cluster of collisions which occur at similar times? Does it make any difference? If it does, what threshold should I use for the clustering?</div></blockquote>Again the Mirtich's Time Warp paper has a good solution. <br>Clustering operations are referred as 'fusion' (merge) and 'fision' (split).<br><br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sat Jan 14, 2006 11:13 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[michael]]></name></author>
+		<updated>2006-01-14T21:35:08+00:00</updated>
+
+		<published>2006-01-14T21:35:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=626#p626</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=626#p626"/>
+		<title type="html"><![CDATA[Interval arithmetic, interpenetration, repositioning]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=626#p626"><![CDATA[
+Hello all.<br><br>I guess this question seems relevant mostly to Redon, but since I'm a newbie I believe almost anyone will be able to resolve my confusion.<br><br>1. I use interval arithmetic for continuous collision detection. However, I don't use screwing motion as described by Redon in some of his papers, but rather a trivial axis/angle representation, which seems easier to implement (I simply compute the perpendicular and parallel components of each vertex relative to the axis of rotation, and use the most basic trigonometric equations with interval arithmetic). I wonder why screwing motion is preferable - I'm pretty sure it is, since my implementation is too trivial.<br><br>2. Why is it preferable to check whether the point of impact is inside the edge/triangle only after the time of impact (with the infinite line/plane) has been determined? The way I see it, this allows some collisions to be missed. For example, a vertex that's supposed to collide with a triangle might be stopped a little too soon, when the closest point in the plane is still outside the triangle. Why not compute the point of impact continuously with interval arithmetic and stop only when there's no chance of collision?<br><br>3. How is repositioning done when the distance at the time of impact is smaller than a certain value (and there are more than 2 bodies)? I'd be grateful if someone could direct me to some relevant papers, preferably ones that don't require a very strong physical background.<br><br>4. When I have only 2 bodies, and do some repositioning to keep a minimal distance between them, I get no interpenetration. However, without this repositioning step, the simulator usually halts (as expected), but seldom I also get some interpenetration. Is this to be expected as well, or did I definitely make a mistake somewhere? (According to Redon interval arithmetic should not allow any interpenetration.) I wonder where my mistake could be, because in 98% of the cases interpenetration is prevented.<br><br>5. Regarding the main simulation loop: should I only handle the first collision found, or should I handle a cluster of collisions which occur at similar times? Does it make any difference? If it does, what threshold should I use for the clustering?<br><br>Thanks, and sorry for the long post.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=406">michael</a> — Sat Jan 14, 2006 9:35 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13389" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-02-28T13:46:31+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13389</id>
+
+		<entry>
+		<author><name><![CDATA[Brian Beuken]]></name></author>
+		<updated>2022-02-28T13:46:31+00:00</updated>
+
+		<published>2022-02-28T13:46:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43907#p43907</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43907#p43907"/>
+		<title type="html"><![CDATA[Re: Rotation around the forward axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43907#p43907"><![CDATA[
+slerping is fine when it comes to the actiual transition of the point we are heading to where we want to head I can easily put a target point the left/right/up/down of the ship and the slerp will take it there controlled but the Delta time and rate of movment.<br><br>Its just the roll that escapes me..<br><br>However setting up eulers is possible, if I rotate around the Z and then recalulate the orientation as a quat it might work...<br><br>will give it a try.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12284">Brian Beuken</a> — Mon Feb 28, 2022 1:46 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[douya_5200]]></name></author>
+		<updated>2022-02-28T11:29:37+00:00</updated>
+
+		<published>2022-02-28T11:29:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43905#p43905</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43905#p43905"/>
+		<title type="html"><![CDATA[Re: Rotation around the forward axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43905#p43905"><![CDATA[
+my suggestions of a naive way would be using euler angles.<br><br>step 1: user inputs<br>step 2: calculate values of pitch, yaw , roll of current frame (Yes, you need to figure out what the angles are and combine them)<br>step 3: get Euler angle rotations<br>step 4: construct rotation matrix from Euler angles<br>step 4: Or construct quaternion from Euler angles<br>step 5: apply quaternion to the rigidbody transform.<br><br>All you need is to google the convert Euler angles to quaternion part. <br>You may also want to check out the Unity3D::Quaternion::Slerp function.<br>Hope this would help.<br><br>Edit: if you want to add separate roll on top of the slerping. Then you need to  construct another matrix/quaternion that only represents the roll change, then concatenate the matrix/quaternion before applying it to the transform.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14215">douya_5200</a> — Mon Feb 28, 2022 11:29 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Brian Beuken]]></name></author>
+		<updated>2022-02-28T08:58:51+00:00</updated>
+
+		<published>2022-02-28T08:58:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43904#p43904</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43904#p43904"/>
+		<title type="html"><![CDATA[Re: Rotation around the forward axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43904#p43904"><![CDATA[
+its a bit messy at the moment, since it isn't working I'm just trying things out, also I have to switch to GLM to do some of the maths then back to bullet which isn't nice.<br><br><div class="codebox"><p>Code: </p><pre><code>// now lets change orientation?// can't do this in bullet// tp is a target position to move left or right around the yglm::quat targetorientation = glm::conjugate(glm::quat(glm::lookAt(tp, WhoAmI-&gt;WorldPosition, glm::vec3(0, 1, 0))));#ifdef DEBUGif (Dt &gt; 0.9f) Dt = 0.1f; // avoid break/stepping delays#endifglm::quat gcurr = glm::quat(Current.getW(), Current.getX(), Current.getY(), Current.getZ());glm::quat intermediateientation = glm::slerp(gcurr, targetorientation, Dt / ShipsAttributeData.TurningRate); // need to incorporate some inertia/mass into his turn later// so we turned twaard the new tp with this... but how do we roll him? repeat on the forward axis?targetorientation = glm::conjugate(glm::quat(glm::lookAt(WhoAmI-&gt;WorldPosition+RightGLM, WhoAmI-&gt;WorldPosition, ForwardGLM)));intermediateientation = glm::slerp(intermediateientation, targetorientation, Dt / ShipsAttributeData.TurningRate); // need to incorporate some inertia/mass into his turn laterbtQuaternion btQuatlook;btQuatlook.setX(intermediateientation.x);btQuatlook.setY(intermediateientation.y);btQuatlook.setZ(intermediateientation.z);btQuatlook.setW(intermediateientation.w);WhoAmI-&gt;MyPhysObj-&gt;SetOrientation(btQuatlook);</code></pre></div>this does produce some level of roll, but also a lot of pitch so... yeah I'm doing it totally wrong and no idea what I'm doing.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12284">Brian Beuken</a> — Mon Feb 28, 2022 8:58 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[douya_5200]]></name></author>
+		<updated>2022-02-28T07:32:00+00:00</updated>
+
+		<published>2022-02-28T07:32:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43902#p43902</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43902#p43902"/>
+		<title type="html"><![CDATA[Re: Rotation around the forward axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43902#p43902"><![CDATA[
+Hi,<br>Could you put up your code here?  otherwise it's hard to tell what you have done wrong. It's probably the problems of calculations with rotation matrix/ quaternions.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14215">douya_5200</a> — Mon Feb 28, 2022 7:32 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Brian Beuken]]></name></author>
+		<updated>2022-02-27T22:28:24+00:00</updated>
+
+		<published>2022-02-27T22:28:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43901#p43901</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43901#p43901"/>
+		<title type="html"><![CDATA[Rotation around the forward axis]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43901#p43901"><![CDATA[
+arrgh I hate maths, and clearly I need to love it but.,. I thought this might be a common issue, but a search on here found only issues relating to rotation around a y or z axis, not an arbitary forward axis.<br><br><br>Help, Im stuck on someting in my space game again, getting my ships flying around from point to point is fine, but I now want to take control of some thips and have them roate as well as turn under user control<br><br>I have my Orientation of my ships, from GetRigidBody()-&gt;getOrientation();<br>and I can use conjugate and slerp to point the ship to a particular point in space ok.. so turning and pointing at a new point is easy, I'm just using the Y axis (yaw) and a bit of pitch <br><br>But what I really need to do is rotate around the forward axis, spinning left and right (roll), to allow for some steering behaviour from the user on the keyboard/mouse, I also want to pull up and down (pitch) This will give me the ability to make tight turns fighter style<br><br>But nothing I try seems to let me just rotate along the forward axis.. or combine RPY? I only have control of the yaw. but setting a target orientation to aim for.<br><br><br>Im genuinly crap at this can any one help?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12284">Brian Beuken</a> — Sun Feb 27, 2022 10:28 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

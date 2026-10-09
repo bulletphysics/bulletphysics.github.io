@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Blender Fracture Modifier - Compound Fracture Support</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Blender Fracture Modifier - Compound Fracture Support</h2>
+		<p><a href="viewtopic.php%3Ft=10883.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10883</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Blender Fracture Modifier - Compound Fracture Support</h3>
+				<div class="date">Posted: <strong>Thu Oct 29, 2015 3:58 pm</strong></div>
+				<div class="author">by <strong>scorpion81</strong></div>
+				<div class="content">Hello,<br>
+<br>
+i am the developer of the Fracture Modifier in Blender. For some time it has been using rigidbodies and fixed constraints to simulate connections between shards inside a fractured object.<br>
+But as this method becomes very slow with say, 5000+ rigidbodies and a lot of constraints, i was looking to add compound fracture support to the modifier.<br>
+For this purpose i took and modified the "FractureDemo" of bullet and added it into a branch of blender, and the basic principle works already.<br>
+But i have some kind of problems to control the fracture simulation as accurate as with simulating real constraints.<br>
+<br>
+In my modification i use a new dummy "btCompoundConstraint" type, a "btFractureDynamicsWorld" subclass and a "btFractureBody" subclass. I calculate / build the connections inside the compound based on those <br>
+dummy constraints, which are not added to the world base class and thus are not really simulated by a solver (so this performs faster than using say, fixed constraints). I had to replace the "recomputeConnectivity"<br>
+function which operates on N^2 of the collision object count by this method, because it slowed down simulation of larger amounts of shards massively.<br>
+<br>
+The construction of the compounds as well as the weakening of connections / breaking off shards happens manifold-based. (with gluecallback called once at sim start, and fracturecallback from solveConstraints())<br>
+<br>
+I see that this connection calculation atm cant replace a full blown constraint solver.... but now my question (especially to Erwin)<br>
+<br>
+Is there a way to let compounds be destroyed nearly as controllable as with constraints, but without losing the performance gain and the bomb-proof glueing between compound children ?<br>
+I was experimenting with weaker thresholds at constraints with smaller masses (both partner masses added), but i cant let small shards break off before bigger shards (the bigger ones create bigger forces due to higher (volume dependent) fractions of the total object mass).<br>
+<br>
+So again (especially Erwin), do you maybe have some suggestions about how to improve the control ?  <br>
+And.. everyone is invited to test the build (or compile it first, the provided builds are outdated) and give some feedback either here or in the according BlenderArtists Thread.<br>
+<br>
+<a href="http://blenderartists.org/forum/showthread.php?343637-Custom-Build-Blender-Fracture-Modifier" class="postlink">http://blenderartists.org/forum/showthr ... e-Modifier</a><br>
+<br>
+<br>
+<br>
+A build of the Fracture Modifier can be downloaded here:<br>
+<a href="http://df-vfx.de/fracturemodifier/" class="postlink">http://df-vfx.de/fracturemodifier/</a> (older version, still without compound support)<br>
+<a href="https://drive.google.com/folderview?id=0Bwkun-jSiZ-RMjhmQUlSR3JZTms&amp;usp=sharing#list" class="postlink">https://drive.google.com/folderview?id= ... aring#list</a> (only the ubuntu version has an outdated version of the compound code inside)<br>
+<br>
+Source code is here:<br>
+<a href="http://git.blender.org" class="postlink">http://git.blender.org</a> (branch: fracture_modifier)<br>
+<a href="https://git.blender.org/gitweb/gitweb.cgi/blender.git/shortlog/refs/heads/fracture_modifier" class="postlink">https://git.blender.org/gitweb/gitweb.c ... e_modifier</a><br>
+<br>
+the main modifications of bullet are here:<br>
+<a href="https://developer.blender.org/diffusion/B/browse/fracture_modifier/extern/bullet2/src/BulletDynamics/Dynamics/" class="postlink">https://developer.blender.org/diffusion ... /Dynamics/</a>  (btFractureBody, btFractureDynamicsWorld)<br>
+<a href="https://developer.blender.org/diffusion/B/browse/fracture_modifier/extern/bullet2/src/BulletDynamics/ConstraintSolver" class="postlink">https://developer.blender.org/diffusion ... aintSolver</a> (btCompoundConstraint)<br>
+<a href="https://developer.blender.org/diffusion/B/browse/fracture_modifier/intern/rigidbody/" class="postlink">https://developer.blender.org/diffusion ... rigidbody/</a> (changes in rb_bullet_api.cpp, RBI_api.h)<br>
+<br>
+Furthermore, there is a MOD_fracture.c here:<br>
+<a href="https://developer.blender.org/diffusion/B/browse/fracture_modifier/source/blender/modifiers/intern/" class="postlink">https://developer.blender.org/diffusion ... rs/intern/</a><br>
+<br>
+and a fracture.c and a modified rigidbody.c here:<br>
+<a href="https://developer.blender.org/diffusion/B/browse/fracture_modifier/source/blender/blenkernel/intern/" class="postlink">https://developer.blender.org/diffusion ... el/intern/</a><br>
+<br>
+Hope to hear some feedback <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Blender Fracture Modifier - Compound Fracture Support</h3>
+				<div class="date">Posted: <strong>Tue Aug 16, 2016 4:08 am</strong></div>
+				<div class="author">by <strong>hyyou</strong></div>
+				<div class="content">Hello, scorpion81<br>
+<br>
+I have played the plugin.  It is great and thank for your help in the forum!<br>
+<br>
+Now, I am interested in your code and still digging it.<br>
+<br>
+Besides the code itself, do you have some document / more description about your modification of Bullet?<br>
+It will really help my digging process.<br>
+<br>
+If you don't reply, I will stalk you in Blender's forum instead.   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

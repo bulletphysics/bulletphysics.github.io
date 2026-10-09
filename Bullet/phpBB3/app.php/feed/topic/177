@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/177" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-11-17T18:21:28+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/177</id>
+
+		<entry>
+		<author><name><![CDATA[mewert]]></name></author>
+		<updated>2005-11-17T18:21:28+00:00</updated>
+
+		<published>2005-11-17T18:21:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=459#p459</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=459#p459"/>
+		<title type="html"><![CDATA[Parallel LCP solving methods?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=459#p459"><![CDATA[
+For implementation on a Cell processor, which I'm guessing you're most interested in Erwin <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink">  I'd probably use a buffering scheme.  Where you have a buffer on each processor for the delta of the solution values of the constraints shared between two blocks.<br> <br>You would order your constraints, to solve the non-shared elements first. After updating from the buffer and solving the shared elements, you would kick the results off to the other processors.  Those results would get collected in the buffer.  By the time you've finished your next iteration on the non-shared constraints, the results from the other processors should be ready to use.  So the shared constraints would kind of lag one iteration behind ( is it Jacobi iteration here? ).  <br><br>I'm assuming you're using an LCP solver that is linear in performance per iteration, not a "Big Matrix" solver.  One problem I see is that when complementarity fails on a constraint and you have to "undo" the forces applied, this may need some special handling, or it may just work out.   <br><br>I'm making some assumptions about the Cell's DMA capabilities here, that it can DMA into a buffer while the SPU is chugging away on the current iteration.  For a more standard multi-core processor, you would use "restrict" on the non-shared elements and have a separate loop to handle the shared elements which will require reading and writing to memory.  Hope the rambling style of my writing isn't too confusing.<br><br>- Michael Alexander Ewert<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=323">mewert</a> — Thu Nov 17, 2005 6:21 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Antonio Martini]]></name></author>
+		<updated>2005-11-17T11:23:40+00:00</updated>
+
+		<published>2005-11-17T11:23:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=456#p456</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=456#p456"/>
+		<title type="html"><![CDATA[Re: Parallel LCP solving methods?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=456#p456"><![CDATA[
+has anybody already looked into this?<br><br>"Matrix Multisplitting Methods with Applications to the Linear Complementarity Problems"<br><br><a href="http://lsec.cc.ac.cn/~bzz/Public/series.html" class="postlink">http://lsec.cc.ac.cn/~bzz/Public/series.html</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=145">Antonio Martini</a> — Thu Nov 17, 2005 11:23 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[russ]]></name></author>
+		<updated>2005-11-16T07:07:21+00:00</updated>
+
+		<published>2005-11-16T07:07:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=455#p455</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=455#p455"/>
+		<title type="html"><![CDATA[Parallel LCP solving methods?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=455#p455"><![CDATA[
+right: this kind of partitioninig (i.e. to minimize the interactions between different parts of a graph) is common in sparse matrix code in high performance computing - both to minimize the amount of fill-in during factorization, and to minimize the amount of interprocessor communication during parallelization. there are many algorithms to generate effective orderings (lots of research results here). some matrix structures (such as tree or mesh structures) have optimal orderings that can be computed easily, but matrices with arbitrary structures (e.g. resulting from collision detection) require fairly complex algorithms. for a realtime GS solver you could easily spend more time computing a good non-interaction ordering than you'd save by parallelization.<br><br>i think some testing is in order: try block gauss-siedel with various block sizes and compare the resulting accuracy (i.e. convergence rate). if it's "good enough" then i'd forego the tricky reordering algorithms. you might find, for example, that you could do one extra GS iteration to make up for some reasonable block size.<br><br>what other approximations to GS lend themselves to parallelization? i parallelized ODE a while ago (on an SGI altix machine) by unrolling the inner loop of GS and simply not worrying about data dependence or competing updates to the same output elements. the result: accuracy indistinguishable from the serialized version.<br><br>russ.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=18">russ</a> — Wed Nov 16, 2005 7:07 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2005-11-16T06:39:55+00:00</updated>
+
+		<published>2005-11-16T06:39:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=454#p454</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=454#p454"/>
+		<title type="html"><![CDATA[Parallel LCP solving methods?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=454#p454"><![CDATA[
+One way to think about this is to visualize how GS operates on the body-constraint graph. Assume constraints only operate on one or two bodies. GS processes each constraint in turn, adjusting the net force that acts on the two bodies.<br><br>Two constraints that affect different pairs of bodies can be solved independently. Imagine a vertical stack of boxes. Two independent GS loops can operate, one from the top down, the other from the bottom up. When they get half way, the results must be merged.<br><br>Perhaps such an approach can be generalized to make an efficient parallel PGS solver.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Wed Nov 16, 2005 6:39 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2005-11-15T23:51:45+00:00</updated>
+
+		<published>2005-11-15T23:51:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=453#p453</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=453#p453"/>
+		<title type="html"><![CDATA[Parallel LCP solving methods?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=453#p453"><![CDATA[
+In rigid body simulation contact solving, each step in the iterative scheme like Gauss Seidel requires the result from the previous step. This makes it difficult to parallelize. Jacobi method on the other hand can be easier implemented in parallel. A mix between Jacobi and Gauss Seidel, a kind of block solving process might enable faster solving for multiprocessor architectures.<br><br>Does anyone have ideas, experience or references to papers about parallel LCP solver methods that fit a small memory footprint?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Nov 15, 2005 11:51 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

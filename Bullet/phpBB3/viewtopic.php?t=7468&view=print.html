@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Little Tutorial on btGhostObject (In Progress)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Little Tutorial on btGhostObject (In Progress)</h2>
+		<p><a href="viewtopic.php%3Ft=7468.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7468</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Little Tutorial on btGhostObject (In Progress)</h3>
+				<div class="date">Posted: <strong>Sun Sep 25, 2011 4:24 pm</strong></div>
+				<div class="author">by <strong>Dr.Shepherd</strong></div>
+				<div class="content">Hi, all, this is a little tutorial on btGhostObject, and this only provides one way to implement it. I think there should be many ways, whatever, I will revise it later when I got new discoveries. <br>
+<br>
+<strong class="text-strong"><span style="font-size:150%;line-height:116%">Introduction to btGhostObject:</span></strong><br>
+When you go through the API documentation, please pay attention to the Inheritance diagram for each class you are searching, Actually it is the most important part of the class.<br>
+<br>
+When you check BtGhostObject, please be aware that it is inherited from btCollisionObject. And Pay attention to btPairCachingGhostObject.<br>
+-----btCollisionObject<br>
+------------btGhostObject<br>
+-------------------btPairCachingGhostObject<br>
+------------btRigidObject<br>
+------------btSoftObject<br>
+So you see, it is at the equal level with the rigidbody and softbody.<br>
+<br>
+And don't mess this btCollisionObject with btCollisionShape.<br>
+-----btCollisionShape<br>
+----------btConvexShape (This is what most people use, box, capsule, sphere etc)<br>
+----------btConcaveShape<br>
+----------btCompoundShape<br>
+<br>
+One more little thing: Contact manifold is a small group that contains contact points. When two collision objects collide with each other, there may be one more manifolds between them, and each manifold contains no more than 4 contact points.<br>
+<br>
+<strong class="text-strong"><span style="font-size:150%;line-height:116%">Why you want to use btGhostObject:</span></strong><br>
+The reason why you use btGhostObject is that you only want to focus on some objects , to see what it collides with. By this way, you don't need to iterate over all contact manifolds in the dynamics world. You iterate only over the pairs of objects that you are interested in. (Check the tutorial: <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Collision_Callbacks_and_Triggers" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... d_Triggers</a>)<br>
+<br>
+However, even if you constrain your iteration to part of the whole world, the contact points information are still stored in the dynamics world cache, which means we still have to look up the allContacManifold to get the contact points we need.<br>
+btPersistentManifold is a contact point cache, it stays persistent as long as objects are overlapping in the broadphase. <br>
+<br>
+<strong class="text-strong"><span style="font-size:150%;line-height:116%">Let's work it out:</span></strong><br>
+First, you should add the header file into your cpp:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include "BulletCollision/CollisionDispatch/btGhostObject.h"</code></pre></div>
+It's not just 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include "btGhostObject.h"</code></pre></div>
+
+1. When you are initializing your dynamics world, you should do the following to set up a ghost object: 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>ghostObject = new btGhostObject();
+		ghostObject-&gt;setCollisionShape(new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.))));
+		ghostObject-&gt;setWorldTransform(groundTransform);
+		m_dynamicsWorld-&gt;addCollisionObject(ghostObject);
+		m_dynamicsWorld-&gt;getBroadphase()-&gt;getOverlappingPairCache()-&gt;setInternalGhostPairCallback(new btGhostPairCallback());	</code></pre></div>
+
+Don't forget the last line. <br>
+<br>
+2. Use this ghostobject:<br>
+What I did is to use it in motorPreTickCallback (you can also find it in the same tutorial)<br>
+<br>
+Setup the motorPreTickCallback:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	m_dynamicsWorld-&gt;setInternalTickCallback(motorPreTickCallback,this,true);</code></pre></div>
+
+Define the motorPreTickCallback:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void motorPreTickCallback (btDynamicsWorld *world, btScalar timeStep)
+{
+  	for(int i = 0; i &lt; ghostObject-&gt;getNumOverlappingObjects(); i++)
+ 	{
+                btRigidBody *pRigidBody = dynamic_cast&lt;btRigidBody *&gt;(ghostObject-&gt;getOverlappingObject(i));
+               // do whatever you want to do with these pairs of colliding objects
+        }
+</code></pre></div>
+
+If you omit the last line in previous step:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_dynamicsWorld-&gt;getBroadphase()-&gt;getOverlappingPairCache()-&gt;setInternalGhostPairCallback(new btGhostPairCallback());</code></pre></div>
+You will receive nothing in motorPreTickCallback. (although there is no actual btGhostPairCallback in my case)<br>
+<br>
+<span style="font-size:150%;line-height:116%"><strong class="text-strong">About the Tutorial In the Wiki</strong></span><br>
+If you try to implement the example about btGhostObject given at the tutorial from the Wiki, define your GhostObject as the btPairCachingGhostObject, not just as btGhostObject. Then it should work out.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_ghostObject = new btPairCachingGhostObject();</code></pre></div>
+I add up some more comments for the example, hope it can help you understand more easily
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7468&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// Prepare for getting all the contact manifolds for one Overlapping Pair
+      btManifoldArray   manifoldArray;
+// Get all the Overlapping Pair
+      btBroadphasePairArray&amp; pairArray = ghostObject-&gt;getOverlappingPairCache()-&gt;getOverlappingPairArray();
+      int numPairs = pairArray.size();
+
+      for (int i=0;i&lt;numPairs;i++)
+      {
+         manifoldArray.clear();
+
+         const btBroadphasePair&amp; pair = pairArray[i];
+         
+         //unless we manually perform collision detection on this pair, the contacts are in the dynamics world paircache: 
+//The next line fetches the collision information for this Pair
+         btBroadphasePair* collisionPair = dynamicsWorld-&gt;getPairCache()-&gt;findPair(pair.m_pProxy0,pair.m_pProxy1);
+         if (!collisionPair)
+            continue;
+
+// Read out the all contact manifolds for this Overlapping Pair
+         if (collisionPair-&gt;m_algorithm)
+            collisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(manifoldArray);
+
+         for (int j=0;j&lt;manifoldArray.size();j++)
+         {
+            btPersistentManifold* manifold = manifoldArray[j];
+
+// Check if the first object in the Pair is GhostObject or not.
+            btScalar directionSign = manifold-&gt;getBody0() == m_ghostObject ? btScalar(-1.0) : btScalar(1.0);
+            for (int p=0;p&lt;manifold-&gt;getNumContacts();p++)
+            {
+             	const btManifoldPoint&amp;pt = manifold-&gt;getContactPoint(p);
+                if (pt.getDistance()&lt;0.f)
+		{
+// Actually you can get the local information from this Overlapping pair, not just world Position
+			const btVector3&amp; ptA = pt.getPositionWorldOnA();
+			const btVector3&amp; ptB = pt.getPositionWorldOnB();
+			const btVector3&amp; normalOnB = pt.m_normalWorldOnB;
+			/// work here
+		}
+            }
+         }
+      }
+</code></pre></div>
+
+<span style="font-size:150%;line-height:116%"><strong class="text-strong">Conclusion</strong></span><br>
+<br>
+This is just the simplest implementation for btGhostObject, and I try to tell what I have done in my case. Though this is simple, it is enough for my case. Hope anyone can give more suggestions on how to use btGhostObject.<br>
+<br>
+I think Bullet should need such little examples to show how each class works, we can provide our each small example and prepare for future's documentation.<br>
+<br>
+I read through the posts below when I try to find information on this topic:<br>
+<a href="viewtopic.php%3Ft=3976.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... f=9&amp;t=3976</a><br>
+<a href="viewtopic.php%3Ft=3026.html" class="postlink">http://www.bulletphysics.org/Bullet/php ... 26&amp;start=0</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

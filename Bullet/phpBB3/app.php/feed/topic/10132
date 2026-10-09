@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10132" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-10-04T17:57:59+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10132</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-10-04T17:57:59+00:00</updated>
+
+		<published>2014-10-04T17:57:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34109#p34109</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34109#p34109"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34109#p34109"><![CDATA[
+Well, a good example would be a hinge. You usually solve the motor first, then the limit, followed by the two angular constraints and finally the three linear constraints.<br><br>Obviously you want this order as the motor can press on the limit and then as the limit comes after this and cancels the motor again. The motor pressing on the limit is kind of a problem with random constraint order. So this is a mini example of proper constraint ordering. Then you have a couple of options for the remaining five constraints. You can solve each constraint individually (what is what you are doing). Angular constraints are usually much easier (faster) to solve as the linear entries are zero, so I am not sure you utilize that. You can also solve two angular constraints together (as a 2x2 system) and finally solve the linear constraints as a 3x3 system. Of course you can solve the linear and angular constraint together as a 5x5 system as well. This is the most expensive, but also the most stable one as the linear and angular constraints are not fighting anymore. The very best is to solve the 5x5 hinge constraints with the limit together as a 6x6 LCP which can be solved elegantly with direct enumeration. <br><br>I never did the LCP approach as this is very expensive in 3D. But Box2D does it and it gives really good results (means stiff limits). I used the 5x5 block solve 10 years ago in Lair. We used varying timesteps which could become terrible large and it helped to keep things together (not stretch) e.g. when the dragon picked up something. Currently I only solve the linear constraints as a 3x3 system. This seems to be a good compromise since it is fast and gives good results. Also note that we solve linear constraints last as stretching is more visible there as for angular constraints. Especially with skinned models. <br><br>HTH,<br>-Dirk<br><br>PS:<br>Again I recommend looking at Box2D. It is all there and trivial to port to 3D.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sat Oct 04, 2014 5:57 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-10-03T18:21:06+00:00</updated>
+
+		<published>2014-10-03T18:21:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34105#p34105</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34105#p34105"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34105#p34105"><![CDATA[
+<blockquote class="uncited"><div>I have more of a block solver. So it looks like this:<br><br>for ( n iterations )<br>{<br>    for_each( dynamic_contact c )<br>        c-&gt;solve();<br><br>    for_each( static_contact c )<br>        c-&gt;solve();<br>}</div></blockquote>Interesting - I have to admit while I have significantly refactored this code base I didn't write the original solver so I have not really looked at all the different techniques. What are the differences between the two solvers? The accumulated lambda that is used to determine the resulting forces to apply is part of the whole system of interconnected constraints - each line in my solver row looks almost identical, with the exception of clamping.<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Fri Oct 03, 2014 6:21 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-10-03T02:26:22+00:00</updated>
+
+		<published>2014-10-03T02:26:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34100#p34100</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34100#p34100"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34100#p34100"><![CDATA[
+I have more of a block solver. So it looks like this:<br><br>for ( n iterations )<br>{<br>    for_each( dynamic_contact c )<br>        c-&gt;solve();<br><br>    for_each( static_contact c )<br>        c-&gt;solve();<br>}<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Fri Oct 03, 2014 2:26 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2014-10-02T15:41:51+00:00</updated>
+
+		<published>2014-10-02T15:41:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34097#p34097</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34097#p34097"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34097#p34097"><![CDATA[
+I'm pretty sure they mean to iterate over all of the sorted constraints in one loop.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Thu Oct 02, 2014 3:41 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-10-01T18:07:59+00:00</updated>
+
+		<published>2014-10-01T18:07:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34092#p34092</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34092#p34092"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34092#p34092"><![CDATA[
+<blockquote class="uncited"><div>Randy is right. You should sort your contacts such that static contacts are always solved last. This way you reduce chances that stuff gets pushed out of the world.<br>...</div></blockquote>A question. My solver looks like this:<br><div class="codebox"><p>Code: </p><pre><code>for ( num_iterations ){    for ( num_solver_rows )    {         IterateRow( )    }    if ( maxDeltaLambda &lt; tolerance )       break;}</code></pre></div>I solve all the constraints together in the loop - are you suggesting that first I iterate on the dynamic and keyframe contacts, and then I iterate on the static afterwards, as if they are in separate islands? I can't imagine this is what you mean, or that it would work!<br><br>I currently don't employ warmstarting, and my iterations are quite high - I wonder if the sorted order is really going to help?<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Wed Oct 01, 2014 6:07 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-10-01T16:11:49+00:00</updated>
+
+		<published>2014-10-01T16:11:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34091#p34091</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34091#p34091"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34091#p34091"><![CDATA[
+<blockquote class="uncited"><div>Maybe you could try sorting the pairs the broadphase gives you in order to solve what is most important last. With Gauss Seidel the last constraints solved will be the most accurate, and perhaps for you the last contacts solved should be dynamic vs static.<br><br>Alternatively, maybe it would be good to see if the player is in the way of an animation and static body before playing the animation. If so, then do something about it (perhaps move the player), or not play the animation at all. I have seen doors in games attempt to shut, and once they come into contact with the player they just open back up without finishing their animation. This reminds me of elevator doors in real life.</div></blockquote>Randy,<br><br>It didn't really occur to me that the order that the constraints are solved would matter but when I stop and think about I see that they do. I'll give that a try - now I just need a free way to sort the constraints!<br><br>Dirk, <br><br>Motor forces occurred to me as well but the designer pointed out the specific 'problem' of crates in doors as you suggested.<br><br>Thank you both for your feedback!<br><br>Steven<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Wed Oct 01, 2014 4:11 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-09-28T04:17:31+00:00</updated>
+
+		<published>2014-09-28T04:17:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34069#p34069</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34069#p34069"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34069#p34069"><![CDATA[
+Randy is right. You should sort your contacts such that static contacts are always solved last. This way you reduce chances that stuff gets pushed out of the world.<br><br>For doors I would use motors instead of kinematic bodies. You compute a motor force that will follow the animation. A kinematic body has essentially an infinite force which you want to avoid. This is helpful for all kind of stuff like e.g. also elevators. The down side is that you can now block doors and elevators with e.g. crates that get pushed around. Other solutions as e.g. shadow controllers are very complicated and I would try to avoid those.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Sun Sep 28, 2014 4:17 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[RandyGaul]]></name></author>
+		<updated>2014-09-27T19:36:14+00:00</updated>
+
+		<published>2014-09-27T19:36:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34066#p34066</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34066#p34066"/>
+		<title type="html"><![CDATA[Re: Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34066#p34066"><![CDATA[
+Maybe you could try sorting the pairs the broadphase gives you in order to solve what is most important last. With Gauss Seidel the last constraints solved will be the most accurate, and perhaps for you the last contacts solved should be dynamic vs static.<br><br>Alternatively, maybe it would be good to see if the player is in the way of an animation and static body before playing the animation. If so, then do something about it (perhaps move the player), or not play the animation at all. I have seen doors in games attempt to shut, and once they come into contact with the player they just open back up without finishing their animation. This reminds me of elevator doors in real life.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10235">RandyGaul</a> — Sat Sep 27, 2014 7:36 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-09-26T19:16:31+00:00</updated>
+
+		<published>2014-09-26T19:16:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34063#p34063</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34063#p34063"/>
+		<title type="html"><![CDATA[Any smart ideas on contact resolution priorities?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34063#p34063"><![CDATA[
+Hi there. Currently in our engine we have three classes of bodies: static bodies, dynamic bodies, and keyframed bodies. One of my team members came to me and asked if there was any way to prioritize responses to collisions between these bodies. For example, if a keyframed gate animates onto a dynamic player, he will push through the static floor, but perhaps the floor should never be allowed to be penetrated, or at least not penetrated 'as much'.<br><br>To me this sounds odd - if the objects are penetrating, between a rock and a hard place, the dynamic player has no where to go. I also can't think how I would factor this kind of thing into the relatively simple gauss seidel solver we use. However, I thought I would ask if anyone has any smart ideas (beyond disabling the contact once collision occurs).<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Fri Sep 26, 2014 7:16 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

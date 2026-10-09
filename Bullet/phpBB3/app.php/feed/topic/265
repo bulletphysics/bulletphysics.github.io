@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/265" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-01-30T07:58:44+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/265</id>
+
+		<entry>
+		<author><name><![CDATA[Chris Elion]]></name></author>
+		<updated>2007-01-30T07:58:44+00:00</updated>
+
+		<published>2007-01-30T07:58:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3386#p3386</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3386#p3386"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3386#p3386"><![CDATA[
+Thanks for the links. Something to pass the time on the bus to work.<br><blockquote class="uncited"><div>The way CG and LBFGS operate is to minimize the cost function without regard to the residual (velocity errors). The velocity errors are erratic through the iterations. The consequence of early termination is unstable stacking.</div></blockquote>Maybe Conjugate Residuals would be better suited? Again, I've never tried it, but it minimizes || A^(-1/2) (b-Ax)||_2 over the Krylov subspace at each step (Golub &amp; Van Loan, 10.4.3)...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1158">Chris Elion</a> — Tue Jan 30, 2007 7:58 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2007-01-30T07:44:14+00:00</updated>
+
+		<published>2007-01-30T07:44:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3385#p3385</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3385#p3385"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3385#p3385"><![CDATA[
+I have implemented CG and Limited Memory BFGS (LBFGS) on mechanical systems and they can indeed operate with order N time and space. The problem with both of these algorithms is that sometimes they take 100+ iterations to converge (depending on preconditioning). If you cut the iterations short your velocity errors may have actually increased.<br><br>The way CG and LBFGS operate is to minimize the cost function without regard to the residual (velocity errors). The velocity errors are erratic through the iterations. The consequence of early termination is unstable stacking.<br><br>On the other hand, Gauss-Seidel always reduces the cost function and the velocity errors. The convergence is poor, but the simulation is generally smooth and forgiving.<br><br>Here is the original GPCG paper <a href="http://www.gphysics.com/files/GPCG_Text.pdf" class="postlink">http://www.gphysics.com/files/GPCG_Text.pdf</a>. Here is an improved version <a href="http://www.gphysics.com/files/QP_Box_CG.pdf" class="postlink">http://www.gphysics.com/files/QP_Box_CG.pdf</a><br><br>Admin update:<br>See <a href="http://www.researchgate.net/profile/Gerardo_Toraldo/publication/257655182_more_toraldo_91/links/00463525ab22839457000000.pdf?origin=publication_detail" class="postlink">http://www.researchgate.net/profile/Ger ... ion_detail</a><br>and <a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.24.5748&amp;rep=rep1&amp;type=pdf" class="postlink">http://citeseerx.ist.psu.edu/viewdoc/do ... 1&amp;type=pdf</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Tue Jan 30, 2007 7:44 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Chris Elion]]></name></author>
+		<updated>2007-01-30T04:36:21+00:00</updated>
+
+		<published>2007-01-30T04:36:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3384#p3384</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3384#p3384"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3384#p3384"><![CDATA[
+(Sorry if these are dumb questions, but my background is in PDEs - I've never written my own rigid body simulator, and I'm not about to rewrite Havok's solver.)<br><br>Are there any good referneces on "gradient projection + conjugate gradient" that Erin mentioned earlier in the thread? Can you just precondition that with PGS (in the same way that you can use GS as a preconditioner for CG for unconstrainted systems of equations)?<br><blockquote class="uncited"><div>Whenever I have time to optimze a CG implementation for a specific problem, the first two things that I look at are:  a) an appropriate preconditioner (these are invaluable if you have some intuitive knowledge of the system) and b) a good way to get initial values.</div></blockquote>Definitely. Even something simple like diagonal scaling or SSOR should be better than nothing. "Numerical Linear Algebra" by Trefethen and Bau has a great  chpater with a high-level discussion on choosing a preconditioner, but they never go into detail on specific examples.<br><blockquote class="uncited"><div>The accumulator gives you a LCP solver that is linear in processing time and memory. If I took your recipe and implemented your technique I would end up with a system that is O(n^3) cpu time and O(n^2) in memory needed.  </div></blockquote>I can't speak for David's implementation, but the storage requirements for CG are only O(N) assuming that you don't explicitly form the matrix. And there are "limited memory" quasi-Newton methods that also only require storing vectors. As for the performance of PGS, each iteration takes O(N) operations, but the number of iterations needed to converge to a specified tolerance can increase with the size of the problem (or at least that's the case with finite differences).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1158">Chris Elion</a> — Tue Jan 30, 2007 4:36 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mewert]]></name></author>
+		<updated>2007-01-30T03:04:12+00:00</updated>
+
+		<published>2007-01-30T03:04:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3383#p3383</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3383#p3383"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3383#p3383"><![CDATA[
+Hi David,<br><br>Quasi-Newton preconditioner, Conjugate Gradient solver and then non-linear line search.  Would be an interesting exercise to figure out how to do that efficiently.  Projected Gausse Seidel implemented with an accumulation vector seems to work pretty well.  The accumulator gives you a LCP solver that is linear in processing time and memory.  If I took your recipe and implemented your technique I would end up with a system that is O(n^3) cpu time and O(n^2) in memory needed.  Which is what "LCP solver" used to be.  Is your QN/CG/NLS implementation also linear in time/space requirements similar to PGS with an accumulator ( aka sequential impulses )?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=323">mewert</a> — Tue Jan 30, 2007 3:04 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[DavidWu]]></name></author>
+		<updated>2007-01-28T02:28:39+00:00</updated>
+
+		<published>2007-01-28T02:28:39+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3366#p3366</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3366#p3366"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3366#p3366"><![CDATA[
+Good points on Red Black.   I was thinking about my FEM solver when I first considered that one.<br><br>Regarding PCG, I think that early on people were referring to "Projected".  Whenever I have time to optimze a CG implementation for a specific problem, the first two things that I look at are:  a) an appropriate preconditioner (these are invaluable if you have some intuitive knowledge of the system) and b) a good way to get initial values.<br><br><br>David<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=70">DavidWu</a> — Sun Jan 28, 2007 2:28 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Chris Elion]]></name></author>
+		<updated>2007-01-28T01:23:31+00:00</updated>
+
+		<published>2007-01-28T01:23:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3365#p3365</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3365#p3365"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3365#p3365"><![CDATA[
+<blockquote class="uncited"><div>While I have been pretty happy with how things work, if we reach the point at which we more HW threads than we have decoupled systems, I will definely spend more time on the PGS varients (red black or whatever) that are well suited to parallel implementation.</div></blockquote>Hi David,<br>Good to meet you (briefly) on Thursday. Two thoughts on red-black:<br><br>1) Red-black ordering works well when you're solving PDEs by finite differencing, because it's easy to divide the grid up that way. I think it would be a lot harder for rigid body simulations, though - your connectivity graph is constantly changing, and you can't always split the bodies up into just two groups (you might need a red/black/blue/green/yellow coloring). For ragdolls, it might not be as bad, since the connectivity there won't change very often.<br><br>2) I need to double-check this, but I believe that red-black ordering converges less rapidly than the "natural" ordering, at least for PDEs. If you're on a huge Beowulf cluster, then the parallelizability makes up for the decrease in convergence, but I'm not sure how many threads/SPUs you'd need to throw at it to see an improvement. Red-black does work better than when it's used in a multigrid solver (again, need to double-check), but that's due to how it damps out certain frequencies better.<br><br>Just to clarify from earlier discussions, is the P in "PCG" for "projected" or "preconditioned"?<br><br>-Chris<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1158">Chris Elion</a> — Sun Jan 28, 2007 1:23 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[DavidWu]]></name></author>
+		<updated>2007-01-27T18:25:01+00:00</updated>
+
+		<published>2007-01-27T18:25:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3364#p3364</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3364#p3364"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3364#p3364"><![CDATA[
+One problem with traditional CG solvers is that they do not handle non-linear systems very well.   When doing a non-linear CG solve you have to do a line minimization rather than taking a full step in the search direction, and unfortunately many types of non-linearity will break the cleverness of CG (the way in which it builds a set of conjugate search directions without explicitly storing the Hessian).  An example of a bad non-linearity is hitting or leaving one of the range limits of an LCP.<br>So if all of your contacts are consistant through the solve, convergence is great.  However, whenever you get a switch you are usually best off reseting everything - otherwise CG might diverge.  If you were to reset at each step you have steepest descent, which converges but not all that well.<br>This explains part of why warm starting these sorts of systems is so effective - if your initial guess is gets all of the limits right, you have no switching and you are just solving a linear system.<br><br>One way to get some of the benefit from CG in nonlinear situations is to use a Quasi Newton Search (like BFGS).  Unfortunately this has its own issues, and empirically it has never worked well for me on problems that are mostly linear in some areas, but very non-linear at specific points (i.e. LCP).   In fact, all of the CG type algorithms are supposed to fail when the system is not C1 continuous.<br><br>While I honestly haven't done too much work with a PGS, I found that I got the best results from something similar to a Quasi-Newton search that linearalizes the contraints about an initial search direction, solves using linear CG and then uses the resulting search vector in a nonlinear line search.   The main difference between this an a standard nonlinear CG is that you use a newton search vector (which would get you to the the minima in one step if the system were linear) rather than a steepest descent search vector.<br><br>While I have been pretty happy with how things work, if we reach the point at which we more HW threads than we have decoupled systems, I will definely spend more time on the PGS varients (red black or whatever) that are well suited to parallel implementation.<br><br>David Wu<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=70">DavidWu</a> — Sat Jan 27, 2007 6:25 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ngbinh]]></name></author>
+		<updated>2006-04-05T22:17:22+00:00</updated>
+
+		<published>2006-04-05T22:17:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=872#p872</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=872#p872"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=872#p872"><![CDATA[
+<blockquote class="uncited"><div>ngbinh, could you elaborate a bit on PATH?  Or a link to some docs?<br>- Michael Alexander Ewert</div></blockquote>Here you go: <a href="http://www.cs.wisc.edu/cpnet/cpnetsoftware/" class="postlink">http://www.cs.wisc.edu/cpnet/cpnetsoftware/</a><br>PATH is a sparse LCP/MCP/NCP solver. The problem with PATH is it's a general solver so it might not be efficient to use for multi bodies dynamics system.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=225">ngbinh</a> — Wed Apr 05, 2006 10:17 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[ngbinh]]></name></author>
+		<updated>2006-04-05T22:05:26+00:00</updated>
+
+		<published>2006-04-05T22:05:26+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=870#p870</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=870#p870"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=870#p870"><![CDATA[
+<blockquote class="uncited"><div>To be clear, I used a gradient projection + conjugate gradient algorithm (single precision only) to solve the constraint equations for rigid body simulation. The gradient projection is used to determine the active set of constraints and conjugate gradient is used to minimize the quadratic cost function on the active set. So this is a bit different then using CG to solve a stiff cloth system.<br><br>GPCG seems good for non-realtime work. It is likely to be faster than a pivoting method (Lemke or Dantzig). In my experiments, GPCG benefited greatly from warm-starting. On the other hand, Lemke and Dantzig don't gain much from warm-starting (you still have to invert a matrix).</div></blockquote>I think the most beautiful feature of PGS/CG/ iterative-ish methods are they always return "something" after sometime so they are good for games. But, they also have some bad properties:<br>1. I don't think there are a simple iterative solver if we use fully correct friction. In such case you'll have the matrix like  this:<br><br>|M Wt     |<br>|W        0|<br>|0        -E|<br>|0 U E     |<br><br>This matrix is not symmetry (and not even anti symmetry)<br><br>2. I think I can work out a iterative solver for that system if the matrix is MLCP but i can't imagine how to solve if the matrix is NCP(nonlinear CP).<br>Also, Jong-Shi Pang, the guy who wrote LCP book told me that he don't believe the iterative solver will be faster. I don't really understand what's his stands there but he's expert in this area.<br><br>3. I haven't done any comparision between iterative/pivoting methods yet, but I believe that iterative solver can't bring you even close to reality.<br><br>About warm starting: we are working with PATH now and the first experiment show that warm-starting can be done and it would greatly reduce the running time with some tricks and pre-analysis of the matrix. Pivoting methods can also be warm-started to avoid changing pivot.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=225">ngbinh</a> — Wed Apr 05, 2006 10:05 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Etherton]]></name></author>
+		<updated>2006-04-05T17:53:54+00:00</updated>
+
+		<published>2006-04-05T17:53:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=866#p866</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=866#p866"/>
+		<title type="html"><![CDATA[Which LCP's solver have been used by popular physics engine?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=866#p866"><![CDATA[
+Newton? Why settle for a run of the mill simple free engine, that is mediocre at best. Wouldn't it be better to break or figure out PhysX/Novodex or Havok?<blockquote class="uncited"><div>For example, he has stated in these boards that Newton DOES use LCP. Remember when reading "marketting" text, you must be very careful to read ALL the words used <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>--EK</div></blockquote>Marketing? To my knowledge it is just simple free library used mainly by inexperience hobbies that in most cases do not know what they are doing.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=250">Etherton</a> — Wed Apr 05, 2006 5:53 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Units and size?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Units and size?</h2>
+		<p><a href="viewtopic.php%3Ft=367.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=367</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Units and size?</h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 9:24 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content">I have read the posts about size restrictions on objects etc. In my game the bounding box size of some objects can go down to 0.02 or so in one axis. My understanding is that this is too small to be reliable. So I was thinking that I could scale up everything for bullet by 10 (as an example). Is my thinking right here?<br>
+Scaling bounding volumes is easy. Scaling the actual triangles would be a pain though and having an extra copy of every mesh scaled for bullet is no good.<br>
+One could of course rescale the whole game world but that doesn't really sound very appealing either.<br>
+Any other ideas on how to solve this?<br>
+<br>
+Also what is the minimum size I should stay above? Does this only relate to bounding volumes or is the size of individual triangles important too?<br>
+I want to make sure I understand the problem before I spend time solving it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units and size?</h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 10:10 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kend wrote:</cite>I have read the posts about size restrictions on objects etc. In my game the bounding box size of some objects can go down to 0.02 or so in one axis. My understanding is that this is too small to be reliable. So I was thinking that I could scale up everything for bullet by 10 (as an example). Is my thinking right here?<br>
+Scaling bounding volumes is easy. Scaling the actual triangles would be a pain though and having an extra copy of every mesh scaled for bullet is no good.<br>
+One could of course rescale the whole game world but that doesn't really sound very appealing either.<br>
+Any other ideas on how to solve this?<br>
+<br>
+Also what is the minimum size I should stay above? Does this only relate to bounding volumes or is the size of individual triangles important too?<br>
+I want to make sure I understand the problem before I spend time solving it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Ken</div></blockquote>
+
+The minimum objectsize is mostly for dynamic objects, so I wouldn't worry about static triangle meshes. It's more about dynamic convex hull/box/sphere/cylinder/cone.<br>
+<br>
+This 'minimum size requirement' is due to the collision margin and contact point reduction. Those (independent) values are currently default set at around 0.04 units.<br>
+<br>
+1) collision margin (collisionShape-&gt;SetMargin()): this value is to avoid doing costly penetration depth calculation, and also to guarantee a valid normal (otherwise touching objects have undefined contact normal). Don't make the value too small, otherwise performance degrades (due to slow penetration depth approximation), make it not too big, because objects will be 'rounded'. Effectively, objects can never be smaller then this margin.<br>
+<br>
+2) gContactBreakingTreshold, this value is related to contact reduction (points closer then this value are regarded 'the same', and also contact breaking (if contacts are further away then this distance, they are removed). Those values are tuned, so it works nice with default gravity and timestep and object sizes. Make them too small, and you loose points and introduce jitter. Make it too big, and all points get reduced into 1.<br>
+<br>
+So it's best not to touch those values unless necessary.<br>
+<br>
+Do you require very thin moving boxes?<br>
+Thanks,<br>
+Erwin<br>
+<br>
+PS: see also this link, Halo 2, Havok 2<br>
+'don't make anything smaller then a PC Monitor'<br>
+<br>
+<a href="http://www.bungie.net/News/TopStory.aspx?story=havokhalo2feature" class="postlink">http://www.bungie.net/News/TopStory.asp ... lo2feature</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units and size?</h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 11:25 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>The minimum objectsize is mostly for dynamic objects, so I wouldn't worry about static triangle meshes. It's more about dynamic convex hull/box/sphere/cylinder/cone.<br>
+<br>
+This 'minimum size requirement' is due to the collision margin and contact point reduction. Those (independent) values are currently default set at around 0.04 units.<br>
+<br>
+Do you require very thin moving boxes?<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+Yes, dynamic boxes is what I meant. Most of the boxes are "large" but I can see the need for some that are thin. I could of course increase the thickness of the bounding box but then it will look like the actual object is floating above ground. In fact it already does. The actual object is floating about 0.02 - 0.03 units above ground. Is this related to the minimum value (0.04) then?<br>
+<br>
+This thin box object jumps and jitters quite a lot when dropped on ground before it finally settles down. Is this due to the small size?<br>
+<br>
+Regarding step size. What is the best time step in Bullet? I'm currently using 0.01. Would 0.02 be better? Does it matter?<br>
+<br>
+Thanks,<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units and size?</h3>
+				<div class="date">Posted: <strong>Thu Jun 08, 2006 11:50 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kend wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>The minimum objectsize is mostly for dynamic objects, so I wouldn't worry about static triangle meshes. It's more about dynamic convex hull/box/sphere/cylinder/cone.<br>
+<br>
+This 'minimum size requirement' is due to the collision margin and contact point reduction. Those (independent) values are currently default set at around 0.04 units.<br>
+<br>
+Do you require very thin moving boxes?<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+Yes, dynamic boxes is what I meant. Most of the boxes are "large" but I can see the need for some that are thin. I could of course increase the thickness of the bounding box but then it will look like the actual object is floating above ground. In fact it already does. The actual object is floating about 0.02 - 0.03 units above ground. Is this related to the minimum value (0.04) then?<br>
+This thin box object jumps and jitters quite a lot when dropped on ground before it finally settles down. Is this due to the small size?<br>
+
+</div></blockquote>
+
+A long thin box below the collision margins is not well supported, so best avoided if possible: having any side of smaller then say 0.20 units is highly unrecommended.<br>
+Ignoring that will result in jitter and failing simulation, unfortunately.<br>
+<br>
+The 'floating' is likely because the trianglemesh has a margin. There is some improvements possible, like setting the margin for static trianglemeshes to zero (setMargin). It will hurt performance for penetrating cases. Please don't do this for dynamic objects. Box has compensation for the margin, which means that there is no gap between stacking boxes. In the future this will also be added for convex hull objects. Sphere's use their radius for margin, so no gap either. Cylinders and Cone have some gap.<br>
+
+<blockquote><div><cite>kend wrote:</cite>
+Regarding step size. What is the best time step in Bullet? I'm currently using 0.01. Would 0.02 be better? Does it matter?<br>
+Thanks,<br>
+Ken</div></blockquote>
+
+A small fixed timestep is best. Most of my demos use 60 Hertz (1/60). 0.01 is smaller then 0.02, so it's better. Then, choose the number of iterations for the constraint solver in the range 4 to 10.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units and size?</h3>
+				<div class="date">Posted: <strong>Fri Jun 09, 2006 12:05 am</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>A long thin box below the collision margins is not well supported, so best avoided if possible: having any side of smaller then say 0.20 units is highly unrecommended.<br>
+Ignoring that will result in jitter and failing simulation, unfortunately.<br>
+<br>
+The 'floating' is likely because the trianglemesh has a margin. There is some improvements possible, like setting the margin for static trianglemeshes to zero (setMargin). It will hurt performance for penetrating cases. Please don't do this for dynamic objects. Box has compensation for the margin, which means that there is no gap between stacking boxes. In the future this will also be added for convex hull objects. Sphere's use their radius for margin, so no gap either. Cylinders and Cone have some gap.
+</div></blockquote>
+
+Ouch. A min size of 0.2 units is pretty big in my "world". So the min size is about 10x the tolerance values. Maybe I will have to look into scaling the whole world somehow.<br>
+<br>
+I'll look into the triangle mesh margin. Maybe lowering it a little for the terrain. Would be awkvard to work in some kind scaled dimensions though...<br>
+<br>
+Ken</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units and size?</h3>
+				<div class="date">Posted: <strong>Fri Jun 09, 2006 12:44 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kend wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>A long thin box below the collision margins is not well supported, so best avoided if possible: having any side of smaller then say 0.20 units is highly unrecommended.<br>
+Ignoring that will result in jitter and failing simulation, unfortunately.<br>
+<br>
+The 'floating' is likely because the trianglemesh has a margin. There is some improvements possible, like setting the margin for static trianglemeshes to zero (setMargin). It will hurt performance for penetrating cases. Please don't do this for dynamic objects. Box has compensation for the margin, which means that there is no gap between stacking boxes. In the future this will also be added for convex hull objects. Sphere's use their radius for margin, so no gap either. Cylinders and Cone have some gap.
+</div></blockquote>
+
+Ouch. A min size of 0.2 units is pretty big in my "world". So the min size is about 10x the tolerance values. Maybe I will have to look into scaling the whole world somehow.<br>
+<br>
+I'll look into the triangle mesh margin. Maybe lowering it a little for the terrain. Would be awkvard to work in some kind scaled dimensions though...<br>
+<br>
+Ken</div></blockquote>
+
+<br>
+
+<blockquote class="uncited"><div>
+Ouch. A min size of 0.2 units is pretty big in my "world". So the min size is about 10x the tolerance values. Maybe I will have to look into scaling the whole world somehow. 
+</div></blockquote>
+
+What gravity value do you use?<br>
+Do you have some mapping from units to meters?<br>
+<br>
+If you choose 9.8 for gravity, you can consider 1 unit = 1 meter, if you use real time steps. So the minimum 'recommended' size would translate to about 20 centimer, for a margin of 0.04. If you look at most games, you will seldom see rigid bodies smaller then that (exceptions confirming the rule). <br>
+<br>
+There are definately ways to improve all this, but there are also other areas in Bullet that require more urgent improvement (compound objects, generic constraints, motors, limits etc) that I prioritized more important for generic use.<br>
+<br>
+How large are typical things in your simulation "world"?<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Units and size?</h3>
+				<div class="date">Posted: <strong>Fri Jun 09, 2006 8:35 pm</strong></div>
+				<div class="author">by <strong>kend</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>What gravity value do you use?<br>
+Do you have some mapping from units to meters?<br>
+<br>
+If you choose 9.8 for gravity, you can consider 1 unit = 1 meter, if you use real time steps. So the minimum 'recommended' size would translate to about 20 centimer, for a margin of 0.04. If you look at most games, you will seldom see rigid bodies smaller then that (exceptions confirming the rule). <br>
+<br>
+How large are typical things in your simulation "world"?<br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+Yes, I use 9.8 and my units are meters. Most objects will be 0.2 or larger but as you say, there are exceptions. There will be some objects that are below that limit. I was thinking I could use centimeters instead and then all values would 100x. Only concern there is how it will affect the upper bounds. If the world is a few km across you get values that are 100,000 - 300,000. That's larger than I'd like from a floating point error viewpoint.<br>
+<br>
+Let me ask this. What would be needed to get a reliable recommended min size of 10 cm or 0.1 units? If that can be done I'd be happy. Do I just change some values? Which ones?<br>
+<br>
+Ken</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

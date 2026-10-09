@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Can't get rotation from applyForce's rel_pos</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Can't get rotation from applyForce's rel_pos</h2>
+		<p><a href="viewtopic.php%3Ft=13312.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13312</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Can't get rotation from applyForce's rel_pos</h3>
+				<div class="date">Posted: <strong>Sun Nov 07, 2021 5:47 pm</strong></div>
+				<div class="author">by <strong>zb10948</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I'm unable to achieve 'natural' rotation of a rigidbody by modifiying the position from centre of mass to offseted.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13312&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		    btVector3 force(-1, 0, 0);
+                    force *= 13.0f;
+
+                    btVector3 thrust_position(0, 1.7, 0);
+                    btVector3 com = body-&gt;getCenterOfMassPosition();
+                    thrust_position += com;
+
+                    body-&gt;applyForce(force, thrust_position);
+</code></pre></div>
+
+Effect of this code is the same as running applyCentralForce(force). The getRotation() quaternion remains at (1, 0, 0, 0);<br>
+<br>
+The body is rigidbody dynamic with a mass of 1 in world with no gravity, compound shape made of a few convex hulls. It rotates normally via manual transformation. <br>
+<br>
+Am I doing this wrong and should I supply a world coordinate that matches some point on the hull itself? My goal is similar to aircraft thrust vectoring, by offsetting the thrust point from the centre.<br>
+<br>
+Thanks for tips in advance <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Can't get rotation from applyForce's rel_pos</h3>
+				<div class="date">Posted: <strong>Tue Nov 09, 2021 4:40 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I would expect the object to rotate after your <strong class="text-strong">applyForce()</strong> call.  However, <strong class="text-strong">applyForce()</strong> only lasts for one substep so if you don't call it multiple times over several substeps it is possible your body won't pick up enough angular velocity to notice.  The delta angular velocity from a single <strong class="text-strong">applyForce()</strong> with offset not only depends on the offset and strength of force, but also on the length of the substep and the angular inertia tensor of the object.  Short substeps and large angular inertia tensor coefficients make for very sluggish objects after one poke with <strong class="text-strong">applyForce()</strong>.<br>
+<br>
+If you're trying to make a fun game, and don't want to tear your hair out tuning forces and offsets, then I would recommend NOT using <strong class="text-strong">applyForce()</strong> if you can help it and instead compute the angular velocity you want and slew the body's angular velocity toward your desired value.  Something like this (in pseudocode):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13312&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>old_angular_velocity = body-&gt;getAngularVelocity();
+delta = substep_duration / SLEW_PERIOD;
+delta_angular_velocity = delta * (new_target_angular_velocity - old_angular_velocity);
+if (delta_angular_velocity.length() &gt; MIN_DELTA_ANGULAR_VELOCITY) {
+    new_angular_velocity =  old_angular_velocity + delta_angular_velocity;
+    body-&gt;setAngularVelocity(new_angular_velocity);
+}</code></pre></div>
+You then have a single value to tune: <strong class="text-strong">SLEW_PERIOD</strong>.  It should be about 1/3 the time you would like it to take for your object to transition from current value to new value.  So, if you want your object to transition in about 1 second you would set <strong class="text-strong">SLEW_PERIOD</strong> to be about 0.333.  The reason for the <strong class="text-strong">MIN_DELTA_ANGULAR_VELOCITY</strong> is to prevent the logic above from keeping the body active when it doesn't need to be adjusted.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

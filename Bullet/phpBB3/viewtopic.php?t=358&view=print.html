@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; new to the forum, collision group filtering</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>new to the forum, collision group filtering</h2>
+		<p><a href="viewtopic.php%3Ft=358.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=358</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>new to the forum, collision group filtering</h3>
+				<div class="date">Posted: <strong>Thu Jun 01, 2006 10:06 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content">Hi, I've been looking for a free, good physics engine for a long time, I've been disappointed by the current scene... most physics engines around are commercial, and the only reasonably good, and free engine has been ODE, although it's getting old very fast.<br>
+<br>
+I recently found Bullet, and found it very interesting, and I am considering using it in my home project as a core collision detection system.<br>
+<br>
+But, I have some questions I would like to know:<br>
+<br>
+The authors think Bullet is mature enough to be used in a reasonably complex project? or it will explode at the first bump?<br>
+<br>
+I'm planning to use only the collision detector, not the dynamics solver, but, I am going to place 100s of objects in scene, all the time, will be able to handle this stress?<br>
+<br>
+Also, due to the nature of the project (let's just say it, a shooter), it's extremely important for me to be able to cull some collisions between objects, in this way:<br>
+<br>
+For every collision object in the scene, I have 2 DWORD flags:<br>
+<br>
+DWORD group; // indicates with a bit, which group pertains this object<br>
+DWORD groupmask; // this object will only detect collisions with all objects that give positive to this mask (objectA.group &amp; objectB.mask == true) ... or something like that.<br>
+<br>
+I need this because I don't want all the bullets colliding each other.<br>
+<br>
+Also, it is possible to use a static, tri-mesh collision detection against lots of primitives? and, it is fast and stable?<br>
+<br>
+Thanks in advance</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: new to the forum, and some questions</h3>
+				<div class="date">Posted: <strong>Thu Jun 01, 2006 10:48 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>vicviper wrote:</cite>Hi, I've been looking for a free, good physics engine for a long time, I've been disappointed by the current scene... most physics engines around are commercial, and the only reasonably good, and free engine has been ODE, although it's getting old very fast.<br>
+<br>
+I recently found Bullet, and found it very interesting, and I am considering using it in my home project as a core collision detection system.<br>
+<br>
+But, I have some questions I would like to know:<br>
+<br>
+The authors think Bullet is mature enough to be used in a reasonably complex project? or it will explode at the first bump?
+</div></blockquote>
+
+Bullet Discrete Collision Detection system should be mature enough for a reasonably complex project... But, it has some limitations and rules that might break things. Most important: there are hardcoded margins / tolerances of 0.06 units, so Collision Shapes should be at least say 0.3 units in any direction, otherwise you get instability. Also, no 'compound' support yet, but this can easily be added. Some extra work is needed if you need much smaller object sizes. The Collision Margin not only serves for stability, it also prevents more expensive penetration cases. Once objects penetrate more then the sum of their margins, it becomes more expensive.<br>
+<br>
+The Continuous Collision Detection part is not so mature yet, so I would use that with 'care'. The Continuous Collision Detection algorithms are currently used for the ray casting, linear casting (Sweep) etc.<br>
+
+<blockquote><div><cite>vicviper wrote:</cite>
+I'm planning to use only the collision detector, not the dynamics solver, but, I am going to place 100s of objects in scene, all the time, will be able to handle this stress?
+</div></blockquote>
+It depends what kind of collision representation: a few hundred spheres, boxes, cylinders and cones should be fine, convex polyhedra too, as long as they don't have too much detail (say less then 25 points). There is some profiling support, which can give some performance indication. Locate quickprof.h, in LinearMath folder, and #define USE_QUICKPROF 1<br>
+
+<blockquote><div><cite>vicviper wrote:</cite>
+Also, due to the nature of the project (let's just say it, a shooter), it's extremely important for me to be able to cull some collisions between objects, in this way:<br>
+<br>
+For every collision object in the scene, I have 2 DWORD flags:<br>
+<br>
+DWORD group; // indicates with a bit, which group pertains this object<br>
+DWORD groupmask; // this object will only detect collisions with all objects that give positive to this mask (objectA.group &amp; objectB.mask == true) ... or something like that.<br>
+I need this because I don't want all the bullets colliding each other.
+</div></blockquote>
+You can easily modify/add collision filters yourself, check out:<br>
+<br>
+bool    CollisionDispatcher::NeedsCollision(BroadphaseProxy&amp; proxy0,BroadphaseProxy&amp; proxy1)<br>
+
+<blockquote><div><cite>vicviper wrote:</cite>
+Also, it is possible to use a static, tri-mesh collision detection against lots of primitives? and, it is fast and stable?
+</div></blockquote>
+Yes, Bullet has TriangleMeshShape, see the ConcaveDemo. It uses a bounding volume hierarchy (AABB tree) for acceleration.<br>
+<br>
+I'm happy to get feedback, so we can improve the library.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jun 03, 2006 6:51 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content">So far, I understand that I have to move the objects manually in the scene, then, I should call PerformDiscreteCollisionDetection(); , and after that, I am not completely sure on the steps to go, I've checked the "CollisionInterfaceDemo" that shows that, after the world update, I should get the CollisionDispatcher, and from that, get a list of "manifolds".<br>
+<br>
+What I am not sure is what these "manifolds" are... I assume they're a list of collision detections, but, Will I receive just a single "manifold" for every object pair which collided? or I will received a "manifold" for every contact point? (thus, I'll have the possibility to receive more than one "manifold" for two colliding objects. In the code it is mentioned that this is "one way" to get the list of collisions... which are the other ways?<br>
+<br>
+In which part of the collision pipeline should I call "NeedsCollision" ? By looking at the code, I looks like a callback called after the collision pairs have been collected... shouldn't be better to cull them at the beginning of the pipeline?<br>
+<br>
+also, when dealing with objects (without dynamics) which is the proper way of moving/rotating them? , can I just modify m_WorldTransform without any additional process, or should I call some special function?<br>
+<br>
+Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jun 03, 2006 7:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I'm planning to add more interface to the Collision Detection (CollisionWorld/CollisionObejct). So far, most interface is to the entire Physics Engine (CcdPhysicsEnvironment/CcdPhysicsController).<br>
+
+<blockquote><div><cite>vicviper wrote:</cite>So far, I understand that I have to move the objects manually in the scene, then, I should call PerformDiscreteCollisionDetection(); , and after that, I am not completely sure on the steps to go, I've checked the "CollisionInterfaceDemo" that shows that, after the world update, I should get the CollisionDispatcher, and from that, get a list of "manifolds".<br>
+<br>
+What I am not sure is what these "manifolds" are... I assume they're a list of collision detections, but, Will I receive just a single "manifold" for every object pair which collided? or I will received a "manifold" for every contact point? (thus, I'll have the possibility to receive more than one "manifold" for two colliding objects. In the code it is mentioned that this is "one way" to get the list of collisions... which are the other ways?
+</div></blockquote>
+
+Each potential overlapping object pair has 1 Persistent Manifold. Each Persistent Manifold has a maximum of 4 contact points.<br>
+
+<blockquote class="uncited"><div>
+In which part of the collision pipeline should I call "NeedsCollision" ? By looking at the code, I looks like a callback called after the collision pairs have been collected... shouldn't be better to cull them at the beginning of the pipeline?
+</div></blockquote>
+Correct, you just get a callback. <br>
+<br>
+You could add the filter during the broadphase if it really is a bottleneck. Narrowphase and Constraint solving take up most time usually, but if your scenario is different, it can be modified.<br>
+
+<blockquote class="uncited"><div>
+Also, when dealing with objects (without dynamics) which is the proper way of moving/rotating them? , can I just modify m_WorldTransform without any additional process, or should I call some special function?<br>
+<br>
+Thanks in advance!</div></blockquote>
+If you just use the Collision Detection, you can just modify the m_WorldTransform, as long as the motion is coherent (small steps). If the object moves to a completely different location, some extra work needs to be done to flush the contact points.<br>
+<br>
+Thanks for the suggestions/feedback. I will take it into consideration while adding more interfaces to the Collision Detection API.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jun 03, 2006 11:45 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+You could add the filter during the broadphase if it really is a bottleneck. Narrowphase and Constraint solving take up most time usually, but if your scenario is different, it can be modified.
+</div></blockquote>
+
+Yes, my current project involves a lot ( arround 300) moving arround, and overlapping, but usually not colliding, with the current implementation, Bullet would give a lot of collision hits, just to be discarded by the NeedCollision callback.<br>
+<br>
+The solution would be to add a pair of variables to the CollisionObject class, these two variables would be used this way (I'll give you a sample given my current project, so things will be more clear)<br>
+<br>
+Le't say I have this:<br>
+<br>
+enum ObjectTypes<br>
+   {<br>
+   scenary = 1,<br>
+   player = 2,<br>
+   enemy = 4,<br>
+   playerbullet = 8,<br>
+   enemybullet = 16,<br>
+   item = 32,<br>
+   };<br>
+<br>
+<br>
+When I create a player, I create it with these values for the two variables:<br>
+<br>
+m_Group = player;<br>
+m_GroupMask = scenary | enemy | enemybullet | item;<br>
+<br>
+Whith this, I am telling the system that this object can collide with the scenary, enemies, enemy bullets and items, but it can't collide with other players or its own bullets.<br>
+<br>
+For an item object it would be:<br>
+<br>
+m_Group = item;<br>
+m_GroupMask = player;<br>
+<br>
+This way, only the players can pick the items.<br>
+<br>
+Having this two variables, in the very beginning of testing if two objects can collide, you can do this:<br>
+<br>
+if ( !(object1.m_Group &amp; object2.m_GroupMask) ) return(false);<br>
+<br>
+this is a really fast test that can be placed before everything else, even before than simple bounding sphere tests.<br>
+<br>
+And, in order to keep default functionality (all objects colliding against all others), the flag values for all objects would be:<br>
+<br>
+m_Group = 1;<br>
+m_GroupMask = 1;<br>
+<br>
+Another advantage of this system is that, in many cases, when a collision is detected, just by checking the flags of both objects you can decide a response (a bullet with an enemy renders an explosion and destroys both objects), and leaves the callback for only very special cases.<br>
+<br>
+Edit: Ine extra feature would be to add the GroupMask to they CollisionWorld::RayTest(from, to, callback, groupmask), this way, it could be possible to cast rays keeping certain objects "transparent" (for example, when casting rays against the scenary, skipping moving entitities)<br>
+<br>
+Hope this helps you improve Bullet <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Thanks in advance</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jun 25, 2006 11:19 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Basic collision filtering is implemented in Bullet 1.6a.<br>
+<br>
+See CcdPhysicsDemo how to use it.<br>
+You can modify the CcdConstructionInfo members:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=358&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+//to disable static-static collision processing, move static objects into their own group (StaticFilter), and disable collision with that group:
+
+ccdObjectCi.m_collisionFilterGroup = CcdConstructionInfo::StaticFilter;
+ccdObjectCi.m_collisionFilterMask = CcdConstructionInfo::AllFilter ^ CcdConstructionInfo::StaticFilter;
+</code></pre></div>
+
+If you are interested:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=358&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//those are the members / data types in CcdConstructionInfo
+
+short int  m_collisionFilterGroup  ( defaults to DefaultFilter = 1)
+short int  m_collisionFilterMask (defaults to AllFilter)
+
+enum   CollisionFilterGroups { 
+  DefaultFilter = 1, 
+  StaticFilter = 2, 
+  KinematicFilter = 4, 
+  DebrisFilter = 8, 
+  AllFilter = DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter 
+}
+
+</code></pre></div>
+
+
+<blockquote class="uncited"><div>
+this is a really fast test that can be placed before everything else, even before than simple bounding sphere tests. 
+</div></blockquote>
+Bullet uses the 3d axis sweep and prune. This incremental approach has only cost for moving objects / swaps. So overlapping static-static objects will only perform the check once, during startup/addition to the broadphase, when you use this new collision filter.<br>
+<br>
+Let me know if this works for you.<br>
+Download:<br>
+<a href="http://www.continuousphysics.com/mediawiki-1.5.8/index.php?title=Download" class="postlink">http://www.continuousphysics.com/mediaw ... e=Download</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

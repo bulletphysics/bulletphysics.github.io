@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; bullet class hieararchy</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>bullet class hieararchy</h2>
+		<p><a href="viewtopic.php%3Ft=399.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=399</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>bullet class hieararchy</h3>
+				<div class="date">Posted: <strong>Sun Jul 02, 2006 7:31 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content">I'm kinda getting lost with bullet class hierarchy, and some classes definitions, I am programming a simple wrapper arround Bullet to hide all the bullet complexities, and to be able to fit it in my pipeline, but I'm having serious troubles with how Bullet has been constructed:<br>
+<br>
+I have these two classes, derived from DummyEntity, so I can pool them in a single array.<br>
+<br>
+class StaticEntity;<br>
+class DynamicEntity;<br>
+<br>
+These classes are designed so that I could rederive again from them, and create a spaceship, an asteroid, etc<br>
+<br>
+Being the only difference between them, that StaticEntity has a CollisionObject member, and (I wanted that) DynamicEntity has a RigidBody member, which is derived from CollisionObject<br>
+<br>
+Now, I can't place RigidBody as a member, because the constructor requires parameters, unlike CollisionObject, which has a constructor with no parameters.<br>
+<br>
+I also have a class World, I initially wanted it to hold all the world related data, and keep track of the entities, right now it has the CollisionWorld as a member, I figured I could easily replace it with a discretecollisiondetectorandresponse class, or the CcdPhysicsEnvironment, but I noticed that, unlike CollisionObject &gt; RigidBody , CcdPhysicsEnvironment is not derived from CollisionWorld , so I can't do easy switches between collision systems (If I understand correctly what Ccd does)<br>
+<br>
+Another thing I realized is that, in most demos, there's no cleanup at all, so I must dive deep into the code to see what needs to be manually deleted / detached, etc.<br>
+<br>
+As a side note, would like to tell about the pre DirectX 5 API disaster, which was, to develop an API intended mostly to look cool in the demos, but hard to use in an actual project. So far, bullet is looking great, but I see it has a high risk of suffering the same problem: pushing some new physics effect through the API, can render the API too complex to use.<br>
+<br>
+In a game project, you're continuosly creating &amp; destroying objects, all the time... many of them only last a few seconds, and are also the ones that are created in larger quantities (missiles, grenades, debris, etc), so it is really important that the construction &amp; destruction of objects to be done as fast and easy as possible, and to be able to done it in different ways.<br>
+<br>
+One of the things that should be avoided as much as possible is to call new/delete too many times when creating/destroying an object, ideally, the only new/delete should be done for the user's client class that holds all the bullet objects internally as members.<br>
+<br>
+The reason to avoid calling new/delete is because in a programming environment with garbage collection, or slow memory allocation (some consoles) if you're playing a game, and, in the middle of the action, you call 300 times new and/or delete, the garbage collector will surely pop up and do nasty things in the framerate counter.<br>
+<br>
+Right now, most sample demos create the objects in the stack, so we can't really see other proper ways of creating/deleting objects, or the performance effects of creating/deleting many objects in the middle of the simulation.<br>
+<br>
+If you agree, I would like to send you my wrapper class objects, so you can take a look at them and discuss.<br>
+<br>
+<br>
+Btw, read in the TODO list you want to remove some hardcoded max values, a trick I use is to use a std::vector, but, for performance purposes, instead of cleaning the array with vector::clean, use vector::resize(0) , the effect of this is that the array will be effectively resized to 0, but without deleting the internal buffer, so, in the next iteration, when the buffer is populated again, it will call for extra memory space, only if it exceeds the number of elements of the previos iteration.<br>
+<br>
+Thanks in advance<br>
+<br>
+Vic</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 02, 2006 7:44 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It's not so complicated as you might think, but indeed the memory management is not optimal yet. To simplify things, I'm planning to add a C-interface, which should make it more clear what is internal, and what is expected to be exposed.<br>
+<br>
+Bullet has 3 main modules:<br>
+<br>
+1) A wrapper (CcdPhysicdEnvironment,CcdPhysicdController)<br>
+2) Rigid body Dynamics (RigidBody/TypedConstraint)<br>
+3) Collision Detection (CollisionWorld,CollisionObject,CollisionShape)<br>
+<br>
+The dependencies between those modules are one-way (wrapper knows about dynamics/collision detection, and not the other way around).<br>
+<br>
+Most user API should be exposed by the wrapper, which is currently CcdPhysicsEnvironment. I'm currently refactoring/adding a new wrapper that allows parallel execution of simulation islands. I'm planning to avoid as much dynamic allocations as possible, and just using pre-allocated pools. Memory is probably even leaking at the moment. But first, I want to have the basic structures and parallel execution in place.<br>
+<br>
+If you have a good wrapper, we can discuss your issues.  Just mail me your proposal, I can have a look at it. In the end, the wrapper should be just simple. Above 7 classes should cover most functionality.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

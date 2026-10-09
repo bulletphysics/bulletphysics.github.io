@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Restitution broken in 2.45</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Restitution broken in 2.45</h2>
+		<p><a href="viewtopic.php%3Ft=1589.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1589</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Restitution broken in 2.45</h3>
+				<div class="date">Posted: <strong>Fri Oct 19, 2007 5:23 pm</strong></div>
+				<div class="author">by <strong>Icoxo</strong></div>
+				<div class="content"><a href="http://blenderartists.org/forum/showthread.php?p=968809&amp;posted=1#post968809" class="postlink">http://blenderartists.org/forum/showthr ... post968809</a><br>
+Restitution simply doesn't work in 2.45. Works in 2.44.<br>
+<br>
+Erwin, this is an large bug in your area of the GE's development, essemcially makes things like good mini-golf games impossible without a bounce python script.<br>
+<br>
+Thanks in advance for looking into it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution broken in 2.45</h3>
+				<div class="date">Posted: <strong>Thu Nov 01, 2007 10:21 am</strong></div>
+				<div class="author">by <strong>calli</strong></div>
+				<div class="content">I found exactly the same together with my students. Maybe it is a Blender Bug then I will fill in a bugreport for the GE, but I think it is more related to Bullet?<br>
+<br>
+See attached .blend (.zip because .blend is not allowed here...  <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> )<br>
+<br>
+Best Regards,<br>
+Carsten</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution broken in 2.45</h3>
+				<div class="date">Posted: <strong>Thu Nov 01, 2007 5:42 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It was a bug in the Bullet version used for Blender 2.45. A new constraint solver was used. It can be easily fixed with a one-liner, if you re-compile Blender from code:<br>
+<br>
+Add the setSolverMode around line 560 of in blender\source\gameengine\Physics\Bullet\CcdPhysicsEnvironment.cpp
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1589&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void		CcdPhysicsEnvironment::setSolverType(int solverType)
+{
+
+	switch (solverType)
+	{
+	case 1:
+		{
+			if (m_solverType != solverType)
+			{
+
+				m_solver = new btSequentialImpulseConstraintSolver();
+				m_solver-&gt;setSolverMode(btSequentialImpulseConstraintSolver::SOLVER_USE_WARMSTARTING | btSequentialImpulseConstraintSolver::SOLVER_RANDMIZE_ORDER);
+
+				break;
+			}
+		}
+</code></pre></div>
+
+It will be fixed when I get to update to a new version of Bullet 2.64.<br>
+<br>
+Can you let us know if that works?<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution broken in 2.45</h3>
+				<div class="date">Posted: <strong>Fri Nov 02, 2007 10:15 am</strong></div>
+				<div class="author">by <strong>calli</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1589&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Compiling ==&gt; 'SumoPHYCallbackBridge.cpp'
+source/gameengine/Physics/Sumo/Fuzzics/include/SM_Callback.h:4: warning: ‘class SM_Callback’ has virtual functions but non-virtual destructor
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.h: In constructor ‘CcdPhysicsEnvironment::CcdPhysicsEnvironment(btDispatcher*, btOverlappingPairCache*)’:
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.h:236: warning: ‘CcdPhysicsEnvironment::m_scalingPropagated’ will be initialized after
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.h:59: warning:   ‘int CcdPhysicsEnvironment::m_numIterations’
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:298: warning:   when initialized here
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp: In member function ‘void CcdPhysicsEnvironment::addCcdPhysicsController(CcdPhysicsController*)’:
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:360: warning: unused variable ‘scene’
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp: In member function ‘virtual bool CcdPhysicsEnvironment::proceedDeltaTime(double, float)’:
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:474: warning: comparison between signed and unsigned integer expressions
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp: In member function ‘virtual void CcdPhysicsEnvironment::setSolverType(int)’:
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:559: error: ‘class btConstraintSolver’ has no member named ‘setSolverMode’
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp: In member function ‘virtual PHY_IPhysicsController* CcdPhysicsEnvironment::rayTest(PHY_IPhysicsController*, float, float, float, float, float, float, float&amp;, float&amp;, float&amp;, float&amp;, float&amp;, float&amp;)’:
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:693: warning: unused variable ‘minFraction’
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp: In member function ‘virtual void CcdPhysicsEnvironment::CallbackTriggers()’:
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:904: warning: unused variable ‘ctrl0’
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:904: warning: unused variable ‘ctrl1’
+source/gameengine/Physics/Sumo/Fuzzics/include/SM_MotionState.h:37: warning: ‘class SM_MotionState’ has virtual functions but non-virtual destructor
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp: At global scope:
+source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.cpp:262: warning: ‘void DrawAabb(btIDebugDraw*, const btVector3&amp;, const btVector3&amp;, const btVector3&amp;)’ defined but not used
+scons: *** [/home/src/bdev/build/linux2/source/gameengine/Physics/Bullet/CcdPhysicsEnvironment.o] Error 1
+scons: building terminated because of errors.
+cw@Manta:/home/src/bdev/blender$                                    
+</code></pre></div>
+
+Hmm. error: ‘class btConstraintSolver’ has no member named ‘setSolverMode’ is the error I guess? Missing include or mix of Bullet Versions?<br>
+<br>
+Greetings,<br>
+Carsten</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution broken in 2.45</h3>
+				<div class="date">Posted: <strong>Wed Apr 16, 2008 10:36 am</strong></div>
+				<div class="author">by <strong>mal</strong></div>
+				<div class="content">Hi Erwin,<br>
+<br>
+I also tried adding in the one line patch with the latest svn version of Blender, and am finding the same issue...<br>
+<br>
+'setSolverMode' : is not a member of 'btConstraintSolver'<br>
+<br>
+<br>
+I tried downloading the bullet-2.68.zip file, to see if setSolverMode has been defined in the latest SDK, but there seems to be an issue at the moment with downloading ( I'll try again later today ).  If it's defined in the latest SDK, hopefully it'll be possible to update to the latest Bullet version within the Blender svn.<br>
+<br>
+<br>
+As restitution is currently broken in the current Blender build, it would be great to get it fixed for the 2.45 release - the GE has had some great updates recently in many other areas!<br>
+<br>
+Mal</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution broken in 2.45</h3>
+				<div class="date">Posted: <strong>Wed Apr 16, 2008 7:32 pm</strong></div>
+				<div class="author">by <strong>mal</strong></div>
+				<div class="content">Problem solved <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+I tried casting with...<br>
+((btSequentialImpulseConstraintSolver*)m_solver-&gt;setSolverMode<br>
+<br>
+This compiled OK, but crashed when running.<br>
+<br>
+Ben fixed the issue, and sent me his solution...<br>
+((btSequentialImpulseConstraintSolver*)m_solver)-&gt;setSolverMode<br>
+<br>
+Which, of course, works perfectly - Doh! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Many thanks to Ben for applying the patch to SVN.<br>
+Mal</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Restitution broken in 2.45</h3>
+				<div class="date">Posted: <strong>Wed Apr 16, 2008 7:35 pm</strong></div>
+				<div class="author">by <strong>calli</strong></div>
+				<div class="content">Jippieee!<br>
+<br>
+Thanks,<br>
+Carsten</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Best approach for large scenes with static mesh ...</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Best approach for large scenes with static mesh ...</h2>
+		<p><a href="viewtopic.php%3Ft=10099.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10099</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Best approach for large scenes with static mesh ...</h3>
+				<div class="date">Posted: <strong>Thu Sep 04, 2014 12:22 pm</strong></div>
+				<div class="author">by <strong>tmason</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I am building an engine that supports importing mesh from large FBX files. I can get the scene to load fine and have basic interaction with the scene but when I start attempting to interact with the scene even using basic objects I get serious performance degradation.<br>
+<br>
+My goal is to get a walkable scene with static mesh of a range of sizes with basic interactivity.<br>
+<br>
+Therefore I am hoping there may be some optimization tips folks can share. I will also post some of the code below for how I am using Bullet.<br>
+
+<ul>
+<li>I am using "btBvhTriangleMeshShape" objects for my scene and initializing them using a "btTriangleIndexVertexArray" object for initialization.</li>
+<li>I was thinking about using "btConvexHullShape" objects instead but then I generally lose certain information such as collision detection for objects with holes in it like walls with windows, etc.</li>
+<li>I also wanted to switch to the MultiThreaded version of Bullet but the demo doesn't compile, I get errors like the following:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10099&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "public: __thiscall SpuGatheringCollisionDispatcher::SpuGatheringCollisionDispatcher(class btThreadSupportInterface *,unsigned int,class btCollisionConfiguration *)" (??0SpuGatheringCollisionDispatcher@@QAE@PAVbtThreadSupportInterface@@IPAVbtCollisionConfiguration@@@Z) referenced in function "public: virtual void __thiscall MultiThreadedDemo::initPhysics(void)" (?initPhysics@MultiThreadedDemo@@UAEXXZ)
+1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "public: __thiscall Win32ThreadSupport::Win32ThreadSupport(struct Win32ThreadSupport::Win32ThreadConstructionInfo const &amp;)" (??0Win32ThreadSupport@@QAE@ABUWin32ThreadConstructionInfo@0@@Z) referenced in function "class btThreadSupportInterface * __cdecl createSolverThreadSupport(int)" (?createSolverThreadSupport@@YAPAVbtThreadSupportInterface@@H@Z)
+1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "void __cdecl processCollisionTask(void *,void *)" (?processCollisionTask@@YAXPAX0@Z) referenced in function "public: virtual void __thiscall MultiThreadedDemo::initPhysics(void)" (?initPhysics@MultiThreadedDemo@@UAEXXZ)
+1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "void * __cdecl createCollisionLocalStoreMemory(void)" (?createCollisionLocalStoreMemory@@YAPAXXZ) referenced in function "public: virtual void __thiscall MultiThreadedDemo::initPhysics(void)" (?initPhysics@MultiThreadedDemo@@UAEXXZ)
+1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "void __cdecl deleteCollisionLocalStoreMemory(void)" (?deleteCollisionLocalStoreMemory@@YAXXZ) referenced in function "public: void __thiscall MultiThreadedDemo::exitPhysics(void)" (?exitPhysics@MultiThreadedDemo@@QAEXXZ)
+1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "void __cdecl SolverThreadFunc(void *,void *)" (?SolverThreadFunc@@YAXPAX0@Z) referenced in function "class btThreadSupportInterface * __cdecl createSolverThreadSupport(int)" (?createSolverThreadSupport@@YAPAVbtThreadSupportInterface@@H@Z)
+1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "void * __cdecl SolverlsMemoryFunc(void)" (?SolverlsMemoryFunc@@YAPAXXZ) referenced in function "class btThreadSupportInterface * __cdecl createSolverThreadSupport(int)" (?createSolverThreadSupport@@YAPAVbtThreadSupportInterface@@H@Z)
+1&gt;MultiThreadedDemo.obj : error LNK2019: unresolved external symbol "public: __thiscall btParallelConstraintSolver::btParallelConstraintSolver(class btThreadSupportInterface *)" (??0btParallelConstraintSolver@@QAE@PAVbtThreadSupportInterface@@@Z) referenced in function "public: virtual void __thiscall MultiThreadedDemo::initPhysics(void)" (?initPhysics@MultiThreadedDemo@@UAEXXZ)
+</code></pre></div></li></ul>
+
+<br>
+And here is the code I am using for my current scene:<br>
+<br>
+How I am initializing Bullet:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10099&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>broadphase = new btDbvtBroadphase();
+collisionConfiguration = new btDefaultCollisionConfiguration();
+dispatcher = new btCollisionDispatcher(collisionConfiguration);
+solver = new btSequentialImpulseConstraintSolver;
+dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+dynamicsWorld-&gt;setGravity(btVector3(0, -9.8f, 0));
+</code></pre></div>
+
+<br>
+How I am stepping the world.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10099&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>dynamicsWorld-&gt;stepSimulation(DeltaTime, SimulationSpeed);
+
+/*
+
+Where simulation speed generally set to 7 but can be changed in environment.
+
+*/
+</code></pre></div>
+
+And here is my code for static mesh:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10099&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+	btTriangleIndexVertexArray* PhysicsMeshInterface =
+		new btTriangleIndexVertexArray(NumberOfTriangles,
+		(GLint*)IndicesPointer,
+		3 * sizeof(GLint),
+		NumberOfIndVertices,
+		VerticesPointer,
+		3 * sizeof(GLfloat));
+
+	btBvhTriangleMeshShape* StaticTriangleMeshShape = new btBvhTriangleMeshShape(PhysicsMeshInterface, useQuantizedAabbCompression);
+
+        /*
+
+        PhysicsShape is a pointer to a "btCollisionShape" object.
+
+        */
+
+	PhysicsShape = StaticTriangleMeshShape;
+
+	btTransform TransformFromOpenGL;
+
+	TransformFromOpenGL.setFromOpenGLMatrix(ModelMatrixPointer);
+
+	PhysicsShapeMotionState = new btDefaultMotionState(TransformFromOpenGL);
+
+	btAssert((!PhysicsShape || PhysicsShape-&gt;getShapeType() != INVALID_SHAPE_PROXYTYPE));
+
+	/*
+
+
+        ShapeMass and ShapeInertia are "zeroed" out in the constructor for this class instance that wraps around the Bullet Object in my engine.
+
+        */
+
+
+        btRigidBody::btRigidBodyConstructionInfo PhysicsShapeCI(ShapeMass, PhysicsShapeMotionState, PhysicsShape, ShapeInertia);
+
+	PhysicsShapeRigidBody = new btRigidBody(PhysicsShapeCI);
+
+	PhysicsShapeRigidBody-&gt;setRestitution(ShapeRestitution);
+
+	PhysicsShapeRigidBody-&gt;setUserPointer(this);
+
+	CurrentPhysicsWorld-&gt;addRigidBody(PhysicsShapeRigidBody);
+
+</code></pre></div>
+
+Thank you for any time and assistance you can provide.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

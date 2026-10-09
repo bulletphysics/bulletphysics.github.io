@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet on GPU - Page 7</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet on GPU</h2>
+		<p><a href="viewtopic.php%3Ft=500.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=500</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>7</strong> of <strong>9</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 7:36 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Erwin,<br>
+if the GPU are so fast, couldn't it be that they use a Jacobi like solver which is by its very nature parallel as opposed to Gauss-Seidel.
+</div></blockquote>
+Perhaps they use Jacobi. Still, even when using Jacobi, the constraints might share rigid bodies, so velocity impulses from different constraint on sharing one rigidbody need to be combined. That sounds like a sequential problem, combining those impulses (or updated velocities).<br>
+
+<blockquote><div><cite>Steve wrote:</cite>
+OK - that makes a lot of sense. If the GPU can do Jacobi many, many times faster than the CPU could do GS - then maybe you can do enough iterations to make it worthwhile. However, the idea here is to use the GPU to do more objects - if we burned too much performance on Jacobi then it might not provide any benefits. <br>
+So GS works sequentially through a chain of interactions or something? Something like "look at object A - fix up it's motion - now look at what that fixing up did to objects B, C &amp; D"? If that's it then some parallelism might still be possible if we ran GS in parallel on a bunch of objects that are so far apart that they can't possibly interact with each other? <br>
+<br>
+The idea being to (say) split the world into a spatial grid then run GS in parallel by picking one object from every alternate cell and running all of those in parallel. Since we'd know for sure that those objects could never directly interact - would that be enough to let us run them in parallel? I could imagine situations where that might not work - maybe a long row of boxes - all touching each other. We push on a box on one end - but the consequences of that traverse multiple cells in my hypothetical grid. 
+</div></blockquote>
+
+Steve, the solving method takes contact constraints between two bodies (typically), so usually solving happens on a body-pair basis, not per-body.<br>
+<br>
+Also, we must deal with large stacks where all objects are touching directly or indirectly, so one connected graph. You can make some clustering where you can solve groups of objects in parallel. Then you write back velocities (merge/average results in some way (or apply impulses), and let the relaxation (iterative converging process) deal with your approximations over time.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 9:46 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Steve, the solving method takes contact constraints between two bodies (typically), so usually solving happens on a body-pair basis, not per-body.
+</div></blockquote>
+Well, so long as both sets of body data are present in the input texture, the shader can read a pair of object body parameters - crunch the math and write the results out to ONE output.  If both bodies share a result - then it's likely that the simplest thing is just to redundandly do the math twice - once for each output.<br>
+<br>
+Something like:<br>
+<br>
+   void main ( int myBodyIdent,           // Which body are we processing?<br>
+                      texture allBodyData,     // What is the data for body[N]<br>
+                      texture collisionMap  )   // Who collided with who? <br>
+   {<br>
+      int otherBodyIdent = collisionMap ( myBodyIdent ) ;<br>
+      if ( otherBodyIdent == NULL )<br>
+        write out zero new forces () ;<br>
+      else<br>
+      {<br>
+          myBodyData = allBodyData [ myBodyIdent ] ;<br>
+          otherBodyData = allBodyData [ otherBodyIdent ] ;<br>
+<br>
+          write out ( computeForcesBetween ( myBodyData, otherBodyData ) ) ;<br>
+      }<br>
+  }<br>
+
+<blockquote class="uncited"><div>
+Also, we must deal with large stacks where all objects are touching directly or indirectly, so one connected graph. You can make some clustering where you can solve groups of objects in parallel. Then you write back velocities (merge/average results in some way (or apply impulses), and let the relaxation (iterative converging process) deal with your approximations over time.</div></blockquote>
+
+That sounds OK.<br>
+<br>
+I would imagine things going something like this:<br>
+<br>
+1) Update accellerations from forces, velocities from accellerations and positions from velocities.  All of those things are now sitting around in texture maps with one element per rigid body or something.<br>
+2) Do AABB versus AABB collision detection and end up with one or more textures representing which objects collided with which object.  Again, one texture element per object - containing a short list of things that collided with it.  So in the texture, for each object, there is pixel in the map that contains the identifiers of each other object that collided with this one.  I call this the "collisionMap'.  The 'width' of the collision map would be limited to maybe holding the first four or eight (at a stretch) objects that collided with this one...so you might need more than one map - which means more than one O(N) pass through the collision detector.  This is what I imagine 'Broadphase' looks like.<br>
+3) Do more accurate collision detection on just the objects that passed (2) and extract contact points (again, into some kind of texture representation).<br>
+4) Process the first, second, third...Nth collision for all objects in parallel until done - producing forces that go back into (1) on the next iteration.<br>
+<br>
+I believe that I completely understand (1) - that's my demo essentially.  I think I see how to do (2) as an O(N) process - (3) is a bit of a mystery, and (4) is an O(M) process where M is the most collisions a single object underwent...but I have no clue as to what that entails either.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 21, 2006 10:03 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+if ( otherBodyIdent == NULL ) <br>
+write out zero new forces () ; 
+</div></blockquote>
+If one objects is non-zero, you still need to calculate some impulse. Bullet uses sequential impulses, so on the velocity level, for solving (contact and other) constraints.<br>
+
+<blockquote><div><cite>SteveBaker wrote:</cite>
+I would imagine things going something like this:<br>
+<br>
+1) Update accellerations from forces, velocities from accellerations and positions from velocities.  All of those things are now sitting around in texture maps with one element per rigid body or something.<br>
+2) Do AABB versus AABB collision detection and end up with one or more textures representing which objects collided with which object.  Again, one texture element per object - containing a short list of things that collided with it.  So in the texture, for each object, there is pixel in the map that contains the identifiers of each other object that collided with this one.  I call this the "collisionMap'.  The 'width' of the collision map would be limited to maybe holding the first four or eight (at a stretch) objects that collided with this one...so you might need more than one map - which means more than one O(N) pass through the collision detector.  This is what I imagine 'Broadphase' looks like.<br>
+3) Do more accurate collision detection on just the objects that passed (2) and extract contact points (again, into some kind of texture representation).<br>
+4) Process the first, second, third...Nth collision for all objects in parallel until done - producing forces that go back into (1) on the next iteration.<br>
+<br>
+I believe that I completely understand (1) - that's my demo essentially.  I think I see how to do (2) as an O(N) process - (3) is a bit of a mystery, and (4) is an O(M) process where M is the most collisions a single object underwent...but I have no clue as to what that entails either.</div></blockquote>
+
+To solve (3), can you please add sphere support in the demo. Let's try to add the sphere-sphere case first. I know you want more complexity, so once that is working, we put the cubes back in. <br>
+I would like to see the full pipeline in action first <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+The trivial sphere-sphere code inside Bullet is here:<br>
+<a href="http://svn.sourceforge.net/viewvc/bullet/trunk/Extras/AlternativeCollisionAlgorithms/SphereSphereCollisionAlgorithm.cpp?revision=238&amp;view=markup" class="postlink">http://svn.sourceforge.net/viewvc/bulle ... iew=markup</a><br>
+<br>
+With respect to solving the actual constraint, for spheres that is also extremely simple, we can ignore the moment of inertia and angular effects to start with (no friction). Once this works, you/we add those more interesting bits. Those bits are in Bullet repository:<br>
+<br>
+<a href="http://svn.sourceforge.net/viewvc/bullet/trunk/BulletDynamics/ConstraintSolver/ContactConstraint.cpp?revision=199&amp;view=markup" class="postlink">http://svn.sourceforge.net/viewvc/bulle ... iew=markup</a><br>
+<br>
+I can add the sphere-box case, but we can leave the floor/infinite groundplane for prototyping.<br>
+<br>
+You mention you want to try out a GPU broadphase, so please go ahead <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> But if you loose too much time in step 2 it would be better to built the broadphase information on the CPU, and upload the texture at the start of each frame.<br>
+<br>
+Is that ok?<br>
+Erwin<br>
+<br>
+Bullet goes GPU, <a href="http://digg.com/programming/Bullet_Physics_goes_GPU" class="postlink">digg this</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 1:21 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Nvidias G80 is on the way and will be available in 2006 as I know.<br>
+ATI nex gen GPU will be probalbe available soon to.<br>
+Shader model 4.0 seems to be much better for Physic calculations as S3.0.<br>
+What is the status of OpenGL and GLSL support for it, do some one know this?<br>
+<br>
+<br>
+About broadphase on GPU, in my opinion this must be possible but even if GPU age much faster as CPU brute force will be still too slow for 16000 objects.<br>
+May be ideas of Cullide can be used, not sure?<br>
+<a href="http://gamma.cs.unc.edu/QCULLIDE/" class="postlink">http://gamma.cs.unc.edu/QCULLIDE/</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 2:56 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>DevO wrote:</cite>Nvidias G80 is on the way and will be available in 2006 as I know.<br>
+ATI nex gen GPU will be probalbe available soon to.<br>
+Shader model 4.0 seems to be much better for Physic calculations as S3.0.<br>
+What is the status of OpenGL and GLSL support for it, do some one know this?
+</div></blockquote>
+The difference between the way OpenGL and GLSL operate compared to DirectX is that they tend to specify the API ahead of where the hardare currently is.  So there are lots of GLSL and OpenGL features that don't really work all that well on present hardware - when the next gen hardware appears, OpenGL and GLSL will already have the needed features to drive them.  Also, OpenGL has a comprehensive extension mechanism that allows individual manufacturers to add features to the API to suit their own hardware.  Each revision of DirectX is pretty much a statement of where the hardware is right now.<br>
+<br>
+At any rate, the features of OpenGL/GLSL right now are plenty good enough for doing fast physics - the problems we've been having are that only my particular hardware/software setup appears to actually support them!  The current generation of nVidia hardware (7xxx)  - or even last-years cutting-edge hardware (68xx) - even with present-gen API's are quite capable of doing GPU physics.  ATI hardware (or maybe just their drivers) appear to be lagging in one key area (vertex shader texturing) - but I'm sure they'll catch up - and there are work-arounds. 5xxx series nVidia hardware definitely can't do it though - they don't support enough fragment shader facilities - and their support for floating point textures and FBO's is patchy at best.<br>
+
+<blockquote class="uncited"><div>About broadphase on GPU, in my opinion this must be possible but even if GPU age much faster as CPU brute force will be still too slow for 16000 objects.<br>
+May be ideas of Cullide can be used, not sure?<br>
+<a href="http://gamma.cs.unc.edu/QCULLIDE/" class="postlink">http://gamma.cs.unc.edu/QCULLIDE/</a></div></blockquote>
+
+I'll check it out - thanks for the link.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 3:24 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Hmm - it's going to take a while to fully understand that paper.  What's interesting is that they are using 5950 hardware - which doesn't even support the features I think we need.   It's slower than I'd hope - but on modern hardware, that wouldn't be so bad.<br>
+<br>
+One idea they use (making use of the 'occlusion test' feature) has the potential to speed up the algorithm I have in mind for collision detection.<br>
+<br>
+My problem has been that I want to run 16,000 collision queries through the GPU - but I only have limited space to store the results.  If there are too many collisions against a single object - I have no place to store the consequences of that in a single output texture.  To fix that, I'd have to run a bunch of collision tests - then read back the resulting texture and examine it in the CPU to see if any objects had more than (say) 4 collisions - and rerun the overflowed tests if there were.  But reading back and examining that texture would slow the algorithm down considerably.<br>
+<br>
+What the paper suggests is to use the glocclusionqueryNV extension which allows you to have the GPU count the number of pixels that passed the Z-depth test.  I could theoretically use that to count the number of objects who's list of collisions has overflowed - so the CPU could tell whether or not it needs to do another pass without having to read back the full results texture.  Grouping the collision tests into batches of a few hundred at a time and testing the occlusion test  result after each batch would be pretty efficient I think.<br>
+<br>
+Anyway - I need to finish reading the paper.  It's good stuff.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Sep 22, 2006 11:36 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I still hope we can use the Bullet broadphase first, create a 2D bitmap, that encodes overlap between objects, and upload that to GPU memory.<br>
+<br>
+Focussing on getting some narrowphase working, and then potentially optimize the broadphase for GPU. ATI and Nvidia both got very good results with such approach.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 23, 2006 2:20 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>I still hope we can use the Bullet broadphase first, create a 2D bitmap, that encodes overlap between objects, and upload that to GPU memory.
+</div></blockquote>
+
+OK - so what are the inputs?  What are the outputs?  What are the steps to get from one to the other?   Are the outputs forces or impulses or something?<br>
+<br>
+You talk about a "bitmap".  Are you thinking of something like:<br>
+<br>
+    bool bitmap [ MAX_OBJECT ][ MAX_OBJECT ] ;<br>
+<br>
+    bool objectsOverlap ( int object1, int object2 )<br>
+    {<br>
+       return bitmap [ object1 ][ object2 ] ;<br>
+    }<br>
+<br>
+That wouldn't be at all GPU-friendly.  The only way for the GPU to access such a thing would be in parallel.  But if we want thousands of objects then the bitmap has millions of entries - which would be horrifically costly to process - even in parallel.  Worse still, since most of the bitmap would be 'false', we'd have most of our processors executing the entire narrowphase algorithm with their processors write-protected...because (as I've explained before), this is a SIMD machine. That would be very wasteful.<br>
+<br>
+Better would be an array with one element per object - with a list of the things that collided against it as a simple list of integers...or maybe an array with one element per collision that happened with a simple list of object pairs: A-collidedwith-B, F-collidedwith-Q...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Sep 25, 2006 10:42 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>Better would be an array with one element per object - with a list of the things that collided against it as a simple list of integers...or maybe an array with one element per collision that happened with a simple list of object pairs: A-collidedwith-B, F-collidedwith-Q...</div></blockquote>
+
+OK, my suggested approach was probably too old fashioned for GPU.<br>
+<br>
+In that case, either one array with a small constant number of other elements, or a few arrays with at most one elements of interacting elements would be great.<br>
+I think its easiest to first create such array on the CPU side, if you tell me the format of that array it can be implemented in a day. GPU might take more time <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+If we then can run a shader that gets processed for each interacting 'pair', writing the results just for one object, that would be a great start.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 27, 2006 7:23 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">I added some new code to the demo.<br>
+<br>
+* There is now a 'collisionMap' that stores up to four objects that have (nominally) collided with each object.<br>
+* There is an extra shader that computes some sort of constraint force on every object from (up to) four objects it might have collided with.<br>
+<br>
+For the sake of a demonstration which doesn't have collision detection yet, I hard-wired the four 'colliding' objects to four red cubes and changed the 'constraint force' to be an attraction like gravity.  The result is that the four red cubes look like black holes around which galaxies are forming.<br>
+<br>
+It's a very pretty demo!<br>
+<br>
+You may still need to use a '-v' on the command line to make it work with some combinations of graphics card and operating system.  (Urgh).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 27, 2006 7:26 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Incidentally, I got an email from Chris Seitz at nVidia offering help from nVidia on the GPU physics stuff. Initially, this will get me onto their developer forums - which may help me to understand why the heck this code doesn't work properly under Windows with vertex texturing enabled.  (We know why it doesn't work with ATI hardware though).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 27, 2006 7:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi Steve,<br>
+<br>
+That is good news from Nvidia!<br>
+<br>
+Also ATI is very helpful, so we can contact them with specific questions. However, my issue was with Apple Macbook, where Apple writes the drivers. They are helpful too, and there is some recent demo that looks promising.<br>
+<br>
+By the way, for the windows Bullet source zipfiles, I disabled vertex texture support by default, otherwise the demo always shows grey I think.<br>
+So I modified the line into:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=500&amp;start=90&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool disableVertexTextureSupport = true ;
+</code></pre></div>
+
+until things are fixed this looks better for the executables <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 27, 2006 9:46 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=500&amp;start=90&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool disableVertexTextureSupport = true ;
+</code></pre></div>
+
+We should probably do that conditionally so Linux version still works fast.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 27, 2006 10:20 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi Steve,<br>
+<br>
+The source .tgz doesn't include this temporarily change, it is just the windows zip that includes it.<br>
+<br>
+Your latest GPU demo looks very cool, I will upload some binaries for others to play with, and upload a new source distribution. It doesn't have the lower-case methods yet, but otherwise most refactoring is in it.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Something wrong with the GPU demo..</h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 1:00 pm</strong></div>
+				<div class="author">by <strong>tasora</strong></div>
+				<div class="content">Hallo, <br>
+ I am testing your GPU demo since I am going to implement some<br>
+GP-GPU stuff for my multibody simulator.<br>
+The demo is very interesting, but I found some problems on my<br>
+system.<br>
+These are the results, runing the EXE in debug mode as suggested<br>
+by Steve Baker:<br>
+<br>
+GPUphysics -s:<br>
+   ops: program crashes!<br>
+   <br>
+GPUphysics -p:<br>
+   OK, static green cubes displayed. <br>
+<br>
+GPUphysics -v:<br>
+   OK, cubes are moving &amp; colliding.<br>
+   <br>
+GPUphysics   :<br>
+   OK, cubes are moving &amp; colliding. <br>
+   Exactly as in GPUphysics -v mode (in fact there is<br>
+   always the message about vertex shader being disabled,<br>
+   by default on Win systems.)<br>
+   <br>
+PROBLEMS: <br>
+<br>
+1) <br>
+The <strong class="text-strong">performance is a bit too low</strong>.. I suspect that there's something <br>
+wrong.. Just to give you an idea, the 'average' result is the following:<br>
+  'Performance: 2 passes 256 cubes: other=0.501740ms collisions=16.285310ms'<br>
+Is this normal on a Nvidia 7900GS board?<br>
+  <br>
+2) <br>
+After I close the window by mouse clicking, the background DOS <br>
+window starts printing the following line THOUSANDS of times:<br>
+ <strong class="text-strong">'GLSL_ShaderPair::getUniformLocation: OpenGL Error - operazione non valida'</strong><br>
+until I stop this by Ctrl+C. Note, the sentence 'operazione non valida'<br>
+is in italian because my WindowsXP is localized in italian language (it<br>
+means, 'not a valid operation', anyway...) <br>
+I suspect this should not happen  - also, I guess that this may be related<br>
+with note 1), that is the poor performance.<br>
+<br>
+3)<br>
+Not as important as 1) or 2), but worth mentioning..<br>
+In the first release of the GPU demo, there were floating (not colliding)<br>
+cubes. This was very fast on my GPU, thought a strange effect <br>
+happened: most times it run about 10x slower as soon as started, <br>
+but after some seconds it turned into 'good speed' mode. <br>
+I mean, this may be not directly related to your GPU demo, since <br>
+a similar issue happens also with the Nvidia 'Nalu' demo, which <br>
+runs at 2-3fps for some seconds before going at full speed (but<br>
+does not happen on other demos, even more complex, who knows...)<br>
+<br>
+My system is a Toshiba laptop with a Nvidia GeForce Go 7900GS <br>
+with 512Mb of gpu ram, with the following specs: <br>
+<br>
+INFO: This hardware supports at most:<br>
+   4 vert  texture samplers<br>
+  16 frag  texture samplers<br>
+  16 total texture samplers<br>
+  <br>
+PS: have you tested  the GP-GPU code in <br>
+<a href="http://www.mathematik.uni-dortmund.de/~goeddeke/gpgpu/tutorial.html" class="postlink">http://www.mathematik.uni-dortmund.de/~ ... orial.html</a><br>
+There are some hints about supported OpenGL modes <br>
+on ATI-Nvidia etc.<br>
+<br>
+regards, <br>
+A.Tasora<br>
+<br>
+A.Tasora</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>7</strong> of <strong>9</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

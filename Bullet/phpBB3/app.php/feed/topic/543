@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/543" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-09-23T21:43:21+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/543</id>
+
+		<entry>
+		<author><name><![CDATA[efoss]]></name></author>
+		<updated>2006-09-23T21:43:21+00:00</updated>
+
+		<published>2006-09-23T21:43:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1897#p1897</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1897#p1897"/>
+		<title type="html"><![CDATA[Re: Computing union of overlapping pairs (simulation islands]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1897#p1897"><![CDATA[
+I use a union-find, an "on-line" version. By the time all my pairwise collisions are done, the islands are ready to iterate over without any more work. I found this page to be very good for understanding the concept:<br><br><a href="http://en.wikipedia.org/wiki/Disjoint-set_data_structure" class="postlink">http://en.wikipedia.org/wiki/Disjoint-s ... _structure</a><br><br>As the example in Bullet demonstrates, the basic algorithm is very simple. According to that web page, it was proven in 1989 by Fredman and Saks to be the cheapest possible disjoint-set algorithm.<br><br>I found it useful in my implementation to keep linked lists attached to each object indicating its current children. That allows me to<br><br>1. Iterate over the items in each island without having to sort anything<br>2. Remove an item at any time without destroying its island<br><br>Getting all the pointer maintenance correct is a pain though!<br><br>I store a pointer within each collision object to its union-find parent, which through path compression is normally the mega-parent or representative of that island. That allows me to quickly find and iterate over an island, starting just with a pointer to one of its members.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=461">efoss</a> — Sat Sep 23, 2006 9:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2006-09-22T23:41:02+00:00</updated>
+
+		<published>2006-09-22T23:41:02+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1870#p1870</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1870#p1870"/>
+		<title type="html"><![CDATA[Computing union of overlapping pairs (simulation islands)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1870#p1870"><![CDATA[
+During the DFS, I build up arrays of pointers to bodies, joints, and contact constraints. These arrays get placed into an island structure which is sent to the solver.<br><br>With this system it should straight forward to do parallel processing of islands. Once the island is built, you can send it to another thread while the next island is being built in the main thread.<br><br>I don't keep any island ids in the bodies or joints because it is not needed.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Fri Sep 22, 2006 11:41 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-22T22:39:15+00:00</updated>
+
+		<published>2006-09-22T22:39:15+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1867#p1867</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1867#p1867"/>
+		<title type="html"><![CDATA[Computing union of overlapping pairs (simulation islands)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1867#p1867"><![CDATA[
+<blockquote class="uncited"><div>I use the first algorithm in the link you provided:<br><br>------------------------<br>Off-line version:<br><br>    * Entire input is given at once.<br><br>    * Solution:<br>          o Scan input and place edges in undirected graph.<br>          o Run depth-first search to identify components and label each vertex.<br>          o Scan labels and print out classes (components). <br><br>    * Analysis: O(V + E).<br>      (Here, E = number of input pairs.) <br>----------------------------<br><br>To speed this up I maintain a connectivity graph at across time steps. This is exactly what ODE does (except it recreates the contact graph each step).</div></blockquote>Do what is the actual output of your algorithm? All objects have their island id? How do you process the separate islands at the end, do you have an array of them? In other words, can you easily do parallel processing of islands too?<br><br>I'm doing the on-line version instead. If there would be a cheap way to remove edges/constraints in this approach, then it would be good to keep it persistent. I've been looking into this for a while (and this is probably what the original question is about), but couldn't find such incremental removal of edges/constraints.<br><br>union find deunion only allows backtracking/removing most recent added edges, no random removal of edges <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>Is there any?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Sep 22, 2006 10:39 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2006-09-22T17:37:46+00:00</updated>
+
+		<published>2006-09-22T17:37:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1864#p1864</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1864#p1864"/>
+		<title type="html"><![CDATA[Computing union of overlapping pairs (simulation islands)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1864#p1864"><![CDATA[
+I use the first algorithm in the link you provided:<br><br>------------------------<br>Off-line version:<br><br>    * Entire input is given at once.<br><br>    * Solution:<br>          o Scan input and place edges in undirected graph.<br>          o Run depth-first search to identify components and label each vertex.<br>          o Scan labels and print out classes (components). <br><br>    * Analysis: O(V + E).<br>      (Here, E = number of input pairs.) <br>----------------------------<br><br>To speed this up I maintain a connectivity graph at across time steps. This is exactly what ODE does (except it recreates the contact graph each step).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Fri Sep 22, 2006 5:37 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-09-22T05:13:33+00:00</updated>
+
+		<published>2006-09-22T05:13:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1851#p1851</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1851#p1851"/>
+		<title type="html"><![CDATA[Re: Computing union of overlapping pairs (simulation islands]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1851#p1851"><![CDATA[
+<blockquote class="uncited"><div>I noticed bullet uses a 2 pass approach (although unless I'm reading the code wrong, the inner loops in "SimulationIslandManager::BuildAndProcessIslands" will become worst case O(NxN) searches if there are N islands. )<br>thanks<br>Steve.</div></blockquote>Did you check the most recent version of Bullet 2.0e?<br><br>Bullet uses Union Find to find the connected simulation islands, based on AABB overlap from the broadphase and constraints. Recently I added path compression to Union Find, and according to the following link "Complicated analysis shows: O(m A(m,n)) time where A(m,n) is inverse-Ackerman's function"<br><br><a href="http://www.continuousphysics.com/ftp/pub/test/physics/papers/Algorithms%20and%20Data%20Structuresn%20II.htm" class="postlink">http://www.continuousphysics.com/ftp/pu ... n%20II.htm</a><br><br>After the islands are build, I sort this data, and then all islands can be processed in parallel for both collision detection and constraint solving.<br>There is no multi-core version in the public version yet, but that will be available in the future.<br><blockquote class="uncited"><div>I like to use a body, contact, and joint graph. You can find the islands using a depth first search from the awake bodies. This is always O(n) in the number of bodies, contacts, and joints. </div></blockquote>I am curious if this is really a faster way then Union Find to find the islands. Can you give more details how to determine connected islands, from a set of N bodies, with M connections?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Sep 22, 2006 5:13 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2006-09-22T04:58:42+00:00</updated>
+
+		<published>2006-09-22T04:58:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1850#p1850</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1850#p1850"/>
+		<title type="html"><![CDATA[Computing union of overlapping pairs (simulation islands)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1850#p1850"><![CDATA[
+I like to use a body, contact, and joint graph. You can find the islands using a depth first search from the awake bodies. This is always O(n) in the number of bodies, contacts, and joints.<br><br>If you think about it as a graph problem, it seems that no incremental algorithm can be faster than O(n). Consider when an edge is deleted. How do you determine if the island is split? Wouldn't you have to search the island?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Fri Sep 22, 2006 4:58 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sbroumley]]></name></author>
+		<updated>2006-09-22T03:05:30+00:00</updated>
+
+		<published>2006-09-22T03:05:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1848#p1848</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1848#p1848"/>
+		<title type="html"><![CDATA[Computing union of overlapping pairs (simulation islands)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1848#p1848"><![CDATA[
+Does anyone know of a fast (incremental perhaps?) method that can compute the union of overlapping pairs using the "pair deleted", "pair added" information from the broad phase?<br><br>The only methods I've seen are a "start from scratch every frame" 2 pass approach: The 1st pass sets up N islands (where N = the number of bodies). The 2nd pass merges the islands.<br><br>Is there a method that can use the information from the fast broad phase ie. 1) You know when a new pair begin to overlap 2) You know when a current pair cease to overlap.<br><br>I noticed bullet uses a 2 pass approach (although unless I'm reading the code wrong, the inner loops in "SimulationIslandManager::BuildAndProcessIslands" will become worst case O(NxN) searches if there are N islands. )<br><br><br>thanks<br>Steve.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=207">sbroumley</a> — Fri Sep 22, 2006 3:05 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

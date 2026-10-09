@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Makeing the PGS more stable</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Makeing the PGS more stable</h2>
+		<p><a href="viewtopic.php%3Ft=9073.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9073</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Makeing the PGS more stable</h3>
+				<div class="date">Posted: <strong>Tue May 07, 2013 9:13 am</strong></div>
+				<div class="author">by <strong>Gabor Puhr</strong></div>
+				<div class="content">Hi,<br>
+<br>
+In my company we are using bullet (obviously <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> ) and I had the task to make it more stable.<br>
+We are using really long chain of RB-s with big mass ratios connected with 6dofs.<br>
+One of my first problem was that when I pull one side of the chain it takes N steps before the last element starts to move. Where N is the length of the chain.<br>
+So I forcefully activated all of the joints, but because of that I have lost the freedoms.<br>
+I solved this by calculating two type of errors one for the lo limit and one for the hi limit.<br>
+During solving (in resolveSingleConstraintRowGeneric) if the deltaVel1Dotn+deltaVel2Dotn (actualimpulse) is between the two errors then I don't change the constratint (deltaImpulse:=0) otherwise I set the deltaImpulse to "compensate" the actualimpulse up to the point where it reach the limit.<br>
+(for exmaple: if (actualImpulse&gt;c.m_rhsHi) deltaImpulse = c.m_rhsHi - actualImpulse;)<br>
+With this little modification I could achieve a big step towards stability. <br>
+It is clear that the average performance became worse, but the worst case is slower only a tiny bit. (and that matters for us)<br>
+<br>
+Another comment: obviously increasing the iteration count in the solver should make everything more stable, but actually it explodes the simulation (even with doubles). <br>
+The reason of that: the compensation impulses became so big for one frame at the beginning that one of the RB moves through not just the neighbor body, but even the next to that and the penetration compensation makes everything super crazy.<br>
+This trick solves this problems automatically, because when every RB moves from the beginning the relative speeds became much smaller.<br>
+so I can now increase the iteration count wildly. (though the final solution became the NNCG)<br>
+<br>
+I have checked a lot of paper, but I couldn't find similar solution.<br>
+Is it something very trivial that is why nobody mention it or It is just me who didn't find a good paper from this?<br>
+<br>
+Best Regards<br>
+Gabor</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Makeing the PGS more stable</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 4:44 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I cannot follow everything you are describing here. Here are two general points:<br>
+1) A chain with many links is highly non-linear. This might break the Baumgarte stabilization if the timestep is too large. A rule of thumb is that taking two substeps with half of the timestep helps more in terms of stability and stiffness then doubling the iteration count.<br>
+<br>
+2) It seems that Bullet can put individual bodies in an island to sleep. I would not use this. If possible deactivate this and only use islands sleeping.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Makeing the PGS more stable</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 12:13 pm</strong></div>
+				<div class="author">by <strong>Gabor Puhr</strong></div>
+				<div class="content">Allow me to try to explain again. <br>
+<br>
+Lets assume we have three box next to each other (1,2,3) and the neighbors are connected with a 6dof constraints (1-2,2-3) in a way that all freedoms are restricted.<br>
+(So theoretically the three box should move with each other like a big box)<br>
+If I pull the one at the right side (3) (with a force for example) at the next step the a solver in Bullet will recognize that the 2-3 is violated. <br>
+Because of that it will try to solve it, but will not calculate with the (1-2). As if (1-2) constraint would not exist at all.<br>
+Because of that (2) and (3) will move only in the current step after the solving.<br>
+In the next step, because the (2) was moved the (1-2) constraint is violated so the solver will try to solve that and possibly also the constraint (2-3).<br>
+It can be seen that If I have N box next to each other connected in a similar way it takes N-1 step (or sub step) before the solver will start to solve all of them together, although it should have calculate with all of them even in the first step (sub step).<br>
+Because of that the chain of boxes will bend or stretch etc when I start to move it, but will not behave as one big rigid block. <br>
+This is my primary problem.<br>
+<br>
+One can say that: OK it is not problem, the solver should calculate all of the constraints even if a few are not violated.<br>
+<br>
+The problem with this: Lets change the constraint (2-3) in the upper example in a way that it allows the two boxes (2) and (3) to be separated 1 meter, but no more. So the constraint is satisfied as long as the distance between (2) and (3) is between 0 meter and 1 meter.<br>
+What Bullet solver does here: if the distance of the two boxes (2 and 3) less than 1 meter it will not calculate with the constraint (2-3). So no jacobi entry will be created.<br>
+If the distance is more than 1 meter it starts to calculate with the constraint (2-3), and set up the jacobian in a way to "pull" the (2) and (3) until the distance will be less than 1 meter.<br>
+So if we would want this constraint (2-3) to be active all the time what would be the jacobi when the constraint is satisfied? (distance between (2) and (3) is between 0 meter and 1 meter)<br>
+My guess is that there is no good Jacobi here.<br>
+So I think this is not a solution by itself.<br>
+<br>
+How one would solve the primary problem?<br>
+<br>
+Best Regards<br>
+Gabor</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Makeing the PGS more stable</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 4:19 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">To make this stable you will need a direct matrix solver. You can also try to solve a weld joint as a block of 6x6 matrices. This will give you some stiffness as well. <br>
+<br>
+In a real world example you would not use a weld joint, but use a compound shape with three boxes.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Makeing the PGS more stable</h3>
+				<div class="date">Posted: <strong>Mon May 13, 2013 8:54 am</strong></div>
+				<div class="author">by <strong>Gabor Puhr</strong></div>
+				<div class="content">Thanks. I will check a document about direct solving maybe one of them contains a solution to this problem.<br>
+Best Regards<br>
+Gabor</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Makeing the PGS more stable</h3>
+				<div class="date">Posted: <strong>Mon Oct 28, 2013 1:11 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You could try using Featherstone and/or a direct solver (such as Dantzig or Lemke) as a block solver (as Dirk mentioned). Both are in the latest version of Bullet.<br>
+<br>
+By the way, Bullet doesn't put individual bodies in an island to sleep: an island is either awake and all bodies in the island are simulated, or the island is asleep if all bodies in the island are asleep.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

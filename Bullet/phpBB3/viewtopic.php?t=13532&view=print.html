@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to turn off gravity only for some Objects ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to turn off gravity only for some Objects ?</h2>
+		<p><a href="viewtopic.php%3Ft=13532.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13532</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to turn off gravity only for some Objects ?</h3>
+				<div class="date">Posted: <strong>Wed Feb 08, 2023 4:48 pm</strong></div>
+				<div class="author">by <strong>Yogha001</strong></div>
+				<div class="content">I am currently working on a VR simulation in VRED, utilizing PyBullet as the physics simulation engine to support real-time simulation with objects affected by gravity. However, there are instances where it may be necessary to turn off gravity for specific objects in the simulation.<br>
+<br>
+My current solution to achieve this is by setting the mass of these objects to 0, but this does not result in a realistic scenario of objects floating in space. I am seeking a solution to have some objects float in space with no gravity, while others are affected by gravity in the simulation.<br>
+<br>
+The most realistic solution is to run the Physics client on multiple Server.<br>
+My current code looks like this.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13532&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>newScene()
+
+from pybullet_utils import bullet_client as bc
+import pybullet
+import math
+import time
+import pybullet_data
+
+class TestAction(vrAEBase):
+   def __init__(self):
+       vrAEBase.__init__(self)
+       self.physicsClient1 = bc.BulletClient(connection_mode=pybullet.DIRECT)
+       self.physicsClient2 = bc.BulletClient(connection_mode=pybullet.DIRECT)
+       
+       self.physicsClient1.setAdditionalSearchPath(pybullet_data.getDataPath())
+       self.physicsClient2.setAdditionalSearchPath(pybullet_data.getDataPath())
+       
+       self.physicsClient1.setRealTimeSimulation(1)
+       self.physicsClient2.setRealTimeSimulation(1)
+       
+       # Set gravity to zero in the first instance
+       self.physicsClient1.setGravity(0,0,0) # 0 gravity in the GUI
+       
+       # Set gravity for the sphere object in the second instance
+       self.physicsClient2.setGravity(0,0,-9.8) # -9.8 in Z-axis (typical earth gravity)
+       
+       #loadURDF
+       self.planeId = self.physicsClient1.loadURDF("plane.urdf", [0, 0, 0], [0, 0, 0, 1])
+       
+       self.boxId1 = self.physicsClient1.loadURDF("BOX.urdf",[-1, -1, 10], [0, 0, 0, 1])
+
+       self.boxId2 = self.physicsClient2.loadURDF("BOX.urdf",[1, 1, 10], [0, 0, 0, 1])
+       
+       self.createNodes()
+       self.addLoop()
+
+
+   def __del__(self):
+       self.physicsClient1.disconnect()
+       self.physicsClient2.disconnect()
+       print("end")
+       
+   def createNodes(self):
+       
+       if not getRootNode().getChild("Box").isValid():
+           self.boxNode = createBox(1000, 1000, 1000, 1, 1, 1, 0.0, 1.0, 0.0, 0.0)
+           self.boxNode.setName("Box")
+           getRootNode().addChild(self.boxNode)
+       if not getRootNode().getChild("Box2").isValid():
+           self.boxNode2 = createBox(1000, 1000, 1000, 1, 1, 1, 0.0, 0.0, 1.0, 0.0)
+           self.boxNode2.setName("Box2")
+           getRootNode().addChild(self.boxNode2)
+
+
+   def loop(self):
+
+       pos, rot = self.physicsClient1.getBasePositionAndOrientation(self.boxId1
+
+ 
+   def loop(self):
+
+       pos, rot = self.physicsClient1.getBasePositionAndOrientation(self.boxId1)
+       eulerRot = self.physicsClient1.getEulerFromQuaternion(rot)
+       self.boxNode.setWorldTranslation(pos[0]*1000, pos[1]*1000, pos[2]*1000)
+       self.boxNode.setRotation(math.degrees(eulerRot[0]), math.degrees(eulerRot[1]), math.degrees(eulerRot[2]))
+   
+   
+       pos2, rot2 = self.physicsClient2.getBasePositionAndOrientation(self.boxId2)
+       eulerRot2 = self.physicsClient2.getEulerFromQuaternion(rot2)
+       self.boxNode2.setWorldTranslation(pos2[0]*1000, pos2[1]*1000, pos2[2]*1000)
+       self.boxNode2.setRotation(math.degrees(eulerRot[0]), math.degrees(eulerRot[1]), math.degrees(eulerRot[2]))
+
+ ta = TestAction()
+ ta.setActive(true)</code></pre></div>
+
+When i run this script i don't get any error, so i guess it seems to work. But the Simulation is not working.<br>
+<br>
+I tried another approche to have a better prespective this time without VRED.<br>
+<br>
+So first i run the Example script "runServer.py"<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13532&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#add parent dir to find package. Only needed for source code build, pip install doesn't need it.
+import os
+import inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(os.path.dirname(currentdir))
+os.sys.path.insert(0, parentdir)
+
+import pybullet_data
+import pybullet as p
+import time
+
+p.connect(p.GUI_SERVER)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+
+
+while (1):
+  #this is a no-op command, to allow GUI updates on Mac OSX (main thread)
+  p.setPhysicsEngineParameter()
+  p.setRealTimeSimulation(1)</code></pre></div>
+
+then I run my script it's so similar to the "multipleScenes.py"<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13532&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>from pybullet_utils import bullet_client as bc
+import pybullet
+import pybullet_data
+
+physicsClient1 = bc.BulletClient(connection_mode=pybullet.SHARED_MEMORY)
+physicsClient2 = bc.BulletClient(connection_mode=pybullet.SHARED_MEMORY)
+
+planeID = physicsClient1.loadURDF(pybullet_data.getDataPath() + "/plane.urdf", [0, 0, 0])
+sphereId1 = physicsClient1.loadURDF(pybullet_data.getDataPath() + "/r2d2.urdf", [1,1,2])
+
+sphereId2 = physicsClient2.loadURDF(pybullet_data.getDataPath() + "/r2d2.urdf", [-1,-1,2])
+
+physicsClient1.setGravity(0,0,-9.8) # 0 gravity in the GUI
+
+physicsClient2.setGravity(0,0,0) # -9.8 in Z-axis (typical earth gravity)
+
+physicsClient1.setRealTimeSimulation(1)
+physicsClient2.setRealTimeSimulation(1)
+
+physicsClient1.disconnect()
+physicsClient2.disconnect()</code></pre></div>
+
+The Problem here seems that the same Gravity is applied on both spheres.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

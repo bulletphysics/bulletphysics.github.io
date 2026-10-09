@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13369" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-02-04T22:09:14+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13369</id>
+
+		<entry>
+		<author><name><![CDATA[whitwhoa]]></name></author>
+		<updated>2022-02-04T22:09:14+00:00</updated>
+
+		<published>2022-02-04T22:09:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43833#p43833</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43833#p43833"/>
+		<title type="html"><![CDATA[Re: Recalculate local origin of btCompoundShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43833#p43833"><![CDATA[
+Greatly appreciated! Was able to get it worked out. Also came across <a href="https://gist.github.com/erwincoumans/b8a110b5c228b378161068cd25fa7d2c" class="postlink">this gist</a> while researching what you had explained, which helped out as well. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13318">whitwhoa</a> — Fri Feb 04, 2022 10:09 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-02-04T14:49:51+00:00</updated>
+
+		<published>2022-02-04T14:49:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43831#p43831</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43831#p43831"/>
+		<title type="html"><![CDATA[Re: Recalculate local origin of btCompoundShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43831#p43831"><![CDATA[
+In the <strong class="text-strong">local-frame</strong> the origin and center of mass of the base <strong class="text-strong">btCollisionShape</strong> is always implicitly <strong class="text-strong">&lt;0,0,0&gt;</strong>.   In other words: in the <strong class="text-strong">world-frame</strong> its center of mass is its position (e.g. its <strong class="text-strong">origin</strong> transformed by its <strong class="text-strong">worldTransform</strong>).<br><br>With a <strong class="text-strong">btCompoundShape</strong> what you're supposed to do is: compute the <strong class="text-strong">center of mass</strong> during the convex decomposition stage: in general it will have a non-identity transform.  Then adjust the local-transforms of all the convex parts such that the center of mass is at the origin.  For each subshape the math would be:<br><br><strong class="text-strong">new_local_transform = inverse_center_of_mass_transform * old_local_transform</strong><br><br>Finally, when adding each child  to the compound shape you would supply its <strong class="text-strong">new_local_transform</strong>.<div class="codebox"><p>Code: </p><pre><code>compound_shape-&gt;addChildShape(new_local_transforms[i], sub_shapes[i]);</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Feb 04, 2022 2:49 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[whitwhoa]]></name></author>
+		<updated>2022-02-03T22:45:14+00:00</updated>
+
+		<published>2022-02-03T22:45:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43829#p43829</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43829#p43829"/>
+		<title type="html"><![CDATA[Recalculate local origin of btCompoundShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43829#p43829"><![CDATA[
+Curious if there is a way to recalculate the local origin of a btCompoundShape? I currently have a shape consisting of two spheres and a cylinder, however the origin of the btCompoundShape seems to be the origin of one of it's child shapes and not the origin of the aabb for the compound shape.<br><br>Below is an image of the btPairCachingGhostObject which uses the btCompoundShape with it's origin set as follows (where y is up -z forward):<div class="codebox"><p>Code: </p><pre><code>this-&gt;ghostObject-&gt;getWorldTransform().setOrigin(btVector3(2, 0, 0));</code></pre></div><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1910" class="postimage" alt="bbbb.JPG" onclick="viewableArea(this);" /></dt></dl></div><br>Below is how the btCompoundShape and btPairCachingGhostObject are being generated:<br><div class="codebox"><p>Code: </p><pre><code>btCylinderShape* cyl = new btCylinderShape(btVector3(this-&gt;radius, (1.25f / 2.0f), this-&gt;radius));btTransform cylTran;cylTran.setIdentity();cylTran.setOrigin(btVector3(0,0,0));btSphereShape* sphereSmall = new btSphereShape(0.36f);btTransform sphereSmallTran;sphereSmallTran.setIdentity();sphereSmallTran.setOrigin(btVector3(0, -0.77456, 0));btSphereShape* blendSphere = new btSphereShape(0.4f);btTransform blendSphereTran;blendSphereTran.setIdentity();blendSphereTran.setOrigin(btVector3(0, -0.62507, 0));btCompoundShape* compoundShape = new btCompoundShape();compoundShape-&gt;addChildShape(cylTran, cyl);compoundShape-&gt;addChildShape(sphereSmallTran, sphereSmall);compoundShape-&gt;addChildShape(blendSphereTran, blendSphere);this-&gt;shape = compoundShape;this-&gt;ghostObject = new btPairCachingGhostObject();this-&gt;ghostObject-&gt;setCollisionShape(this-&gt;shape);this-&gt;ghostObject-&gt;setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);this-&gt;collisionWorld-&gt;getDynamicsWorld()-&gt;addCollisionObject(this-&gt;ghostObject, btBroadphaseProxy::KinematicFilter, btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);this-&gt;collisionWorld-&gt;getDynamicsWorld()-&gt;getPairCache()-&gt;setInternalGhostPairCallback(new btGhostPairCallback());this-&gt;ghostObject-&gt;getWorldTransform().setOrigin(btVector3(2, 0, 0));</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13318">whitwhoa</a> — Thu Feb 03, 2022 10:45 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

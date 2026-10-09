@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Food Simulation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Food Simulation</h2>
+		<p><a href="viewtopic.php%3Ft=13162.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13162</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Food Simulation</h3>
+				<div class="date">Posted: <strong>Mon Feb 15, 2021 10:05 pm</strong></div>
+				<div class="author">by <strong>p99user</strong></div>
+				<div class="content">I'm looking for existing projects using Bullet, possibly pybullet, for food simulations. <br>
+In particular I'm interested in simulating the act of scooping granular media from a metal container. <br>
+<br>
+So far, I've tried by simulating food with small spheres, using realistic CAD model for spoons and metal containers. I'm not able to reliably avoid the compenetration of the food with the container and the spoon with the container. This results for instance in the food leaking from the container, when pressure is applied with the spoon.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Food Simulation</h3>
+				<div class="date">Posted: <strong>Tue Feb 16, 2021 6:39 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">To avoid tunneling of convex grains through a concave container in Bullet you should use <strong class="text-strong">btCompoundShape</strong> (collection of convex sub-shapes) for the container rather than a convex mesh shape like <strong class="text-strong">btBvhTriangleMeshShape</strong>.  The penetration resolution logic works much better for convex-vs-convex than convex-vs-concave.  Unfortunately, to approximate a smooth round container with convex parts requires a large number of sub-shapes in the collection, and you'll need to overlap to prevent grains from tunneling between adjacent pieces.  So unless your metal container is conveniently a box then you'll need many parts.  This is possible to do, and while the efficiency of a btCompoundShape with hundreds or thousands of sub-shapes can be surprisingly good, I doubt you'd be able to run such a shape against a few hundred grains in real-time, even on expensive hardware.<br>
+<br>
+Bullet does not work well for "very small" bodies, where the "very small" threshold is probably somewhere between 0.2 and 0.04 units (depending on shapes used and substep configuration).  So, you'd probably have to scale your simulation up such that a grain's smallest dimension is larger than the threshold.  Scaling the simulation in this way is not limited to just the spatial dimensions: you'd also have to scale time and tune your friction/restitution/damping coefficients as well.  Of course, the time dilation makes it even harder to run the simulation in real-time since you would effectively be taking very small substeps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Food Simulation</h3>
+				<div class="date">Posted: <strong>Wed Feb 17, 2021 1:01 am</strong></div>
+				<div class="author">by <strong>p99user</strong></div>
+				<div class="content">Thanks for you answer, the compenetration are definitely reduced following the first part of your answer. In particular, I'm using v-hacd in pybullet.<br>
+<br>
+I'm still seeing tunnelling of the small particles though. By scaling you mean simply an absolute rescaling of the objects in the scene, when importing from URDF? <br>
+Can you clarify on the units? Do you refer to the scale factor that I find for instance in a URDF, like in:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13162&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;mesh filename="myobj.obj"  scale="0.1 0.1 0.1"/&gt;</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Food Simulation</h3>
+				<div class="date">Posted: <strong>Wed Feb 17, 2021 5:55 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Bullet is tuned for meters and seconds.  There are hard-coded thresholds in the details of shapes and collisions which makes Bullet not work well for tiny objects.<br>
+<br>
+However, you could "pretend" Bullet's units are centimeters instead of meters, and thereby simulate smaller physics.  So a 0.01m object would have dimensions of 1.0 units in the simulation.  When you do this you must increase gravity to be 980 distance_units/second^2, however that would cause your objects to fall very fast and achieve high velocities, so you could compensate by "pretending" the unit of time is 10x smaller (deciseconds) and keep the acceleration of gravity 9.8 distance_units / time_unit^2 (note the inverse square term!).  If your substep were 1/60 time_unit then would really represent 1/600 seconds, and your simulation will not run real-time unless you take 10 substeps per real-time 1/60 second, which would be hard to do with high grain count.<br>
+<br>
+With such small effective timesteps you would want to keep friction low (less friction per time unit), restitution high (more bounce per time unit), and probably set the non-physical "damping" terms as low as possible.  You could keep mass units at kilograms however the inertia tensor units scale with distance^2 so you'd want to make the inertia tensors 10000X larger, effectively making the grains correctly slower to rotate per unit time.<br>
+<br>
+Note, the RigidBody approximation can fail for very small timesteps.  At really small steps all things flex and wobble and such micro-physical effects would start to become important in order to achieve accurate results, so using a RigidBody Bullet simulation at extreme scales starts to become a sketchy proposition.<br>
+<br>
+I should mention: this is all theoretical.  I've never actually tried it.  And if your simulation can't run in real-time then it won't really be interactive.  On the other hand you could run the simulation, record it, and then play the movie back at 10x speed.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Food Simulation</h3>
+				<div class="date">Posted: <strong>Wed Feb 17, 2021 5:30 pm</strong></div>
+				<div class="author">by <strong>p99user</strong></div>
+				<div class="content">Lowering the timesteps worked to avoid tunnelling! <br>
+<br>
+Now the remaining problem is the collision spoon-to-container, that is concave(hacd)-to-concave(triangular mesh), where the spoon is dynamic and the container is static. Right now the object get fused together when they collide, like if they are jammed. Sometime is possible to get them unstuck, other times I just need to restart the simulation.<br>
+<br>
+This conversation looks relevant: <a href="viewtopic.php%3Ff=9&amp;t=12939&amp;p=43020&amp;hilit=gimpact.html#p43020" class="postlink">viewtopic.php?f=9&amp;t=12939&amp;p=43020&amp;hilit=gimpact#p43020</a><br>
+<br>
+My impression is that the solution is there, but are Gimpact and Compoundshape exposed in pybullet? <br>
+Another solution is perhaps collisionMargin, but this is not exposed in pybullet, according to the quickstart guide (<a href="https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit" class="postlink">https://docs.google.com/document/d/10sX ... hxVUA/edit</a>#)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Food Simulation</h3>
+				<div class="date">Posted: <strong>Wed Feb 17, 2021 9:04 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I would expect hacd to use btCompoundShape under the hood.  Maybe try also using hacd on the container.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Food Simulation</h3>
+				<div class="date">Posted: <strong>Wed Feb 17, 2021 9:17 pm</strong></div>
+				<div class="author">by <strong>p99user</strong></div>
+				<div class="content">I tried that already, not working unfortunately. The two meshes compenetrate.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Food Simulation</h3>
+				<div class="date">Posted: <strong>Thu Feb 18, 2021 7:48 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I'm guessing your container walls are thin, and the scoop part of your spoon might also be relatively thin.  Thin convex parts of a btCompoundShape could very well penetrate with those of another.<br>
+<br>
+A likely simple solution would be to change your container model to have thick walls: at least twice as thick as: <strong class="text-strong">max_expected_spoon_speed * substep_duration</strong>.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

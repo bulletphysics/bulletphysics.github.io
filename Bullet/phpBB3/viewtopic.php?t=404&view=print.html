@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Stan's cloth simulation demo/discussion</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Stan's cloth simulation demo/discussion</h2>
+		<p><a href="viewtopic.php%3Ft=404.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=404</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>Stan's cloth simulation demo/discussion</h3>
+				<div class="date">Posted: <strong>Wed Jul 05, 2006 5:59 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">(moved reply to general discussion, see original topic here: <a href="http://continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=401" class="postlink">http://continuousphysics.com/Bullet/php ... .php?t=401</a>)<br>
+
+<blockquote><div><cite>melax wrote:</cite>
+<br>
+1) baraff &amp; witkin large steps in cloth simulation SIGGRAPH 98 <br>
+2) SIGGRAPH 2005 physics presentation. <br>
+3) Jeff Laner's demo and gamedev/gamasutra article (good starting point for anybody) <br>
+4) I just recently found this webpage for a UW phd student who posted an implemention (with source) of a backward integrator as a maya plugin
+</div></blockquote>
+
+Thanks for the great looking cloth demo and explanation!<br>
+Those 4 links are missing, can you provide them, especially the last one? The first one is <a href="http://www.cs.cmu.edu/~baraff/papers/index.html" class="postlink">http://www.cs.cmu.edu/~baraff/papers/index.html</a><br>
+
+<blockquote><div><cite>Erin wrote:</cite>
+- Sequential impulses (SI) can be used to simulate cloth. SI can be used to simulate oscillating pendulums. 
+</div></blockquote>
+Would you drop the angular terms and just add particles (point rigid bodies) with point to point constraints (with a distance) using the commonly use velocity based 'relaxation' scheme like PGS / SI?<br>
+<br>
+Also, Stan, please add this link to a nice cloth demo including source code(Verlet based if I remember correctly):<br>
+<a href="http://www.maxgarber.com/projects/cloth/" class="postlink">http://www.maxgarber.com/projects/cloth/</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>v.nice</h3>
+				<div class="date">Posted: <strong>Wed Jul 05, 2006 7:14 pm</strong></div>
+				<div class="author">by <strong>asmithers</strong></div>
+				<div class="content">I tried supporting both baraff and verlet simulatenously<br>
+<br>
+I started off using a baraff based approach to my cloth sim, then moved to a modified verlet.  Some of the effects I made for baraff, namely rigidity came across quite nicely to the verlet model, although the data wasn't valid for both models.  My baraff model always ended up exploding after a few minutes. The energy would never settle.<br>
+<br>
+I do like stan's implementation, there is something pleasing with this implementation.  Its extremely similar to my own in that it shows bows when it collides to the floor, this being a bi-product of my attempt to implement choi's algorithm for buckling.  (choi02).<br>
+<br>
+when I get time ( dont know when at moment ), I'll go through this algorthim in more detail, it looks promising based on the results. Although seems to suffer issues with rapid change of positions... something that was tough for me to solve when attaching to characters.  <br>
+<br>
+Have you tried working on moving cloth at large speed intervals, Ie a flag on presidential car for example ?  <br>
+<br>
+andi</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 05, 2006 10:24 pm</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">Hey, thanks for checking it out.    Yes I'll definitely be improving the writeup and adding the suggested links.  I' should probably add a link back to this bullet thread as well.<br>
+<br>
+About the car on the president's flag - Im imagining that the frequency of the flag flapping would be very high.  So it might be better to use a lower cost simulation but use more timesteps.  <br>
+<br>
+Agreed, rapid changes in position and velocity are a challenge for simulating cloth.  It simply takes iterations for forces to propogate across the mesh.  Both Verlet/constraint-iteration and backward integration handle these much better than forward euler since forward euler cant really do stiff systems.  If an iteration scheme can rearrange the iteration order and make some assumptions as to which end of the cloth is "attached" and which is free, then it could have an additional "responsiveness" advantage here.<br>
+<br>
+I'm on vacation for a couple weeks.  During this time, I might not be able to reply to any questions in a timely manner.<br>
+<br>
+thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 07, 2006 9:36 pm</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">Impressive stability, I couldn't make it explode.<br>
+<br>
+We use a verlet/relaxation-based cloth simulator, which has been working pretty well for a reasonably high poly mesh on a fast moving character.  What Erin is calling Sequential Position something is what I like to call a relaxation solver.  The reason it is often coupled with verlet integrator is so that momentum is indeed changed.  Since in verlet integration, the velocity is represented by the differnece between the last position and the current position.  So as you update the postion of a particle, you change it's velocity at the same time ( assumes all particles have the same mass ).  This also is the reason it's semi-implicit.  Since the velocity is always in-sync with the results of your solver wrt time.  Forward integrators are unstable because the results of the solver are a step out of sync with the application of those results ( one way to look at it ).<br>
+<br>
+We had a back-euler cloth solver that worked for square patches.  Once we started applying the cloth to a shirt in continuous colliding contact with a moving character, things started going awry.  Stability was a big issue and often the CG solver would refuse to converge.  I think we had some problems with our math, but by that point the verlet/relaxation cloth was in a good state and we dropped the back-euler cloth.<br>
+<br>
+My main problem with the verlet/relaxation cloth is that it is very difficult to tune.  Artists could not do it unsupervised and it has a very limited range as far as material types it can simulate.  Also, collision detection quickly becomes the dominant factor for CPU time, since you must do CD more than once a frame per vertex.  Back-euler is O(vertex^2) for the CG solver, but the cost of collision detection is much cheaper so maybe it could be faster compared to the O( vertex ) relaxation solver.<br>
+<br>
+Anyways, would be great to see Stan's cloth working on an animated character.   Man, are we ever a demanding bunch, eh?  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+[/img]</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 08, 2006 2:59 pm</strong></div>
+				<div class="author">by <strong>Oscar Civit Flores</strong></div>
+				<div class="content">Hi all,<br>
+<br>
+There was a nice presentation on "verlet clothes on characters" at GDC 2005 from the guy who added cloth physics to the Source engine for Vampire: The Masquerade:<br>
+<br>
+   <a href="https://www.cmpevents.com/sessions/GD/ParachutePants.pps" class="postlink">https://www.cmpevents.com/sessions/GD/P ... ePants.pps</a><br>
+<br>
+It's a very good presentation and the ideas there actually *work*.<br>
+<br>
+I've been implementing a similar system lately for an upcoming PC game with some modifications to handle fast moving characters with attached clothes (it's a soccer game, so players move quite fast) and it works very well. Changing relaxation order to handle attached points first and biasing it to "move more free particles than attached ones" effectively speeds up convergence.<br>
+<br>
+The main problem I've found are cloth-character collisions, which interact a lot with the length constraints. I have to process them several times per frame to obtain good results, and, also important, perform a final collision treatment step to ensure that, even though the length/curvature constraints may be slightly violated, the cloth patch is not intersecting the character.<br>
+<br>
+Also, as somebody else pointed out, establishing the material properties in a relaxation based system is a bit tricky. I've tried to obtain parameters independent of the timestep and the relaxation iteration count and map them into the range [0..1] to make them intuitive, but currently this is still an experiment.<br>
+<br>
+   Oscar</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>further work</h3>
+				<div class="date">Posted: <strong>Thu Jul 20, 2006 2:15 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+That is really a nice implementation and cloth demo. I also liked the very good structured code which is really good for understanding. <br>
+I had also the luck to get the old "freecloth" implementation of Baraf &amp; Witkins paper, but is was really confusing and not helping. <br>
+<br>
+Since I am one of the developers of the (hopefully) comming cloth implementation in blender <br>
+[<a href="http://www.blender.org" class="postlink">www.blender.org</a> - our cloth patch is based on Provot: <a href="http://mediawiki.blender.org/index.php/BlenderDev/ClothSimulation" class="postlink">http://mediawiki.blender.org/index.php/ ... Simulation</a> ]<br>
+ , I am really interested in more stable solvers. explicit / middle point does fine for simple simulations and looks even more convinceable (our cloth patch is actually used for some TV show about pirate plags in the USA because they said "your cloth looks better than Maya ones" <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"> ) but it has defineatly it's downsides when used on rigged boddies. Then it explodes. Another implicit solver could change this behaviour <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+For our collision detection, which you mentioned as further work in your cloth demo also, I started to implement oriented inflated bounding volume hierarchies ( <a href="http://www.gris.uni-tuebingen.de/publics/paper/Mezger-2002-Improved.pdf" class="postlink">http://www.gris.uni-tuebingen.de/public ... proved.pdf</a> ).<br>
+This works very nice! <br>
+Our C-code implementation (the oriented inflated BVH) is also free available under GPL on the side i mentioned above.<br>
+We doesn't tested the cones for self-collision yet.<br>
+<br>
+What is missing from the paper is the part about collision response where your cloth demo comes in. They suggest to use Baraf &amp; Witkins constraint method and they also improve it in some ways. Some newer siggraph presentation combined all the papers to one nice cloth simulation.<br>
+<br>
+If you don't mind I would really like to use your code as reference for a cloth solver implementation in blender.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Actually my dream is to combine bullet's rigid bodies, blender armature and cloth simulation into one thing, but that's a long way to go <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+<br>
+Greetings and great work!<br>
+Genscher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: further work</h3>
+				<div class="date">Posted: <strong>Thu Jul 20, 2006 6:14 pm</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content"><blockquote><div><cite>Genscher wrote:</cite>...<br>
+If you don't mind I would really like to use your code as reference for a cloth solver implementation in blender.  ...
+</div></blockquote>
+Hi, and thanks for the kind words.  You are certainly most welcome to use or reference the code as you see fit.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>includes</h3>
+				<div class="date">Posted: <strong>Fri Jul 21, 2006 11:52 am</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Good morning!<br>
+<br>
+Thank you for your fast answer! <br>
+<br>
+My first try now is to use our spring network with your solver. That's easy because we have the same spring-definition and building function <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+In the moment I'm guessing the type/class definitions of "Array" and "float3x3" which are used in vec3n.cpp. <br>
+<br>
+I would appreciate if there would be a possibility to take a look at the header files ("vecmath.h" and "array.h") so I know how to code the missing classes/typedefs <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+But thank you again for this great reference!   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+<br>
+-----------<br>
+eMail is genscher22 at gmx dot net</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>coding</h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 2:51 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+I worked on integrate melax solver concept and finished it's integration <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+I have cloth flying in the wind based on melax solver in blender <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+The problem is, that i have to convert between different storage (C++ to C interface) so the speed of the simulation is going down a bit.<br>
+That's why I recently took a look into "Speeding up cloth simulation"/"Decomposing cloth" from Boxman/Asher where they introduce a modified PCG (preconditioned conjugate gradient) algorithm. I also took a look at the "high performance solver" introduced by Hauth et. al. <br>
+<br>
+I implemented a function to create P and P^-1. <br>
+Now I am missing the vector z.<br>
+Anybody here who want to help building a precondiitoned CG algorithm <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Greetings <br>
+Genscher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jul 26, 2006 7:08 pm</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">Congrats on the blender implementation, I'm glad it all came together.<br>
+<br>
+So far, I have just implemented a modified conjugate gradient solver.  The preconditioned cg solver is explained really well in:   SHEWCHUK, J. 1994. "An introduction to the conjugate gradient method without the agonizing pain" <br>
+<br>
+Wrapping your head around the modified algorithm with preconditioning is a bit trickier.  Baraff/Witkin's paper does provide the pseudocode.<br>
+<br>
+------------<br>
+This isn't a big issue for me yet, but since people asked about it...<br>
+On the subject of cloth responsiveness...<br>
+A straightforward cloth implementation is going to require numerous iterations for a tug on one end to propogate across a spring network with a lot of points.  Rather than spending cycles updating parts of the cloth that dont need updating, it only makes sense to try and focus the computation where it is needed.<br>
+On of the mentioned power point presentations describes a verlet/relaxation implementation that would order the points and bias the iteration based on where the cloth was attached to a moving body.   It may be possible to do something similar for implicit integration.   Recall that the conjugate gradient starts with an "initial guess" and then iterates from there to the result.  Usually the zero vector is used as a starting point.  This could be a good place to insert the extra information that we know about the simulation.  i.e. make a better "initial guess" for the delta velocity vector (dV).  Then after that you just use the same old conjugate gradient method.  This strategy should give you the best of both worlds.  You take advantage of "additional knowledge" about cloth construction and attached/manipulated vertices, meanwhile your iteration solver still uses the same algorithm (regardless of the cloth configuration)  that can be run in PARALLEL - especially important for any non-single-cpu implementations.  <br>
+<br>
+So does this work?  I did some (limited) experiments initializing  based on how the cloth was tugged by the mouse.   I did find a downside.  Normally, since I only care about aesthetic behavior, I use a rather high epsilon value for the CG solver to keep the iteration count really low.  When it always uses zero as the starting vector, this doesn't matter - but with the starting point being dramatically different from frame to frame, there were small but noticable discrepancies in the behavior at points on the cloth. <br>
+Note that my initialization of dV was poor - everything was initialized to the "tug".   Ideally you would only want to apply that to things at full stretch starting from the attached point.   This would be similar to doing a single one of those verlet/relaxation (loop-dependant) iteration type of steps to initialize dV.   In essence, for my tests, I was choosing what would have been a worse "starting point" than zero for certain parts of the mesh.   In conclusion, I cant really make any conclusions at this point.   <br>
+-------------------<br>
+<br>
+In response to the request for a demo with cloth on an animated character...  Yes, I agree that is something that I need to do.  Unless all that "pretty math" can lead to usable applications with good performance, then it doesn't do much good.    Trouble is finding time to work on this <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+<br>
+Thanks for the comments all</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>implementation</h3>
+				<div class="date">Posted: <strong>Sun Jul 30, 2006 10:32 am</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">[edited because one error was found, but the problem is not solved]<br>
+[update in the post below]</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>got it!</h3>
+				<div class="date">Posted: <strong>Sun Jul 30, 2006 9:01 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Hello!<br>
+<br>
+<br>
+Man, sometimes, it's good to have a little break and then going back and watch over the problem again.<br>
+<br>
+I have 2nd-order BDF working with melax source <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+It's really just as plain as in the paper <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Greetings!</div></blockquote>
+
+Actually, I was a bit too fast with posting this <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+<br>
+My BDF implementation seems to behave a little bit weird.<br>
+I have some simple cloth hanging down (-9.6 gravity on z-axis) so it should just hang down along the z-axis.<br>
+But when using my BDF formula the cloth stabilize in a state with arround ~15 degree away from the z-axis.<br>
+<br>
+See this compare:<br>
+<img src="http://www.dldw.de/BE.gif" class="postimage" alt="Image"><br>
+<br>
+<strong class="text-strong">[But even in this state you can also see the nice wrinkling behaviour of the BDF in compare to the implicit euler (BE).]</strong><br>
+<br>
+Here's my current BDF-implementation:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>A -= (dFdV * (2*dt/3) +  dFdX * ((4*dt*dt)/9)); // A = I - (dFdV * (2*dt/3) +  dFdX * (4*dt*dt/9))
+		
+B = (X-Xold) * (1/3); // (X - Xold) * 1/3 
+		
+temp = (V*8 - Vold*2) * (dt/9); // + (8*V - 2*Vold)*(dt/9);
+B = B + temp; 
+
+temp = dFdV * V;  // + ((4*dt*dt)/9)*(F - dFdV*V)
+temp = (F - temp) * ((4*dt*dt)/9);
+B = B + temp; 
+
+temp = X - Xold;  // - (2*dt/9)*dFdV*(X-Xold);
+temp = dFdV*temp;
+B = B - temp*(2*dt/9); 	</code></pre></div>
+
+and the update code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Xnew = X + dV;
+		
+Vnew = Xnew*(3/2) - X*2;
+Vnew = Vnew*1 + Xold*(1/2);
+Vnew = Vnew * dt;</code></pre></div>
+
+Maybe someone knows where the error is <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>AIMEX</h3>
+				<div class="date">Posted: <strong>Mon Jul 31, 2006 12:54 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+In the meantime i added the AIMEX ("adaptive implicit-explicit") scheme to melax source which gives arround 5%-15% speedup.<br>
+<br>
+Just add this code to PreSolveSpring() just before you compute the jacobians:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>/////////////////////////////////
+// adaptive implicit explicit scheme 
+// from "Speeding up cloth simulation", Boxman &amp; Ascher 2001
+////////////////////////////////
+	
+// handle every bending springs explicit
+if(s.type==SPRING_BEND)
+	return;
+
+// check the stability equation 
+if((dt * (k * dt + 2 *spring_damp))&lt;=0.2)
+	return;
+////////////////////////////////	</code></pre></div>
+
+<br>
+For all interested why this makes the simulation faster and why that works:<br>
+The basic of the idea is to handle special types of springs explicit instead of implicit. That's also the reason why we need a stability criterium because our simulation could explode again and we would have lost one of the reasons to go implicit.<br>
+Speed:<br>
+Explicit solving saves computing time since we don't have to compute the forces for the jacobians. <br>
+Another nice effect is, that the matrix A gets more sparse and the CG algorithm is faster in result.<br>
+<br>
+Greetings <br>
+Genscher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 01, 2006 5:04 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">Hey, I hadn't heard of the implicit-explicit idea to just use forward for the weaker forces.  Good idea.<br>
+<br>
+I'm sure you noticed this, but just in case you didn't:<br>
+Note that when the cloth's springs are initially constructed it creates an entry in the matrices.  So you might want to avoid this creation step for any explicit springs.  Otherwise, it might still be working through those extra (now zero) matrices each time it does a matrix multiply.<br>
+<br>
+<br>
+--------<br>
+For further optimization, you can take advantage of the symmetry.  Specifically there are two useful things to do here.  Try only storing one of the 3x3 blocks for anything off the main diagonal.  Instead of using a general float3x3 class for each of the blocks, use a symmetric3x3 that stores 6 numbers (float3 diagonal, and float3 offdiagonal).  BTW the correct choice is for symmetricmatrix.offdiag[0] to refer to myfloat3x3[1][2] and myfloat3x3[2][1].  <br>
+<br>
+Its a straightforward optimization.   <br>
+<br>
+One of my objectives was 'Education' -  to make all this backwards integration understandable by the typical developer.  That becomes more difficult if the reference implementation includes everything and every optimization.<br>
+<br>
+--------<br>
+<br>
+BTW gravity is 9.81 not 9.6  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy">   i'm sure that just a typo, but couldn't resist.  I usually just use 10.<br>
+<br>
+<br>
+-------------------<br>
+I didn't use a template metaprogramming approach to optimize the expressions.  Although its a fun mental exercise to implement, the approach is very obfuscated and only yields a performance gain in release mode.  The Optimized Expressions approach, lets you optimize large equations without making the higher level code look ugly.  However, i only went as far as what I needed for the formulas I was using.  If you tried to write a longer expression then it wouldn't compile for you.  (I noticed your use of temporaries).   If you want to put the full expression a a single line of code, then the big vector header file just needs to "grow a bit" by hand (instead of using template compiler tricks) to accomodate what you want. <br>
+<br>
+I certainly hope there isn't some sort of mistake in the big vector implementation that is causing your problem.  <br>
+<br>
+--------------<br>
+<br>
+I wish I had more time right now to be working on this.  <br>
+<br>
+I certainly appreciate your feedback.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Cloth improvements</h3>
+				<div class="date">Posted: <strong>Tue Aug 01, 2006 11:46 am</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+First of all: Thank you for your advises! I will take a look at them. <br>
+<br>
+I tried to debug the BDF formula today and was totally confused after I found the error:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=404&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float a = 1 / 3; // result: a = 0!</code></pre></div>
+
+So I only had to convert all integers to float and the whole BDF formula is working nicely! What a stupid error <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I also have to say that all my "improvements" are not to show any faults/slowness in your code, it's just my attempt to understand the physics/maths which lays behind your code <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+I'm also happy that you didn't used templates so much because there is mostly a problem when it's going to "crossplattform" (especially GCC versus MSVC-compiler problems). <br>
+<br>
+<br>
+Greetings<br>
+Genscher<br>
+<br>
+<strong class="text-strong">update:</strong> I just tested your advice to leave the AddBlocks() call for bending springs. Almost 50% speedup in compare to the fully implicit method <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

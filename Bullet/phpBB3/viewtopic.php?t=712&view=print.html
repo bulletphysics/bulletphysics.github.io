@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; how to make 2 boxes do not collision</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>how to make 2 boxes do not collision</h2>
+		<p><a href="viewtopic.php%3Ft=712.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=712</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>how to make 2 boxes do not collision</h3>
+				<div class="date">Posted: <strong>Mon Nov 20, 2006 9:08 am</strong></div>
+				<div class="author">by <strong>sssa2000</strong></div>
+				<div class="content">for example, there are 2 boxes in a room,<br>
+i only want to the box can collision with the room's wall,<br>
+i do not want to the collision between the boxes,<br>
+how can i do it ?<br>
+thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: how to make 2 boxes do not collision</h3>
+				<div class="date">Posted: <strong>Fri Nov 24, 2006 1:00 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>sssa2000 wrote:</cite>for example, there are 2 boxes in a room,<br>
+i only want to the box can collision with the room's wall,<br>
+i do not want to the collision between the boxes,<br>
+how can i do it ?<br>
+thanks!</div></blockquote>
+
+There are a few ways. The easiest is to assign different collision groups, and collision filter flags to the boxes.<br>
+<br>
+By default, once you add a rigidbody to the dynamics world, it gets automatically assigned collision filter flags: this prevents collision between static versus static objects. In code this is:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=712&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>          short collisionFilterGroup = isDynamic? btBroadphaseProxy::DefaultFilter : btBroadphaseProxy::StaticFilter;
+          short collisionFilterMask = isDynamic?  btBroadphaseProxy::AllFilter :  btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+
+rigidbody-&gt;getBroadphaseProxy()-&gt;m_collisionFilterGroup = collisionFilterGroup;
+rigidbody-&gt;getBroadphaseProxy()-&gt;m_collisionFilterMask = collisionFilterMask;
+</code></pre></div>
+
+Remember to re-assign a new collisionFilterGroup and collisionFilterMask AFTER you added the rigidbody to the world. Otherwise the rigidbody won't have a broadphase proxy yet.<br>
+<br>
+The collisionFilterMask determines (filters) the collision objects belonging to certain collisionFilterGroups to collision with. The group/mask is stored as short integer,so this gives 16 different groups of objects. Some default groups are defined:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=712&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> ///optional filtering to cull potential collisions       
+enum CollisionFilterGroups        
+{               
+ DefaultFilter = 1,               
+ StaticFilter = 2,               
+ KinematicFilter = 4,               
+ DebrisFilter = 8,               
+ AllFilter = DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter,
+};
+
+</code></pre></div>
+
+I will add some Bullet Demo that demonstrates its use.<br>
+Thanks,<br>
+Erwin<br>
+<br>
+PS: If you need more fine grain control, you can override the 'needsCollision' by deriving your own version of the btCollisionDispatcher. This is tricky, so I might just add some callback that you can register for to prevent collisions between certain objects.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

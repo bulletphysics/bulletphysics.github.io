@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10011" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-07-17T02:11:25+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10011</id>
+
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-07-17T02:11:25+00:00</updated>
+
+		<published>2014-07-17T02:11:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33691#p33691</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33691#p33691"/>
+		<title type="html"><![CDATA[Re: Strategies for dealing with non-incremental broadphase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33691#p33691"><![CDATA[
+<blockquote class="uncited"><div>I don't create pairs at that point. The proxy movement is cached and when you step the physics world the first thing you do is to create new contacts by iterating over the cached proxies that have moved. The general concept with a dynamic tree broadphase is different from a SAP. The SAP has begin/end overlap kind of built in. In the dynamic tree the idea is that a contact has is to confirm itself when you iterate to update the manifold. <br><br>I don't fire immediately, but queue events. Alternatively people can even iterate over the notifications and pull it.<br><br>Again this is all pretty well implemented in Box2D. In b2WorldCallbacks you need to implement OnContactBegin() / OnContactEnd(), PreSolve() and PostSolve(). This should give a good idea. It is pretty straight forward to adapt this to any behavior you need. This callbacks are a pain in butt. The game code often likes to destroy bodies on contact begin and invalidates pointers. This can lead to all kind of subtle bugs. We postpone any deletion until the end of the frame therefore not exposing pointers directly, but using handles.</div></blockquote>Dirk,<br><br>The callback system is all set up and working - OnBeginContact()/OnEndContact() based on manifold contacts going from 0-&gt;N and N-&gt;0, respectively. PreSolve and PostSolve are also done. <br><br>The question of queueing is more interesting as it does not seem like Box2D is incremental update, nor queued events. Do you store a little datastructure for the events? It is the case of contacts ending and objects deleting themselves as a result that I am trying to localize to a specific point in the frame.<br><br>I'm going to take another look - I think it shouldn't be too difficult to resolve.<br><br>EDIT: Indeed it was straight forward - the contact begin/end is handled correctly in the collision step; the only complication is the AddPair/RemovePair callbacks that need to be dispatched to my Sensor/Ghost/Phantom API immediately which can be handled by the client code correctly.<br><br>So other than some data/instruction cache downside to this change, I think it's a fix, thanks.<br><br>Thanks again.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Thu Jul 17, 2014 2:11 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-07-17T00:11:58+00:00</updated>
+
+		<published>2014-07-17T00:11:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33690#p33690</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33690#p33690"/>
+		<title type="html"><![CDATA[Re: Strategies for dealing with non-incremental broadphase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33690#p33690"><![CDATA[
+I don't create pairs at that point. The proxy movement is cached and when you step the physics world the first thing you do is to create new contacts by iterating over the cached proxies that have moved. The general concept with a dynamic tree broadphase is different from a SAP. The SAP has begin/end overlap kind of built in. In the dynamic tree the idea is that a contact has is to confirm itself when you iterate to update the manifold. <br><br>I don't fire immediately, but queue events. Alternatively people can even iterate over the notifications and pull it.<br><br>Again this is all pretty well implemented in Box2D. In b2WorldCallbacks you need to implement OnContactBegin() / OnContactEnd(), PreSolve() and PostSolve(). This should give a good idea. It is pretty straight forward to adapt this to any behavior you need. This callbacks are a pain in butt. The game code often likes to destroy bodies on contact begin and invalidates pointers. This can lead to all kind of subtle bugs. We postpone any deletion until the end of the frame therefore not exposing pointers directly, but using handles.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Thu Jul 17, 2014 12:11 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-07-16T23:15:56+00:00</updated>
+
+		<published>2014-07-16T23:15:56+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33689#p33689</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33689#p33689"/>
+		<title type="html"><![CDATA[Re: Strategies for dealing with non-incremental broadphase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33689#p33689"><![CDATA[
+<blockquote class="uncited"><div>I update the proxy in the broadphase immediately to avoid the problems you described, but I don't compute contacts directly. <br>...</div></blockquote>Dirk,<br><br>As always, thank you for the reply. This is my suspicion - that allowing the broadphase to be updated incrementally is the desired behaviour.  I support OnContactBegin( Pair&amp; ) and OnContactEnd( Pair&amp; ), not to mention the allocation and deallocation of pair-wise collision agents. When I originally had a sweep and prune broadphase I incrementally updated the broadphase, but then these callbacks were fired at many points in the frame, causing all kinds of problems.<br><br>When you update the proxies, and either new pairs are created, or previous pairs destroyed, how do you deal with the propagation of this data? If all of these events fire at any point in the frame a lot of problems can occur. Do you queue up this data somehow and only push it out once a frame?<br><br>Any insight would be appreciated.<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Wed Jul 16, 2014 11:15 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-07-16T21:55:27+00:00</updated>
+
+		<published>2014-07-16T21:55:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33688#p33688</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33688#p33688"/>
+		<title type="html"><![CDATA[Re: Strategies for dealing with non-incremental broadphase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33688#p33688"><![CDATA[
+I update the proxy in the broadphase immediately to avoid the problems you described, but I don't compute contacts directly. <br><br>For hitboxes I don't add them into the physics broadphase at all. Especially on a server/client structure you don't want to rewind those. And even in general it makes sense to avoid the hitbox traffic on the broadphase in this case. Hitboxes can be implemented very efficiently using brute force methods utilizing SIMD. I am now even leaning forwards to take triggers out the physics broadphase and have them in a separate system.<br><br>Cheers,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Wed Jul 16, 2014 9:55 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-07-15T16:26:04+00:00</updated>
+
+		<published>2014-07-15T16:26:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33685#p33685</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33685#p33685"/>
+		<title type="html"><![CDATA[Strategies for dealing with non-incremental broadphase]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33685#p33685"><![CDATA[
+Hey Folks,<br><br>So a lot of the refactoring work in our physics engine is complete, and we have it in our game. Our previous system lacked a sophisticated broadphase, instead performing linear comparisons against bodies during detection and ray casts. Our new system uses a DBVT to great effect. One of the side effects of this system is that we are now 'one frame behind' on specific tests. Here's an example:<br><br>1. Take player input and generate velocities; set velocities in body.<br>2. Update broadphase, perform collision detection, update bodies, etc. <br>3. Take new velocities from simulation, determine correct animations to play, update player skeleton<br>4. Move player hit boxes in physics work to match new animation.<br>5. Cast rays against hit boxes - oops broadphase has not been updated.<br><br>This problem is also demonstrated with AABB phantoms are moved and expected to immediately reflect the new overlap list.<br><br>I can see solving this in a few ways:<br><br>1. making the DBVT operate incrementally, which would cause the tree to be refreshed and events fired all over the frame, which isn't cache friendly at all.<br>2. ask the client to invoke 'update broadphase' at key points in the frame to get the broadphase in a valid state.<br><br>How do other people solve this problem?<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Tue Jul 15, 2014 4:26 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

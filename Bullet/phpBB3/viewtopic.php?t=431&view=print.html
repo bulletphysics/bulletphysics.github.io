@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Differences between velocity and position contact constraint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Differences between velocity and position contact constraint</h2>
+		<p><a href="viewtopic.php%3Ft=431.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=431</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3>Differences between velocity and position contact constraint</h3>
+				<div class="date">Posted: <strong>Fri Jul 21, 2006 6:12 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Hi!<br>
+<br>
+We've made a simple demo to show the different between Stewart-Trinkle  and Anitescu Potra (ODE using this now) time stepper.<br>
+As you can see, even with high time step, you'll never see penetration in ST time stepper.<br>
+<br>
+Grab the demo at my colleague's website:<br>
+<a href="http://www.cs.rpi.edu/~sberard/lcp_applet/" class="postlink">http://www.cs.rpi.edu/~sberard/lcp_applet/</a><br>
+<br>
+It can be showed that if you are thriving for non-penetration, Stewart-Trinkle time stepper is the way to go. The only drawback is that we need a better collision detection. Currently, most collision detection package only return only 1 closest pair. But in order to have "complete" non-penetration, we need all "possible" pairs. I appreciate any disscussions and willing to help on this.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 21, 2006 7:23 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks for the demo! I didn't have Java installed here, but I will try it out later.<br>
+<br>
+
+<blockquote class="uncited"><div>
+The only drawback is that we need a better collision detection. Currently, most collision detection package only return only 1 closest pair. 
+</div></blockquote>
+
+Not sure what your definition is of 'pair', is it referring to all closest point pair (versus 2 closest points, one on each objects), or all potential overlapping object pairs?<br>
+<br>
+Bullet collision detection can provide you will all overlapping pairs, even with the smallest time-of-impact. You just extend the AABB with the motion (that is already done in the CcdPhysicsEnvironment), and call the dispatcher.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 21, 2006 9:03 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">The definition of "active pairs" or more formally "active set" of collision comes from the fact that we want to prevent penetration.<br>
+So, the active set should include all pairs that would collide (penetrate) if we don't do anything. So, if we miss a pair, they will penetrate. If we included the pair that would not penetrate, we lost some CPU cycles (Not too much though, coz the LCP solver will easily satisfy that complimentarity condition).<br>
+<br>
+So what I'm after now is a list of all potential overlapping features of two shapes. My point is: penetration is bad because it's not physically correct plus it's expensive to resolve. My analysis show that the cost of a pair not in penetration is cheaper than the cost of a pair that's already in penetration. <br>
+<br>
+The base line is: avoid just using penetration depth in simulation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 21, 2006 9:15 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You description is still vague to me.<br>
+<br>
+Say, we have 2 states, the starting state, and the ending state.<br>
+and 2 bodies, say 2 spheres for example (to simplify).<br>
+<img src="http://www.continuousphysics.com/timeofimpact.jpg" class="postimage" alt="Image"><br>
+At the start-state they are both not overlapping. and the end state, they are not overlapping either.<br>
+<br>
+Usually, you want the time-of-impact, when they are in touching contact. Bullet can calculate this time of impact.<br>
+<br>
+What kind of info did you exactly expect for this situation?<br>
+<br>
+<img src="http://www.continuousphysics.com/penetration.jpg" class="postimage" alt="Image"><br>
+And secondly, if they would be in (deep) penetration at the end of the timestep (T1), what info do you want? The closest distances of all features at the beginning of the timestep (T0) ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 22, 2006 5:19 pm</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>You description is still vague to me.
+</div></blockquote>
+Hi, I'm the colleague mentioned by ngbinh.  I'll try to clarify the contact information required by the stewart-trinkle formulation by a simple 2D polygon example.<br>
+<img src="http://www.cs.rpi.edu/~sberard/collision.png" class="postimage" alt="Image"><br>
+In this example, we see that at least 5 "contacts" or witness pairs are required to prevent all inter-penetrations between the polygons.  The length of the blue lines between the vertex-edge pairs can be thought of as the respective values of the distance functions.  Note, the bottom horizontal blue line is not drawn incorrectly.  It is a problem due to the linearization of the  contact constaints.  All vertices are are a witness pair with a half-plane, not a line segment.  This means the vertex may come in contact with a non-existant edge.  Heuristics and tolerance levels are currently used to try and limit the occurences of these linearization issues, but they still happen.  If we allow non-linear complementarity formulations, this can be overcome, but at the cost of slower solution times.<br>
+
+<blockquote class="uncited"><div>Usually, you want the time-of-impact, when they are in touching contact. Bullet can calculate this time of impact. </div></blockquote>
+Knowing the time-of-impact is very useful, but in my opinion very hard with many movable bodies with intermittant contact.  Knowing this time would allow the time-stepper to apply any impact resolution law they want, but solving for this time accurately is impossible with actually solving the dynamics.  The coupling between the dynamics and collision detection has always been a headache for me!!  I am interested in how bullet can solve for these times without solving the dynamics.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 22, 2006 6:05 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+In this example, we see that at least 5 "contacts" or witness pairs are required to prevent all inter-penetrations between the polygons.
+</div></blockquote>
+
+Is this at the beginning of the timestep (T0) or at the end?<br>
+Can you also explain it in terms of my picture with the red and green spheres?<br>
+<br>
+Most importantly, how are you using this witness pair info exactly?<br>
+<br>
+How do you make sure at the end of the timestep they don't miss the collision or deeply penetrate? Do you adjust the velocity, or only integrate the position with a fraction so they come in touching contact?<br>
+(this 'fraction' is the time of impact)<br>
+<br>
+
+<blockquote class="uncited"><div>
+but solving for this time accurately is impossible with actually solving the dynamics.
+</div></blockquote>
+It is possible! Actual implementations: Havok, Doom3, PhysX and many more. They all can prevent penetration using time of impact calculation in the collision detector, and a dynamics scheme that steps until the time of impact (or throwing away additional motion that would lead to penetration). Bullet collision detection calculates the time of impact, but the implementation is work-in-progress. The trick is to allow some 'tolerance' / 'allowed penetration' for the touching contacts (otherwise you get always zero time of impact).<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 22, 2006 9:38 pm</strong></div>
+				<div class="author">by <strong>sberard</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Is this at the beginning of the timestep (T0) or at the end?
+</div></blockquote>
+Beginning, T0<br>
+
+<blockquote class="uncited"><div>
+Can you also explain it in terms of my picture with the red and green spheres?
+</div></blockquote>
+Yes and no.  If we are assuming a linear system, then your spheres would be approximated by a large number of polyhoderon.  Then you would have a similar situation as in my figure, where at time T0, many vertices of the red (green) polyhedron approximation would be in potential contact with many edges of the green (red) polyhedron approximation.  In the limit, you could include every vertex with every edge, but that is computationally intractable and we use techniques to prune the number of witness pairs.<br>
+<br>
+If your spheres are implicit or smooth, then a nonlinear complementarity formulation must be used which will not require vertex/edge pairs, since they don't exist.  If you are really interested in exact geometric representations, this is something we are exploring in our lab right now.<br>
+
+<blockquote class="uncited"><div>
+Most importantly, how are you using this witness pair info exactly?
+</div></blockquote>
+The distance between each witness pair is included into the Stewart-Trinkle formulation, which does not allow this distance to become negative; thus preventing inter-penetration of the body.  The complementarity constraint is between this gap "function" and the normal contact force.  Since we don't really have a function for the gap, we take a tailor series approximation of it:<br>
+\psi_n + \partial \psi_n \over q * \Delta q + \partial \psi_n \over t * \Delta t<br>
+where psi_n is the value of the gap at time 0, \partial \psi_n \over q is the nonpenetration constraint jacobian, q is the configuration of the body, \partial \psi_n \over t arises for kinematically controlled bodies, and \Delta t is the step size.<br>
+It should be noted, the only difference between the Stewart-Trinkle formulation and the Anitescu-Potra, is the inclusion of the \psi_n term in  the Taylor series expansion: ST includes it, AP does not.<br>
+
+<blockquote class="uncited"><div>
+How do you make sure at the end of the timestep they don't miss the collision or deeply penetrate? Do you adjust the velocity, or only integrate the position with a fraction so they come in touching contact?<br>
+(this 'fraction' is the time of impact)
+</div></blockquote>
+By including every potential collision, we can guarantee we never miss it.  Of course in practice this is infeasible.  The ST formulation will not allow the gap to become less than 0 (thus no penetration).  The AP form enforces the constraint at the velocity level, so some initial amount of penetation may occur, but after that AP prevents it from getting worse. (Aside:  If you run the applet on my website and ram the sphere into the horizonal surface, you will see it penetrates the surface with AP, but not with ST.  Also, if you cause penetration with AP, then switch the model to ST, the position level constraint kicks in, and the circle is forced out.).  <br>
+<br>
+If all possible contacts are identified at time T0, then we can guarantee (even with a fixed step size) that penetration will not occur at time T1.  If a contact occurs during a time step, the complementarity condition between the gap function and the normal contact force will determine that the gap = 0 and the normal contact force &gt; 0 at time T1.  If contact does not occur, then the complementarity condition will be gap &gt; 0, normal force = 0 at time T1.  Note, this only allows for plastic collisions (no bounce).  If a collision response is desired, the time of impact must still be determined and some impact law applied.  Or you can cheat, and apply the collision response at the end of the time step.<br>
+
+<blockquote class="uncited"><div>
+It is possible! Actual implementations: Havok, Doom3, PhysX and many more. They all can prevent penetration using time of impact calculation in the collision detector, and a dynamics scheme that steps until the time of impact (or throwing away additional motion that would lead to penetration). Bullet collision detection calculates the time of impact, but the implementation is work-in-progress. The trick is to allow some 'tolerance' / 'allowed penetration' for the touching contacts (otherwise you get always zero time of impact).
+</div></blockquote>
+Call me skeptical though.  I deal with contact intensive systems, which would make these calculations "collision bound".  Imagine trying to simulate sand in an hourglass.  All of these time to impact calcuations will prevent progress of the simulation.  Whereas we can have a fixed time step and guarantee progress.<br>
+<br>
+Allowing penetration is not an option I personally approve of.  It is not what physcally happens.  The processes of how to resolve inter-penetrated bodies are very ad-hod at the moment, and without some sort of swept sphere computation to determine the incoming trajectory, can be wrong.  I am more interested in the new locally-compliant models, where the bodies locally deform at the contact, and resolution is based on displacements instead of analytical techniques.<br>
+<br>
+If you have any other questions please ask.  I will attempt to read a little about these "continuous collision checker", to better understand them.<br>
+<br>
+--Steve</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 22, 2006 10:55 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks for taking the time, but it didn't help me getting more understanding of your method. Probably I just have to read more about this particular Steward Trinkle method.<br>
+<br>
+I wanted you to describe all important steps from T0 to T1 in a simple case, like a moving point versus infinite plane.<br>
+<br>
+Description of a typical solution that prevents penetration, following Brian Mirtich's time stepping as described in his 1996 PhD thesis "Impulse-based Dynamic Simulation of Rigid Body Systems".<br>
+<br>
+0) calculate the minimum time of impact of all objects, <br>
+1) step all involved objects to that time of impact (TOI  where T0 &lt; TOI &lt;= T1)<br>
+2) handle the discontinuity of the collisions happening at this TOI (resolve collision, update velocity of the rigid bodies involved in the collision)<br>
+3) allow some penetration to avoid getting 'stuck' in 0 time of impact<br>
+4) continue this process until T1 is reached.<br>
+<br>
+This stepping process can be optimized by localizing computation, for example using  Mirtich's application of time warp (Siggraph 2000).<br>
+<br>
+Could you describe your approach like I just did for the conventional way of avoiding penetration? (without reverting to mathematic formulae)<br>
+<br>
+In the meanwhile, I will have a look at this Steward Trinkle paper.<br>
+
+<blockquote class="uncited"><div>
+without some sort of swept sphere computation to determine the incoming trajectory
+</div></blockquote>
+Most methods use more advance ways then the simple linear case of a computing a swept sphere. Typical methods include rotation, and convex shapes or concave mesh (a bounding volume hierarchy of triangles).<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 23, 2006 7:30 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Erwin! I will try to explain to you how Stewart Trinkle or in general, how can contact constraint in position level can prevent interpenetration.<br>
+<br>
+The main difference between Stewart-Trinkle timestepper and Anitescu Potra (contact constraint handled in velocity level, the way most of people in the industry doing) is in non-penetration constraint. In ST, non-penetration constraint is:<br>
+0 &lt;= d comp. p &gt;=0 (d is distance, p is normal impulse)<br>
+when in AP:<br>
+0 &lt;= v comp. f &gt;= 0 ( v is normal velocity, f is normal force)<br>
+<br>
+So in ST, basically the result of LCP solver always penetration-free IF we constraint that feature at the right time. Look more closely at the constraint, you will see the phenomenon,<br>
+<br>
+<img src="http://img46.imageshack.us/img46/4136/stvsapqr8.jpg" class="postimage" alt="Image"><br>
+<br>
+In ST, when you include a pair of contacts into LCP, then the LCP solver will do the job to prevent that pair from interpenetation in the next time step. So in this case, if you included 3 pairs of contact P1,P2 and P5 into the active set, then the LCP will prevent them penetrate in the next time step. So, only if P4,P5 penetrate then we have penetration. Of course you can also add P4,P5 but it would cost you some CPU cycles.<br>
+<br>
+For the AP case, as usual, you have to include only P1 (the only one in penetration) to prevent deeper penetration.<br>
+<br>
+You can view like this: in ST, you PREVENT penetration by adding contact pairs(Those pair won't penetration in the next time step). In constrast, AP just try to STOP penetrated pair, so in AP, no way you can prevent penetration. Remember, when you put a contact pair into active set in AP, the constraint is: the velocity of those pair cannot make them penetrate deeper.<br>
+<br>
+So you can see, there is inherent differences in ST and AP collision detection.<br>
+<br>
+About continous collision detection, it has a different flavor than ST vs AP. It try to predict future collision pair. Right now, discreet collision detection has a very weak assumption that the contact information is constant over a time step. Continous collision will try to predict those information at time t1 by making BETTER assumption: those bodies will have constant velocities over a time step. This assumption is better but also not correct. So you see a strange connection between collision and dynamics. You need collision to carry dynamics but you need dynamics (to get the right future configuration) to get the right collision. So, the most accurate thing to do is to use NCP instead of LCP. <br>
+<br>
+Also, the main weakness of continous CD is you have to chop time step down to tiny bit. Thus there is no guarantee in progress. There will be the case when intensive collision happen and TOI is so close to T0. I know you can relax it a bit by allowing some sort of penetration. But we want to avoid penetration because it's not physically correct. Furthurmore, I think I can come up with a modified ST to consider the constant velocities assumption. Thus, it's similiar to continous CD.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 23, 2006 7:56 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Thanks for taking the time, but it didn't help me getting more understanding of your method. Probably I just have to read more about this particular Steward Trinkle method.
+</div></blockquote>
+I think you should read that paper. ST method is the first one that can handle friction. AP is 1 year later and somewhat similiar. I think there is a problem with ST paper because prof Trinkle mentioned in his paper that his method can suffer from no solution. But I doubt that's just the result of the position constraint. Because with such constraint, if you put your scene into a physically incorrect configuration then it more likely, ST will fail.<br>
+<br>
+<img src="http://img490.imageshack.us/img490/5881/stvsap2hz5.jpg" class="postimage" alt="Image"><br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+I wanted you to describe all important steps from T0 to T1 in a simple case, like a moving point versus infinite plane.<br>
+<br>
+Description of a typical solution that prevents penetration, following Brian Mirtich's time stepping as described in his 1996 PhD thesis "Impulse-based Dynamic Simulation of Rigid Body Systems".<br>
+<br>
+0) calculate the minimum time of impact of all objects, <br>
+1) step all involved objects to that time of impact (TOI  where T0 &lt; TOI &lt;= T1)<br>
+2) handle the discontinuity of the collisions happening at this TOI (resolve collision, update velocity of the rigid bodies involved in the collision)<br>
+3) allow some penetration to avoid getting 'stuck' in 0 time of impact<br>
+4) continue this process until T1 is reached.<br>
+<br>
+This stepping process can be optimized by localizing computation, for example using  Mirtich's application of time warp (Siggraph 2000).<br>
+<br>
+Could you describe your approach like I just did for the conventional way of avoiding penetration? (without reverting to mathematic formulae)
+</div></blockquote>
+Look back at my previous post,we do similiar to what you discribe but by constraining the REAL non penetration condition (in position level) we can avoid them. The main difference is we don't wait till there is some penetration and correct it but actively prevent it. The bad things in allowing penetration are:<br>
+1. Penetration is WRONG.<br>
+2. We will only chasing our tails. Penetration-&gt; correct then penetration -&gt; correct...That's why we need to disable bodies sometimes to have a stable simulation.<br>
+3. There is no good way to correcting penetration. (Maybe because penetrations don't happen in nature).<br>
+<br>
+Here come our version:<br>
+1. Setup collision detection by adding *all* possible contacts into active set<br>
+2. Throw them into LCP<br>
+3. Get impulse out of the result<br>
+4. Update positions/velocities<br>
+<br>
+The nice things of this are:<br>
+1. We *guarantee* no penetration ( not absolutely because there are many other issues)<br>
+2. We guarantee progression. You will always be able to step forward. There is no need to chop down your time stepper.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Most methods use more advance ways then the simple linear case of a computing a swept sphere. Typical methods include rotation, and convex shapes or concave mesh (a bounding volume hierarchy of triangles).<br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+I also mentioned this in previous post. The way they advance has to based on some assumptions. But to get the real correct one, no way you can avoid using dynamics in collision. As Steve mentioned before, there is a strange coupling between them. That's also not why I don't really like continous CD. The main bad thing I hate is there is no guarantee in progression.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 23, 2006 9:26 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">there is still no better understanding at all.<br>
+<br>
+Please compare the typical CCD+TOI (as described in steps a few post earlier) method against your ST implementation, and please ignore AP and friction for a second.<br>
+
+<blockquote class="uncited"><div>
+The main difference is we don't wait till there is some penetration and correct it but actively prevent it.
+</div></blockquote>
+
+I guess you are comparing your implementation of ST with AP.<br>
+<br>
+CCD methods don't wait until there is penetration. They thow all objects and time of impact into the LCP and integrator in such a way that penetrations are avoided before they happen.<br>
+<br>
+0) Can you describe the recipe your implementation of ST more in detail? <br>
+Just 'throwing things in an LCP' is not detailed enough, because that is what most CCD+TOI methods do as well.<br>
+1) Does it subdivide the timestep?<br>
+2) what happens if there is a collision in the middle between T0 and T1?<br>
+3) Why does your ST implementation not suffer from contacting situations where the CCD+TOI based methods would lock when the smallest time of impact goes to zero?<br>
+4) can you try to paint the effective end position in ST at the end of the timestep? It has the CCD+TOI already filled in, with the begin at T0, collision-free motion at T1_predicted, and position at TOI the time of impact, where it subdivides the timestep, applies an impulse, and continue so the object bounces DURING the timestep and ends in 'effective T1'.<br>
+<br>
+See picture, sorry for bad artwork <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+<br>
+<img src="http://continuousphysics.com/st_np_vs_ccdtoi.jpg" class="postimage" alt="Image"><br>
+<br>
+<br>
+Let's hope you will be able to explain your method in more detail.<br>
+<br>
+In the meanwhile, after not getting the point of ST, I will invite Kenny Erleben and Stephane Redon to help out.<br>
+<br>
+Thanks for the effort,<br>
+Erwin<br>
+<br>
+ps: are you visiting SIGGRAPH? it might be easier to discuss over there in a meeting?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 23, 2006 10:45 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>there is still no better understanding at all.<br>
+<br>
+Please compare the typical CCD+TOI (as described in steps a few post earlier) method against your ST implementation, and please ignore AP and friction for a second.<br>
+<br>
+I guess you are comparing your implementation of ST with AP.<br>
+
+</div></blockquote>
+
+It's not really "correct" to compare ST with CCD+TOI because one is timestepper,other is collision detection. The truth is, you can use CCD+TOI with ST so I don't know how to compare them. It's possible to compare ST with AP+CCD&amp;TOI. If that what's you really mean then I can say currently AP+CCD&amp;TOI is more accurate than naive ST. But you should consider the facts that CCD&amp;TOI is much more costly than one-shot distance computations. Also, I believe that I can modify ST to act similiar to AO+CCD&amp;TOI in many senses without the need of CCD&amp;TOI. About using CCD&amp;TOI with ST, it can only be better not worse than AP+ CCD&amp;TOI. <br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+CCD methods don't wait until there is penetration. They thow all objects and time of impact into the LCP and integrator in such a way that penetrations are avoided before they happen.
+</div></blockquote>
+I agree with you. <br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+0) Can you describe the recipe your implementation of ST more in detail? <br>
+Just 'throwing things in an LCP' is not detailed enough, because that is what most CCD+TOI methods do as well.
+</div></blockquote>
+I don't know how to explain in more details. Throwing here mean exactly as it. After we collect all possible collision pairs, we build the big matrix as  usual (says, like ODE for more specific) and solve it. The only different is our constraint is in position level not velocity and we also have a "stabilization" term which not exist if you write in velocity level. <br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+1) Does it subdivide the timestep?
+</div></blockquote>
+No<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+2) what happens if there is a collision in the middle between T0 and T1?
+</div></blockquote>
+Our constraint will handle it, it will produce an appropriate impulse to make sure there will be no penetration. I think now what your constraint do is to make sure the penetration won't be worse.<br>
+<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+3) Why does your ST implementation not suffer from contacting situations where the CCD+TOI based methods would lock when the smallest time of impact goes to zero?
+</div></blockquote>
+Again, if you mean AP and CCD+TOI then the answer is in this method, we need to find TOI which require subdivision of time step. In ST, we leave that thing to LCP solver. There could be some micro collision between bodies in the scene during T0-T1 but at T1, the LCP solver will guarantee there is no penetration. About micro collisions, I don't think I have enough knowledge to explain. Maybe David Stewart or Mihai Anitescu would be able to say something because they pursuit that narrow path.
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+4) can you try to paint the effective end position in ST at the end of the timestep? It has the CCD+TOI already filled in, with the begin at T0, collision-free motion at T1_predicted, and position at TOI the time of impact, where it subdivides the timestep, applies an impulse, and continue so the object bounces DURING the timestep and ends in 'effective T1'.
+</div></blockquote>
+In ST, the object will rest in contact. I didn't mention that it's hard to produce bouncing effect in ST, because when you need to bounce, you need to time of collision, then it pins down to CCD&amp;TOI. But in ST, we don't know anything(I mean with one-shot CD) about exact TOI.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+ps: are you visiting SIGGRAPH? it might be easier to discuss over there in a meeting?</div></blockquote>
+I don't have plan to visit SIGGRAPH although I really want to.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 23, 2006 11:12 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+It's not really "correct" to compare ST with CCD+TOI because one is timestepper,other is collision detection
+</div></blockquote>
+
+CCD+TOI uses the timestepper that subdivides the timestep based on the TOI queue. So it steps from T0 to the smallest TOI, calculates the local LCP conditions at that TOI, and proceeds the simulation until it reaches T1.<br>
+So CCD+TOI Queue is a timestepper.<br>
+<br>
+0) Can you describe all the constraint that you throw into the LCP which allows ST to avoid penetration?<br>
+<br>
+It seems to involve some distance constraint, and internally the LCP projects the motion and makes sure this distance never becomes negative?<br>
+<br>
+1) How does your implementation of ST deal with rotations? With rotating long thin objects, it is not necessarily the closest points at time T0 that cause the penetration in T1.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 23, 2006 11:35 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+With CCD+TOI I meant using a time-of-impact queue like Mirtich does in his PhD or his Time Warp paper. So when you want the simulation to proceed from T0 to T1, it will maintain a TOI queue, and step from closest TOI to the next, until it reaches T1.
+</div></blockquote>
+OK, I see what you mean now. The drawbacks of this method is:<br>
+1. It projects future position by making assumption that linear/angular velocities are constant over a time step. <br>
+2. It doesn't guarantee progress. ( I don't know how it relaxes this statement by allowing some penetrations but the main idea is that).<br>
+<br>
+Now, if you want me to compare this method with current ST then:<br>
+1) Short answer: CCD+TOI is more accurate than one-shot CD+ST<br>
+2) Long answer with some explainations: ...they are still different. Given the TOI queue, I can set-up the LCP using ST. I think you still need to setup a LCP in CCD+TOI right? So I doubt it's still AP+ CCD&amp;TOI like what I called.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+0) Can you describe the actual constraint that you throw into the LCP which allows ST to avoid penetration?<br>
+Is it a distance constraint, and internally the LCP projects the motion and makes sure this distance never becomes negative?
+</div></blockquote>
+Yes. We put in the complementarity condition:<br>
+0&lt;= distance between pairs in active set COMP. normal impules &gt;= 0<br>
+So, LCP will calculate the normal impulse suchthat it will be enough prevent penetration.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+1) How does it deal with rotations?
+</div></blockquote>
+I don't really understand your question? But if you include the pair that would penetrate by that rotation, then ST will help to stop that.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 24, 2006 12:14 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+1. It projects future position by making assumption that linear/angular velocities are constant over a time step. 
+</div></blockquote>
+Brian Mirtich doesn't use constant linear/angular velocity, he uses parabolic motion (including gravity) in his TOI calculations and timestepping. A lot of approaches assume constant linear/angular velocity. Still better then screwing motion, which Stephane Redon used in his analytical TOI calculation, before he switched to Interval Arithmetic based methods.
+<blockquote class="uncited"><div>
+2. It doesn't guarantee progress.
+</div></blockquote>
+Adding some small collision tolerance/allowed penetration guarantees progress.<br>
+<br>
+The CCD/TOI + stepping safely to the next TOI, or using Timewarp, is described in chapter 5.4 and 5.6 in <br>
+<a href="http://www.cs.miami.edu/~harald/papers/hs-thesis.pdf" class="postlink">http://www.cs.miami.edu/~harald/papers/hs-thesis.pdf</a><br>
+
+<blockquote><div><cite>ngbinh wrote:</cite>
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+1) How does it deal with rotations?
+</div></blockquote>
+I don't really understand your question? But if you include the pair that would penetrate by that rotation, then ST will help to stop that.</div></blockquote>
+
+<br>
+If you include (fast) rotational motion then P4 might cause the penetration. I just wondered if you take that into account. With long thin objects this becomes more important.<br>
+ <br>
+<img src="http://www.continuousphysics.com/stvsapqr8.jpg" class="postimage" alt="Image"><br>
+<br>
+
+<blockquote class="uncited"><div>
+So, LCP will calculate the normal impulse suchthat it will be enough prevent penetration. 
+</div></blockquote>
+So you also throw the timestep 'deltatime' and the assumed motion into the LCP?<br>
+<br>
+What kind of motion does your implementation of ST LCP assume/use?<br>
+<br>
+If the loop is like:<br>
+0) calculate feature-pair distances<br>
+1) setup LCP that calculates impulses so the updated position will not be in penetration<br>
+2) apply impulses/update velocities (from LCP results)<br>
+3) update positions<br>
+<br>
+Then the updated position at T1 is at the ' time of impact', effectively loosing time?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

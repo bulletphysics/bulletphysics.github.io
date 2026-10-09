@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Impulse based simulation - Jacobson, Baltman, Guendelman</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Impulse based simulation - Jacobson, Baltman, Guendelman</h2>
+		<p><a href="viewtopic.php%3Ft=151.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=151</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Impulse based simulation - Jacobson, Baltman, Guendelman</h3>
+				<div class="date">Posted: <strong>Fri Oct 21, 2005 9:46 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Given two bodies b1 and b2. In an impulse based simulator you integrate the bodies forward in time, find the constraint error and correct it. Mathematically I believe this are differential inclusions and you project the phase state of the bodies back onto the constraint manifold. This sounds difficult, but is extreme easy to implement. For the ball-socket joint you simple do something like this:<br>
+<br>
+<br>
+b1.Step( dt );<br>
+b2.Step( dt );<br>
+<br>
+// Let r1 and r2 be the offset vector from the CM the the joint anchor point<br>
+v32 v1 = b1.GetVelocityAt( r1 );<br>
+v32 v2 = b2.GetVelocityAt( r2 );<br>
+<br>
+// The relative velocity must be zero - so this is the constraints error<br>
+v32 v_rel = v1 - v2;<br>
+<br>
+That's not too difficult. Actually this is the Jacoby entry, but you don't have to deal with large matrices and do all the bookkeeping. Now that we have found the constraint violation, we need to correct it - that is project back onto the constraint manifold. We don't want to simply divide the error between both bodies, but also consider the mass and moment of inertia somehow. Heavier bodies should move/rotate less than lighter ones. We have to solve the following question:<br>
+<br>
+"Find corrections for the current linear velocities v1 and v2 plus corrections for the current angular velocities w1 and w1, such that the relative velocity at the joint anchor becomes zero. Preferable considering the masses and moments of inertia."<br>
+<br>
+In the literature (s. Papers) it is proposed to calculate the collision impulse and chose the direction of the relative velocity as collision normal and its length as relative normal velocity. E.g. in Jiggle the constraints are implemented this way.<br>
+<br>
+f32 j = -(1 + e)*vn / [ (1/m1) + (1/m2) + n*(J1^-1*(r1 x n) x r1) + n*(J2^-1*(r2 x n) x r2)<br>
+<br>
+Now the question:<br>
+I assumed that after applying the impulse the relative velocity would be zero. This is sometimes correct, but in the majority of cases it seems as if the error is only reduced a bit. Isn't this bad for the convergence of the system? For two limits I don't have convergence anymore. Are there other methods to divide the error between the two bodies? I setup the impulse equations and avoided the calculation of the collison impulse - since this would be more numerically stable. But I think I have an error in the matrix, so I can't say how this works at the moment. Any suggestions?<br>
+<br>
+Regards,<br>
+<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

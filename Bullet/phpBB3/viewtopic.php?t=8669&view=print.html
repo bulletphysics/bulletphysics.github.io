@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; S-H clipping</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>S-H clipping</h2>
+		<p><a href="viewtopic.php%3Ft=8669.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8669</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>S-H clipping</h3>
+				<div class="date">Posted: <strong>Wed Dec 12, 2012 2:03 am</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">Anyone have issues with S-H clipping with the Edge-Face case of an OBB? Sometimes, I get 1 contact instead of two, in the middle of a face.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8669&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void getEdgeFaceClippedContactData(AMG3DPlane clippingPlanes[4], const AMG3DVector4 vSubjectVertices[2], const AMG3DContactID subjectIDs[2], 
+								   AMG3DContactData *pContactData)
+{
+	AMG3DContactData clippedContactsInputList;
+	AMG3DContactData clippedContactsOutputList;
+	int iCountInputList=0;
+	int iCountOutputList=0;
+
+	for(int i=0; i&lt;2; ++i) {
+		clippedContactsOutputList.contacts[i].vContactPoint = vSubjectVertices[i];
+		
+		// The clipping edge
+		clippedContactsOutputList.contacts[i].contactID.ec.iEdge1BoxID		= subjectIDs[i].ec.iEdge1BoxID;
+		clippedContactsOutputList.contacts[i].contactID.ec.iEdge1Index		= subjectIDs[i].ec.iEdge1Index;
+		
+		// The subject edge
+		clippedContactsOutputList.contacts[i].contactID.ec.iEdge2BoxID		= subjectIDs[i].ec.iEdge2BoxID;
+		clippedContactsOutputList.contacts[i].contactID.ec.iEdge2Index		= subjectIDs[i].ec.iEdge2Index;
+		
+		// The third edge that makes up the subject vertex
+		clippedContactsOutputList.contacts[i].contactID.ec.iEdge3BoxID		= subjectIDs[i].ec.iEdge3BoxID;
+		clippedContactsOutputList.contacts[i].contactID.ec.iEdge3Index		= subjectIDs[i].ec.iEdge3Index;
+	}
+
+	iCountOutputList = 2;
+
+	// For each clipping plane
+	for(int i=0; i&lt;4; ++i) {
+		clippedContactsInputList = clippedContactsOutputList;
+		iCountInputList = iCountOutputList;
+		iCountOutputList = 0;
+		AMG3DVector4 vS = clippedContactsInputList.contacts[iCountInputList-1].vContactPoint;
+		int ivSIndex = iCountInputList-1;
+
+		// Clip each subject vertex against clipping plane and store three edges for each contact to form contact ID
+		for(int j=0; j&lt;iCountInputList; ++j) {
+			// Vertex J is inside the clipping plane
+			AMG3DScalar fD; // Determines the penetration depth of each contact, not required here (face plane only)
+			if(pointInsidePlane(clippedContactsInputList.contacts[j].vContactPoint, clippingPlanes[i], &amp;fD)) {
+				// Vertex S is outside the clipping plane, clip with respect to S
+				if(!pointInsidePlane(vS, clippingPlanes[i], &amp;fD)) {
+					AMG3DLineSegment lineSegment(clippedContactsInputList.contacts[j].vContactPoint, vS);
+					AMG3DScalar fT;
+					AMG3DVector4 vIntersectionPoint;
+					bool bIntersect = clippingPlanes[i].intersects(lineSegment, &amp;fT, &amp;vIntersectionPoint);
+					clippedContactsOutputList.contacts[iCountOutputList].vContactPoint = vIntersectionPoint;
+					
+					AMG3DContactID contactvS = clippedContactsInputList.contacts[ivSIndex].contactID;
+
+					if(contactvS.ec.iEdge1BoxID==1) { // Point has been previously clipped
+						contactvS.ec.iEdge2BoxID = 1;
+						contactvS.ec.iEdge2Index = i; // Now, this vertex ID consists of 2 clipping planes
+					}
+					else {
+						contactvS.ec.iEdge1Index = i;
+					}
+					
+					clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge1BoxID		= 1;
+					clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge1Index		= contactvS.ec.iEdge1Index;
+					clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge2BoxID		= contactvS.ec.iEdge2BoxID;
+					clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge2Index		= contactvS.ec.iEdge2Index;
+					clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge3BoxID		= contactvS.ec.iEdge3BoxID;
+					clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge3Index		= contactvS.ec.iEdge3Index;
+
+					iCountOutputList++;
+
+					break; // Once vertex clipped against this plane, continue to the next plane
+				}
+
+				clippedContactsOutputList.contacts[iCountOutputList].vContactPoint = clippedContactsInputList.contacts[j].vContactPoint;
+
+				AMG3DContactID contactIDs = clippedContactsInputList.contacts[j].contactID;
+
+				// No change, store current subject edge IDs
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge1BoxID		= contactIDs.ec.iEdge1BoxID;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge1Index		= contactIDs.ec.iEdge1Index;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge2BoxID		= contactIDs.ec.iEdge2BoxID;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge2Index		= contactIDs.ec.iEdge2Index;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge3BoxID		= contactIDs.ec.iEdge3BoxID;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge3Index		= contactIDs.ec.iEdge3Index;
+
+				iCountOutputList++;	
+			}
+			else if(pointInsidePlane(vS, clippingPlanes[i], &amp;fD)) { // Vertex J is outside the clipping plane, clip with respect to J
+				AMG3DLineSegment lineSegment(clippedContactsInputList.contacts[j].vContactPoint, vS);				
+				AMG3DScalar fT;
+				AMG3DVector4 vIntersectionPoint;
+				bool bIntersect = clippingPlanes[i].intersects(lineSegment, &amp;fT, &amp;vIntersectionPoint);
+				clippedContactsOutputList.contacts[iCountOutputList].vContactPoint = vIntersectionPoint;
+				
+				AMG3DContactID contactvS = clippedContactsInputList.contacts[ivSIndex].contactID;
+				AMG3DContactID contactJ = clippedContactsInputList.contacts[j].contactID;
+
+				if(contactJ.ec.iEdge1BoxID==1) { // Point has been previously clipped
+					contactvS.ec.iEdge2BoxID = 1;
+					contactvS.ec.iEdge2Index = i;
+				}
+				else {
+					contactvS.ec.iEdge1Index = i;
+				}
+
+				// Clipping, take 1 clipping edge and 1 subject edge
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge1BoxID		= 1;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge1Index		= contactvS.ec.iEdge1Index;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge2BoxID		= contactvS.ec.iEdge2BoxID;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge2Index		= contactvS.ec.iEdge2Index;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge3BoxID		= contactvS.ec.iEdge3BoxID;
+				clippedContactsOutputList.contacts[iCountOutputList].contactID.ec.iEdge3Index		= contactvS.ec.iEdge3Index;
+
+				iCountOutputList++;
+
+				break; // Once edge clipped against this plane, continue to the next plane
+			}
+			vS = clippedContactsInputList.contacts[j].vContactPoint;
+			ivSIndex = j;
+		}
+	}
+
+	(*pContactData) = clippedContactsOutputList;
+	(*pContactData).iNumContacts = iCountOutputList;
+}</code></pre></div>
+
+With the face-face case, I sometimes get 6 contacts but this is because the clipping planes are not straight so there is some error. However the clipping points are on the edge of the clipping planes so I assume this is OK.<br>
+<br>
+Thanks !</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

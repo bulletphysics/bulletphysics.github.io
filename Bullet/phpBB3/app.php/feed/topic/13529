@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13529" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-02-06T15:56:46+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13529</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-02-06T15:56:46+00:00</updated>
+
+		<published>2023-02-06T15:56:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44232#p44232</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44232#p44232"/>
+		<title type="html"><![CDATA[Re: No performance difference between static and kinematic bodies?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44232#p44232"><![CDATA[
+The broadphase keeps track of the AABBs and also overlapping AABB pairs between distinct objects that might need narrowphase collision check to compute the contact points (if any).  Ignoring narrowphase costs... there is overhead in: (1) knowing all the AABBs and overlaps and (2) adding new AABBs to the data structure.  By using a compound shapes to store static objects you reduce the complexity of the broadphase while slightly increasing the cost of the narrowphase check when there IS an overlap.  So, if you have a big world and you clump nearby static objects into single shapes you may find it improves the runtime efficiency.  If that is all you care about then perhaps it is worth trying.<br><br>One disadvantage to combining static objects is: if you want to move or remove just one of a group then the complexity of your own logic, and perhaps the CPU cost of removal, will go up.  But again, if all you care about is runtime efficiency then you would be willing to pay this price.<br><br>For the benefit of fellow readers I supply this snippet from the code from <strong class="text-strong">btCollisionWorld.h</strong>:<div class="codebox"><p>Code: </p><pre><code>   ·///m_forceUpdateAllAabbs can be set to false as an optimization to only update active object AABBs   ·///it is true by default, because it is error-prone (setting the position of static objects wouldn't update their AABB)   ·bool m_forceUpdateAllAabbs;</code></pre></div>When setting it false you need to manually update the AABB of non-active objects... when you move them.  Static objects would always need their AABBs updated when moved whereas dynamic and kinematic objects would only need them updated if you move them without also activating them.<br><br>You are probably already doing this, but I mention it for the record: if all of your static objects are using btBoxShape, and you have a lot of them, be sure to take advantage of "shape sharing" where two identically shaped objects reference same shape instance.  This saves memory and improves cache coherence.  There is no default ref-counting or shape-manager built into Bullet so you would have to write your own.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Mon Feb 06, 2023 3:56 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[GeanGean]]></name></author>
+		<updated>2023-02-05T21:19:31+00:00</updated>
+
+		<published>2023-02-05T21:19:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44230#p44230</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44230#p44230"/>
+		<title type="html"><![CDATA[Re: No performance difference between static and kinematic bodies?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44230#p44230"><![CDATA[
+First off, I did find a magic line that did increase performance by a ton:<div class="codebox"><p>Code: </p><pre><code> world-&gt;setForceUpdateAllAabbs(false); </code></pre></div>That said, I'm still on the quest to handle ever more objects. <br><blockquote class="uncited"><div>If you want to increase performance you should try consolidating multiple static objects together to get a smaller number of them.  Either combine them into large mesh objects using <strong class="text-strong">btBvhTriangleMeshShape</strong>, or maybe use <strong class="text-strong">btCompoundShape</strong>.</div></blockquote>Most ( 90%? ) of my static objects are various rectangular prisms made with btBoxShape. Would combining a bunch of these into a compound shape really improve performance? I guess I just assumed a more complex shape isn't necessarily better than 2 simpler ones. <blockquote class="uncited"><div>Somewhere in the high 10k objects you might notice the <strong class="text-strong">world-&gt;addCollisionObject()</strong> call starts to become expensive enough to notice, because the time to load the Nth object scales at O(N).  This cost is being spent adding each new AABB to the broadphase overlap tree.  Keeping the number of objects low will help you here.</div></blockquote>I've actually noticed that adding objects with addCollisionObject results in lower FPS than addRigidBody for static objects. <br>Just to be clear, I don't care about *loading* time. I care about performance in FPS after everything has been added.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14521">GeanGean</a> — Sun Feb 05, 2023 9:19 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-02-05T07:07:48+00:00</updated>
+
+		<published>2023-02-05T07:07:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44228#p44228</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44228#p44228"/>
+		<title type="html"><![CDATA[Re: No performance difference between static and kinematic bodies?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44228#p44228"><![CDATA[
+If the kinematic objects are not active then they are not much more expensive than static.  If you were to bounce a dynamic object around the kinematic objects then they would activate, but since they are being "animated" by <strong class="text-strong">btDefaultMotionState</strong> which does nothing, then they will be deactivated again after two seconds.<br><br>If you want to increase performance you should try consolidating multiple static objects together to get a smaller number of them.  Either combine them into large mesh objects using <strong class="text-strong">btBvhTriangleMeshShape</strong>, or maybe use <strong class="text-strong">btCompoundShape</strong>.<br><br>Somewhere in the high 10k objects you might notice the <strong class="text-strong">world-&gt;addCollisionObject()</strong> call starts to become expensive enough to notice, because the time to load the Nth object scales at O(N).  This cost is being spent adding each new AABB to the broadphase overlap tree.  Keeping the number of objects low will help you here.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Sun Feb 05, 2023 7:07 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[GeanGean]]></name></author>
+		<updated>2023-02-05T00:35:00+00:00</updated>
+
+		<published>2023-02-05T00:35:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44227#p44227</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44227#p44227"/>
+		<title type="html"><![CDATA[No performance difference between static and kinematic bodies?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44227#p44227"><![CDATA[
+So I'm trying to get a simulation going where even though I have minimal moving objects, I may have a very large amount of totally static things to collide with. Really the greater the number the better, 10000s at least, ideally hundreds of thousands. But none of them need to do anything except maybe collide with an object.<br><br><br>Anyway, I've noticed this doesn't really seem feasible at a decent framerate. <br>But what's more curious to me is there no difference in performance between:<div class="codebox"><p>Code: </p><pre><code>btMotionState* ms = new btDefaultMotionState(startTrans);btRigidBody::btRigidBodyConstructionInfo info(0.0,ms,shape,btVector3(0,0,0));body = new btRigidBody(info);body-&gt;setCollisionFlags( btCollisionObject::CF_STATIC_OBJECT);body-&gt;setFriction(0.5);body-&gt;setRestitution(0.5);body-&gt;forceActivationState(ISLAND_SLEEPING);world-&gt;addRigidBody(body);</code></pre></div>And:<div class="codebox"><p>Code: </p><pre><code>btMotionState* ms = new btDefaultMotionState(startTrans);btRigidBody::btRigidBodyConstructionInfo info(0.0,ms,shape,btVector3(0,0,0));body = new btRigidBody(info);body-&gt;setCollisionFlags( btCollisionObject::CF_KINEMATIC_OBJECT);body-&gt;setFriction(0.5);body-&gt;setRestitution(0.5);world-&gt;addRigidBody(body);</code></pre></div>You'd think the kinematic objects would use up a bit more CPU time because they *might* move, where as the static objects would use up essentially zero CPU time, because they literally do nothing. Forcing deactivation also does nothing.<br><br>Any tips in general on how to reasonably get a greater amount of static bodies?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14521">GeanGean</a> — Sun Feb 05, 2023 12:35 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

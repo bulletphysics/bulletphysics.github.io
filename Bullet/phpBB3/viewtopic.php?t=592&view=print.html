@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; convex hull vs polygon soup collision detection</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>convex hull vs polygon soup collision detection</h2>
+		<p><a href="viewtopic.php%3Ft=592.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=592</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>convex hull vs polygon soup collision detection</h3>
+				<div class="date">Posted: <strong>Sun Oct 08, 2006 8:53 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content">I'm doing some research about how to detect collisions between a convex hull and triangle soups with arbitrarily arranged triangles.<br>
+<br>
+What I'm trying to do is to treat every triangle in the soup as a convex hull, using SAT, and so far, I can detect collisions very well.<br>
+<br>
+The problem comes when I want to find the correct separation axis between the convex hull and a triangle.<br>
+<br>
+Typically when two convex hulls collide, the correct separation axis is the one with the shorterst depth penetration.<br>
+<br>
+With triangles, I test all possible axes, but In case there's a collision, I always get the triangle normal as separation axis, regardless an axis with shorter depth has been found.  This is good because it solves very well the conflicts when a convex hull collides very close to the edges of two triangles in a mesh, actually, always choosing the triangle normal as separation axis is correct 95% of the time.<br>
+<br>
+The problem is the other 5%, where the correct separation axis is one other than the triangle normal (usually a cross product between a triangle and hull normals)<br>
+<br>
+The question is: how to know when these 5% axes are the correct ones?<br>
+<br>
+Thanks in advance</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: convex hull vs polygon soup collision detection</h3>
+				<div class="date">Posted: <strong>Sun Oct 08, 2006 11:25 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>vicviper wrote:</cite>With triangles, I test all possible axes, but In case there's a collision, I always get the triangle normal as separation axis, regardless an axis with shorter depth has been found.  This is good because it solves very well the conflicts when a convex hull collides very close to the edges of two triangles in a mesh, actually, always choosing the triangle normal as separation axis is correct 95% of the time.<br>
+<br>
+The problem is the other 5%, where the correct separation axis is one other than the triangle normal (usually a cross product between a triangle and hull normals)<br>
+<br>
+The question is: how to know when these 5% axes are the correct ones?<br>
+<br>
+Thanks in advance</div></blockquote>
+
+Handling concave triangle meshes by performing a batch of separate convex versus triangle tests is very common, and either SAT or GJK can be used. I assume you use a culling stage (midphase) like kdop tree or aabb tree to cull triangles that can't contribute to the final results.<br>
+<br>
+SAT has the drawback that it is penetration based, so the effect of hitting 'internal edges' is larger then when you use GJK, because GJK allows contact generation based on distance (using some margin). Still, both approaches can benefit from some heuristics, and using the triangle normal is one of them, using continuous collision detection another (this is used for character controllers, like the typical quake FPS) or using rounded collision shapes(when using GJK you can easily round all shapes by increasing a collision margin).<br>
+<br>
+One improvement is to distinguish between 'convex' edges and 'concave' edges. You can safely ignore 'concave' edges, as no collision will happen with them. You could add some threshold based on the angle of the two triangles that share the edge, and below certain values (although the edge is convex) still threat it as concave, so use the triangle normal.<br>
+You have to be careful which penetration depth and normal to use, otherwise you can push objects in the wrong direction: imagine an objects on the edge of a cliff, it will be pushes off-the-cliff.<br>
+<br>
+Another more complicated improvement is doing some convex decomposition (either precomputed or online/at runtime) to solve this: group all triangle that share convex-edges into a convex hull, and do a convex-hull versus convex-hull test.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 12, 2006 6:11 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I dealt with this problem quite a bit.<br>
+<br>
+As Erwin mentioned, if you only use triangle normals, then a box sitting on the edge of a cliff will be pushed off the edge. With many physics algorithms, there is a little bit of penetration. The triangles on the face of the cliff will see the box as being deeply embedded into the face. This is obviously bad behavior.<br>
+<br>
+When you have penetration, there are some odd cases. Another example is a thin box sticking vertically into the floor along the edge between two triangles. In this case, an edge-edge axis will likely have the minimum penetration. But the edge-edge axis is parallel to the floor so the box will fall right through the floor.<br>
+<br>
+I found a good heuristic is to consider the triangle normal and the box face normals as contact normals. This avoids the edge-edge case, and helps with the cliff problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 16, 2006 10:04 pm</strong></div>
+				<div class="author">by <strong>vicviper</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I dealt with this problem quite a bit.<br>
+<br>
+I found a good heuristic is to consider the triangle normal and the box face normals axes contact normals. This avoids the edge-edge case, and helps with the cliff problem.</div></blockquote>
+
+What do you mean by axes contact normals? could you develop this a bit?<br>
+<br>
+Right now I'm doing this:<br>
+<br>
+First I test the triangle normal as separation axis test.<br>
+<br>
+Then, I test the cross products of the triangle normal vs the triangle edges, but I only take the result into consideration if the resulting dot product between the triangle normal and the adyacent triangles are within some limit angle.  This seems to solve the edge-edge case too, but I need to do further tests.<br>
+<br>
+The case which I haven't solved yet is the hull plane vs triangle corner, that is, when I test the hull axes alone.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Oct 16, 2006 10:11 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I fixed a typo there.<br>
+<br>
+What I meant to say is that you should only consider the triangle normal _and_ the hull face normals when creating contact points. You should only use the edge-edge cross product axes to rule out collision.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

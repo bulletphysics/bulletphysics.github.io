@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Floating point exception in GjkPairDetector::GetClosestPoint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Floating point exception in GjkPairDetector::GetClosestPoint</h2>
+		<p><a href="viewtopic.php%3Ft=369.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=369</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Floating point exception in GjkPairDetector::GetClosestPoint</h3>
+				<div class="date">Posted: <strong>Fri Jun 16, 2006 3:44 am</strong></div>
+				<div class="author">by <strong>SnadderLars</strong></div>
+				<div class="content">I'm trying to run the CcdPhysicsDemo and I get a floating point exception in GjkPairDetector::GetClosestPoints, line 82 in my version of the sources:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=369&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if ((delta &gt; SimdScalar(0.0)) &amp;&amp; (delta * delta &gt; squaredDistance * input.m_maximumDistanceSquared))
+</code></pre></div>
+
+It's caused by squaredDistance * input.m_maximumDistanceSquared where<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=369&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   squaredDistance = SIMD_INFINITY
+   input.m_maximumDistanceSquared = 1.0E+30
+</code></pre></div>
+
+the multiply results in +INF which triggers the exception.<br>
+<br>
+Is this on purpose? What happens with the compare when one side is INF?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jun 16, 2006 3:03 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It is an early-out test for optimization.(if the distance between two objects is larger then the maxDistance, we are not interested in results). I disabled this optimizatoin (testing) by setting the maximum to 1e30f, so it should fail the early out optimization.<br>
+<br>
+I'm not using exception handling, so I didn't realize it causes troubles.<br>
+I'll fix it.<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

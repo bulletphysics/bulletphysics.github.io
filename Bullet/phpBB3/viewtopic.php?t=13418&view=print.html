@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Raycast Vehicle bounces while driving for unknown reasons</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Raycast Vehicle bounces while driving for unknown reasons</h2>
+		<p><a href="viewtopic.php%3Ft=13418.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13418</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Raycast Vehicle bounces while driving for unknown reasons</h3>
+				<div class="date">Posted: <strong>Fri Apr 08, 2022 7:07 am</strong></div>
+				<div class="author">by <strong>kcjsend2</strong></div>
+				<div class="content">Hi.<br>
+<br>
+As I wrote in Subject, Vehicle was running on a track made using btBvhTriangleMeshShape when it randomly bounces off like something got caught in a wheel.<br>
+<br>
+I have already confirmed that there is no element in the mesh that can be caught in the wheel.<br>
+<br>
+here's video link.<br>
+<a href="https://youtu.be/lYUlhcdB0iw" class="postlink">https://youtu.be/lYUlhcdB0iw</a><br>
+<br>
+and here's how I create vehicle and control it.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13418&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+void PhysicsPlayer::BuildRigidBody(const std::shared_ptr&lt;BulletWrapper&gt;&amp; physics)
+{
+	auto dynamicsWorld = physics-&gt;GetDynamicsWorld();
+
+	mOOBB.Extents = { 10.0f, 4.0f, 14.0f };
+
+	XMFLOAT3 vehicleExtents = mOOBB.Extents;
+	XMFLOAT3 wheelExtents = mWheel[0]-&gt;GetBoundingBox().Extents;
+
+	btTransform btCarTransform;
+	btCarTransform.setIdentity();
+	btCarTransform.setOrigin(btVector3(mPosition.x, mPosition.y, mPosition.z));
+
+	LoadConvexHullShape(L"Models\\Car_Body_Convex_Hull.obj", physics);
+
+	mBtRigidBody = physics-&gt;CreateRigidBody(1000.0f, btCarTransform, mBtCollisionShape);
+	mVehicleRayCaster = std::make_shared&lt;btDefaultVehicleRaycaster&gt;(dynamicsWorld);
+	mVehicle = std::make_shared&lt;btRaycastVehicle&gt;(mTuning, mBtRigidBody, mVehicleRayCaster.get());
+	mBtRigidBody = mVehicle-&gt;getRigidBody();
+
+	mBtRigidBody-&gt;setActivationState(DISABLE_DEACTIVATION);
+	//mBtRigidBody-&gt;setGravity(btVector3(0, -20, 0));
+	dynamicsWorld-&gt;addVehicle(mVehicle.get());
+
+	mVehicle-&gt;setCoordinateSystem(0, 1, 2);
+
+	btVector3 wheelDirectionCS0(0, -1, 0);
+	btVector3 wheelAxleCS(-1, 0, 0);
+
+	float wheelWidth = wheelExtents.x;
+	float wheelRadius = wheelExtents.z;
+	float wheelFriction = mWheelFriction;
+	float suspensionStiffness = 20.f;
+	float suspensionDamping = 2.3f;
+	float suspensionCompression = 4.4f;
+	float rollInfluence = 0.01f;  //1.0f;
+
+	// 앞바퀴
+	bool isFrontWheel = true;
+	float connectionHeight = -0.9f;
+
+	btVector3 connectionPointCS0(vehicleExtents.x - 2.5f, connectionHeight, vehicleExtents.z - 2.8f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6f, wheelRadius, mTuning, isFrontWheel);
+
+	connectionPointCS0 = btVector3(-vehicleExtents.x + 2.5f, connectionHeight, vehicleExtents.z - 2.8f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6f, wheelRadius, mTuning, isFrontWheel);
+
+	isFrontWheel = false;
+
+	connectionPointCS0 = btVector3(vehicleExtents.x - 2.3f, connectionHeight, -vehicleExtents.z + 2.6f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6f, wheelRadius, mTuning, isFrontWheel);
+
+	connectionPointCS0 = btVector3(-vehicleExtents.x + 2.3f, connectionHeight, -vehicleExtents.z + 2.6f);
+	mVehicle-&gt;addWheel(connectionPointCS0, wheelDirectionCS0, wheelAxleCS, 0.6f, wheelRadius, mTuning, isFrontWheel);
+
+	for (int i = 0; i &lt; mVehicle-&gt;getNumWheels(); i++)
+	{
+		btWheelInfo&amp; wheel = mVehicle-&gt;getWheelInfo(i);
+		wheel.m_suspensionStiffness = suspensionStiffness;
+		wheel.m_wheelsDampingRelaxation = suspensionDamping;
+		wheel.m_wheelsDampingCompression = suspensionCompression;
+		wheel.m_frictionSlip = wheelFriction;
+		wheel.m_rollInfluence = rollInfluence;
+	}
+}
+
+class PhysicsPlayer : public Player
+{
+//Other functions and variables were excluded because they were not related to the bullet.
+private:
+	const float mWheelFriction = 10.0f;
+	const float mWheelDriftFriction = 5.0f;
+
+	std::shared_ptr&lt;WheelObject&gt; mWheel[4];
+	btRaycastVehicle::btVehicleTuning mTuning;
+	std::shared_ptr&lt;btVehicleRaycaster&gt; mVehicleRayCaster;
+	std::shared_ptr&lt;btRaycastVehicle&gt; mVehicle;
+
+	float mBoosterLeft = 0.0f;
+	float mBoosterTime = 5.0f;
+
+	float mEngineForce = 0.f;
+
+	float mMaxEngineForce = 8000.f;
+	float mMaxBackwardEngineForce = 10000.f;
+	float mBoosterEngineForce = 300000.f;
+
+	float mVehicleSteering = 0.f;
+	float mSteeringIncrement = 5.0f;
+	float mSteeringClamp = 0.6f;
+
+	float mCurrentSpeed = 0.0f;
+	float mMaxSpeed = 1000.0f;
+
+	float mBreakingForce = 0.0f;
+
+	float mFovCoefficient = 1.0f;
+
+	int mItemNum = 0;
+	float mDriftGauge = 0.0f;
+};
+
+
+void PhysicsPlayer::OnPreciseKeyInput(float Elapsed)
+{
+	if (mVehicle)
+		mCurrentSpeed = mVehicle-&gt;getCurrentSpeedKmHour();
+
+	mEngineForce = 0.0f;
+	mBreakingForce = 10.0f;
+
+	if (mBoosterLeft &gt; 0.0f)
+	{
+		mMaxSpeed = 1500.0f;
+		mBoosterLeft -= Elapsed;
+
+		mRimLightOn = true;
+	}
+
+	if (mBoosterLeft &lt; 0.0f)
+	{
+		mMaxSpeed = 1000.0f;
+		mBoosterLeft = 0.0f;
+
+		mRimLightOn = false;
+	}
+
+	if (mVehicleSteering &gt; 0)
+	{
+		mVehicleSteering -= mSteeringIncrement * Elapsed;
+		if (mVehicleSteering &lt; 0)
+		{
+			mVehicleSteering = 0;
+		}
+	}
+
+	else if (mVehicleSteering &lt; 0)
+	{
+		mVehicleSteering += mSteeringIncrement * Elapsed;
+		if (mVehicleSteering &gt; 0)
+		{
+			mVehicleSteering = 0;
+		}
+	}
+
+	if (GetAsyncKeyState(VK_LEFT) &amp; 0x8000)
+	{
+		mVehicleSteering -= mSteeringIncrement * Elapsed;
+		if (mVehicleSteering &lt; -mSteeringClamp)
+			mVehicleSteering = -mSteeringClamp;
+	}
+	if (GetAsyncKeyState(VK_RIGHT) &amp; 0x8000)
+	{
+		mVehicleSteering += mSteeringIncrement * Elapsed;
+		if (mVehicleSteering &gt; mSteeringClamp)
+			mVehicleSteering = mSteeringClamp;
+	}
+	if (GetAsyncKeyState(VK_UP) &amp; 0x8000)
+	{
+		if (mCurrentSpeed &lt; 0.0f)
+			mBreakingForce = 150.0f;
+		else if (mMaxSpeed &gt; mCurrentSpeed)
+			mEngineForce = mMaxEngineForce;
+		else
+		{
+			mBreakingForce = 100.0f;
+			mEngineForce = 0.0f;
+		}
+	}
+	if (GetAsyncKeyState(VK_DOWN) &amp; 0x8000)
+	{
+		if (mCurrentSpeed &gt; 0.0f)
+			mBreakingForce = 150.0f;
+		else if (-mMaxSpeed &lt; mCurrentSpeed)
+			mEngineForce = -mMaxBackwardEngineForce;
+		else
+		{
+			mBreakingForce = 100.0f;
+			mEngineForce = 0.0f;
+		}
+	}
+	if (GetAsyncKeyState('Z') &amp; 0x8000/*&amp;&amp;mItemNum&gt;0*/)
+	{
+		#ifdef STANDALONE
+		if (mBoosterLeft == 0.0f)
+			mBoosterLeft = mBoosterTime;
+		#endif
+
+		//mItemNum-=1;
+	}
+	// if (GetAsyncKeyState('X') &amp; 0x8000/*&amp;&amp;mItemNum&gt;0*/)
+	//{
+	//
+	//}
+	if (GetAsyncKeyState(VK_SHIFT) &amp; 0x8000)
+	{		
+		for (int i = 2; i &lt; 4; ++i)
+		{
+			if (mVehicle) mVehicle-&gt;getWheelInfo(i).m_frictionSlip = mWheelDriftFriction;
+		}
+
+		float Epsilon = 50.0f / 180.0f;
+
+		auto camLook = mCamera-&gt;GetLook();
+		camLook.y = 0.0f;
+		camLook = Vector3::Normalize(camLook);
+
+		auto playerLook = mLook;
+		playerLook.y = 0.0f;
+		playerLook = Vector3::Normalize(playerLook);
+
+		float angle = acos(Vector3::Dot(camLook, playerLook) / (Vector3::Length(camLook) * Vector3::Length(playerLook)));
+
+		if (Epsilon &lt; angle &amp;&amp; mDriftGauge &lt; 1.0f)
+		{
+			mDriftGauge += Elapsed / 2.0f;
+		}
+		if (mDriftGauge &gt; 1.0f)
+		{
+			mDriftGauge = 0.0f;
+			if (mItemNum &lt; 2)
+				mItemNum++;
+		}
+	}
+	else
+	{
+		for (int i = 2; i &lt; 4; ++i)
+		{
+			if(mVehicle) mVehicle-&gt;getWheelInfo(i).m_frictionSlip = mWheelFriction;
+		}
+	}
+
+	if (mBoosterLeft &amp;&amp; mMaxSpeed &lt; mCurrentSpeed)
+		mEngineForce = mBoosterEngineForce;
+
+	for (int i = 0; i &lt; 2; ++i)
+	{
+		if (mVehicle)
+		{
+			mVehicle-&gt;applyEngineForce(mEngineForce, i);
+			mVehicle-&gt;setBrake(mBreakingForce, i);
+		}
+	}
+
+	if (mVehicle)
+	{
+		int wheelIndex = 0;
+		mVehicle-&gt;setSteeringValue(mVehicleSteering, wheelIndex);
+		wheelIndex = 1;
+		mVehicle-&gt;setSteeringValue(mVehicleSteering, wheelIndex);
+	}
+}
+
+void PhysicsPlayer::Update(float elapsedTime, float updateRate)
+{
+	GameObject::Update(elapsedTime, updateRate);
+	
+	for (int i = 0; i &lt; 4; ++i)
+	{
+		if (mVehicle)
+		{
+			btTransform wheelTransform = mVehicle-&gt;getWheelTransformWS(i);
+			mWheel[i]-&gt;UpdatePosition(elapsedTime, wheelTransform);
+		}
+	}
+
+	//btVector3 linearVel = mBtRigidBody-&gt;getLinearVelocity();
+	//mBtRigidBody-&gt;applyCentralImpulse(btVector3(0, -linearVel.length() / 10, 0));
+
+	if (mBoosterLeft &gt; 0.0f)
+	{
+		if (mFovCoefficient &lt; 1.1f)
+			mFovCoefficient += elapsedTime * 5.0f * (1.1f - mFovCoefficient);
+		else
+			mFovCoefficient = 1.1f;
+	}
+	else
+	{
+		if (mFovCoefficient &gt; 1.0f)
+			mFovCoefficient -= elapsedTime * 5.0f * (mFovCoefficient - 1.0f);
+		else
+			mFovCoefficient = 1.0f;
+	}
+}
+</code></pre></div>
+
+Update runs after OnPreciseKeyInput runs.<br>
+<br>
+The vehicle chassis was created using a Hull Shape created by the V-HACD.<br>
+<br>
+And I don't know if this is going to be an impact, but because the vehicle modeling is pretty big, all the objects have been scaled six times accordingly.<br>
+<br>
+That is, 1 meter is 6 in the code internal value.<br>
+<br>
+I'm not sure what part of the code is causing this sudden bounce. Is there any guideline for tuning the Raycast Vehicle?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Raycast Vehicle bounces while driving for unknown reasons</h3>
+				<div class="date">Posted: <strong>Mon Apr 11, 2022 2:06 pm</strong></div>
+				<div class="author">by <strong>bennicus</strong></div>
+				<div class="content">I haven't used the bullet raycast vehicle before, but try logging or visualizing the contact normal of each wheel. It's possible that the wheel raycast could be hitting on a boundary between triangles and giving you horizontal or upside-down normal, I've had this problem before with raycast wheels on tri meshes in PhysX. If that's the issue, you might want to try manually smoothing or filtering out sudden changes in the normal direction like that.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

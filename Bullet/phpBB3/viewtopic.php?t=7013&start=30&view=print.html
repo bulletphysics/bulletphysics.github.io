@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; My explicit euler cloth code - Page 3</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>My explicit euler cloth code</h2>
+		<p><a href="viewtopic.php%3Ft=7013.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7013</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>3</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 1:44 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content"><blockquote><div><cite>DevO wrote:</cite>
+This should be 3 point constrain only.<br>
+The only tricky part is actually properly creating this constrains.<br>
+The should be just like distance constrains that are used to replace bending constrains but are using middle point too.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>0-----1-----2
+|     |     |
+3-----4-----5
+|     |     |
+6-----7-----8
+</code></pre></div>
+In this simple case you should have 6 bend constrains.<br>
+C(0,1,2), C(3,4,5), C(6,7,8), C(0,3,6), C(1,4,7), C(2,5,8).</div></blockquote>
+
+Oh I just saw fig.4 and its explanation. Doing that way, I think I could just add in the constraint like this
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for(int j=0;j&lt;numY;j++) {
+   for(int i=0;i&lt;numX;i++) {
+      AddBendingConstraint(i+(j*numX), i+((j+1)*numX), i+((j+2)*numX), kBend);
+      AddBendingConstraint(j+(i*numY), j+((i+1)*numY), j+((i+2)*numY), kBend);
+   }
+}
+</code></pre></div> and i think this should do it. I will do this tomorrow hopefully. I have already commited teh current version though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 1:53 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content"><blockquote class="uncited"><div>I dont get this, are u talking about this <a href="http://image.diku.dk/kenny/download/kel" class="postlink">http://image.diku.dk/kenny/download/kel</a> ... e.ea10.pdf.</div></blockquote>
+
+Yes I am talking about this paper.<br>
+Please lock at page 5 to Figure 6: <strong class="text-strong">algorithm create-bending-constraints</strong> and read <br>
+<strong class="text-strong">4.1. Working with Triangle Meshes</strong>.<br>
+<br>
+The constrain should not for an triangle that you have in the mesh.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//add vertical constraints
+for(int j=0;j&lt;numY-2;j++) {
+   for(int i=0;i&lt;numX;i++) {
+      AddBendingConstraint(i+(j*numX), i+((j+1)*numX), i+((j+2)*numX), kBend);
+   }
+}
+//add horizontal constraints
+for(int j=0;j&lt;numY;j++) {
+   for(int i=0;i&lt;numX-2;i++) {
+      AddBendingConstraint(i+(j*numX), (i+1)+(j*numX), (i+2)+(j*numX), kBend);
+   }
+}
+</code></pre></div>
+Something like this should work.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2011 1:57 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Oh ok thanks for that.<br>
+One more thing, you didnt tell me how i should refer you in the code.<br>
+I have just written special thanks to DevO for his help. Do u want to add in your real name and affiliation?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2011 2:37 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Ok done. I have committed the final pbd version. You can checkout from svn.<br>
+<br>
+One more thing, if I were to extend it to 3d meshes, how do i create the constraints? I think i would have to create a tetrahedral mesh first and then assign distance constraints to the three shared edge (p2p3, p0p3 and p1p3) and one bend constraint(p2p1) assuming the base of the tetrahedron is p0p1p2 and p3 is the apex vertex as given in the following figure,
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7013&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>       + (p3)
+      /|\
+(p2) +-|-+(p1)
+      \|/
+       +(p0)
+</code></pre></div> Is this how pdb is setup for softbodies?<br>
+<br>
+Another thing I want to ask is how to do simple linear FEM for softbodies? Do u have any idea or reference which might help?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2011 3:03 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">On FEM you might want to start here: <a href="http://www.matthiasmueller.info/publications/GI2004.pdf" class="postlink">http://www.matthiasmueller.info/publications/GI2004.pdf</a><br>
+<br>
+I found this course awesome since it approaches FEM from the Direct Stiffness Method and Variational perspective. This is very advanced though:<br>
+<a href="http://www.colorado.edu/engineering/CAS/courses.d/IFEM.d/" class="postlink">http://www.colorado.edu/engineering/CAS ... .d/IFEM.d/</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2011 3:08 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Thanks Dirk for the links. I will surely have a look through these.<br>
+<br>
+On the side note, have u checked out our pbd implementation? Any comments on it?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2011 1:09 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Hi,<br>
+please lock at this version.<br>
+I just wanted to test one idea regarding float precision and summation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2011 3:03 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi DevO.<br>
+   THanks for the KahanSum stuff. I will run it on my system first thing tomorrow morning. By the way, could u elaborate a bit more on this as this is quite new for me. I assume it is something to do with the floating point inaccuracies during summations however I m not sure. An expert advice would be interesting.<br>
+<br>
+Apart from this, is the pbd implementation (the latest svn one) correct. <br>
+<br>
+Another thing, what about using pbd for soft bodies any ideas how to go about it?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2011 3:08 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Here is a possible way how to use PBD to do softbodies:<br>
+<a href="http://www.matthiasmueller.info/publications/orientedParticles.pdf" class="postlink">http://www.matthiasmueller.info/publica ... ticles.pdf</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2011 3:10 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Thanks Dirk for this.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2011 4:15 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">WOW, using KahanSum the behaviour is more accurate as compared to not using the KahanSum.<br>
+DevO I am grateful to you for pointing this out. I didnt know about this and the errors numerical inprecision generates. Thanks man.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2011 3:12 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Can you elaborate a bit more about the KahanSum and where you added it to the PDB algorithm - maybe a simple example? I will look at the code after this, but it might be nice to discuss this in isolation. I looked at Wikipedia and it seems to deal with Cancelation problems. Good stuff DevO <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Wed Jul 27, 2011 9:21 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks for sharing these cloth implementations, it will be helpful.<br>
+<br>
+For FEM, you can also buy the 'Game Physics Pearls' book, and check out chapter 10.<br>
+<br>
+I recently extracted the corotational linear fem implementation from OpenTissue (removed BOOST and only use the necessary code) here:<br>
+<a href="https://github.com/erwincoumans/experiments" class="postlink">https://github.com/erwincoumans/experiments</a> (there is a Download button) and check out the dynamics/corotational_fem folder.<br>
+You can build it under Windows using Visual Studio 2008/2010 by clicking on the build/msvc2008.bat batchfile and open the new folder.
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=774" class="postimage" alt="fem_gwen.png" onclick="viewableArea(this);" /></dt>
+						<dd>fem_gwen.png (75.86 KiB) Viewed 68446 times</dd>
+		</dl>
+		
+		
+			</div>
+
+I plan to add some collision detection to it. You could use it to simulate cloth as well (thick cloth of a single layer of tetrahedra)<br>
+Cheers,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Thu Jul 28, 2011 1:51 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">WOW. Thanks Erwin for this. I would surely have a look through those resources.<br>
+<br>
+Thanks,<br>
+Mobeen</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My explicit euler cloth code</h3>
+				<div class="date">Posted: <strong>Tue Aug 16, 2011 7:04 pm</strong></div>
+				<div class="author">by <strong>saggita</strong></div>
+				<div class="content">Just my 2 cents about Explicit method..<br>
+<br>
+1. The force between two points are not constant even during the discrete time step. We already know that the force is changing as a result of moving points. The good thing is that we can compute how much the force will change during the time step. Unfortunately it is a function of point velocity and we don't know this until we integrate! So those two information (force change rate and point velocities) are strongly coupled together. That is why we need to solve a linear equation in implicit method.  <br>
+<br>
+2. If one point is moving towards the other point, we know that the force change rate is a vector with the same direction of the two points. However, if the point is moving perpendicular to the line of two points, there is still change of force. In this case, the force change rate is dependent on the point velocity direction but not the same direction. So the force change rate is always vector and the relationship with point introduces some 3x3 matrix which is Jacobian matrix. For real-time simulation, we can ignore the perpendicular case, then the Jocobian matrix is no longer needed because the force change rate will be always the same direction as the line of two points. This makes it possible to implement implicit integration without solving linear equation. Below paper explains this concept. <br>
+<br>
+<a href="http://www.multires.caltech.edu/pubs/GI99.pdf" class="postlink">http://www.multires.caltech.edu/pubs/GI99.pdf</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>3</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

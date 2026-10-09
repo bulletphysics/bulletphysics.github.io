@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13088" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-10-19T14:15:25+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13088</id>
+
+		<entry>
+		<author><name><![CDATA[Ezlo]]></name></author>
+		<updated>2020-10-19T14:15:25+00:00</updated>
+
+		<published>2020-10-19T14:15:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43153#p43153</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43153#p43153"/>
+		<title type="html"><![CDATA[Re: Problem with character controller and btHeightfieldTerrainShape]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43153#p43153"><![CDATA[
+Thanks a lot for your reply! <br><br>The character's restitution I had already set to zero, but increasing the character's gravity definitely helps minimizing the bouncing even though it's still there. With normal gravity the maximum distance from the ground is ~ 0.2 (for reference the character/capsule is ~ 2 units) and with a gravity -50.0f the value decreases to ~0.04.<br><br>This is a gif of the character with increased gravity and the bouncing is only noticeable if you're really paying attention to it.<br><a href="https://gfycat.com/hugeagreeablecurlew" class="postlink">https://gfycat.com/hugeagreeablecurlew</a><br><br>So while it works and I will keep it for now this solution seems to be a little hacky and I would prefer a cleaner solution, so if anyone has any other ideas I'm all ears.<br><br>EDIT:<br>I just found out that the solution of the first link (<a href="https://stackoverflow.com/questions/25605659/avoid-ground-collision-with-bullet" class="postlink">https://stackoverflow.com/questions/256 ... ith-bullet</a>) also works for btHeightfieldTerrainShape and not only the btBvhTriangleMeshShape, so generating a btTriangleInfoMap and implementing a custom callback for the terrain shape fixes the bouncing completely.<br><div class="codebox"><p>Code: </p><pre><code>#include &lt;BulletCollision/CollisionDispatch/btInternalEdgeUtility.h&gt;      ....    //register callback function    gContactAddedCallback = collisionCallback;    ....    //generate triangle info map    terrainTriangleInfo = new btTriangleInfoMap();    btGenerateInternalEdgeInfo(terrainShape, terrainTriangleInfo);    terrainShape-&gt;setTriangleInfoMap(terrainTriangleInfo);    ....    //create rigid body for the terrain shape    btRigidBody::btRigidBodyConstructionInfo bodyInfo(0.0f, motionState, terrainShape, btVector3(0,0,0));    btRigidBody* body = new btRigidBody(bodyInfo);    //enable custom callback    body-&gt;setCollisionFlags(body-&gt;getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);   ....      //custom callback functionbool BulletPhysics::collisionCallback(btManifoldPoint&amp; cp, const btCollisionObjectWrapper* obj1, int id1, int index1, const btCollisionObjectWrapper* obj2, int id2, int index2){        btAdjustInternalEdgeContacts(cp, obj2, obj1, id2, index2);        return true;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13792">Ezlo</a> — Mon Oct 19, 2020 2:15 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-10-17T16:44:40+00:00</updated>
+
+		<published>2020-10-17T16:44:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43149#p43149</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43149#p43149"/>
+		<title type="html"><![CDATA[Re: Problem with character controller and btHeightfieldTerrainShape]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43149#p43149"><![CDATA[
+Mmmmaybe... but it is not clear.  I have experienced the case where hidden normals introduce odd collision directions on a flat <strong class="text-strong">btBvhTriangleMeshShape</strong> surface.  My understanding is: <strong class="text-strong">btHeightfieldTerrainShape</strong> builds temporary <strong class="text-strong">btTriangleShapes</strong> instances as necessary whereas <strong class="text-strong">btBvhTriangleMeshShape</strong> caches its <strong class="text-strong">btTriangleShapes</strong> in a "boundary volume hierarchy (bvh)".  But in both cases you are effectively colliding against "triangle soup" and it is possible to get odd normals at the edges adjacent triangles.<br><br>Assuming your character's "bounce" is purely linear and isn't a wobble of rotation... I would suggest trying the following:<br><br><strong class="text-strong">(1)</strong> Reduce the character's restitution (bounciness) to zero.<br><br><strong class="text-strong">(2)</strong> Increase effective gravity when character is walking.  If you ever need weaker/normal gravity you could set it dynamically as necessary (i.e. when jumping or walking off a ledge).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Sat Oct 17, 2020 4:44 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Ezlo]]></name></author>
+		<updated>2020-10-16T21:21:05+00:00</updated>
+
+		<published>2020-10-16T21:21:05+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43147#p43147</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43147#p43147"/>
+		<title type="html"><![CDATA[Problem with character controller and btHeightfieldTerrainShape]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43147#p43147"><![CDATA[
+I'm writing my own character controller class inheriting from btActionInterface and using a capsule collision shape. When I move the player over a completely flat heightfield it starts to "bounce" slightly but very noticeably, especially as the camera is bound to the player position in my case. I assume the issue is related to this topic <a href="https://github.com/godotengine/godot/issues/21341#issuecomment-417537807" class="postlink">https://github.com/godotengine/godot/is ... -417537807</a> and this <a href="https://stackoverflow.com/questions/25605659/avoid-ground-collision-with-bullet" class="postlink">https://stackoverflow.com/questions/256 ... ith-bullet</a><br><br>Does this mean the btHeightfieldTerrainShape is unusable for this purpose and I'm forced to use the btBvhTriangleMeshShape or is there something I am missing?<br><br>Thank you in advance.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13792">Ezlo</a> — Fri Oct 16, 2020 9:21 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

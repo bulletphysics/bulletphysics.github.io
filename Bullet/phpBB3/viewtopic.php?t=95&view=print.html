@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet and ODE</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet and ODE</h2>
+		<p><a href="viewtopic.php%3Ft=95.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=95</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Bullet and ODE</h3>
+				<div class="date">Posted: <strong>Sat Aug 13, 2005 7:41 pm</strong></div>
+				<div class="author">by <strong>plok</strong></div>
+				<div class="content">Firstly, I'd just like to say how nice the demos look...<br>
+<br>
+Secondly, I'm currently writing a very simple proof of concept 3D engine. The rendering is homebrew, but I am currently using ODE for physics and collision detection. I was wondering how Bullet might play a part in the engine - only collision detection, or are you planning to add more features to make Bullet more like ODE? (e.g. joints)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Aug 13, 2005 8:15 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi,<br>
+<br>
+It all depends, what you are looking for, but I would recommend to try to hook-up the Bullet collision detection to ODE.<br>
+<br>
+Perhaps look at the module overview, or doxygen:<br>
+DOXYGEN: <br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/html/annotated.html" class="postlink">http://www.continuousphysics.com/Bullet ... tated.html</a> <br>
+MODULE OVERVIEW: <br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/BulletModules.pdf" class="postlink">http://www.continuousphysics.com/ftp/pu ... odules.pdf</a><br>
+ODE has more joints, and motors, Bullet only has ball-socket so far. Also Bullet lacks some optimizations like a kdop-tree for triangle meshes.<br>
+Benefit of Bullet is the unified convex collision detection, swept convex cast (swepth sphere, box), time of impact, and more understandable source code.<br>
+<br>
+Would you be interested to try out to connect them together ?<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Aug 13, 2005 9:19 pm</strong></div>
+				<div class="author">by <strong>plok</strong></div>
+				<div class="content">I'm not the greatest at maths/physics, but I'm quite good at gluing things together, so I will definitely give it a try. I get how ODE works, but I must admit to not understanding how Bullet works at all - I'll take a look next week...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Aug 14, 2005 1:18 am</strong></div>
+				<div class="author">by <strong>kfields</strong></div>
+				<div class="content">Hi Erwin,<br>
+<br>
+Thanks for sharing this code, I am also working on an engine using ODE and Ogre but I would really like to have continuous collision with convex support.  I would also be interested in using Bullets dynamics once they mature a bit more, but for now I am primarily interested in using it for contact determination only.<br>
+<br>
+I already have implemented a broadphase collision system and custom compound geoms.  (I didn't like their implementation of spaces or geom transforms).  At this point I could drop using ODE geom objects altogether I think.<br>
+<br>
+All I need is a way to get contact points from bullet.<br>
+<br>
+I've browsed through the source code and it looks like I would need to ...<br>
+<br>
+1. Have a BroadphaseProxy member within my Geom/Shape wrapper class.<br>
+<br>
+2. Implement a method similar to SimpleBroadphase::DispatchAllCollisionPairs, since, (no offense!), I would like to continue using my own broadphase.<br>
+<br>
+3. Make the virtual call to CollisionAlgorithm::ProcessCollision.<br>
+<br>
+4.  Hmmmmm... after looking at ConvexConvexAlgorithm::ProcessCollision I see that it is tied directly to the dynamics part of bullet and that my reasoning is at a dead end.<br>
+<br>
+I know this is a lot to ask but do you think you could separate the collision from the dynamics code?  I think it would be beneficial to you as well.<br>
+<br>
+I'm trying to think of a way to tease the two apart.<br>
+<br>
+It could be as simple as having a function that returns a contact point array like ODE.<br>
+<br>
+Or maybe by creating an interface called ContactProcessor that gets passed to ProcessCollision and have it implement a ProcessContacts function?<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=95&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class ContactProcessor {
+public:
+   int m_numContacts ;
+   Result *p_results ;
+   void ProcessContacts() ;
+}
+</code></pre></div>
+
+Only ... how do you do memory management for the Result object in that case?  Wouldn't we want to reuse it and avoid creation and deletion overhead?  That seems to imply that ContactProcessor creates and owns the Result object, only, I can see that you are using different Result classes created within the ProcessCollision function.  I'm stuck.<br>
+<br>
+I know this is pretty sloppy but It's the best I could do for tonight.  Maybe I'll think of something better tomorrow.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+Thanks again!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Aug 14, 2005 8:03 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kfields wrote:</cite>
+All I need is a way to get contact points from bullet.
+</div></blockquote>
+In that case, it is probably best to just use the collision detection, which is located in the /Bullet/Bullet folder. You don't need any of the dynamics or integration files (ConvexConvexCollisionAlgorithm).<br>
+<br>
+All you need it calling gjk, and pass the <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=95&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>PersistentManifold* m_manifoldPtr;
+
+ManifoldResult output(body0,body1,m_manifoldPtr);
+GjkPairDetector::ClosestPointInput input;
+//init input
+m_gjkPairDetector.GetClosestPoints(input,output);
+//the PersistentManifold class automatically manages the contact points, ManifoldResult passes contact points it gets from GJK.
+</code></pre></div>
+
+Persistency of the contacts is done by the PersistentManifold class, and you can manage their lifetime yourself. No dynamic allocation is required if you use a cache of PersistentManifolds.<br>
+<br>
+I will have a look if it is doable to move ConvexConvexCollisionAlgorithm to the collision detection folder (it is a kind of bridge class at the moment). In that case you can use more of the framework.<br>
+<br>
+By the way, can you share your broadphase ?<br>
+<br>
+Thanks a lot for the feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 15, 2005 1:58 am</strong></div>
+				<div class="author">by <strong>kfields</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Persistency of the contacts is done by the PersistentManifold class, and you can manage their lifetime yourself. No dynamic allocation is required if you use a cache of PersistentManifolds. 
+</div></blockquote>
+
+Sounds good!<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+I will have a look if it is doable to move ConvexConvexCollisionAlgorithm to the collision detection folder (it is a kind of bridge class at the moment). In that case you can use more of the framework.
+</div></blockquote>
+
+Yeah, I was thinking in order to do that you would have to move the contact processing down into the shape classes, or create a two tier wrapper system like the one I have, and move it up.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+By the way, can you share your broadphase ?
+</div></blockquote>
+
+Sure, I've been putting off uploading this to SourceForge but maybe you could give me some feedback in return?<br>
+<br>
+<a href="https://sourceforge.net/project/showfiles.php?group_id=113759" class="postlink">https://sourceforge.net/project/showfil ... _id=113759</a><br>
+<a href="http://www.botworx.org" class="postlink">http://www.botworx.org</a><br>
+<br>
+Thanks Erwin!<br>
+<br>
+Kurtis</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

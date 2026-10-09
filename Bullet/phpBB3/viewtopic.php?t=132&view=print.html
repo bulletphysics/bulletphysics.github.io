@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [GJK] Solving for lambda values</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[GJK] Solving for lambda values</h2>
+		<p><a href="viewtopic.php%3Ft=132.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=132</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[GJK] Solving for lambda values</h3>
+				<div class="date">Posted: <strong>Tue Sep 13, 2005 2:17 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Hey guys, I decided to try putting the matrix from page 127 of Gino's book into matlab and getting the symbolic solution. I have added this to my gjk implementation. The results are so-so currently, and I'm kind blocked on what to do next. The problem is that in solve_lambdas3 &amp; solve_lambdas4 the denominator can turn out to be zero sometimes. Has anyone else gone down this road? Any suggestions in avoiding the zero denominator would be greatly appreciated!<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=132&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    void solve_lambdas2 (int ibuf[4])
+    {
+        scalar a = _subdot[ibuf[1]][ibuf[0]];
+        scalar b = _subdot[ibuf[1]][ibuf[1]];
+        _lambdas[ibuf[0]] = b/(-a+b);
+        _lambdas[ibuf[1]] = -1.0/(-a+b)*a;
+    }
+
+    void solve_lambdas3 (int ibuf[4])
+    {
+        scalar a = _subdot[ibuf[1]][ibuf[0]];
+        scalar b = _subdot[ibuf[1]][ibuf[1]];
+        scalar c = _subdot[ibuf[1]][ibuf[2]];
+        scalar d = _subdot[ibuf[2]][ibuf[0]];
+        scalar e = _subdot[ibuf[2]][ibuf[1]];
+        scalar f = _subdot[ibuf[2]][ibuf[2]];
+        scalar denom = (d*b+a*f-f*b-d*c+e*c-e*a);
+        pal_assert (denom != 0.0);
+        scalar idenom = 1.0 / denom;
+        _lambdas[ibuf[0]] = -(f*b-e*c) * idenom;
+        _lambdas[ibuf[1]] = -(d*c-a*f) * idenom;
+        _lambdas[ibuf[2]] =  (d*b-e*a) * idenom;
+    }
+    void solve_lambdas4 (int ibuf[4])
+    {
+#define a _subdot[ibuf[1]][ibuf[0]]
+#define b _subdot[ibuf[1]][ibuf[1]]
+#define c _subdot[ibuf[1]][ibuf[2]]
+#define d _subdot[ibuf[1]][ibuf[3]]
+#define e _subdot[ibuf[2]][ibuf[0]]
+#define f _subdot[ibuf[2]][ibuf[1]]
+#define g _subdot[ibuf[2]][ibuf[2]]
+#define h _subdot[ibuf[2]][ibuf[3]]
+#define i _subdot[ibuf[3]][ibuf[0]]
+#define j _subdot[ibuf[3]][ibuf[1]]
+#define k _subdot[ibuf[3]][ibuf[2]]
+#define l _subdot[ibuf[3]][ibuf[3]]
+        scalar denom = ((b*g-f*c-a*g+a*f+e*c-e*b)*l-e*d*k-b*h*k+e*b*k+f*d*k+j*c*h-j*d*g+i*d*g+a*h*k-i*b*g-a*f*k-a*j*h+a*j*g+e*j*d-e*j*c-i*c*h+i*f*c+i*b*h-i*f*d);
+        pal_assert (denom != 0.0);
+        scalar idenom = 1.0 / denom;
+        _lambdas[ibuf[0]] = ((b*g-f*c)*l+j*c*h-b*h*k+f*d*k-j*d*g) * idenom;
+        _lambdas[ibuf[1]] = -((-e*c+a*g)*l+i*c*h-a*h*k+e*d*k-i*d*g) * idenom;
+        _lambdas[ibuf[2]] = -((e*b-a*f)*l-i*b*h+a*j*h-e*j*d+i*f*d) * idenom;
+        _lambdas[ibuf[3]] = -(a*f*k-a*j*g-e*b*k+e*j*c+i*b*g-i*f*c) * idenom;
+#undef a
+#undef b
+#undef c
+#undef d
+#undef e
+#undef f
+#undef g
+#undef h
+#undef i
+#undef j
+#undef k
+#undef l
+        }
+    void solve_lambdas ()
+    {
+        int size = 0;
+        int ibuf[4];
+        size = get_indexes (ibuf);
+
+        switch (size)
+        {
+        case 1:
+            _lambdas[ibuf[0]] = 1.0;
+        break;
+        case 2:
+            solve_lambdas2 (ibuf);
+        break;
+        case 3:
+            solve_lambdas3 (ibuf);
+        break;
+        case 4:
+            solve_lambdas4 (ibuf);
+        break;
+        default:
+            pal_assert (false);
+        }
+    }
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Sep 13, 2005 9:45 am</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content">A zero denominator denotes that your set of points is affinely dependent (a point can be expressed as an affine combination of the other points.) This can happen if your termination condition fails.  My advise would be to postpone the division until you've found the proper subsimplex. For the proper simplex the numerators are all positive. Since the denominator is the sum of the numerators it is guaranteed to be non-zero for the proper subsimplex.  <br>
+<br>
+Gino</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 14, 2005 2:58 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Gino, I tried what you suggested, but it made things worse. I'm sure I'm just doing something wrong. I won't have time to play with this for a little while, but Erwin requested the full source for this. Disclaimer: It doesn't work (yet). <br>
+<br>
+<br>
+Comments/Review appreciated.<br>
+<br>
+c_gjk_base.h:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/jmc_gjk_base.h" class="postlink">http://www.continuousphysics.com/ftp/pu ... gjk_base.h</a><br>
+<br>
+c_gjk_solved.h:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/jmc_gjk1.cpp" class="postlink">http://www.continuousphysics.com/ftp/pu ... c_gjk1.cpp</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 14, 2005 1:01 pm</strong></div>
+				<div class="author">by <strong>jalla</strong></div>
+				<div class="content">hi,<br>
+<br>
+Using memset(this, 0, sizeof(*this)) on classes with virtual functions is bad.<br>
+For an explanation see here:<br>
+<a href="http://www.devx.com/tips/Tip/14473" class="postlink">http://www.devx.com/tips/Tip/14473</a><br>
+<br>
+-rasmus</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 17, 2005 3:25 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">So, here is a working version that tries to precalculate as much as possible<br>
+I get the same behaviour as the determinant, but I don't have any formalized tests.<br>
+<br>
+Speaking of that, has anyone made an attempt at creating a test suite for gjk? I am very much interested in creating one. What orientations of convex objects produce the worst simplexes for gjk?<br>
+<br>
+code snippet:<br>
+<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=&amp;file=jmc_gjk1.cpp" class="postlink">http://www.continuousphysics.com/ftp/pu ... c_gjk1.cpp</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

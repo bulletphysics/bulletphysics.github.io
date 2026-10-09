@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Computing distance</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Computing distance</h2>
+		<p><a href="viewtopic.php%3Ft=264.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=264</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Computing distance</h3>
+				<div class="date">Posted: <strong>Fri Mar 17, 2006 9:40 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Hi!<br>
+Anyone know of algorithm that compute the distances between two bodies as well as the penetration depth?<br>
+Could I modify Bullet to get the distances?<br>
+<br>
+I need that distance because some time steppers use "prevent penetration" not "penetration correction" approach, so the distances are needed.<br>
+<br>
+I'd guess SWIFT++ could return distance but no penetration<br>
+thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Computing distance</h3>
+				<div class="date">Posted: <strong>Fri Mar 17, 2006 10:40 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>Hi!<br>
+Anyone know of algorithm that compute the distances between two bodies as well as the penetration depth?<br>
+Could I modify Bullet to get the distances?<br>
+<br>
+I need that distance because some time steppers use "prevent penetration" not "penetration correction" approach, so the distances are needed.<br>
+<br>
+I'd guess SWIFT++ could return distance but no penetration<br>
+thanks</div></blockquote>
+
+Bullet GJK gives you already the closest distance. See in ConvexHullDistance demo:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=264&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	PointCollector gjkOutput;
+	GjkPairDetector::ClosestPointInput input;
+	input.m_transformA = tr[0];
+	input.m_transformB = tr[1];
+	convexConvex.GetClosestPoints(input ,gjkOutput);
+</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=264&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>struct PointCollector : public DiscreteCollisionDetectorInterface::Result
+{
+	SimdVector3 m_normalOnBInWorld;
+	SimdVector3 m_pointInWorld;
+	SimdScalar	m_distance;//negative means penetration
+...
+</code></pre></div>
+
+<br>
+There is currently penetration depth estimation, and a EPA implementation is contributed but not added to CVS yet. And more high-level interfaces, but in those cases there is broadphase culling, which prevents calculation of closest distance if objects are too far apart.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Mar 17, 2006 11:21 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">OK. That's great!<br>
+I didn't really dwell into Bullet, just messing around with higher level interfaces.<br>
+<br>
+Thanks alot.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Computing distance</h3>
+				<div class="date">Posted: <strong>Sun Mar 19, 2006 6:19 pm</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>Hi!<br>
+Anyone know of algorithm that compute the distances between two bodies as well as the penetration depth?<br>
+Could I modify Bullet to get the distances?<br>
+<br>
+I need that distance because some time steppers use "prevent penetration" not "penetration correction" approach, so the distances are needed.<br>
+<br>
+I'd guess SWIFT++ could return distance but no penetration<br>
+thanks</div></blockquote>
+
+SOLID 3.5 computes both the distance and the penetration depth for any combination  of convex shape types. SOLID 3.5 can be downloaded from <a href="http://www.dtecta.com" class="postlink">http://www.dtecta.com</a>.<br>
+<br>
+Cheers,<br>
+<br>
+Gino</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Apr 05, 2006 9:25 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Hi!<br>
+Another question:<br>
+<br>
+Let me describe the scenario first:<br>
+Two body A,B are close (or already) in contact, I'd like to get all the features distance that &lt; some epsilon not just the closet one?<br>
+<br>
+That features of collision detection are essential for my current time stepper to prevent intepenetrations, not just recover from penetration.<br>
+<br>
+A side question: Anyone know of any physics engine implementation using that technique? <br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Apr 05, 2006 9:46 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">This is called contact manifold generation. There have been a couple of similar postings/questions recently.<br>
+When using GJK, you need to gather multiple points. Several methods exist, Bullet uses currently Persistent Manifold that adds one closest point at a time, and keeps a small point set persistent over frames. Please see other postings about this:<br>
+<br>
+<a href="http://continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=288" class="postlink">http://continuousphysics.com/Bullet/php ... .php?t=288</a><br>
+<br>
+Another approach, very suitable for polyhedra and in combination with Separating Axis Test based collision detection: you can explicitly build the manifold by finding two parallel planes and perform clipping using edge-planes.<br>
+If I got time I might start writing some white-paper about Contact Manifold generation in combination with GJK.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Apr 05, 2006 10:09 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Thanks for the quick response!<br>
+It's really hard to work on the dynamics part alone (without knowing about stuff in CD).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13112" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-11-28T16:28:35+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13112</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-11-28T16:28:35+00:00</updated>
+
+		<published>2020-11-28T16:28:35+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43205#p43205</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43205#p43205"/>
+		<title type="html"><![CDATA[Re: Adding forces on collision callback for CCD:]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43205#p43205"><![CDATA[
+Ok.<br><br>The good news is: <strong class="text-strong">btDiscreteDynamicsWorld::internalSingleStepSimulation()</strong> is virtual.  You could derive <strong class="text-strong">MyDiscreteDynamicsWorld</strong> from <strong class="text-strong">btDiscreteDynamicsWorld</strong> and override that method to do what you want.  In other words: add <strong class="text-strong">doMySpecialStuff()</strong> between <strong class="text-strong">solveConstraints()</strong> and <strong class="text-strong">integrateTransforms()</strong>.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Sat Nov 28, 2020 4:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[rolfvdhulst]]></name></author>
+		<updated>2020-11-28T13:30:40+00:00</updated>
+
+		<published>2020-11-28T13:30:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43204#p43204</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43204#p43204"/>
+		<title type="html"><![CDATA[Re: Adding forces on collision callback for CCD:]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43204#p43204"><![CDATA[
+That's a good idea, but unfortunately doesn't work, because integrateTransforms() is already called before that, moving the body. I already tried this with using the post-tick callback, but that doesn't work for exactly the same reason.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13438">rolfvdhulst</a> — Sat Nov 28, 2020 1:30 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2020-11-27T14:27:21+00:00</updated>
+
+		<published>2020-11-27T14:27:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43200#p43200</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43200#p43200"/>
+		<title type="html"><![CDATA[Re: Adding forces on collision callback for CCD:]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43200#p43200"><![CDATA[
+One idea that occurs to me is: set the flag in the collision callback but harvest it in an Action within the same substep.  If you look inside <strong class="text-strong">btDiscreteDynamicsWorld::internalSingleStepSimulation()</strong> you will see: the collisions are computed and processed before the actions are updated.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Nov 27, 2020 2:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[rolfvdhulst]]></name></author>
+		<updated>2020-11-26T23:24:16+00:00</updated>
+
+		<published>2020-11-26T23:24:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43198#p43198</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43198#p43198"/>
+		<title type="html"><![CDATA[Adding forces on collision callback for CCD:]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43198#p43198"><![CDATA[
+My problem is as follows: I have a ball of which I need fairly accurate, but fast, physics (basically a CCD solution)<br><br>The ball rolls at fairly high speed towards a box (part of compound body). On collision, I want a force to be applied on both the ball and the box (NOT along the normal) ; but the collision itself also has a restitution coefficient. I essentially want the force to be added immediately after the collision is processed e.g. the restitution is taken into account. I've tried directly adding a force in the callback, but this resulted in the colliding contact impulse computed by bullet being very small as the artificial force I added is already sufficient to seperate the bodies.<br><br>I'm using btMultiBody with CCD enabled for the ball. <br>Right now, I use the gContactAddedCallback to register the collision, and then set a flag for the next tick to add the <br>forces. This works better, as then bullet processes the entire collision and then only adds the forces for the next physics tick. This does however mean that the ball/sphere moves a bit after the collision is done at a velocity which is too low (and more importantly, in the wrong direction).<br><br>Is there any way to solve this problem nicely? Or do I just have to deal with it?<br>Unfortunately, the ball is often also touching the ground (for which all friction types are enabled) and in various states of spinning/sliding/rolling, so I cannot easily write an algorithm myself that from the hitfraction does this small extrapolation.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13438">rolfvdhulst</a> — Thu Nov 26, 2020 11:24 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

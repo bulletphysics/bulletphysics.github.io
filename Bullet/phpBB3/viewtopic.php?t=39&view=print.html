@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to create the contact manifold ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to create the contact manifold ?</h2>
+		<p><a href="viewtopic.php%3Ft=39.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=39</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>How to create the contact manifold ?</h3>
+				<div class="date">Posted: <strong>Wed Jul 20, 2005 10:05 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Kenny Erleben wrote:</cite>
+<br>
+So, I guess the question here is how to combine a constraint-based simulation and a conservative advancement scheme based on TOIs. I assume that you would ignore TOIs from static constacts and only consider dynamic (colliding) contacts. 
+</div></blockquote>
+
+Time of Impact calculation and contact points generation can either be done in one go, or completely seperate. I tried both succesfully, however I handle them seperate in my current approach. Also I don't distinguish between colliding or static contacts.<br>
+<br>
+In the algebraic approach (implementation of Redon's paper) based on relative screwing motion the time of impact is calculated for all feature pairs. This automatically gives all contact point at once. However one must be careful, because the contact points have a timestamp. If this timestamp is much later then the actual time of impact, the contactpoint are not valid at all.<br>
+<br>
+As said before, I handle TOI calculation and manifold generation seperately. For the contact point generation stage I use tradional discrete collision detector (GJK) and a persistent manifold.<br>
+<br>
+Basically the discrete collision detector adds one (or more) clostest point (or deepest penetration) to a persistent contact manifold. It keeps the existing points.<br>
+Every frame the contact points in the manifold get updated, and points that exceed the maximum distance are removed. When the manifold is full, and another point is added, the following strategy is used:<br>
+- keep points with deepest penetration<br>
+- keep the triangle with largest area<br>
+<br>
+This works quite well for implicit convex, polyhedra and convex on concave. See Bullet demos and source for details. I dont handle the concave-concave case.<br>
+<br>
+How do others create their contact manifold ? During the TOI calculation, or seperate ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2005 4:49 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Here's what I do for box-box collision:<br>
+<br>
+1. Find the separating axis with minimum overlap. In this determination, I bias against edge-edge contact.<br>
+2. If the minimum axis is edge-edge, I just generate one point.<br>
+3. If the minimum axis is face-(vert | edge | face), I determine the reference face according to the minimum axis and the incident face on the other box. I then clip the incident face against the reference face. I then reduce the generated points to at most 4 using an approximate convex hull.<br>
+<br>
+This algorithm can be extended to convex polyhedra. The problem is to determine the minimum axis quickly.<br>
+<br>
+Erin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jul 21, 2005 7:04 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content">In my opinion stable and robust contact point generation is a topic that could use some attention. It is in my opinion largely neglected by people doing research in collision detection. <br>
+<br>
+In my experience contact point generation is one of the major sources to unstable simulations. In my opinion temporal coherence seems to be the most vital property that a good contact point generation algorithm should have. By temporal coherence I mean that the trajectories of contact points should follow piecewise continuous paths. Similar requirement should be used on the contact normals. Some of the few methods described in the litterature results in nearly flickering contacts during smooth object motion.<br>
+<br>
+I try to exploit caching and I often use pseudo normals of surfaces (angle weighted normals seem to work quite nice for polygonal objects).<br>
+Contact reduction algorithms do, in my experience, often add more trouble than they are worth, simply because the book-keeping can be quite expensive. For algorithms such as GJK or VCLIP I have succesfully applied recursive search methods for generating contacts. This works well for polygonal objects. For primitives I usually apply case-analysis. Objects represented by implicit surfaces I use simple sampling and inside outside testing. BVHs are a bit tricky due to the risk of multiple reported contacts (neighboring triangles share edges). Edge-edge contacts seem to be important for rigid bodies, but not very important for deformable objects.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2005 9:33 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kenny wrote:</cite>In my opinion stable and robust contact point generation is a topic that could use some attention.</div></blockquote>
+I agree, its once of the reasons to set up this forum. continuous collision detection is another one, and all the extra bits that are hardly spoken out <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+
+<blockquote><div><cite>kenny wrote:</cite>For algorithms such as GJK or VCLIP I have succesfully applied recursive search methods for generating contacts. This works well for polygonal objects. 
+</div></blockquote>
+
+In Bullet, I use one generic approach which works well for implicit and polyhedral objects, but it relies on some tresholds (mainly welding treshold and breaking contact treshold).<br>
+<br>
+Could you go into more detail what you mean by 'recursive search method' ?<br>
+
+<blockquote><div><cite>kenny wrote:</cite>
+For primitives I usually apply case-analysis. 
+</div></blockquote>
+Can you describe this case analysis ? And how would you handle implicit cylinder rolling or resting on a cone, or a cone resting on a triangle ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2005 7:45 pm</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Could you go into more detail what you mean by 'recursive search method' ?</div></blockquote>
+
+It is essentially a tandem neighborhood search of features. Initially seeded at a feature pair making up the ``first'' principal contact. <br>
+<br>
+Look at work done by Joukhada, Laugier and Sundaraj, that will give you the basic idea.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Can you describe this case analysis ?
+</div></blockquote>
+
+It depends on the types of geometries. I  guess the most simple example is that of a point and triangle testing. You start by figuring out wheter the projected point lies inside the edges or if it lies outside then the closest edge/or vertex. One the closest edge or vertex is found you have all the information you need.<br>
+<br>
+Another case would be cylinder point test. First project the point onto center line of cylinder, then figure out if point lies inside end caps or outside. If inside end caps then test distance to line bla bla bla and so on.<br>
+<br>
+The case-analysis idea extend straigthforwardly. The SAT testing can be seen as a case analysis.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+ And how would you handle implicit cylinder rolling or resting on a cone, or a cone resting on a triangle ?</div></blockquote>
+
+Cylinder and cones sucks, they have curved surfaces and edges (yielding infinitely many contacts:-). I would probably use capsyles instead of cylinders. A capsyle is basically a line segment and two spheres. I haven't really considered a cone.<br>
+<br>
+There is an inherent complexity limit on the geometries that are easily dealt with using case-analysis. If things get too complicated it is often easier to use something like GJK.<br>
+<br>
+To device algorithms for case analysis I have from time to time found it very helpfull and instructive to think in terms of external voronoi regions. Once you have a good understanding of these, you simply need a method to prune away external voronoi regions, which are of no interest.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2005 9:10 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>kenny wrote:</cite>
+To device algorithms for case analysis I have from time to time found it very helpfull and instructive to think in terms of external voronoi regions. Once you have a good understanding of these, you simply need a method to prune away external voronoi regions, which are of no interest.
+</div></blockquote>
+I agree. I'm using the voronoi idea (inspired by Christer Ericson) inside the sub distance algorithm of GJK, as an alternative to Johnsons' determinant method.<br>
+<br>
+By the way, doesn't Mirtich not have a patent in that area of using voronoi regions in collision detection ?<br>
+<br>
+But Kenny,
+<blockquote><div><cite>kenny wrote:</cite>
+There is an inherent complexity limit on the geometries that are easily dealt with using case-analysis. If things get too complicated it is often easier to use something like GJK. 
+</div></blockquote>
+
+I don't get it. If I follow your recipy for the following case:<br>
+<br>
+Take a few implicit primitives, things get complicated (sorry),<br>
+So instead of case analysis you revert to GJK as you told. <br>
+But this only gives you one point.  How do you get a stable situation with just 1 point ?<br>
+<br>
+That's exactly why I have worked on this contact manifold generation and reduction on top of GJK. And I'm very curious what alternative others have for implicit difficult cases.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jul 22, 2005 9:24 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>Here's what I do for box-box collision:<br>
+1. Find the separating axis with minimum overlap. In this determination, I bias against edge-edge contact.<br>
+2. If the minimum axis is edge-edge, I just generate one point.<br>
+3. If the minimum axis is face-(vert | edge | face), I determine the reference face according to the minimum axis and the incident face on the other box. I then clip the incident face against the reference face. I then reduce the generated points to at most 4 using an approximate convex hull.<br>
+This algorithm can be extended to convex polyhedra. The problem is to determine the minimum axis quickly.
+</div></blockquote>
+
+I've heard such approach first mentioned by John Nagle, in this thread:<br>
+<a href="http://groups.google.co.uk/group/comp.games.development.programming.algorithms/browse_frm/thread/b6316c1311b726a0/118bae17f95d39db" class="postlink">http://groups.google.co.uk/group/comp.g ... 17f95d39db</a><br>
+<br>
+This works for polyhedral objects, so you tesselate your cylinders and cones ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 23, 2005 12:41 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I think tesselation is not a bad thing. You automatically get rolling resistance. This was done with barrels in Half Life 2.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 23, 2005 7:53 am</strong></div>
+				<div class="author">by <strong>kenny</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+By the way, doesn't Mirtich not have a patent in that area of using voronoi regions in collision detection ?</div></blockquote>
+
+Actually I think Lin-Canny predates him on using external voronoi regions.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+But Kenny,
+<blockquote><div><cite>kenny wrote:</cite>
+There is an inherent complexity limit on the geometries that are easily dealt with using case-analysis. If things get too complicated it is often easier to use something like GJK. 
+</div></blockquote>
+
+I don't get it. If I follow your recipy for the following case:<br>
+<br>
+Take a few implicit primitives, things get complicated (sorry),<br>
+So instead of case analysis you revert to GJK as you told. <br>
+But this only gives you one point.  How do you get a stable situation with just 1 point ?
+</div></blockquote>
+
+I was simply making the point that if you have too many cases you need to search through in a brute force manner. Maybe you are better of with a method that works on general geometries.<br>
+<br>
+Using GJK you would need a post-processing phase for contact determination. <br>
+<br>
+For implicit objects you do not have an explicit surface, so you need some way to detect the surface.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+That's exactly why I have worked on this contact manifold generation and reduction on top of GJK. And I'm very curious what alternative others have for implicit difficult cases.</div></blockquote>
+
+There is a paper from siggraph 93 which deals with the problem of implict representations<br>
+<br>
+<a href="http://www.gg.caltech.edu/papers/collideabstract.html" class="postlink">http://www.gg.caltech.edu/papers/collideabstract.html</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jul 23, 2005 9:35 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I think tesselation is not a bad thing. You automatically get rolling resistance. This was done with barrels in Half Life 2.</div></blockquote>
+
+Interesting. So how do you deal with all the contact points ? For a cylinder you can easily get loads. Do you have a post-processing stage to reduce them ? If so, how do you do this ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jul 24, 2005 6:02 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">The Novodex guys describe how to find an approximate convex hull for the contact manifold in their Game Programming Gems 4 article. Basically you find the min-max contact points along two orthogonal axes in the contact plane.<br>
+<br>
+I use a simlar technique so that a table with four boxes for legs only gets four contact points, even on a highly tesselated mesh. This turns out to be quite cheap and gives a great performance boost in the solver.<br>
+<br>
+Also, remember that the rendered mesh on a barrel can be smoother than the collision.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create the contact manifold ?</h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2005 12:32 pm</strong></div>
+				<div class="author">by <strong>Stephane Redon</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+How do others create their contact manifold ? During the TOI calculation, or seperate ?</div></blockquote>
+
+In my case during the TOI calculation. Then contacts are maintained or not from one step to the other based on the small positive distance between the contact features. Nothing fancy <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile">.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2005 12:40 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Stephane Redon wrote:</cite>
+In my case during the TOI calculation. Then contacts are maintained or not from one step to the other based on the small positive distance between the contact features. Nothing fancy .
+</div></blockquote>
+
+sounds quite fancy to me though. Because how do you deal with the 'timestap' of the contacts ? During the TOI calculation, the TOI assumably gets smaller and smaller, and all the time contact points are collected, each with a different time stamp.<br>
+So I'm probably intested in your filtering scheme.<br>
+<br>
+Also, at which distance is the contact created, given your 3 epsilons in the french thesis or english <a href="http://www.inrialpes.fr/i3d/people/redon/papers/vrJournal2004.pdf" class="postlink">http://www.inrialpes.fr/i3d/people/redo ... al2004.pdf</a><br>
+<br>
+Eb, Es, Er or exactly at the isosurface where the distance equals 0.<br>
+If the latter, I tried this, and the TOI is not robust anymore. Somehow the contacts needs to be at least distance 'Er' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"> ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Jul 25, 2005 12:55 pm</strong></div>
+				<div class="author">by <strong>Stephane Redon</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite><blockquote><div><cite>Stephane Redon wrote:</cite>
+In my case during the TOI calculation. Then contacts are maintained or not from one step to the other based on the small positive distance between the contact features. Nothing fancy .
+</div></blockquote>
+
+sounds quite fancy to me though. Because how do you deal with the 'timestap' of the contacts ? During the TOI calculation, the TOI assumably gets smaller and smaller, and all the time contact points are collected, each with a different time stamp.<br>
+So I'm probably intested in your filtering scheme.<br>
+<br>
+Also, at which distance is the contact created, given your 3 epsilons in the french thesis or english <a href="http://www.inrialpes.fr/i3d/people/redon/papers/vrJournal2004.pdf" class="postlink">http://www.inrialpes.fr/i3d/people/redo ... al2004.pdf</a><br>
+<br>
+Eb, Es, Er or exactly at the isosurface where the distance equals 0.<br>
+If the latter, I tried this, and the TOI is not robust anymore. Somehow the contacts needs to be at least distance 'Er' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"> ?</div></blockquote>
+
+Yes, you never reach a perfectly contacting state, you just get close. Say you're looking for collisions in [0,1]. At some point of the detection you find one  collision at 0.7. It's the first collision in the interval, so you keep it. Then you find one at 0.6995. Because the time difference is less than a threshold you keep both contact points. If then you find a collision at 0.3, you only keep this new one. If you don't find a new collision, you keep both 0.6995 and 0.7. That's the detection part. <br>
+<br>
+Then, you position the objects, thanks to the motions used for collision detection, slightly before the first impact, say 0.699. At that point, the contacts are necessarly at a strictly positive distance, because the objects were slightly separated at the previous time step. You then do a check for repositioning (i.e. you slightly separate the objects if one contact distance is less than Er). In the end of this step "detection - potential repositioning", the objects are slightly separated and you can go to the next time step. With constraint-based dynamics, these contact points will not be re-detected at the next time step (well, sometimes it happens, if you use explicit linearized constraints which are valid at the beginning of the time step only).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jul 26, 2005 11:45 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks Stephane,<br>
+<br>
+There are still quite a few unknowns that one has to solve for a working implementation:<br>
+<br>
+- how do you determine the distance of the contact points ? Do you use discrete collision detection for that ? Or do you update the distance incrementally ?<br>
+<br>
+- do you convert 'distance space' into 'time-of-impact' space ? Do you use linear+angular velocity for that ? And do you project this on the seperating axis ? <br>
+<br>
+Another problem: for example for a featurepair vertex-face:<br>
+If a vertex is approaching 'almost' parallel to the face, the location of the contact might vary a lot, even for small differences in distances in the face-normal direction.<br>
+<br>
+How do you deal with that ?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

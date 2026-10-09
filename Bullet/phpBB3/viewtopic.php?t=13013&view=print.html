@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [SOLVED] Dynamic Character Controller doubt</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[SOLVED] Dynamic Character Controller doubt</h2>
+		<p><a href="viewtopic.php%3Ft=13013.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13013</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[SOLVED] Dynamic Character Controller doubt</h3>
+				<div class="date">Posted: <strong>Sat Jun 27, 2020 8:14 pm</strong></div>
+				<div class="author">by <strong>rfunes</strong></div>
+				<div class="content">Hello,<br>
+<br>
+I am trying to use a dynamic (non-kinematic) character controller for my game, using the capsule shape as the collision shape.<br>
+<br>
+It is working great, except for one case that I am not able to find a good solution so far.<br>
+<br>
+When standing a tiny bit over an edge, the contact point between the ground and the bottom of the capsule shape is no longer perfectly centered in the middle of the capsule shape. In this scenario, if I induce a rotation (either by adding torque or adding angular speed), the capsule not only rotates, but also translates laterally.<br>
+<br>
+I understand that this is the correct physics behavior, but I need to override it, because as much as it is dynamically correct (given the capsule shape and how friction/center of mass works), it is terrible for the character control. <br>
+<br>
+Right now I am casting rays to check if the character is on an edge, and then reposition the rigid body on the desired position, instead of letting the physics control the rotation. This way I can force the capsule shape to "stay put" on the same place and avoid the unwanted translation.<br>
+<br>
+This still feels wrong, as it induces a different behavior when rotating while walking a little bit past an edge, as the repositioning of the rigid body cancels any other movement components that were also applying forces to the body.<br>
+<br>
+For example, when the character is walking on a flat surface, and I induce a rotation, the character naturally keeps moving forward while at the same time rotating. This is the correct behavior that feels very natural when playing. But when walking close (or a tiny bit past) an edge, due to this "solution" I implemented, for a tiny moment the character stops moving forward while it turns on the same spot, due to the fact it is being reinstantiated.<br>
+<br>
+I wonder if there is any other solution for this problem, other than using a kinematic character controller? I tried reducing the friction, but it induces other major problems caused by too low friction.<br>
+<br>
+I am sure this should be a common problem for dynamic character controllers, so I hope that someone already faced this before and a better solution exists already... I really want to try keeping using a rigid body, as for everything else it is working great.<br>
+<br>
+In the hope of being a little more clear, here follows a poorly drawn MS Paint image to explain my problem.<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1831" class="postimage" alt="Problem.png" onclick="viewableArea(this);" /></dt>
+						<dd>Problem.png (42.93 KiB) Viewed 16174 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Thanks !</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamic Character Controller doubt</h3>
+				<div class="date">Posted: <strong>Sat Jun 27, 2020 9:04 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">A solution to this problem I have used successfully is to not allow non-zero angular velocity of the character and just slam its rotation.  In other words, in CharacterController::updateAction() do something like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13013&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform transform = body-&gt;getWorldTransform();
+transform.setRotation(desiredRotation);
+body-&gt;setWorldTransform(transform);
+body-&gt;setAngularVelocity(btVector3(0.0));</code></pre></div>
+
+Note, that will prevent the character from being rotated (or being prevented from rotating) by collisions with other objects and will also prevent the it from rolling/shifting other dynamic objects from its turning motion.  If your gameplay doesn't require such interactions then the solution might work for you.<br>
+<br>
+More advice (perhaps you know this but just in case): if you use the current rotation to compute it the new <strong class="text-strong">desiredRotation</strong> then you must normalize <strong class="text-strong">desiredRotation</strong> before you apply it.  Else floating point error will accumulate, the transform will go unstable, and you'll introduce NaN into the physics simulation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamic Character Controller doubt</h3>
+				<div class="date">Posted: <strong>Sat Jun 27, 2020 11:20 pm</strong></div>
+				<div class="author">by <strong>rfunes</strong></div>
+				<div class="content">So if I understood how your solution works, it gets the object's transform (the current position), then apply the desired rotation, then move the object back to the original transform, therefore nullifying any unwanted translations that would have been caused by the physics simulation?<br>
+<br>
+Quick doubt, given that this is how the solution works, why do we need to zero the angular velocity after setting the world transform?<br>
+<br>
+I implemented your proposed solution and it looked like this (I am using LibGDX):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13013&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>if (obj.isOnEdge()) {
+    // New code as suggested by drleviathan
+    Matrix4 transform = obj.getInstance().body.getWorldTransform();  // LibGDX uses Matrix4 instead of btTransform, but it is the same thing
+    transform.rotate(new Vector3(Vector3.Y), turnDirection * turnSpeed); // This is the equivalent LibGDX method
+    obj.getInstance().body.setWorldTransform(transform);
+    obj.getInstance().body.setAngularVelocity(new Vector3(0f, 0f, 0f));
+} else {
+    // On a flat surface when the bottom of the capsule shape makes contact with the ground, I can simply set the angular velocity and it works great
+    obj.getInstance().body.setAngularVelocity(new Vector3(0f, turnDirection * turnSpeed, 0f));
+}</code></pre></div>
+
+I would like to test a little bit more before I mark this as "solved", but the character seems to be handling in a very natural way !<br>
+Thanks !</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamic Character Controller doubt</h3>
+				<div class="date">Posted: <strong>Sun Jun 28, 2020 9:59 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The solution gets the current transform (position + rotation), overwrites the rotation part, and slams the body's transform to be that of the modified value.  The end result is: the body's position doesn't change, but its rotation does.<br>
+<br>
+You set the angular velocity to be zero because... it shouldn't be spinning because... it is rotated exactly how you want it.  To spin it would be to rotate it away from the target.  Put another way: the angular velocity of the character is meaningless since it is always pointing exactly where you want it, and when a value is meaningless you might as well set it to zero.<br>
+<br>
+Finally, a non-zero angular velocity might introduce artifacts when the character stands on dynamic objects and spins around: it might "push/roll" such dynamic platforms, causing them to move when they shouldn't.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Dynamic Character Controller doubt</h3>
+				<div class="date">Posted: <strong>Mon Jun 29, 2020 2:26 am</strong></div>
+				<div class="author">by <strong>rfunes</strong></div>
+				<div class="content">Thanks, makes complete sense. Your solution works perfectly and I am using it to handle all rotations, even when on a flat ground surface, since there is no need to use the other one (setAngularVelocity) in my case.<br>
+<br>
+In the end what I have now is that for forward/backward/jump movement, I am applying forces, but for rotation I am using your solution. <br>
+<br>
+So it became a hybrid solution, where the rotation is implemented in a similar way to what a kinematic controller would use, and all other movements are using the dynamic rigid body physics.<br>
+<br>
+Reviewing my old solution, my error was that I was applying the current position to the translation (setToTranslation) and only then applying the rotation. Of course when I set the current position to the translation, the character would stop where it was when I induced a rotation, which was not good to control when walking forward while trying to rotate to make a turn, for example..</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

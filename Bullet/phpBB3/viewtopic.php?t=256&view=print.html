@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; A Simple Constraints System</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>A Simple Constraints System</h2>
+		<p><a href="viewtopic.php%3Ft=256.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=256</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>A Simple Constraints System</h3>
+				<div class="date">Posted: <strong>Wed Mar 08, 2006 4:00 am</strong></div>
+				<div class="author">by <strong>gfaraj</strong></div>
+				<div class="content">Hello, I am trying to make a simple yet powerful-enough constraints system for a game physics engine. I already have simple collision detection and response using rigid bodies. I have looked for examples or tutorials on how to implement constraints, but have not found much. <br>
+<br>
+I read Thomas Jakobsen's article in Gamasutra (<a href="http://www.gamasutra.com/resource_guide/20030121/jacobson_01.shtml" class="postlink">http://www.gamasutra.com/resource_guide ... n_01.shtml</a>) but I don't think I can implement a Verlet integrator the way I have been handling movement in my engine. I use impulses to move the rigid bodies. So what I need is an example of how to implement constraints in this kind of system. Can anyone point me in the right direction?<br>
+<br>
+I'm using a simple Euler integrator at the moment (thinking of writing a Runge-Kutta integrator soon):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=256&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>        void BeEulerIntegrator::Integrate(BeRigidBody* Body, Float DeltaTime)
+        {
+            // Should we mess with this body?
+            if (!Body-&gt;IsDynamic() || Body-&gt;IsFlagSet(BeRigidBodyFlags::DISABLED) || 
+                Body-&gt;Mass() &lt; MathUtil::BE_EPSILON || !Body-&gt;Scene())
+                return;
+
+            BeVector3 Force;
+            BeVector3 Torque;
+
+            // Linear dynamics
+            // ---------------
+            Force = Body-&gt;Force() + Body-&gt;ImpulseForce();
+            if (!Body-&gt;IsFlagSet(BeRigidBodyFlags::NO_GRAVITY))
+                Force += Body-&gt;Scene()-&gt;Gravity() * Body-&gt;Mass();
+            
+            Body-&gt;AddLinearMomentum(Force * DeltaTime);
+            Body-&gt;Translate(Body-&gt;LinearVelocity() * DeltaTime);
+
+            // Angular dynamics
+            // ----------------
+            Torque = Body-&gt;Torque() + Body-&gt;ImpulseTorque();
+
+            Body-&gt;AddAngularMomentum(Torque * DeltaTime);
+
+            BeQuaternion kW = BeQuaternion(Body-&gt;AngularVelocity().x(),
+                                           Body-&gt;AngularVelocity().y(),
+                                           Body-&gt;AngularVelocity().z(),
+                                           0.0f);
+
+            BeQuaternion kA1DQDT = 0.5f * kW * Body-&gt;QOrientation();
+            Body-&gt;SetQOrientation(Body-&gt;QOrientation() + DeltaTime * kA1DQDT);
+
+            // Reset impulses
+            Body-&gt;SetImpulseForce(BeVector3::Zero);
+            Body-&gt;SetImpulseTorque(BeVector3::Zero);
+        } 
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 08, 2006 5:59 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">read kenny's thesis. You can find it in the forums.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

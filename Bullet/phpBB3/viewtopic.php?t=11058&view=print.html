@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Implementing hinge constraint</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Implementing hinge constraint</h2>
+		<p><a href="viewtopic.php%3Ft=11058.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11058</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Mon Feb 29, 2016 3:16 pm</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">Hi!<br>
+<br>
+I'm trying to understand joints implementation based on Lagnange multipliers. Now I'm thinking about a hinge joint between two rigid bodies. Here's how I think it should be done. Please tell me if I'm missing something or if something could be done better.<br>
+<br>
+Let us talk about just angular movement for a moment. I want to constraint relative angular movement of a bodyB relative to bodyA in a way that bodyB can only rotate about a vector V tighly bounded with bodyA. I.e. lets (Vx, Vy, Vz) be a constant coordinates in a bodyA frame.<br>
+<br>
+Quaternion describing relative orientation of bodyB against bodyA is qR = qB * qAconj, where qA, qB are quaternions describing orientations of bodies, and qAconj is conjugation.<br>
+<br>
+If V would point in Z axis direction, e.g. (0, 0, 1), then the constatints would be<br>
+qR.x = 0,<br>
+qR.y = 0,<br>
+sin(minAngle / 2) &lt;= qR.z &lt;= sin(maxAngle / 2).<br>
+<br>
+If is not the case I'd find (a constant) quaternion qC which rotates V to (0, 0, |V|) to reduce the problem to that case. So finally, my constraints would be<br>
+(qC * qB * qAconj).x = 0,<br>
+(qC * qB * qAconj).y = 0,<br>
+sin(minAngle / 2) &lt;= (qC * qB * qAconj).z &lt;= sin(maxAngle / 2).<br>
+<br>
+Then I'd differentiare equations, express derivatives of qB and qAconj in terms of wA and wB and get the Jacobian. And then run velocities corrections iterations and position correction iterations in a NGS way.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Sat Mar 05, 2016 12:18 am</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">I'm stuck. Even for just one body which I want to constraint in rotation about one axis it doesn't work, though the problem seems obvious.<br>
+Let V = (Vx, Vy, Vz) be a vector coordinates in a world frame, and q is a unit orientation quaternion of a body (so that if u is a column of coordinates in a body frame (q u qConj) is a column with vector coordinates in a world frame). Let us complete V to a right handed orthonormal basis {a, b, V}. q must desribe rotation about V. So its imaginary part must be colinear to V. Which it equivalent to orthogonality to a and b. So the constraints are<br>
+a * q.im = 0,<br>
+b * q.im = 0,<br>
+(where * is a dot product, q.im -- is a vectorial part of a quaternion).<br>
+<br>
+The velocity constraints are<br>
+0.5 * a * (q * w).im = 0,<br>
+0.5 * b * (q * w).im = 0.<br>
+<br>
+But if I use that velocity constraints I get wrong behaviour if a and b vectors are not along coordinate axes. I have no idea what it wrong here. Completion to basis, calculating of jacobians and inverse mass seems OK: as an independent test, I changed velocity constraints to obvious correct ones:<br>
+a * (q * w * qConj).im,<br>
+a * (q * w * qConj).im<br>
+(angular velocity vector must be colinear to the rotation axis)<br>
+and it worked fine. But I doubt that antiderivative of (\dot q * \bar q) exists, so I haven't a position constraint.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Mon Mar 07, 2016 6:27 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">The Jacobians are simply a and b for the first body (and, of course, -a, and -b for the second body). Is this the result you are getting?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Tue Mar 08, 2016 6:31 pm</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">Nope. Jacobians are coordinate expressions of differentials of maps from "coordinate space" to "constraint space". In simple words, if we have n constraints C_i and m coordinates x_j, ij-th matrix element J_{ij} is dC_i/dt |_{v_j = 1}, where v_j = dx_j/dt. It's written in the previous post. For example, J_{12} = 0.5 * a * (q * (0, 0, 1, 0)).im, where first * is just scalars multiplication, second -- dot product, third -- quaternions multiplication. (For convenience while experimenting I just write short functions getC, getCdot by which Jacobian is calculated.) Is there some possibility that in the general case (a and b not coordinate system orts) semi-implicit Euler method does not converge? I didn't have time to analyse it on paper, but, if I didn't do some stupid mistake in the code, it doesn't (sounds oddly).<br>
+<br>
+It seems that I found the correct constraints (fixed version from the first post). Let us concentrate just on unlimited hinge rotation of two rigid bodies about some common axis. So we need to get rid of two degrees of freedom. Let<br>
+<em class="text-italics">q = rAconj qAconj qB rB,</em><br>
+where qA and qB are usual orientation quaternions (s.t. if a vector V has a coordinates column V' in a frame of a body B (lets name this frame B') then (qB*(0, V')*qBconj).im is its coordinates column in a world frame (lets call this frame W)), rB is a quaternion which carry out rotation from frame where the axis, bodies rotate about, direction vector has coordinates (0, 0, 1) (lets call this frame B'') to frame B', rA defined by analogy. So we have a map
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11058&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>     q            rB      qB   qAconj  rAconj
+B'' --&gt; A'': B'' ---&gt; B' ---&gt; W ---&gt; A' ---&gt; A''
+</code></pre></div>The hinge constraint would not be violated iff vectorial part of q is collinear with Z axis. I.e. the (coordinate) constraints are just<br>
+<em class="text-italics">q.x = 0,<br>
+q.y = 0.</em><br>
+Then differentiating this equations, minding Leibniz rule, unitarity of quaternions and dq/dt = 0.5 q (0, w) identity we get<br>
+<em class="text-italics">qdot = 0.5 rAconj (qAconj qB (0, wB) - (0, wA) qAconj qB) rB</em><br>
+and the velocity constraints:<br>
+<em class="text-italics">qdot.x = 0,<br>
+qdot.y = 0.</em><br>
+Velocities are "decoupled" so to get Jacobian is a matter of simple quaternion multiplication. This one converges (hooray!), but there's still an issue (oh...). Everything works fine if one of the bodies has an infinite inertia (kinematic body) or (if both bodies are dynamic) if angular velocities are orthogonal or collinear to rotation axis. If angular velocities are in general case simulation blows up. And this is an up-to-date WTF. This is not because of quadratic term (Coriolis', gyroscopic, ...) in the Euler equations -- I ignore this term for now for the sake of stability.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Tue Mar 08, 2016 7:50 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I have a fully working constraint model and that's what I have for the Jacobian for a hinge. I don't know if quaternions would make any of my calculations easier, but I don't use any. It just seems they need to be converted to a matrix so often that they are more trouble than they're worth.<br>
+<br>
+Anyway, maybe you'll have better luck with the following thread. See the post by Dirk Gregorius in particular - he computes the Jacobians as the cross product of the other two vectors, but the result is essentially the same (it will be slightly different if there is already an error in the hinge constraint, but I couldn't tell you off-hand if his method is better or worse than mine ... I just know that mine works stably).<br>
+<br>
+<a href="viewtopic.php%3Ft=8686.html" class="postlink">http://www.bulletphysics.org/Bullet/php ... f=4&amp;t=8686</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Tue Mar 08, 2016 8:21 pm</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content"><blockquote><div><cite>bone wrote:</cite>I have a fully working constraint model and that's what I have for the Jacobian for a hinge.</div></blockquote>
+That's because you use another constraints. Of course it's possible to use kind of (for the first body)<br>
+a * e3A = 0,<br>
+b * e3A = 0,<br>
+where e3A is the unit vector rigidly connected with body A. In a body A frame it can rotate only so<br>
+d/dt e3A = wA x e3A,<br>
+where x is a cross product. So the velocity constraints are<br>
+a * (wA x e3A) = wA * (e3A x a) = 0,<br>
+b * (wA x e3A) = wA * (e3A x b) = 0.<br>
+So we have the Jacobian, etc. Lagrange multipliers would talk us how e3A must be changed (rotated), from which we'd derive how angular velocities and quaternions (in NGS) must be changed. This should work. I used the velocity constraint based on the similar idea in the second post, to make myself sure that code for computing jacobians and correcting velocities is OK. I tested it now for a two dynamic bodied joined by a hinge constraint (velocity constraint only) -- seems OK. But my sence of beauty objects againt such sollution <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> It's unnatural to mess with implicit representation of orientation quaternions (e3A or something like it) against explicit: quaternions itself. Plus, as Dirk mentions in that thread, that constraints are bistable. Which is bad by itself, plus, by continuity, it should have worse convergence (because the more constraint violated, the closer it to the "saddle point" (90 degree angle) where, by symmetry and the fact that a continuous function with different signs on the sides of a segment has zero, seems to have zero restoring force (Cdot)).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Wed Mar 09, 2016 2:25 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Ahh, now I see where you're coming from. Well I'm afraid my math isn't good enough to help you. Good luck!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Mar 25, 2016 11:15 am</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">I figured out what the problem was. It was... an error in the basic matrix class from which everything linear algebra stuff like vectors inherited. The error was in access to a matrix element function. But it did not show because almost always I worked with whether vectors (matrices with 1 width) or with linear operators (square matrices). It's a miracle how such trivial error in such important place didn't appear for quite a long time. Related to the topic I suspected an error in quaternion gymnastics, sudden divergence of numerical method and so on. But not THIS. I'm in a superposition of  <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked">  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br>
+<br>
+So finally I have a working hinge constraint. A different versions of it, actually: quaternion based described upwards and the one based directly on vectors orthogonality (similar to mentioned upwards too). I'm too lazy to compare their convergence speed experimentally (especially, if the result seems obvious), but I verified that the former manages angles violation more that 90 degrees fine, unlike the latter, as expected. Also, it's much more convenient to manage limit rotation about a common axis in the quaternion based approach. And that's what I want to talk about <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> It seems the question deserves its own topic: <a href="viewtopic.php%3Ft=11095.html" class="postlink">http://www.bulletphysics.org/Bullet/php ... =4&amp;t=11095</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Mar 25, 2016 2:38 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Congrats! And yes, I have also encountered some of my own fundamental math code with a mistake. Usually it was either never used before, or just had a marginal impact on the end result.<br>
+<br>
+Anyway, your hinge constraint sounds robust. Can it even handle rotations more than 180 degrees (like it is being wound up like a spring?)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Mar 25, 2016 4:09 pm</strong></div>
+				<div class="author">by <strong>vanger</strong></div>
+				<div class="content">Thanks! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+No. That would require some history of a mutual movement, not just body states. So it would be not so natural. Though, it's definitely doable, but there would the same issues both in quaternion based approach and local frames based one.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Aug 26, 2016 2:19 am</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content"><blockquote><div><cite>vanger wrote:</cite>
+<em class="text-italics">qdot = 0.5 rAconj (qAconj qB (0, wB) - (0, wA) qAconj qB) rB</em><br>
+and the velocity constraints:<br>
+<em class="text-italics">qdot.x = 0,<br>
+qdot.y = 0.</em><br>
+Velocities are "decoupled" so to get Jacobian is a matter of simple quaternion multiplication.</div></blockquote>
+
+Would you mind explaining how you isolated wA and wB so as to identify the Jacobian by inspection? I've tried re-arranging qdot but I don't quite understand how construct the Jacobian such that qdot = Jv. <br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Implementing hinge constraint</h3>
+				<div class="date">Posted: <strong>Fri Sep 16, 2016 5:52 pm</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">Answering my own question here, as I've managed to come to a better understanding of the mathematics involved:<br>
+<br>
+Quaternion multiplication can be represented in matrix form, such that<br>
+<br>
+q * p = Q( q ) * p<br>
+<br>
+Furthermore, quaternion multiplication with a pure quaternion (e.g. omega in this case) can be written as<br>
+<br>
+q * (0, w) = P( q ) * w<br>
+<br>
+where w is a standard 3-vector. Definitions of these matrices are located <a href="http://umu.diva-portal.org/smash/get/diva2:140361/FULLTEXT01.pdf" class="postlink">here</a> under chapter 14 and in the notation appendix, in <a href="https://www.amazon.com/Game-Physics-Pearls-Gino-Bergen/dp/1568814747" class="postlink">Game Physics Pearls</a> under chapter 9 (which is an excellent, book I might add), or one can simply derive them by hand by expanding the standard quaternion multiplication, i.e.<br>
+<br>
+q * p = ( qs * ps - qv • pv, qs * pv + ps * qv + qv x pv )<br>
+<br>
+where '•' is the standard dot-product and 'x' is the standard cross-product. Note that because quaternion multiplication is non-commutative, the above matrices will have left- and right-product forms corresponding to the multiplication order.<br>
+<br>
+Therefore, the equation<br>
+<br>
+qdot = 0.5 rAconj (qAconj qB (0, wB) - (0, wA) qAconj qB) rB<br>
+<br>
+can be written in matrix form as<br>
+<br>
+qdot = 0.5 * Qr( rAconj * qAconj * qb ) * Pl( rB ) * wB - 0.5 * Qr( rAconj ) * Pl( qAconj * qB * rB ) * wA<br>
+<br>
+where the 'r' and 'l' subscripts on Q and P denote right- and left-products, respectively. In this form, wA and wB are now isolated and we can easily identify our jacobian by inspection. Hope this helps someone!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

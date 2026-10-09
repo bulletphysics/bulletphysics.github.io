@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [Solved]If I want hard constraints is featherstone and multibody the only effective solution?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[Solved]If I want hard constraints is featherstone and multibody the only effective solution?</h2>
+		<p><a href="viewtopic.php%3Ft=13105.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13105</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[Solved]If I want hard constraints is featherstone and multibody the only effective solution?</h3>
+				<div class="date">Posted: <strong>Wed Nov 11, 2020 8:05 pm</strong></div>
+				<div class="author">by <strong>Octavius_Ace</strong></div>
+				<div class="content">Hi,<br>
+For context, I don't use the python binding and only use the core Dynamic, Collision and LinearMaths libraries in my code.<br>
+<br>
+I've had a rag doll implementation, using the sequential impulse solver for years and ignored the "elasticity" in the constraint chains.<br>
+I've read most posts relating to this lack of hard constraints in ragdolls and don't want to go over old ground. (I've experimented with damping, softness bias limits, error reduction, CFM, similar mass ratios, using hinge in place of 6DoF etc.)<br>
+I've reduced test cases down to a single constraint between a static RB and a dynamic RB, and I can still apply moderate impulses that visibly violate the constraint.<br>
+<br>
+All of the above is recounted in many other posts and I noticed that while the old rag doll demo is gone, it's still in one of the stress tests and still uses Seq Imp Solver and has the same limitations.<br>
+So it feels like I'm at the end of the road with the Seq Imp Solver.<br>
+<br>
+Options appear to be:
+<ul><li>Featherstone / Multibody</li></ul>
+<ul><li>An MLCP solver</li></ul>
+<ul><li>Switch physics engines - I'd rather not, as I like Bullet and have invested a fair amount of time understanding it and integrating it.</li>
+</ul>
+
+So questions:<br>
+1) Am I missing a trick with Seq Impulse and there is a way to harden up constraints? (Using btNNCGConstraintSolver didn't improve things )<br>
+2) Do any of the MLCP solvers offer a solution?<br>
+1) Does Featherstone provide genuinely hard constraints or will I find the softness problem reduced but still present?<br>
+2) Does Featherstone support more than slider and hinge - I'm unclear on this?<br>
+3) Is PhysX (for instance) going to suffer the same problems or is that framework's TGS solver a better option?<br>
+<br>
+Happy to take any advice/experience around this.<br>
+<br>
+Cheers.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: If I want hard constraints is featherstone and multibody the only effective solution?</h3>
+				<div class="date">Posted: <strong>Thu Jan 28, 2021 12:28 am</strong></div>
+				<div class="author">by <strong>acu192</strong></div>
+				<div class="content">I'm also very interested in knowing the answer to your questions. Hopefully someone who knows the multibody world can help us here.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: If I want hard constraints is featherstone and multibody the only effective solution?</h3>
+				<div class="date">Posted: <strong>Thu Jan 28, 2021 8:02 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Years ago (2014) I tried using FixedConstraints (with dynamic transforms) to drive a ragdoll character.  I tried a range of numbers of constraints and body-parts.  As I recall: with the mass ratios and timesteps I was using: above 15 constraints it was pseudo unstable and with 9 constraints (and fewer body parts) it was stable but soft.  So I blended Bullet's solution with a custom verlet solver step (character parts only) and was able to get a stiffer solution with decent performance.  The good news: a verlet sovler is relatively simple to implement (the math is not too hard) and if you just need to simulate a small number of characters/constraints I believe such a solution is viable for real-time simulations.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [Solved]If I want hard constraints is featherstone and multibody the only effective solution?</h3>
+				<div class="date">Posted: <strong>Sun Feb 07, 2021 11:23 am</strong></div>
+				<div class="author">by <strong>Octavius_Ace</strong></div>
+				<div class="content">Apologies for not replying sooner. I missed your responses.<br>
+The good news from my perspective, is that having integrated but not used a multi body loader, I got a well behaving skeleton set up using only the default sequential impulse solver.<br>
+How did I do this? By following the rules on world scaling correctly.<br>
+<br>
+As Bullet's multi body solver is limited to ball, hinge and slider joints, I created  a model and skeleton, using only hinges with angular limits. My intention was to use seq imp and multi body side by side, for comparison.<br>
+I also kept the skeleton simple:<br>
+Pelvis, single torso, head, upper arms lower arms, hands, upper legs, lower legs and feet.<br>
+In doing this I removed multiple spine bones, neck and toe bones.<br>
+It also meant removing a number of 6DOF joints.<br>
+<br>
+But the key to a more stable ragdoll, was also taking notice of a limit that is mentioned here and there throughout forum replies and early documentation. Do not allow any collision shape dimension to fall below 0.2 units.<br>
+This turned out to be the key to my problems.<br>
+Up until this point I always sized my world to reflect real world dimensions. So arm bones would be around 30cm long and 5 to 10 cm in diameter, i.e. 0.3 by 0.1<br>
+At these dimensions, even two RBs with a single hinge between them and equal 1 kg masses, would behave like elastic.<br>
+Scaling up and making the min bone diameter 20 cm (0.2 units) has an amazing effect on stability.<br>
+<br>
+So you just need to decide what the smallest dimension is in your simulation and scale that to at least 0.2 then apply that scale to everything else. Remember to adjust masses accordingly too.<br>
+Be careful though, as there's a trade off to be had. I scaled up by around 2.5, so my hand bone RBs can have dims as low as 0.2/2.5 = 0.08 so 8cm  <br>
+This means a 2m tall figure, is modelled as 5 metres in Blender.<br>
+There will be limits on this scaling workaround, as masses start to become very large. <br>
+When objects get unrealistically large, I find the simulation becomes very 'floaty', as if objects are made of polystyrene and air resistance is becoming noticeable. (I know Bullet doesn't stimulate air resistance but that's what it looks like)<br>
+<br>
+One final thing, observing this lower limit also massively reduces the occurrence of RBs passing through bvh mesh surfaces too. So consider scale first, if you run into pass through problems. <br>
+Do this before any of the other suggestions people make in forum replies, such as:<br>
+increasing solver iterations <br>
+decreasing simulation step length<br>
+increasing mesh triangle density<br>
+<br>
+Anyway, there you have it, a simple solution to the problem.<br>
+I'll post a video on You Tube in the coming days by way of a demo and add a link here.<br>
+<br>
+Cheers</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [Solved]If I want hard constraints is featherstone and multibody the only effective solution?</h3>
+				<div class="date">Posted: <strong>Fri Feb 12, 2021 11:24 pm</strong></div>
+				<div class="author">by <strong>Octavius_Ace</strong></div>
+				<div class="content">And here's a quick video showing a well-behaved rag doll, where rigid body min dims are  greater the 0.2.<br>
+<br>
+<a href="https://www.youtube.com/watch?v=vtRmbP0ZwHM" class="postlink">https://www.youtube.com/watch?v=vtRmbP0ZwHM</a><br>
+<br>
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: [Solved]If I want hard constraints is featherstone and multibody the only effective solution?</h3>
+				<div class="date">Posted: <strong>Tue Feb 16, 2021 11:12 pm</strong></div>
+				<div class="author">by <strong>acu192</strong></div>
+				<div class="content">Thanks for following up with you solution, Octavius_Ace. Glad to hear it, and I'll give it a try soon to see if I can solve my own "constraint stretching" issues as well.<br>
+<br>
+Sidenote... You say: <br>
+
+<blockquote class="uncited"><div>When objects get unrealistically large, I find the simulation becomes very 'floaty',</div></blockquote>
+
+Maybe this is because you didn't increase gravity? I found this idea un-intuitive at first, but turns out if you scale objects by X you also have to scale gravity by X to make it look normal.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Any smart ideas on contact resolution priorities?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Any smart ideas on contact resolution priorities?</h2>
+		<p><a href="viewtopic.php%3Ft=10132.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10132</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Fri Sep 26, 2014 7:16 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content">Hi there. Currently in our engine we have three classes of bodies: static bodies, dynamic bodies, and keyframed bodies. One of my team members came to me and asked if there was any way to prioritize responses to collisions between these bodies. For example, if a keyframed gate animates onto a dynamic player, he will push through the static floor, but perhaps the floor should never be allowed to be penetrated, or at least not penetrated 'as much'.<br>
+<br>
+To me this sounds odd - if the objects are penetrating, between a rock and a hard place, the dynamic player has no where to go. I also can't think how I would factor this kind of thing into the relatively simple gauss seidel solver we use. However, I thought I would ask if anyone has any smart ideas (beyond disabling the contact once collision occurs).<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Sat Sep 27, 2014 7:36 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Maybe you could try sorting the pairs the broadphase gives you in order to solve what is most important last. With Gauss Seidel the last constraints solved will be the most accurate, and perhaps for you the last contacts solved should be dynamic vs static.<br>
+<br>
+Alternatively, maybe it would be good to see if the player is in the way of an animation and static body before playing the animation. If so, then do something about it (perhaps move the player), or not play the animation at all. I have seen doors in games attempt to shut, and once they come into contact with the player they just open back up without finishing their animation. This reminds me of elevator doors in real life.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Sun Sep 28, 2014 4:17 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Randy is right. You should sort your contacts such that static contacts are always solved last. This way you reduce chances that stuff gets pushed out of the world.<br>
+<br>
+For doors I would use motors instead of kinematic bodies. You compute a motor force that will follow the animation. A kinematic body has essentially an infinite force which you want to avoid. This is helpful for all kind of stuff like e.g. also elevators. The down side is that you can now block doors and elevators with e.g. crates that get pushed around. Other solutions as e.g. shadow controllers are very complicated and I would try to avoid those.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Wed Oct 01, 2014 4:11 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content"><blockquote><div><cite>RandyGaul wrote:</cite>Maybe you could try sorting the pairs the broadphase gives you in order to solve what is most important last. With Gauss Seidel the last constraints solved will be the most accurate, and perhaps for you the last contacts solved should be dynamic vs static.<br>
+<br>
+Alternatively, maybe it would be good to see if the player is in the way of an animation and static body before playing the animation. If so, then do something about it (perhaps move the player), or not play the animation at all. I have seen doors in games attempt to shut, and once they come into contact with the player they just open back up without finishing their animation. This reminds me of elevator doors in real life.</div></blockquote>
+
+Randy,<br>
+<br>
+It didn't really occur to me that the order that the constraints are solved would matter but when I stop and think about I see that they do. I'll give that a try - now I just need a free way to sort the constraints!<br>
+<br>
+Dirk, <br>
+<br>
+Motor forces occurred to me as well but the designer pointed out the specific 'problem' of crates in doors as you suggested.<br>
+<br>
+Thank you both for your feedback!<br>
+<br>
+Steven</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Wed Oct 01, 2014 6:07 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Randy is right. You should sort your contacts such that static contacts are always solved last. This way you reduce chances that stuff gets pushed out of the world.<br>
+...</div></blockquote>
+
+A question. My solver looks like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10132&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for ( num_iterations )
+{
+    for ( num_solver_rows )
+    {
+         IterateRow( )
+    }
+
+    if ( maxDeltaLambda &lt; tolerance )
+       break;
+}
+</code></pre></div>
+
+I solve all the constraints together in the loop - are you suggesting that first I iterate on the dynamic and keyframe contacts, and then I iterate on the static afterwards, as if they are in separate islands? I can't imagine this is what you mean, or that it would work!<br>
+<br>
+I currently don't employ warmstarting, and my iterations are quite high - I wonder if the sorted order is really going to help?<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Thu Oct 02, 2014 3:41 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I'm pretty sure they mean to iterate over all of the sorted constraints in one loop.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Fri Oct 03, 2014 2:26 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I have more of a block solver. So it looks like this:<br>
+<br>
+for ( n iterations )<br>
+{<br>
+    for_each( dynamic_contact c )<br>
+        c-&gt;solve();<br>
+<br>
+    for_each( static_contact c )<br>
+        c-&gt;solve();<br>
+}</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Fri Oct 03, 2014 6:21 pm</strong></div>
+				<div class="author">by <strong>sphet</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>I have more of a block solver. So it looks like this:<br>
+<br>
+for ( n iterations )<br>
+{<br>
+    for_each( dynamic_contact c )<br>
+        c-&gt;solve();<br>
+<br>
+    for_each( static_contact c )<br>
+        c-&gt;solve();<br>
+}</div></blockquote>
+
+Interesting - I have to admit while I have significantly refactored this code base I didn't write the original solver so I have not really looked at all the different techniques. What are the differences between the two solvers? The accumulated lambda that is used to determine the resulting forces to apply is part of the whole system of interconnected constraints - each line in my solver row looks almost identical, with the exception of clamping.<br>
+<br>
+S</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Any smart ideas on contact resolution priorities?</h3>
+				<div class="date">Posted: <strong>Sat Oct 04, 2014 5:57 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Well, a good example would be a hinge. You usually solve the motor first, then the limit, followed by the two angular constraints and finally the three linear constraints.<br>
+<br>
+Obviously you want this order as the motor can press on the limit and then as the limit comes after this and cancels the motor again. The motor pressing on the limit is kind of a problem with random constraint order. So this is a mini example of proper constraint ordering. Then you have a couple of options for the remaining five constraints. You can solve each constraint individually (what is what you are doing). Angular constraints are usually much easier (faster) to solve as the linear entries are zero, so I am not sure you utilize that. You can also solve two angular constraints together (as a 2x2 system) and finally solve the linear constraints as a 3x3 system. Of course you can solve the linear and angular constraint together as a 5x5 system as well. This is the most expensive, but also the most stable one as the linear and angular constraints are not fighting anymore. The very best is to solve the 5x5 hinge constraints with the limit together as a 6x6 LCP which can be solved elegantly with direct enumeration. <br>
+<br>
+I never did the LCP approach as this is very expensive in 3D. But Box2D does it and it gives really good results (means stiff limits). I used the 5x5 block solve 10 years ago in Lair. We used varying timesteps which could become terrible large and it helped to keep things together (not stretch) e.g. when the dragon picked up something. Currently I only solve the linear constraints as a 3x3 system. This seems to be a good compromise since it is fast and gives good results. Also note that we solve linear constraints last as stretching is more visible there as for angular constraints. Especially with skinned models. <br>
+<br>
+HTH,<br>
+-Dirk<br>
+<br>
+PS:<br>
+Again I recommend looking at Box2D. It is all there and trivial to port to 3D.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

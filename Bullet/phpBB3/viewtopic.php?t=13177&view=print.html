@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>&quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?</h2>
+		<p><a href="viewtopic.php%3Ft=13177.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13177</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>&quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?</h3>
+				<div class="date">Posted: <strong>Fri Mar 19, 2021 6:17 pm</strong></div>
+				<div class="author">by <strong>acu192</strong></div>
+				<div class="content">The User's Manual says that a <strong class="text-strong">btBvhTriangleMeshShape</strong> can store "multiple mesh parts" (page 14).<br>
+<br>
+I studied the source of <strong class="text-strong">btTriangleMesh</strong> and it only uses one (1) "part" (i.e. only one entry goes into the `m_indexedMeshes` array).<br>
+<br>
+So, my question (I've tried studying the code deeper, and also searching the forum, but I can't find the answer myself) is ...<br>
+<br>
+<strong class="text-strong">Is there ever a reason to use "multiple mesh parts" in my btBvhTriangleMeshShape? If so, when should I use multiple "parts"?</strong><br>
+<br>
+My general idea is that if my mesh has more than one "connected components" (to use a <em class="text-italics">graph theory</em> term), then each "connected components" (again, <em class="text-italics">graph theory</em> term) should become a "part" in the btBvhTriangleMeshShape?<br>
+<br>
+In other places on this forum, @drleviathan has called the btBvhTriangleMeshShape a "triangle soup". If that's really the case, then having multiple "parts" wouldn't change any of the underlying computation?<br>
+<br>
+Thank you!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?</h3>
+				<div class="date">Posted: <strong>Fri Mar 19, 2021 10:23 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">My interpretation of the manual (although I wasn't able to find a copy with the section you describe) is: if you have multiple distinct mesh "parts"... then you could store them in single btBvhTriangleMeshShape instance in one RigidBody... and the collision behavior would be identical to what you'd get if you stored each part in its own btBvhTriangleMeshShape instance on a distinct RigidBody.<br>
+<br>
+Of course... you would NOT want to store multiple "parts" in a single shape when you need to add/remove parts dynamically at runtime.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?</h3>
+				<div class="date">Posted: <strong>Fri Mar 19, 2021 11:30 pm</strong></div>
+				<div class="author">by <strong>acu192</strong></div>
+				<div class="content">Here's the manual I was referring to: <a href="https://github.com/bulletphysics/bullet3/blob/395e17c7bf2fd1b906f41aa651bb145dcedeb873/docs/Bullet_User_Manual.pdf" class="postlink">https://github.com/bulletphysics/bullet ... Manual.pdf</a> (middle-ish of page 14) Says, "The btBvhTriangleMeshShape can store multiple mesh parts. It keeps a triangle index and part index in a 32bit structure, reserving 10 bits for the part Id and the remaining 22 bits for triangle index."<br>
+<br>
+Your interpretation seems reasonable. There's another sentence in the manual (page 35) that says "Many small btBvhTriangleMeshShape pollute the broadphase. Better combine them." So... your interpretation is consistent with that idea as well.<br>
+<br>
+Another interesting bit: None of the examples in the bullet source code uses multiple "parts" in a single btBvhTriangleMeshShape. So I'm hesitant to go down that road since it's apparently not common enough to make it into an example.<br>
+<br>
+I'm assuming, @drleviathan, that you've never used multiple "parts" in a single btBvhTriangleMeshShape then?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?</h3>
+				<div class="date">Posted: <strong>Mon Mar 22, 2021 3:39 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Ah I see... looking closer at the code I rediscover: the <strong class="text-strong">btBvhTriangleMeshShape</strong> uses an instance of something that implements the <strong class="text-strong">btStridingMeshInterface</strong> and that interface supports having the mesh split into sub-parts.  Yes, I recall taking advantage of that multiple parts API.  At one time we were loading FBX files into memory and the triangle mesh info would be divided into multiple parts, depending on how the FBX mesh was created.  We wrote a FbxMeshInterface class to give the btBvhTriangleMeshShape access to the raw data, which was also used for rendering.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?</h3>
+				<div class="date">Posted: <strong>Tue Mar 23, 2021 3:30 pm</strong></div>
+				<div class="author">by <strong>acu192</strong></div>
+				<div class="content">Yes, that's actually how I ran into this myself (except we're loading GLTF instead of FBX but whatever, conceptually the same).<br>
+<br>
+Actually I went ahead and am just using <strong class="text-strong">btTriangleMesh</strong> (implements <strong class="text-strong">btStridingMeshInterface</strong>) and I'm just adding all triangles to one "part" (because that's a limitation of <strong class="text-strong">btTriangleMesh</strong>). It seems to be working totally fine on all my models so far. But my original question was essentially: Is the underlying computation of <strong class="text-strong">btBvhTriangleMeshShape</strong> **different** if you add all triangles to one "part" vs. if you honor your GLTF and add triangles to several "parts"? I have a feeling that the answer is "no, it's all just a triangle soup no matter what" -- but I haven't been able to verify that. I tried studying the code deeper but I'm not seeing the answer.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

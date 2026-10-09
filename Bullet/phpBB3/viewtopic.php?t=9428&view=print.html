@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Parsing btBulletFile really slow?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Parsing btBulletFile really slow?</h2>
+		<p><a href="viewtopic.php%3Ft=9428.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9428</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Parsing btBulletFile really slow?</h3>
+				<div class="date">Posted: <strong>Thu Sep 19, 2013 9:27 pm</strong></div>
+				<div class="author">by <strong>Empire-Phoenix</strong></div>
+				<div class="content">Hi,<br>
+<br>
+well I planned to use the serialisation of the bvh and trimesh shapes to speedup my applications start time.<br>
+However currently while testing, I found the btBulletFile:parse(false) function to be unbelieavably slow, and assume I did something wrong.<br>
+<br>
+This goes so far, that regenerating the 1million polygon shape and bvh is faster than loading it. Can this be right?<br>
+<br>
+<br>
+I save the shape with 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9428&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> btDefaultSerializer*    serializer = new btDefaultSerializer();
+        serializer-&gt;startSerialization();
+        meshShape-&gt;serializeSingleShape(serializer);
+        serializer-&gt;finishSerialization();</code></pre></div>
+
+this needs around 960 milliseconds and is fine so far.<br>
+<br>
+However loading needs (actually only parsing the file the rest is nearly not measurable) 2584 milliseconds<br>
+The relevant code is:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9428&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bParse::btBulletFile* bulletFile2 = new bParse::btBulletFile((char*)buffer,len); //file is actually loaded from ram
+	bool ok = (bulletFile2-&gt;getFlags()&amp; bParse::FD_OK)!=0;
+	if (ok){
+		printf("ok");
+		bulletFile2-&gt;parse(false); //this here needs that long 
+		... rebuilding with the data from it
+</code></pre></div>
+Completly regenerating the shape needs less than 3000 milliseconds, so the time save is somewhat small.<br>
+<br>
+I run on linux(ubuntu 13.04) x64<br>
+gcc/g++ 4.7.3<br>
+<br>
+I assume I do something wrong? If not can anyone give sugestions to reduce the time for loading?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Parsing btBulletFile really slow?</h3>
+				<div class="date">Posted: <strong>Thu Sep 26, 2013 7:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I am surprised that loading a .bullet file takes much time, there is not much going on under the hood, aside from pointer patching.<br>
+3 seconds for pointer patching seems wrong.<br>
+<br>
+Can you reproduce this in the Bullet/SerializeDemo, loading your .bullet file?<br>
+<br>
+Are you measuring an optimized build (-O2, "Release")?<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Parsing btBulletFile really slow?</h3>
+				<div class="date">Posted: <strong>Sat Oct 05, 2013 3:33 am</strong></div>
+				<div class="author">by <strong>Empire-Phoenix</strong></div>
+				<div class="content">Hi, sorry for the late reply,<br>
+<br>
+I use optimized build, yes.<br>
+I now use a different loading circumventing this problem, by using the bvh de/serializeinPlace with this for essentially the same data and nothing else changed the loading time is only a few ms.<br>
+The bvh itself is in the file 300mb in size.<br>
+<br>
+Using my own file read write stuff semms to solved this, but the question remains, what in the parseFile could be so slow?<br>
+As far as I understood, it basically contains the same data I use now, only with some kind of chunked stuff. I don't get why it loads so much faster.<br>
+<br>
+The demos are a bit problematic to get to work, as bullet is integrated into another library by build time.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; New paper about impulse-based dynamic simulation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>New paper about impulse-based dynamic simulation</h2>
+		<p><a href="viewtopic.php%3Ft=658.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=658</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>New paper about impulse-based dynamic simulation</h3>
+				<div class="date">Posted: <strong>Thu Nov 02, 2006 2:23 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">Hi, <br>
+<br>
+I just published my new paper with the title <br>
+<br>
+"Fast Dynamic Simulation of Multi-Body Systems Using Impulses"<br>
+<br>
+on my homepage <br>
+<br>
+<a href="http://www.impulse-based.de" class="postlink">http://www.impulse-based.de</a><br>
+<br>
+The paper shows how all kinds of joint constraints are realized in an impulse-based simulation. Furthermore a new method is presented that allows to compute all required impulses by using a system of linear equations. This method is very fast. We have compared it with the method of David Baraff presented in "Linear-Time Dynamics using Lagrange Multipliers". The simulation of a tree with 255 joints was more than 5 times faster with my new method. <br>
+<br>
+So maybe this is interesting for you. <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New paper about impulse-based dynamic simulation</h3>
+				<div class="date">Posted: <strong>Fri Nov 10, 2006 10:07 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi Jan,<br>
+<br>
+The picture on your website explains a lot.<br>
+<br>
+Bullet also has a several constraints using Impulse Based, including a Generic D6 Constraint, that allows the user to specify the state for each axis independently: either totally Locked, totally Free or Limited. This allows all kind of constraints in one class. I try to understand the important differences with your approach (and if its worth adding them)<br>
+<br>
+Did you compare the practical results using your 'look-ahead and integrate' with just doing all calculations based on current positions (without look-ahead and without step 2) ? Does it converge much faster? Less penetration/joint (positional) error?<br>
+<br>
+Thanks a lot,<br>
+Erwin<br>
+<br>
+<br>
+<img src="http://www.continuousphysics.com/ftp/pub/test/physics/papers/JanBenderApproach.gif" class="postimage" alt="Image"><br>
+
+<blockquote><div><cite>Jan Bender wrote:</cite>Hi, <br>
+I just published my new paper with the title <br>
+"Fast Dynamic Simulation of Multi-Body Systems Using Impulses"<br>
+on my homepage <br>
+<a href="http://www.impulse-based.de" class="postlink">http://www.impulse-based.de</a><br>
+The paper shows how all kinds of joint constraints are realized in an impulse-based simulation. <br>
+Jan</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 11:35 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">Hi Erwin,<br>
+
+<blockquote class="uncited"><div>Bullet also has a several constraints using Impulse Based, including a Generic D6 Constraint, that allows the user to specify the state for each axis independently: either totally Locked, totally Free or Limited. This allows all kind of constraints in one class. I try to understand the important differences with your approach (and if its worth adding them)
+</div></blockquote>
+
+I should take a look at this class. How did you realize the joint limits? <br>
+<br>
+
+<blockquote class="uncited"><div>Did you compare the practical results using your 'look-ahead and integrate' with just doing all calculations based on current positions (without look-ahead and without step 2) ? Does it converge much faster? Less penetration/joint (positional) error? </div></blockquote>
+
+If i understand you correctly, the error is just corrected after it occured by iterating over the time. So if a constraint is not satisfied an impulse is applied and then the time step is made. In this way it can not be guaranteed that all constraints are satisfied but it could speed-up the simulation a lot. I will try this and tell you the result. <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 4:35 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jan Bender wrote:</cite>
+I should take a look at this class. How did you realize the joint limits? 
+</div></blockquote>
+Joint limits (linear+angular) on the Generic 6 DOF constraint are handled exactly the same as contact constraints in Bullet. If an axis has a limited range of motion it becomes a unilateral constraint (positional + velocity).<br>
+Note that a fully locked (upper limit == lower limit) axis becomes a bilateral constraint. Please check the codesnippet at the end of this posting, it shows the linear limit solving of one axis, taken from <a href="http://www.continuousphysics.com/Bullet/BulletFull/btGeneric6DofConstraint_8cpp-source.html#l00176" class="postlink">Bullet/src/BulletDynamics/btGeneric6DofConstraint.cpp</a><br>
+
+<blockquote class="uncited"><div>If i understand you correctly, the error is just corrected after it occured by iterating over the time. So if a constraint is not satisfied an impulse is applied and then the time step is made. In this way it can not be guaranteed that all constraints are satisfied but it could speed-up the simulation a lot. I will try this and tell you the result. 
+</div></blockquote>
+In my experience with several physics engines it is not easy to say that an approach can guarantee constraint satisfacton by just taking one concept into account, there are too many details that all interact and matter.<br>
+<br>
+If I understand correctly your approach is still discrete, so it suffers from tunneling: for fast moving objects, the 'predicted' position in the next timestep can totally fail to measure any error/overlap?<br>
+This is the discrete mode of Bullet, which uses indeed the very popular 'retroactive determination' by correcting the penetration/constraint drift error afterwards. I recognize there is a difference in your approach, because you seem to try to prevent the error by predicting a future error. However, this prediction itself might be inaccurate due to tunelling/discretization.<br>
+<br>
+However Bullet also has continuous collision detection, which allows time of impact calculation, so you can step up until the time, and avoid generating the penetration error in the first place. This solves the actual problem of tunneling/missing collisions for fast moving object. This can also be applied to constraints, but this isn't implemented in Bullet yet (temporal constraints).<br>
+<br>
+Have you considered predicting and stepping up to the the actual time of the discontinuity? For collisions this discontinuity would be the time of impact and for other joints, it would be the time when the constraint hits the limit. <br>
+<br>
+Thanks,<br>
+Erwin<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=658&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		//velocity error (first order error)
+			btScalar rel_vel = m_jacLinear[i].getRelativeVelocity(m_rbA.getLinearVelocity(),angvelA, 
+																	m_rbB.getLinearVelocity(),angvelB);
+		
+			//positional error (zeroth order error)
+			btScalar depth = -(pivotAInW - pivotBInW).dot(normalWorld); 
+			btScalar	lo = -1e30f;
+			btScalar	hi = 1e30f;
+		
+			//handle the limits
+			if (m_lowerLimit[i] &lt; m_upperLimit[i])
+			{
+				{
+					if (depth &gt; m_upperLimit[i])
+					{
+						depth -= m_upperLimit[i];
+						lo = 0.f;
+					
+					} else
+					{
+						if (depth &lt; m_lowerLimit[i])
+						{
+							depth -= m_lowerLimit[i];
+							hi = 0.f;
+						} else
+						{
+							continue;
+						}
+					}
+				}
+			}
+
+			btScalar normalImpulse= (tau*depth/timeStep - damping*rel_vel) * jacDiagABInv;
+			float oldNormalImpulse = m_accumulatedImpulse[i];
+			float sum = oldNormalImpulse + normalImpulse;
+			m_accumulatedImpulse[i] = sum &gt; hi ? 0.f : sum &lt; lo ? 0.f : sum;
+			normalImpulse = m_accumulatedImpulse[i] - oldNormalImpulse;
+
+			btVector3 impulse_vector = normalWorld * normalImpulse;
+			m_rbA.applyImpulse( impulse_vector, rel_pos1);
+			m_rbB.applyImpulse(-impulse_vector, rel_pos2);
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 8:20 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">Hi,<br>
+
+<blockquote class="uncited"><div>Joint limits (linear+angular) on the Generic 6 DOF constraint are handled exactly the same as contact constraints in Bullet. If an axis has a limited range of motion it becomes a unilateral constraint (positional + velocity). </div></blockquote>
+
+In the same way I plan to handle joint limits with my method. Thanks for the code snippet. I think I should take a closer look at the whole class to understand the meaning of all parameters.<br>
+
+<blockquote class="uncited"><div>In my experience with several physics engines it is not easy to say that an approach can guarantee constraint satisfacton by just taking one concept into account, there are too many details that all interact and matter.
+</div></blockquote>
+
+This is one advantage of my method. Since you correct the future error you can guarantee that after the next time step the constraint is satisfied within a given tolerance.<br>
+
+<blockquote class="uncited"><div>If I understand correctly your approach is still discrete, so it suffers from tunneling: for fast moving objects, the 'predicted' position in the next timestep can totally fail to measure any error/overlap? </div></blockquote>
+
+Since I still use a discrete collision detection I have the tunneling problem. But this can just happens for collisions. Joint constraints do not fail. You can even take a model where all joint constraints are totally destroyed and the simulation method repairs all constraints. You just have to take care that the impulses don't get to large, otherwise you get numerical problems. <br>
+<br>
+Because of this property of the method the iteration can be aborted before the computation is finished. The joints will not drift apart even if just a small number of iterations is used. I tried this out using a tree with 255 joints (one level more than this one: <a href="http://www.impulse-based.de/videos/tree127.avi" class="postlink">http://www.impulse-based.de/videos/tree127.avi</a>) and just used 10 iterations. The simulation was 5 times faster than real-time and you see no drift.<br>
+
+<blockquote class="uncited"><div>This is the discrete mode of Bullet, which uses indeed the very popular 'retroactive determination' by correcting the penetration/constraint drift error afterwards. I recognize there is a difference in your approach, because you seem to try to prevent the error by predicting a future error. However, this prediction itself might be inaccurate due to tunelling/discretization.
+</div></blockquote>
+
+The prediction is just the motion the bodies would have without any constraint. This leads to a correct solution as my professor has proven in <a href="http://i31www.ira.uka.de/docs/InternalReport2005.17.pdf" class="postlink">http://i31www.ira.uka.de/docs/InternalReport2005.17.pdf</a>. Just the tunneling effect of fast bodies is a problem. Anyway I wanted to try the collision detection of Bullet. So probably the tunneling problem will soon be history  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+
+<blockquote class="uncited"><div>Have you considered predicting and stepping up to the the actual time of the discontinuity? For collisions this discontinuity would be the time of impact and for other joints, it would be the time when the constraint hits the limit.
+</div></blockquote>
+
+This makes only sense for collisions. The actual time of discontinuity of the joints is always "now" since the joints drift immediately apart. But this is no problem the method corrects this accurately.<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 3:52 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jan Bender wrote:</cite><blockquote class="uncited"><div>Have you considered predicting and stepping up to the the actual time of the discontinuity? For collisions this discontinuity would be the time of impact and for other joints, it would be the time when the constraint hits the limit.
+</div></blockquote>
+
+This makes only sense for collisions. The actual time of discontinuity of the joints is always "now" since the joints drift immediately apart. But this is no problem the method corrects this accurately.
+</div></blockquote>
+
+I think it makes sense for joints too, once their bodies are involved in high-impact collisions, for example: if a high speed car hits a ragdoll in the middle of the timestep, you need to step up to that time of impact, solve the collision, but also _all_ the constraints for that ragdoll. Otherwise the ragdolls limbs will be completely violated. That is one of the reasons why we used 'Featherstone constraints' for ragdolls in some of my previous games. (reduced coordinates)<br>
+<br>
+It also makes sense for joint limits: When you introduce joint limits, the discontinuities can happen in the middle of the timestep. And just like collision detection, I think you have to step the constraint up to the time that it hits the limit. This is because if the bodies for that constraint are involved in other constraints (either joint or collisions) it becomes a global problem, not just local.<br>
+<br>
+I can add some picture, or is my attempt to explain clear?<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 4:07 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>I think it makes sense for joints too, once their bodies are involved in high-impact collisions, for example: if a high speed car hits a ragdoll in the middle of the timestep, you need to step up to that time of impact, solve the collision, but also _all_ the constraints for that ragdoll. Otherwise the ragdolls limbs will be completely violated. That is one of the reasons why we used 'Featherstone constraints' for ragdolls in some of my previous games. (reduced coordinates)
+</div></blockquote>
+
+Okay, in this case it is clear. I always correct the constraints when I step up to the time of impact. I meant that it makes no sense if there is no collision or joint limit (which is a kind of collision). <br>
+
+<blockquote class="uncited"><div>I can add some picture, or is my attempt to explain clear? </div></blockquote>
+
+No, it is totally clear and I agree with you. In the case of collision I do the same. I didn't implement joint limits yet. At the moment the only way to simulate them with my method is to define additional collision objects. So even with these joint limits the constraints are corrected at the time of the discontinuity.<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: New paper about impulse-based dynamic simulation</h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 2:13 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Jan Bender wrote:</cite> <br>
+Furthermore a new method is presented that allows to compute all required impulses by using a system of linear equations. This method is very fast. We have compared it with the method of David Baraff presented in "Linear-Time Dynamics using Lagrange Multipliers". The simulation of a tree with 255 joints was more than 5 times faster with my new method. </div></blockquote>
+
+both the Baraff's method and the Featherstone algorithm have O(n) complexity for equality constraints, so you solve a system of linear equations in less than O(n) and this by doing the LU decomposition?  am i missing something? whats the computational complexity of your method? and what are the storage requirements?<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 3:07 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>both the Baraff's method and the Featherstone algorithm have O(n) complexity for equality constraints, so you solve a system of linear equations in less than O(n) and this by doing the LU decomposition? am i missing something? whats the computational complexity of your method? and what are the storage requirements? </div></blockquote>
+
+I use PARDISO to solve the system of linear equations. I can't tell you which complexity it has. It is optimized for sparse matrices but I don't think that it has linear complexity in the worst case. Baraff can guarantee this. But the complexity that you have in praxis for a special model is something different. <br>
+<br>
+For the simulation I used the model proposed by Baraff himself. If you simulate a special model it is not guaranteed that a O(n) algorithm is faster than an algorithm with a higher complexity. Only if n increases there will be a point where the O(n) algorithm gets faster. Baraff has to solve a bigger matrix than me and has to solve a system of differential equations with continuous forces. That's why his method is slower than mine when simulating the tree with 255 joints.<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 4:21 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Jan Bender wrote:</cite><blockquote class="uncited"><div>both the Baraff's method and the Featherstone algorithm have O(n) complexity for equality constraints, so you solve a system of linear equations in less than O(n) and this by doing the LU decomposition? am i missing something? whats the computational complexity of your method? and what are the storage requirements? </div></blockquote>
+
+I use PARDISO to solve the system of linear equations. I can't tell you which complexity it has. It is optimized for sparse matrices but I don't think that it has linear complexity in the worst case. Baraff can guarantee this. But the complexity that you have in praxis for a special model is something different. <br>
+<br>
+For the simulation I used the model proposed by Baraff himself. If you simulate a special model it is not guaranteed that a O(n) algorithm is faster than an algorithm with a higher complexity. Only if n increases there will be a point where the O(n) algorithm gets faster. Baraff has to solve a bigger matrix than me and has to solve a system of differential equations with continuous forces. That's why his method is slower than mine when simulating the tree with 255 joints.<br>
+Jan</div></blockquote>
+i dont know the details of the Baraff's method, however Feastherstone gets faster than any method when n &gt; 7 if im not wrong, where n is the number of DOFs. Of course Feastherstone covers only branched chains but thats what you used for your tests isnt it? <br>
+it can also be extended in order to deal with contacts:<br>
+<a href="http://research.scea.com/research/pdfs/VangelisK_GDC2004.pdf" class="postlink">http://research.scea.com/research/pdfs/ ... DC2004.pdf</a><br>
+<br>
+a method with a worse complexity can be faster simply because its has been better implemented. So you can take any algorithm, implement the best one in a very bad way and show that the worst one is "much better". I depends on how much you are willing to optimize in the end, just change PARDISO with something else and the total speed will drastically change.<br>
+I think that before stating that your algorithm is better, at least an analysis of the computational complexity, storage requirements and in general an analisys of why it is faster and when is the minimum that it is required. Otherwise in the best case it would be reaching the right conclusions from the wrong premises.<br>
+<br>
+I read you paper very quickly,  so i apologise in advance if i have missed something.<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 5:36 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>i dont know the details of the Baraff's method, however Feastherstone gets faster than any method when n &gt; 7 if im not wrong, where n is the number of DOFs. Of course Feastherstone covers only branched chains but thats what you used for your tests isnt it? </div></blockquote>
+
+Faster than ANY method? I would like to see a proof for that. <br>
+
+<blockquote class="uncited"><div>a method with a worse complexity can be faster simply because its has been better implemented. So you can take any algorithm, implement the best one in a very bad way and show that the worst one is "much better". I depends on how much you are willing to optimize in the end, just change PARDISO with something else and the total speed will drastically change.</div></blockquote>
+
+That is clear. Since I have a very similar matrix structure as Baraff I am sure that I can solve my system of linear equations in the same way as him. In this case my algorithm would have a linear complexity. But this will probably be the topic of my next paper <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+
+<blockquote class="uncited"><div>I think that before stating that your algorithm is better, at least an analysis of the computational complexity, storage requirements and in general an analisys of why it is faster and when is the minimum that it is required. Otherwise in the best case it would be reaching the right conclusions from the wrong premises. </div></blockquote>
+
+I never said it is better, it was just faster for the tree model. It always depends on the application which method is the best for you. <br>
+<br>
+On the other side you can't say that a method with linear complexity is the fastest for every model. A complexity of O(n) always means that you have k*n computations where k is a constant. So if k is very big the method can be very slow for small models. But it depends on the method what is "small". <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 5:54 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Jan Bender wrote:</cite><blockquote class="uncited"><div>i dont know the details of the Baraff's method, however Feastherstone gets faster than any method when n &gt; 7 if im not wrong, where n is the number of DOFs. Of course Feastherstone covers only branched chains but thats what you used for your tests isnt it? </div></blockquote>
+
+Faster than ANY method? I would like to see a proof for that. <br>
+
+</div></blockquote>
+i think it was n = 9. In any case detailed analysis of the complexity of the Featherstone algorithms and other algorithms can be found in:<br>
+<br>
+Robotic Dynamics Algorithms<br>
+Roy Feathestone<br>
+Kluwer Academic Press<br>
+<br>
+Efficient Dynamic Simulation of Robotic Mechanisms<br>
+Kathhryn W. Lilly<br>
+Kluwer Academic Press<br>
+<br>
+of course we are in the context of "exact" solvers. <br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 6:05 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>i think it was n = 9. In any case detailed analysis of the complexity of the Featherstone algorithms and other algorithms can be found in:<br>
+<br>
+Robotic Dynamics Algorithms<br>
+Roy Feathestone<br>
+Kluwer Academic Press </div></blockquote>
+
+I know this one but I don't think that there is proof that considers all methods that exist. <br>
+<br>
+Anyway I am sure that the Featherstone algorithm is one of the best and fastest methods. But it has also some disadvantages as every other method too.<br>
+
+<blockquote class="uncited"><div>of course we are in the context of "exact" solvers. </div></blockquote>
+
+My method converges also to the exact solution. There is a proof for this in "On the Convergence and Correctness of Impulse-Based Dynamic Simulation". <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 6:34 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Jan Bender wrote:</cite><blockquote class="uncited"><div>i think it was n = 9. In any case detailed analysis of the complexity of the Featherstone algorithms and other algorithms can be found in:<br>
+<br>
+Robotic Dynamics Algorithms<br>
+Roy Feathestone<br>
+Kluwer Academic Press </div></blockquote>
+
+I know this one but I don't think that there is proof that considers all methods that exist. <br>
+
+</div></blockquote>
+algorithms typically used in robotics and considered very efficient by the experts in the relevant field are considered.So published algorithms at the time of writing were considered.<br>
+So at least there is some reasoning behind the claims. Im not trying to state which algorithm is the best, im just stating that in order to show that a solver is  more efficient than another one, a proper analysis must be conducted, those books are a good example on how such analsys maybe conducted and its not sufficient to take 2 particular implementations and compare them like you did. If you compare your algorithm to the Baraff's one i presume that you assumed a similar context of application and so you assumed that they are comparable. Also stating that a method is very simple to implement when it requires a sparse LU decomposition package seems a contradiction to me. If PARADISO is used at least we should know how it works, as that may well be the reason why it is faster in that case.<br>
+I have the maximum respect for your work, i will read it in more detail as i have more available time, for now i just dont feel very motivated to do it for the reasons i have exposed. <br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Nov 15, 2006 6:58 pm</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Jan Bender wrote:</cite><blockquote class="uncited"><div>i dont know the details of the Baraff's method, however Feastherstone gets faster than any method when n &gt; 7 if im not wrong, where n is the number of DOFs. Of course Feastherstone covers only branched chains but thats what you used for your tests isnt it? </div></blockquote>
+On the other side you can't say that a method with linear complexity is the fastest for every model. A complexity of O(n) always means that you have k*n computations where k is a constant. So if k is very big the method can be very slow for small models. But it depends on the method what is "small". <br>
+Jan</div></blockquote>
+yes however if i see a sparse LU decomposition i think that the solver i designed for large n .<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

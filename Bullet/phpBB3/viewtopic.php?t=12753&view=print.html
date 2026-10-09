@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Help!  softbody nodes can not update after stepsimulate</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Help!  softbody nodes can not update after stepsimulate</h2>
+		<p><a href="viewtopic.php%3Ft=12753.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12753</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Help!  softbody nodes can not update after stepsimulate</h3>
+				<div class="date">Posted: <strong>Thu Aug 22, 2019 3:29 am</strong></div>
+				<div class="author">by <strong>ekcool</strong></div>
+				<div class="content">I follow SoftDemo,and create a btSoftRigidDynamicsWorld and create a softbody with trimesh from my mesh sucessuflly.<br>
+Details as follows:<br>
+1)<br>
+btDefaultSoftBodySolver* softSolver = new btDefaultSoftBodySolver();<br>
+			btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver();<br>
+			btSoftRigidDynamicsWorld* _sworld = new btSoftRigidDynamicsWorld(m_dispatcher, m_broadphase,solver, collisionConfig, softSolver);			<br>
+			m_dynamicsWorld = (btSoftRigidDynamicsWorld*)_sworld;<br>
+			///setting here<br>
+<br>
+			m_dynamicsWorld-&gt;setGravity(btVector3(0, -9.8, 0));<br>
+			m_dynamicsWorld-&gt;getDispatchInfo().m_useContinuous = true;<br>
+			m_dynamicsWorld-&gt;getSolverInfo().m_erp2 = 0.f;<br>
+			m_dynamicsWorld-&gt;getSolverInfo().m_globalCfm = 0.f;<br>
+			m_dynamicsWorld-&gt;setSynchronizeAllMotionStates(true);<br>
+			///////////////////////////////////fill softinfo for create softbody/////////////////////			      m_softBodyWorldInfo.m_broadphase = m_broadphase;		<br>
+			m_softBodyWorldInfo.m_dispatcher = m_dispatcher;<br>
+			m_softBodyWorldInfo.m_sparsesdf.Initialize();<br>
+			m_softBodyWorldInfo.m_gravity.setValue(0, -9.8, 0);<br>
+			m_softBodyWorldInfo.air_density = (btScalar)1.2;<br>
+			m_softBodyWorldInfo.water_density = 0;<br>
+			m_softBodyWorldInfo.water_offset = 0;<br>
+			m_softBodyWorldInfo.water_normal = btVector3(0, 0, 0);<br>
+<br>
+2)////create a softbody and add it into sofrigiddynamicsworld :<br>
+m_psb = btSoftBodyHelpers::CreateFromTriMesh(softBodyWorldInfo, meshVecs, indices, numTrigs);<br>
+		if (m_psb == NULL)<br>
+			assert(false);<br>
+		btSoftBody::Material* pm = m_psb-&gt;appendMaterial();<br>
+		pm-&gt;m_kLST = 0.1;<br>
+		<br>
+		m_psb-&gt;transform(psbTrans);//this works well,it can move the softbody mesh location<br>
+		m_psb-&gt;setTotalMass(5, true);<br>
+		m_psb-&gt;m_cfg.kDP = 0.0;// Damping coefficient [0,1]<br>
+		m_psb-&gt;m_cfg.kDF = /*0.2*/ 1.0;// Dynamic friction coefficient [0,1]<br>
+		m_psb-&gt;m_cfg.kMT = 0.05;// Pose matching coefficient [0,1]<br>
+		m_psb-&gt;m_cfg.kCHR = 1.0;// Rigid contacts hardness [0,1]<br>
+		m_psb-&gt;m_cfg.kKHR = 0.1;// Kinetic contacts hardness [0,1]<br>
+		m_psb-&gt;m_cfg.kSHR = 0.0;// Soft contacts hardness [0,1]<br>
+		m_psb-&gt;m_cfg.collisions = btSoftBody::fCollision::SDF_RS + btSoftBody::fCollision::CL_SS + btSoftBody::fCollision::CL_SELF;<br>
+		m_psb-&gt;m_cfg.piterations = 7;<br>
+		m_psb-&gt;m_materials[0]-&gt;m_kLST = 1.0;<br>
+		m_psb-&gt;m_materials[0]-&gt;m_kAST = 0.2;<br>
+		m_psb-&gt;m_materials[0]-&gt;m_kVST = 1.0;<br>
+		m_psb-&gt;setPose(true, true);<br>
+		m_psb-&gt;generateBendingConstraints(2);<br>
+		m_psb-&gt;randomizeConstraints();<br>
+3)////in my game loop I try to setupsimulate, and get softbody m_nodes' position to update my mesh vertices ,but failed :<br>
+<br>
+         void SkinnedMeshRenderer::lateUpdate() //update for every frame<br>
+    {<br>
+        if (!_mesh)<br>
+        {<br>
+            return;<br>
+        }<br>
+		if (_pWorld)<br>
+		{<br>
+			_pWorld-&gt;stepSimulate(1.0f / 60.0f);<br>
+			this-&gt;updateVerticesFromSim();//get softbody nodes and update mesh vertices,but all nodes location's value had no changes <br>
+		}<br>
+        this-&gt;updateBones();<br>
+        this-&gt;updateBlendShapes();<br>
+		<br>
+    }<br>
+<br>
+<br>
+so, reslut is showed as old state, the mesh cloth had no change ,anyone can give me an advice? thanks...</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

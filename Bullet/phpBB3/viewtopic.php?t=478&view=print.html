@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Box2D / Understanding K (the mass matrix)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Box2D / Understanding K (the mass matrix)</h2>
+		<p><a href="viewtopic.php%3Ft=478.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=478</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Box2D / Understanding K (the mass matrix)</h3>
+				<div class="date">Posted: <strong>Mon Aug 21, 2006 10:41 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">hi,<br>
+i'm afraid this is going to be a rather long-winded question.<br>
+<br>
+i'm working through Box2D, and i'm trying to understand the different ways that K is constructed. <br>
+<br>
+just to make things easier to read, let's say that K = Km + Kia + Kib, where:<br>
+<br>
+Km = (1/Ma + 1/Ma)[1]<br>
+Ki = -r x I x r<br>
+<br>
+(let's say I is short for "I^-1", [1] is the identity matrix, r is the vector from COM to point of contact/application of impulse)<br>
+<br>
+i'm trying to reconcile the Ki formula from textbooks with the ones found in the Box2D source code; obviously Erin rearranged things to simplify the expressions, but i'd really like to understand how this was done, because i'm getting quite confused -- i know enough linear/vector algebra to understand what's going on, but not enough to understand exactly why certain things are the way they are!<br>
+<br>
+texts give Ki = -r x I x r<br>
+<br>
+my (very sketchy) understanding of this is that I is stored in the body's local frame, and the crossproducts transform I so that Ki is a measurement of how the body's rotational inertia contributes to how "heavy" the body feels at r.<br>
+<br>
+i'm a bit unclear on why we'd even need to transform I from the body's local frame, since in 2D the axis of rotation (around which I measures the moment of inertia) and the world z-axis are identical no matter how the body moves! so I should already be in worldspace.. could anyone explain this?<br>
+<br>
+anyway, you then calculate K, and find the impulse P = -d * K^-1 (where d is the error or delta vector.. so P is the correcting impulse, which works along -d).<br>
+<br>
+this is what happens in Box2D for joints.. however, the formula Erin actually uses is:<br>
+<br>
+0) Ki = -r x I x r<br>
+1)     = -r x I [~r]  ([~] is the skew matrix which makes [~a]b = a x b)<br>
+2)     = (I x r) [~r]   (since (a x b) = -(b x a))<br>
+3)     = (I [~r]) [~r]<br>
+4)     = I [~r]^T ~r    (where ^T is transpose)<br>
+<br>
+<br>
+i have no idea how to go from step (3) to (4), but, i needed to arrive at [~r]^T since working through the math, Erin uses [~r]^T [~r] and not [~r][~r]. so, i suppose my first question is: how does that work?! why isn't it simply [~r][~r]?<br>
+<br>
+<br>
+then erin goes on to construct the matrix M = [~r]^T [~r], which is:<br>
+r.y^2 -r.x*r.y<br>
+-r.x*r.y r.x^2<br>
+(this is an "outer product" from the looks of it, but that's about all i know/understand about it)<br>
+<br>
+<br>
+so, my second question is: why doesn't r x I x r reduce to a scalar? <br>
+<br>
+My understanding is that in 2D you can treat w (angular velocity), or c = (a x b) as scalars, but in reality they're simply 3D vectors with x=y=0, and z = the scalar.. so: r x I x r = (r x I) x r<br>
+<br>
+and since I is perp to the xy plane and r is in the xy plane, (r x I) will be in the xy plane, and thus (r x I) x r will be perp to the xy plane, i.e  a scalar.<br>
+<br>
+my only theory is that i'm mistaken and r x I x r != (r x I) x r.. sadly i can't seem to find any references for how the Ki expression was derived to start with. my vector algebra is definitely a bit rusty though, if you can't tell <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+<br>
+<br>
+anyway.. that's for joints. moving on to normal impulses:<br>
+<br>
+the textbook formula for normal impulse is:<br>
+<br>
+Pn = -d.n / (n^T K n)  ("." beng vector dotprod)<br>
+<br>
+my understanding of this is: d.n measures the error d along the normal n (and since Pn is meant to correct the error, we want -d), and (n^T K n) measures the mass along the normal.<br>
+<br>
+in Box2D, Erin has performed some sort of manipulation to arrive at:<br>
+<br>
+(n^T K n) <br>
+= n^T[Km + Kia + Kib]n<br>
+= Km + Kia_n + Kib_n<br>
+<br>
+where Ki_n = I*(r.r - (r.n)^2)<br>
+<br>
+so, third question: how did we go from (n^T K n) to Ki_n?<br>
+<br>
+<br>
+I realise that to play it safe i could simply stick to Ki = -r x I x r = I [~r]^T ~r (i.e build the 2x2 [~r]^T[~r] matrix) and use that everywhere.. however, i'd _really_ like to understand what's going on behind the scenes. <br>
+<br>
+finally, if i take it as a given that Ki_n = I*(r.r - (r.n)^2) for any vector n, then to find P (i.e an impulse that works along all directions) could i simply do: <br>
+<br>
+P = Pu + Pv (where u and v are the world basis vectors)<br>
+..  i could then use the simpler expression Ki_n = I*(r.r - (r.n)^2) to find Ku and Kv, and i'd never have to build or invert a 2x2 matrix.<br>
+<br>
+does this make any sense, or would i be doing the exact same amount of work?<br>
+<br>
+<br>
+I'm sorry for the extreme length of this post, and also if i'm competely overlooking some simple fact; i've been trying to work out the algebra, and i haven't really gotten anywhere.. argh. if only i had paid more attention in school <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+<br>
+anyway, any help or references would be appreciated, i'm trying to learn and it's becoming somewhat frustrating!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 22, 2006 7:45 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I'm a bit skeptical about this formula:<br>
+
+<blockquote class="uncited"><div>Ki = -r x I x r</div></blockquote>
+
+The cross product only applies to vectors, but "I" is a tensor (matrix).<br>
+<br>
+I'll walk through my derivation for joints step by step.<br>
+<br>
+1. Linear/Angular Momentum<br>
+<br>
+v1 = v1b - P / m1<br>
+w1 = w1b - invI1 * cross(r1, P)<br>
+<br>
+v2 = v2b + P / m2<br>
+w2 = w2b + invI2 * cross(r2, P)<br>
+<br>
+2. Constraint<br>
+<br>
+v2 + cross(w2, r2) - v1 - cross(w1, r1) = 0<br>
+<br>
+3. Substitute (1) into (2)<br>
+<br>
+v2b + P / m2 + cross(w2b + invI2 * cross(r2, P), r2)<br>
+- v1b + P / m1 - cross(w1b - invI1 * cross(r1, P), r1) = 0<br>
+<br>
+4. Now we must wrestle with the (3) to solve for P. Let<br>
+<br>
+dvb = v2b + cross(w2b, r2) - v1b - cross(w1b, r1)<br>
+<br>
+5. Use (4) to simplify (3).<br>
+<br>
+dvb + P / m2 + cross(invI2 * cross(r2, P), r2)<br>
++ P / m1 + cross(invI1 * cross(r1, P), r1) = 0<br>
+<br>
+6. Rearrange (5)<br>
+<br>
+(1/m1 + 1/m2) * P + cross(invI1 * cross(r1, P), r1)<br>
++ cross(invI2 * cross(r2, P), r2) = -dvb<br>
+<br>
+7. Focus on subterm.<br>
+<br>
+cross(invI * cross(r, P), r) =<br>
+-cross(r, invI * cross(r, P)) =<br>
+-[~r] * invI * cross(r, P) =<br>
+-[~r] * invI * [~r] * P<br>
+<br>
+Where [~r] is the skew-symmetric matrix formed from r.<br>
+<br>
+8. Using (7) on (6)<br>
+<br>
+K * P = -dvb<br>
+<br>
+where<br>
+<br>
+K = (1/m1 + 1/m2) * [1] - [~r1] * invI1 * [~r1] - [~r2] * invI2 * [~r2]<br>
+<br>
+9. Reduce to 2D<br>
+<br>
+[~r] = [ 0  -rz  ry<br>
+         rz  0  -rx<br>
+        -ry  rx  0]<br>
+<br>
+invI = [0 0 0<br>
+        0 0 0<br>
+        0 0 invIz]<br>
+<br>
+invI * [~r] = invIz * [  0  0 0<br>
+                         0  0 0<br>
+                       -ry rx 0]<br>
+<br>
+[~r] * invI * [~r] = invIz * [-ry*ry  rx*ry 0<br>
+                               ry*rx -rx*rx 0<br>
+                               0        0   0]<br>
+<br>
+So the 3rd row and column go away. <br>
+<br>
+10. Negate (9) and remove z-component:<br>
+<br>
+-[~r] * invI * [~r] = invIz * [ ry*ry -rx*ry<br>
+                               -rx*ry  rx*rx]<br>
+<br>
+This is what's used in Box2D. BTW, this is not an outer-product.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 22, 2006 3:21 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">thanks -- that definitely helps.<br>
+<br>
+i was confused over I being a tensor/matrix and not a vector/scalar.. i reread the slides i got "r x I x r" from, and sure enough they actually said r^x, which is a different shorthand for the skew matrix i suppose.. argh.<br>
+<br>
+<br>
+does what i said about decomposing K along the world basis vectors (i.e K = i^TKi + j^TKj, i=(1,0) j=(0,1)) make any sense? if it does then i'm pretty sure the math would end up being equivalent to using K directly (inverting it).. it's just that when working things out on paper it would be easier since each n^TKn term reduces to a scalar.<br>
+<br>
+anyway, thanks much for your time!<br>
+your hotmail's full btw <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Aug 23, 2006 4:17 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Erin, thanks for the informative explanation. I'm struggling with deriving a K matrix for a hinge joint. In the case of a hinge joint there are two constraint equations (t1 . (w1 - w2) = 0 and t2 . (w1 - w2) = 0) . Would you mind providing another example where you derive the K matrix for a constraint which has two equations that need satisfying.<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Aug 23, 2006 9:17 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The K matrix for a hinge and any other joint can always be computed like this:<br>
+<br>
+K = J * W * JT<br>
+<br>
+where <br>
+<br>
+J   ==  Jacobian<br>
+JT  == Transpose of the Jacobian<br>
+W == Inverse mass matrix<br>
+<br>
+You can always use this formula to find the correcting impulse:<br>
+<br>
+J*W*JT * lambda = -( c / dt + J * v )<br>
+<br>
+When you solved this linear system you need to project it back onto the Jacobian. So in order to find the impulse you must compute:<br>
+<br>
+P = JT * lambda <br>
+<br>
+Note that P is a 12 x 1 vector containing the linear and angular impulse for the two constrained bodies and the impulses can be applied in the center of gravity. Also note that lambda is an impulse here instead of a force...<br>
+<br>
+The resulting K matrix is then either 5x5 if the Jacobian contains the linear constraints or 2x2 if you only used the angular constraints. This is mathematically equivalent to an iterative  Block-Gauss-Seidel solver which will give you better convergence than the normal PGS.<br>
+<br>
+Also note that you constraints are not correct. You must start with the position constraint and build the derivate w.r.t to time. From my experience you will always get very unstable constraints if you don't do this. See Erin's first paper where this is explained.<br>
+<br>
+Cheers,<br>
+-Dirk<br>
+<br>
+BTW:<br>
+The K matrix for the angular constraints should be: K = 1 / ( invJ1 + invJ2 ) from the back of my head.  This is maybe a little more simple to compute.  Let me know if you want a derivation for this...<br>
+<br>
+invJ is the inverse inertia tensor in world coordinates</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Aug 23, 2006 3:47 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">about building the constraints by starting with the position-level constraint: if you look at Erin's post (and if i understand correctly) he starts with the equations for momentum/velocity and not position.. and if i didn't totally misunderstand his 2006 presentation, the normal/tangent constraints are likewise specified by directly using velocity (i.e constraining the relative velocity to be 0, instead of constraining the first derivative of the relative position to be 0).<br>
+<br>
+<br>
+also, could you possibly explain how: K = J * W * JT <br>
+relates to: K = 1/Ma + 1/Mb - [~ra]Ia^-1[~ra] - [~rb]Ib^-1[~rb]<br>
+<br>
+if W == Inverse mass matrix, then is what i'm calling K equivalent to your W? Or are our Ks identical?<br>
+<br>
+if the latter, what does W (i.e the inverse mass matrix _before_ being transformed/projected/whatever onto the jacobian) look like? <br>
+<br>
+if the former, am i simply doing the J * W * JT without knowing it? is the whole process of transforming the inverse inertia tensors by the skew matrices equivalent to J * W * JT?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Aug 23, 2006 4:05 pm</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">don, Thanks for the great reply! The constraints that I included in my post came from Kenny's thesis (I didn't include the linear velocity constraints). I am interested in your response to raigan and I would very much appreciate a derivation of the K matrix from a position/rotation level for an angular constraint. Even better would be a derivation of the hinge joint as a practical example. Also are there any physics books that cover this topic that you could recommend?<br>
+<br>
+Thanks again.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Aug 23, 2006 5:23 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Here are some books you can buy on Amazon:<br>
+Computational Dynamics by Shabana<br>
+Dynamic Simulations of Multibody Systems by Coutinho<br>
+<br>
+However, a better start would be to look at Russel Smith's chapter in GPG4. Also, break out your calculus book and study Lagrange multipliers.<br>
+<br>
+raigan: You are right, I jumped to the velocity constraint. But it did come from a position constraint:<br>
+<br>
+Hinge position is coincident:<br>
+p2 - p1 = 0<br>
+<br>
+In terms of center of mass and radius vector:<br>
+x2 + r2 - x1 - r1 = 0<br>
+<br>
+Now r1 and r2 are fixed in the bodies, so the time derivative is:<br>
+v2 + cross(omega2, r2) - v1 - cross(omega1, r1) = 0<br>
+<br>
+Caveats: the normal contact constraint can be expressed as a position constraint, but people usually throw away a small term in the velocity constraint. The friction constraint is <em class="text-italics">nonholonomic</em>, meaning that it does not constraint position, only velocity. Think about an ice skate.<br>
+<br>
+jmc: Here's how you should formulate the angular constraints for a hinge. Let ax1, ay1, az1 be the joint frame in body1. Likewise for ax2, ay2, az2. These axes are computed in world coordinates (so they depend on the body's rotation). Let az1 and az2 be the hinge axis in both bodies.<br>
+<br>
+Angular constraints:<br>
+dot(az2, ax1) = 0<br>
+dot(az2, ay1) = 0<br>
+<br>
+Derivative:<br>
+dot(cross(omega2, az2), ax1) + dot(az2, cross(omega1, ax1)) = 0<br>
+dot(cross(omega2, az2), ay1) + dot(az2, cross(omega1, ay1)) = 0<br>
+<br>
+The trick now is to factor out omega1 and omega2. Use the scalar product identity.<br>
+<br>
+dot(A, cross(B, C)) == dot(C, cross(A, B)) == dot(B, cross(C, A))<br>
+<br>
+You can assemble these constraints with the position constraint and build a 5x5 K matrix. On the other hand, you could just treat them one-by-one, which is simpler because you don't need to invert a 5x5 matrix.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Aug 23, 2006 5:43 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Constraints:<br>
+<br>
+You must distinguish between holonomic and non-holonomic constraints. Holonomic basically means that you can find the corresponding velocity constraint by building the derivative w.r.t time of the position constraint and vice versa through integration. The friction constraints are non-holonomic and no position constraint exists. Note that a holonomic position constraint imposes also a velocity and an acceletation constraint onto the system. These are sometimes called the hidden constraints<br>
+<br>
+K matrix:<br>
+The derivation is quite simple. Let w_i be the velocities before we apply the impulse, w_i' the velocities after we applied the impulse. J_i are the inertia tensors with i = 1..2. L is the angular Impulse we are going to apply.<br>
+<br>
+w1 + invJ1 * L = w1'   (1)<br>
+w2 -  invJ2 * L = w2'   (2)<br>
+<br>
+Subraction: (1) - (2)<br>
+<br>
+w1 - w2 + ( invJ1 + invJ2 ) * L = w1' - w2'<br>
+<br>
+We want the relativ velocity after the impulse to be the zero vector. Therefore w1' - w2' = 0 and also we define w1 - w2 = dw since this is the relative angular velocity. This yields<br>
+<br>
+dw + ( invJ1 + invJ2 ) * L = 0<br>
+<br>
+Finally:<br>
+<br>
+ ( invJ1 + invJ2 ) * L = -dw  =&gt; L =  - 1 / ( invJ1 + invJ2 ) * dw<br>
+<br>
+Now you simply define K :=  1 / ( invJ1 + invJ2 ) and you have your K-matrix<br>
+<br>
+Equivalence K to J *  W * JT:<br>
+Try this yourself. This is very good practise. Anyway I will give you some hints and you can ask when are stucked.  <br>
+<br>
+1) Take a simple example like the ball joint. Take the Jacobian either from Kenny's thesis or Erin's 2005 paper<br>
+2) Simply perform the matrix multiplication since you want to show J*W*JT == K. Since J is a 3x12 and W is 12x12 make yourself familiar with block matrices and their identities tor reduce the workload.<br>
+<br>
+From the back of my head (but verify this!) you should have:<br>
+<br>
+J = ( I  -R1  -I  R2 ) <br>
+<br>
+where I is the identity matrix and R_i are the related skew matrices of the lever arms to the anchor point.  For the mass matrix see Kenny's thesis. Is is simply a block-diagonal matrix with the first entry (M._11) being the mass matrix of body1. The second entry (M._22) is the inertia tensor of body1. The third entry is the mass matrix of body2 (M._33) and so on. The inverse of a diagonal matrix is found by building the reciprocals of the diagonal elements. So for the block matrix you build the inverses of the matrices.<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Aug 23, 2006 5:49 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+You can assemble these constraints with the position constraint and build a 5x5 K matrix. On the other hand, you could just treat them one-by-one, which is simpler because you don't need to invert a 5x5 matrix.
+</div></blockquote>
+
+It is simpler, but using the 5x5 system would be equivalent (w.r.t. to your sequential impulses) to a block Gauss-Seidel which has superior convergence, *especially* for joints where the angular term is dominant. <br>
+From a practical standpoint and also having SIMD in head I would suggest solving blocks of 3x3 systems, that is simply solving the linear and angular terms...<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

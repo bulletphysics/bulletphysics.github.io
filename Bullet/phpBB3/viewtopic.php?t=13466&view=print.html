@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Detecting collisions with btHeightfieldTerrainShape</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Detecting collisions with btHeightfieldTerrainShape</h2>
+		<p><a href="viewtopic.php%3Ft=13466.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13466</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Detecting collisions with btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Fri Aug 05, 2022 8:31 pm</strong></div>
+				<div class="author">by <strong>fandango</strong></div>
+				<div class="content">Hi everyone. I have a 256x256 heightfield, which is currently rendering correctly in Bullet's Debug Draw handler, so I believe it is set up correctly. It has it's own filter group (8) and I'm wanting to detect collisions with game rigidbodies (btBoxShape) whose filter group is (1). <br>
+<br>
+What I'm finding is that my callback 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13466&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void CollisionCallback(btBroadphasePair &amp;collisionPair, btCollisionDispatcher &amp;dispatcher, const btDispatcherInfo &amp;dispatchInfo) {
+        SDL_Log(
+            "Collision detected ( %d | %d )",
+            collisionPair.m_pProxy0-&gt;m_collisionFilterGroup,
+            collisionPair.m_pProxy1-&gt;m_collisionFilterGroup);
+}
+
+collisionDispatcher-&gt;setNearCallback(CollisionCallback);
+</code></pre></div>
+
+is triggering as soon as a rigidBody's AABB box enters the terrain AABB box. (e.g., so as they fly above the highest mountain there are no interactions, but as soon as the bounding box for the entire terrain is entered, the callback is triggered). <br>
+<br>
+My understanding was that these callbacks would trigger when the actual triangle mesh of the terrain was crossed.<br>
+<br>
+I feel like I'm close, but I'm entirely sure how I should be handling this. The included Bullet Heightfield example doesn't use any callbacks, but seems to do manual raycasting for all rigidbodies in the world. Is that what I'm meant to be doing in this callback, a manual raycast? Or should I not be using this callback at all and every tick do manual raycasts for all rigidbodies in my world?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Detecting collisions with btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Fri Aug 05, 2022 10:41 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The way collision works in Bullet is...<br>
+<br>
+The "broad-phase" provides collision candidates (e.g. pairs bodies with overlapping bounding boxes) to the "narrow-phase" which computes the details (contact manifold) of the collision.  Your problem is... you are tapping into the output of the broad-phase: when objects are "near enough to warrant a more expensive narrow-phase check".<br>
+<br>
+Yes, btHeightfieldTerrainShape keeps the data in a regular grid and builds btTriangleShape instances as necessary (during the narrow-phase check) to collide against other shapes.<br>
+<br>
+If you want to log all collisions then maybe something like this after the stepSimulation():
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13466&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    // list all touching objects
+    int num_manifolds = collision_dispatcher-&gt;getNumManifolds();
+    for (int i = 0; i &lt; num_manifolds; ++i) {
+        btPersistentManifold* contact_manifold =  collision_dispatcher-&gt;getManifoldByIndexInternal(i);
+        if (contact_manifold-&gt;getNumContacts() &gt; 0) {
+            const btCollisionObject* object_a = contact_manifold-&gt;getBody0();
+            const btCollisionObject* object_b = contact_manifold-&gt;getBody1();
+            SDL_Log("Collision detected ( %d | %d )", object_a-&gt;getWorldArrayIndex(), object_b-&gt;getWorldArrayIndex());
+        }
+    }
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Detecting collisions with btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Sat Aug 06, 2022 9:48 am</strong></div>
+				<div class="author">by <strong>fandango</strong></div>
+				<div class="content">Thanks drleviathan, somewhat ironically I had that exact code commented out in my PhysicsManager. I think the problem is I don't really know how best to handle this. <br>
+<br>
+I have a couple of hundred small flying entities over a triangle terrain and want to detect if they crash into the terrain. Ideally they should have an opportunity to change course. <br>
+<br>
+I think what I need to do is use their velocity (with some look-ahead) to perform a ray check on the terrain mesh. With regard to checking if they are <em class="text-italics">inside</em> the landscape, I'd be as well doing a cheap heightfield lookup with the lower resolution grid.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Detecting collisions with btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Sat Aug 06, 2022 2:32 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yes, if you want to prevent the collisions in the first place you would need to look ahead, with ray-trace or some other mechanism.  If you're running several hundred at once then the ray-trace seems like the cheapest approach.  Rumor has it the btHeightfieldTerrainShape can get expensive if you make long mostly horizontal ray traces against it: where the ray-trace test must generate large numbers of btTriangleShape's to test against.  If you find your ray-trace tests start to bog the system down you might consider reducing LOD of the terrain and using a btBvhTriangleMeshShape instead which uses a Bounding Volume Hierarchy data structure to speed up spatial queries against it.<br>
+<br>
+Meanwhile, there might be another way to do it.  It is possible to set a callback for when contact points are created, but before they have been integrated into the final contact manifold.  This provides an opportunity to examine the details of the contact and to change them before they are actually handled.  I've seen this used to disable collisions between objects on a pairwise/temporary basis instead of using collision groups/filters.<br>
+<br>
+The way I could imagine this being used would be to add a second (identical? lower LOD?) btHeightfieldTerrainShape that is raised above the real one, and which configures to only collides against missiles.  It would serve only as a proximity detector: you would catch all contact points, check to see if they are against this heightfield, and disable them if necessary.  The effect would be: the missiles never actually collide physically, but the creation of contact points could be used to communicate real-terrain proximity info to each corresponding missile.  Dunno what is the CPU cost trade-off here but I figured I would mention the idea.<br>
+<br>
+Good luck.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Detecting collisions with btHeightfieldTerrainShape</h3>
+				<div class="date">Posted: <strong>Sun Aug 07, 2022 7:43 pm</strong></div>
+				<div class="author">by <strong>fandango</strong></div>
+				<div class="content">Thank you for the information, that's fantastic! I saw some posts about the contact points callback that you mentioned and will look into that a bit more to see what's possible.<br>
+<br>
+I experimented with just having a short raycast based on heading per entity and the speed seemed to be fine! So I might go down that avenue. However, what I think I will do is actually implement some path-finding for the terrain (i.e., waypoints that are above the terrain) and avoid the physics entirely and leave that for detecting objects like buildings that have strongly defined AABBs and ignore the terrain for that pass. Also I check entities that are under the terrain in different groups spread across frames. Sometimes it actually looks better if they go into the ground for a few frames before exploding.  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br>
+<br>
+So far performance seems to be very good, but I do still have hopes of a raspberry pi port of my game so we'll see how that goes. Thanks again for your help drleviathan, it's really appreciated.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Performance tips? (OpenCL/multi-threading/etc) - Real-Time Physics Simulation Forum</title>
+
+	<link rel="alternate" type="application/atom+xml" title="Feed - Real-Time Physics Simulation Forum" href="/Bullet/phpBB3/app.php/feed?sid=a5de50bc9e95b7072db587f046c68882">		<link rel="alternate" type="application/atom+xml" title="Feed - All forums" href="/Bullet/phpBB3/app.php/feed/forums?sid=a5de50bc9e95b7072db587f046c68882">			<link rel="alternate" type="application/atom+xml" title="Feed - Forum - General Bullet Physics Support and Feedback" href="/Bullet/phpBB3/app.php/feed/forum/9?sid=a5de50bc9e95b7072db587f046c68882">	<link rel="alternate" type="application/atom+xml" title="Feed - Topic - Performance tips? (OpenCL/multi-threading/etc)" href="/Bullet/phpBB3/app.php/feed/topic/11734?sid=a5de50bc9e95b7072db587f046c68882">	
+	<link rel="canonical" href="viewtopic.php%3Ft=11734.html">
+
+<!--
+	phpBB style name: prosilver
+	Based on style:   prosilver (this is the default phpBB3 style)
+	Original author:  Tom Beddard ( http://www.subBlue.com/ )
+	Modified by:
+-->
+
+<link href="./assets/css/font-awesome.min.css?assets_version=39" rel="stylesheet">
+<link href="./styles/prosilver/theme/stylesheet.css?assets_version=39" rel="stylesheet">
+<link href="./styles/prosilver/theme/en/stylesheet.css?assets_version=39" rel="stylesheet">
+
+
+
+
+<!--[if lte IE 9]>
+	<link href="./styles/prosilver/theme/tweaks.css?assets_version=39" rel="stylesheet">
+<![endif]-->
+
+
+
+
+
+</head>
+<body id="phpbb" class="nojs notouch section-viewtopic ltr ">
+
+
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+	<div id="page-header">
+		<div class="headerbar" role="banner">
+					<div class="inner">
+                        <div style="text-align: center; margin-bottom: 15px;">
+    <img src="/Bullet/phpBB3/images/cropped-pybullet.png" alt="PyBullet Banner" style="max-width: 100%; height: auto;">
+</div>
+			<div id="site-description" class="site-description">
+		<a id="logo" class="logo" href="./index.php?sid=a5de50bc9e95b7072db587f046c68882" title="Board index">
+					<span class="site_logo"></span>
+				</a>
+				<h1>Real-Time Physics Simulation Forum</h1>
+				<p></p>
+				<p class="skiplink"><a href="#start_here">Skip to content</a></p>
+			</div>
+
+			                        <div id="search-box" class="search-box search-header" role="search" style="max-width: 220px;">
+    <script async src="https://cse.google.com/cse.js?cx=7638796233dba4863"></script>
+    <div class="gcse-searchbox-only"></div>
+</div>
+			
+			</div>
+					</div>
+				<div class="navbar" role="navigation">
+	<div class="inner">
+
+	<ul id="nav-main" class="nav-main linklist" role="menubar">
+
+		<li id="quick-links" class="quick-links dropdown-container responsive-menu" data-skip-responsive="true">
+			<a href="#" class="dropdown-trigger">
+				<i class="icon fa-bars fa-fw" aria-hidden="true"></i><span>Quick links</span>
+			</a>
+			<div class="dropdown">
+				<div class="pointer"><div class="pointer-inner"></div></div>
+				<ul class="dropdown-contents" role="menu">
+					
+											<li class="separator"></li>
+																									<li>
+								<a href="./search.php?search_id=unanswered&amp;sid=a5de50bc9e95b7072db587f046c68882" role="menuitem">
+									<i class="icon fa-file-o fa-fw icon-gray" aria-hidden="true"></i><span>Unanswered topics</span>
+								</a>
+							</li>
+							<li>
+								<a href="./search.php?search_id=active_topics&amp;sid=a5de50bc9e95b7072db587f046c68882" role="menuitem">
+									<i class="icon fa-file-o fa-fw icon-blue" aria-hidden="true"></i><span>Active topics</span>
+								</a>
+							</li>
+							<li class="separator"></li>
+							<li>
+								<a href="./search.php?sid=a5de50bc9e95b7072db587f046c68882" role="menuitem">
+									<i class="icon fa-search fa-fw" aria-hidden="true"></i><span>Search</span>
+								</a>
+							</li>
+					
+										<li class="separator"></li>
+
+									</ul>
+			</div>
+		</li>
+
+				<li data-skip-responsive="true">
+			<a href="/Bullet/phpBB3/app.php/help/faq?sid=a5de50bc9e95b7072db587f046c68882" rel="help" title="Frequently Asked Questions" role="menuitem">
+				<i class="icon fa-question-circle fa-fw" aria-hidden="true"></i><span>FAQ</span>
+			</a>
+		</li>
+						
+			<li class="rightside"  data-skip-responsive="true">
+			<a href="./ucp.php?mode=login&amp;redirect=viewtopic.php%3Ft%3D11734&amp;sid=a5de50bc9e95b7072db587f046c68882" title="Login" accesskey="x" role="menuitem">
+				<i class="icon fa-power-off fa-fw" aria-hidden="true"></i><span>Login</span>
+			</a>
+		</li>
+						</ul>
+
+	<ul id="nav-breadcrumbs" class="nav-breadcrumbs linklist navlinks" role="menubar">
+				
+		
+		<li class="breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
+
+			
+							<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope><a itemprop="item" href="./index.php?sid=a5de50bc9e95b7072db587f046c68882" accesskey="h" data-navbar-reference="index"><i class="icon fa-home fa-fw"></i><span itemprop="name">Board index</span></a><meta itemprop="position" content="1" /></span>
+
+											
+								<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope data-forum-id="21"><a itemprop="item" href="./viewforum.php?f=21&amp;sid=a5de50bc9e95b7072db587f046c68882"><span itemprop="name">BULLET PHYSICS LIBRARY USERS</span></a><meta itemprop="position" content="2" /></span>
+															
+								<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope data-forum-id="9"><a itemprop="item" href="./viewforum.php?f=9&amp;sid=a5de50bc9e95b7072db587f046c68882"><span itemprop="name">General Bullet Physics Support and Feedback</span></a><meta itemprop="position" content="3" /></span>
+							
+					</li>
+
+		
+					<li class="rightside responsive-search">
+				<a href="./search.php?sid=a5de50bc9e95b7072db587f046c68882" title="View the advanced search options" role="menuitem">
+					<i class="icon fa-search fa-fw" aria-hidden="true"></i><span class="sr-only">Search</span>
+				</a>
+			</li>
+			</ul>
+
+	</div>
+</div>
+	</div>
+
+	
+	<a id="start_here" class="anchor"></a>
+	<div id="page-body" class="page-body" role="main">
+		
+		
+<h2 class="topic-title"><a href="./viewtopic.php?t=11734&amp;sid=a5de50bc9e95b7072db587f046c68882">Performance tips? (OpenCL/multi-threading/etc)</a></h2>
+<!-- NOTE: remove the style="display: none" when you want to have the forum description on the topic body -->
+
+
+
+<div class="action-bar bar-top">
+	
+			<a href="./posting.php?mode=reply&amp;t=11734&amp;sid=a5de50bc9e95b7072db587f046c68882" class="button" title="Post a reply">
+							<span>Post Reply</span> <i class="icon fa-reply fa-fw" aria-hidden="true"></i>
+					</a>
+	
+			<div class="dropdown-container dropdown-button-control topic-tools">
+		<span title="Topic tools" class="button button-secondary dropdown-trigger dropdown-select">
+			<i class="icon fa-wrench fa-fw" aria-hidden="true"></i>
+			<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+		</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																												<li>
+					<a href="./viewtopic.php?t=11734&amp;sid=a5de50bc9e95b7072db587f046c68882&amp;view=print" title="Print view" accesskey="p">
+						<i class="icon fa-print fa-fw" aria-hidden="true"></i><span>Print view</span>
+					</a>
+				</li>
+											</ul>
+		</div>
+	</div>
+	
+			<div class="search-box" role="search">
+			<form method="get" id="topic-search" action="./search.php?sid=a5de50bc9e95b7072db587f046c68882">
+			<fieldset>
+				<input class="inputbox search tiny"  type="search" name="keywords" id="search_keywords" size="20" placeholder="Search this topic…" />
+				<button class="button button-search" type="submit" title="Search">
+					<i class="icon fa-search fa-fw" aria-hidden="true"></i><span class="sr-only">Search</span>
+				</button>
+				<a href="./search.php?sid=a5de50bc9e95b7072db587f046c68882" class="button button-search-end" title="Advanced search">
+					<i class="icon fa-cog fa-fw" aria-hidden="true"></i><span class="sr-only">Advanced search</span>
+				</a>
+				<input type="hidden" name="t" value="11734" />
+<input type="hidden" name="sf" value="msgonly" />
+<input type="hidden" name="sid" value="a5de50bc9e95b7072db587f046c68882" />
+
+			</fieldset>
+			</form>
+		</div>
+	
+			<div class="pagination">
+			4 posts
+							&bull; Page <strong>1</strong> of <strong>1</strong>
+					</div>
+		</div>
+
+
+
+
+			<div id="p39443" class="post has-profile bg2">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile39443">
+			<dt class="no-profile-rank no-avatar">
+				<div class="avatar-container">
+																			</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=12217&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">ivanisavich</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=12217&amp;sr=posts&amp;sid=a5de50bc9e95b7072db587f046c68882">6</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Sat Jun 10, 2017 7:54 pm</dd>		
+		
+						
+						
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content39443">
+
+					<h3 class="first">
+						<a href="./viewtopic.php?p=39443&amp;sid=a5de50bc9e95b7072db587f046c68882#p39443">Performance tips? (OpenCL/multi-threading/etc)</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=39443&amp;sid=a5de50bc9e95b7072db587f046c68882" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=39443&amp;sid=a5de50bc9e95b7072db587f046c68882#p39443" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=12217&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">ivanisavich</a></strong> &raquo; </span><time datetime="2017-06-10T21:54:43+00:00">Sat Jun 10, 2017 9:54 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">I'm migrating my physics code for an application I'm working on from PhysX to Bullet, to do some performance testing. My application uses rigidbodies, constraints and cloth.<br>
+<br>
+Initially I was under the impression that Bullet supports OpenCL computations, which greatly improve simulation performance...but digging a little more on the forum I found some posts that implied OpenCL in bullet hasn't been developed in years and is very much experimental. Has anyone implemented it recently? Is it stable? Does it work with cloth and constraints or only rigidbodies?<br>
+<br>
+Also, I enabled bullet multithreading in my app and get moderate performance gains (about 10-15% better performance when using 12 threads instead of 1, on my 16 core machine)....but the simulations are still pretty slow.<br>
+<br>
+As a comparison, when simulating 10k spheres dropping onto a ground plane, my PhysX sim runs more than twice as fast as Bullet.<br>
+<br>
+Are there any other obvious ways to speed up rigidbody simulations? Any hidden precompiler flags I can enable, etc? I'm pretty new to bullet and so I don't have a good grasp of all possible tips and tricks yet, and would appreciate any advice!</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p39451" class="post has-profile bg1">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile39451">
+			<dt class="no-profile-rank no-avatar">
+				<div class="avatar-container">
+																			</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=10573&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">lunkhound</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=10573&amp;sr=posts&amp;sid=a5de50bc9e95b7072db587f046c68882">99</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Nov 21, 2013 8:57 pm</dd>		
+		
+						
+						
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content39451">
+
+					<h3 >
+						<a href="./viewtopic.php?p=39451&amp;sid=a5de50bc9e95b7072db587f046c68882#p39451">Re: Performance tips? (OpenCL/multi-threading/etc)</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=39451&amp;sid=a5de50bc9e95b7072db587f046c68882" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=39451&amp;sid=a5de50bc9e95b7072db587f046c68882#p39451" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=10573&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">lunkhound</a></strong> &raquo; </span><time datetime="2017-06-13T00:10:05+00:00">Tue Jun 13, 2017 12:10 am</time>
+			</p>
+			
+			
+			
+			
+			<div class="content"><blockquote><div><cite>ivanisavich wrote:</cite>I'm migrating my physics code for an application I'm working on from PhysX to Bullet, to do some performance testing. My application uses rigidbodies, constraints and cloth.<br>
+<br>
+Initially I was under the impression that Bullet supports OpenCL computations, which greatly improve simulation performance...but digging a little more on the forum I found some posts that implied OpenCL in bullet hasn't been developed in years and is very much experimental. Has anyone implemented it recently? Is it stable? Does it work with cloth and constraints or only rigidbodies?</div></blockquote>
+
+I don't know about the OpenCL stuff.<br>
+
+<blockquote><div><cite>ivanisavich wrote:</cite>Also, I enabled bullet multithreading in my app and get moderate performance gains (about 10-15% better performance when using 12 threads instead of 1, on my 16 core machine)....but the simulations are still pretty slow.</div></blockquote>
+
+Is this a recent version of bullet?<br>
+If so:<br>
+  - are you using the DiscreteDynamicsWorldMt as your physics world?<br>
+  - which task scheduler are you using?<br>
+  - are most of the bodies in your simulation world bunched together? or are they spread out?<br>
+
+<blockquote><div><cite>ivanisavich wrote:</cite>As a comparison, when simulating 10k spheres dropping onto a ground plane, my PhysX sim runs more than twice as fast as Bullet.<br>
+<br>
+Are there any other obvious ways to speed up rigidbody simulations? Any hidden precompiler flags I can enable, etc? I'm pretty new to bullet and so I don't have a good grasp of all possible tips and tricks yet, and would appreciate any advice!</div></blockquote>
+
+If you check out the example browser in the current bullet, and look at the "MultiThreadedDemo" under the "experiments" section. This is kind of a best-case scenario for showing what kind of speedup is possible with multithreading in bullet right now.<br>
+The demo has 48 separate stacks of boxes (which can each be solved in parallel). You can adjust the number of stacks by adjusting the "Stack rows" and "Stack columns" sliders.<br>
+In this demo you can tweak various options, like changing the task scheduler, the thread count, the solver flags, and see the effect on performance.<br>
+There is a built-in profiler:<br>
+ - if you click on the "Display solver info" button, you should get a summary of profile stats relating to multithreading which can give some insight into where the time is going<br>
+ - if you click on "View -&gt; Profiler" you'll get a window with real-time detailed profiling stats for the main thread only<br>
+ - if you press 'p' and hold it down for a half-second or so, a file called "timings_0.json" will be written to a folder somewhere (on Windows/Cmake/MSVC it is the same folder as the App_Examplebrowser.vcxproj file)<br>
+<br>
+If you use the chrome web browser, and put "about://tracing" into the address bar, you can use it to load the json file to view timings for each thread.</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p42190" class="post has-profile bg2">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile42190">
+			<dt class="no-profile-rank no-avatar">
+				<div class="avatar-container">
+																			</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=13320&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">SnapperTT</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=13320&amp;sr=posts&amp;sid=a5de50bc9e95b7072db587f046c68882">1</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Jun 13, 2019 6:28 am</dd>		
+		
+						
+						
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content42190">
+
+					<h3 >
+						<a href="./viewtopic.php?p=42190&amp;sid=a5de50bc9e95b7072db587f046c68882#p42190">Re: Performance tips? (OpenCL/multi-threading/etc)</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=42190&amp;sid=a5de50bc9e95b7072db587f046c68882" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=42190&amp;sid=a5de50bc9e95b7072db587f046c68882#p42190" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=13320&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">SnapperTT</a></strong> &raquo; </span><time datetime="2019-06-13T07:04:23+00:00">Thu Jun 13, 2019 7:04 am</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">First of all thankyou lunkhound, for your work on implementing MP Bullet.<br>
+<br>
+Like the OP I am also experiencing very modest performance boosts - looking at the MultiThreaded Demo in the example browser, with 12 threads (6 cores) I am getting a ~20% boost in performance for about a 400% increase in total CPU time.<br>
+ThreadSupport, No MT: - 32ms<br>
+ThreadSupport, MT enabled w/ 12 threads: ~26ms<br>
+OpenMP, MT enabled: 38ms (!!)<br>
+Running with Bullet 2.88. This ratio is roughly consistant even when cranking the box counts up.<br>
+<br>
+I'm curious as I'm considering my own implementation of multithreading - dividing the simulation into many btDynamicWorlds and giving them each a thread. If the simulation can be sensibly divided up such that there is little overlapping regions and objects stay within their worlds there should be a linear (or better) speedup with world count. For instance in a city simulation objects in different neighborhoods can be grouped into a single btDynamicWorld as objects rarely transition between neighborhoods.<br>
+But from reading this thread (<a href="viewtopic.php%3Ff=9&amp;t=10232.html" class="postlink">viewtopic.php?f=9&amp;t=10232</a>) it appears that this is basically what you are doing within one world, and are creating regions on the fly.<br>
+<br>
+Do you have any thoughts as what can be done either to get the kinds of perf boosts with DiscreteDynamicsWorldMt as reported in the thread, or whether or not my approach is sensible?</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p42410" class="post has-profile bg1">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile42410">
+			<dt class="no-profile-rank no-avatar">
+				<div class="avatar-container">
+																			</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=13427&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">Dundo</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=13427&amp;sr=posts&amp;sid=a5de50bc9e95b7072db587f046c68882">1</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Wed Sep 25, 2019 7:48 am</dd>		
+		
+						
+						
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content42410">
+
+					<h3 >
+						<a href="./viewtopic.php?p=42410&amp;sid=a5de50bc9e95b7072db587f046c68882#p42410">Re: Performance tips? (OpenCL/multi-threading/etc)</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=42410&amp;sid=a5de50bc9e95b7072db587f046c68882" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=42410&amp;sid=a5de50bc9e95b7072db587f046c68882#p42410" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=13427&amp;sid=a5de50bc9e95b7072db587f046c68882" class="username">Dundo</a></strong> &raquo; </span><time datetime="2019-10-08T09:14:17+00:00">Tue Oct 08, 2019 9:14 am</time>
+			</p>
+			
+			
+			
+			
+			<div class="content"><blockquote cite="./viewtopic.php?p=42190&amp;sid=a5de50bc9e95b7072db587f046c68882#p42190"><div><cite><a href="./memberlist.php?mode=viewprofile&amp;u=13320&amp;sid=a5de50bc9e95b7072db587f046c68882">SnapperTT</a> wrote: <a href="./viewtopic.php?p=42190&amp;sid=a5de50bc9e95b7072db587f046c68882#p42190" data-post-id="42190" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Thu Jun 13, 2019 7:04 am</span></cite>
+Like the OP I am also experiencing very modest performance boosts - looking at the MultiThreaded Demo in the example browser, with 12 threads (6 cores) I am getting a ~20% boost in performance for about a 400% increase in total CPU time.<br>
+ThreadSupport, No MT: - 32ms<br>
+ThreadSupport, MT enabled w/ 12 threads: ~26ms<br>
+OpenMP, MT enabled: 38ms (!!)<br>
+Running with Bullet 2.88. This ratio is roughly consistant even when cranking the box counts up.
+</div></blockquote>
+Hello, I have the exact same results. <br>
+Interestingly OpenMP is much slower than single threaded set up only when GUI is not rendered (renderGui set to false in OpenGLExampleBrower.cpp). <br>
+It worth noting that with GUI disabled there is a much more difference between MT and non MT: I can gain ~100%! <br>
+Here is some screenshot of the tests that I've done. <br>
+You can read the legend in this way: <br>
+Two token separated by _, the first token is SOLVER_TYPE, the second token is TASK_SCHEDULER. <br>
+Solver Types: <br>
+SIMT: SequentialImpulseMT<br>
+SI: SequentialImpulse<br>
+NNCG: NNCT<br>
+<br>
+Task Scheduler:<br>
+TS: ThreadSupport (btCreateDefaultTaskScheduler())<br>
+OMP: OpenMP (btGetOpenMPTaskScheduler())<br>
+PPL: PPL (btGetPPLTaskScheduler())<br>
+ST: SingleThreaded (MULTITHREADED_WORLD_ENABLE is false)<br>
+<br>
+All Tests are done adjusting the parameters in "Benchmarks/Prim vs Mesh" demo, commenting "sCurrentDemo-&gt;renderScene()" function in OpenGLExampleBrowser.cpp to disable rendering. <br>
+<br>
+<img src="https://i.ibb.co/ygGkhvx/Multithread-Tests.png" class="postimage" alt="Image"></div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+	
+
+	<div class="action-bar bar-bottom">
+	
+			<a href="./posting.php?mode=reply&amp;t=11734&amp;sid=a5de50bc9e95b7072db587f046c68882" class="button" title="Post a reply">
+							<span>Post Reply</span> <i class="icon fa-reply fa-fw" aria-hidden="true"></i>
+					</a>
+		
+		<div class="dropdown-container dropdown-button-control topic-tools">
+		<span title="Topic tools" class="button button-secondary dropdown-trigger dropdown-select">
+			<i class="icon fa-wrench fa-fw" aria-hidden="true"></i>
+			<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+		</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																												<li>
+					<a href="./viewtopic.php?t=11734&amp;sid=a5de50bc9e95b7072db587f046c68882&amp;view=print" title="Print view" accesskey="p">
+						<i class="icon fa-print fa-fw" aria-hidden="true"></i><span>Print view</span>
+					</a>
+				</li>
+											</ul>
+		</div>
+	</div>
+
+			<form method="post" action="./viewtopic.php?t=11734&amp;sid=a5de50bc9e95b7072db587f046c68882">
+		<div class="dropdown-container dropdown-container-left dropdown-button-control sort-tools">
+	<span title="Display and sorting options" class="button button-secondary dropdown-trigger dropdown-select">
+		<i class="icon fa-sort-amount-asc fa-fw" aria-hidden="true"></i>
+		<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+	</span>
+	<div class="dropdown hidden">
+		<div class="pointer"><div class="pointer-inner"></div></div>
+		<div class="dropdown-contents">
+			<fieldset class="display-options">
+							<label>Display: <select name="st" id="st"><option value="0" selected="selected">All posts</option><option value="1">1 day</option><option value="7">7 days</option><option value="14">2 weeks</option><option value="30">1 month</option><option value="90">3 months</option><option value="180">6 months</option><option value="365">1 year</option></select></label>
+								<label>Sort by: <select name="sk" id="sk"><option value="a">Author</option><option value="t" selected="selected">Post time</option><option value="s">Subject</option></select></label>
+				<label>Direction: <select name="sd" id="sd"><option value="a" selected="selected">Ascending</option><option value="d">Descending</option></select></label>
+								<hr class="dashed" />
+				<input type="submit" class="button2" name="sort" value="Go" />
+						</fieldset>
+		</div>
+	</div>
+</div>
+		</form>
+	
+	
+	
+			<div class="pagination">
+			4 posts
+							&bull; Page <strong>1</strong> of <strong>1</strong>
+					</div>
+	</div>
+
+
+<div class="action-bar actions-jump">
+		<p class="jumpbox-return">
+		<a href="./viewforum.php?f=9&amp;sid=a5de50bc9e95b7072db587f046c68882" class="left-box arrow-left" accesskey="r">
+			<i class="icon fa-angle-left fa-fw icon-black" aria-hidden="true"></i><span>Return to “General Bullet Physics Support and Feedback”</span>
+		</a>
+	</p>
+	
+		<div class="jumpbox dropdown-container dropdown-container-right dropdown-up dropdown-left dropdown-button-control" id="jumpbox">
+			<span title="Jump to" class="button button-secondary dropdown-trigger dropdown-select">
+				<span>Jump to</span>
+				<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+			</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																				<li><a href="./viewforum.php?f=21&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-cat-link"> <span> BULLET PHYSICS LIBRARY USERS</span></a></li>
+																<li><a href="./viewforum.php?f=9&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; General Bullet Physics Support and Feedback</span></a></li>
+																<li><a href="./viewforum.php?f=24&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; PyBullet Support and Feedback</span></a></li>
+																<li><a href="./viewforum.php?f=18&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Release Announcements</span></a></li>
+																<li><a href="./viewforum.php?f=17&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Applications, Games, Demos or Movies using Bullet</span></a></li>
+																<li><a href="./viewforum.php?f=20&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-cat-link"> <span> PHYSICS AUTHORING TOOLS, SERIALIZATION AND STANDARDS</span></a></li>
+																<li><a href="./viewforum.php?f=12&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Physics authoring tools, serialization, standards and related topics</span></a></li>
+																<li><a href="./viewforum.php?f=19&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-cat-link"> <span> RESEARCH AND DEVELOPMENT IN COLLISION DETECTION &amp; PHYSICS. Don't post Bullet support questions here!</span></a></li>
+																<li><a href="./viewforum.php?f=4&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Research and development discussion about Collision Detection and Physics Simulation</span></a></li>
+																<li><a href="./viewforum.php?f=6&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Links, Papers, Libraries, Demos, Movies, Comparisons</span></a></li>
+																<li><a href="./viewforum.php?f=16&amp;sid=a5de50bc9e95b7072db587f046c68882" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Career Opportunities</span></a></li>
+											</ul>
+		</div>
+	</div>
+
+	</div>
+
+
+
+			</div>
+
+
+<div id="page-footer" class="page-footer" role="contentinfo">
+	<div class="navbar" role="navigation">
+	<div class="inner">
+
+	<ul id="nav-footer" class="nav-footer linklist" role="menubar">
+		<li class="breadcrumbs">
+									<span class="crumb"><a href="./index.php?sid=a5de50bc9e95b7072db587f046c68882" data-navbar-reference="index"><i class="icon fa-home fa-fw" aria-hidden="true"></i><span>Board index</span></a></span>					</li>
+		
+				<li class="rightside">All times are <span title="UTC">UTC</span></li>
+							<li class="rightside">
+				<a href="./ucp.php?mode=delete_cookies&amp;sid=a5de50bc9e95b7072db587f046c68882" data-ajax="true" data-refresh="true" role="menuitem">
+					<i class="icon fa-trash fa-fw" aria-hidden="true"></i><span>Delete cookies</span>
+				</a>
+			</li>
+														</ul>
+
+	</div>
+</div>
+
+	<div class="copyright">
+				<p class="footer-row">
+			<span class="footer-copyright">Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited</span>
+		</p>
+						<p class="footer-row" role="menu">
+			<a class="footer-link" href="./ucp.php?mode=privacy&amp;sid=a5de50bc9e95b7072db587f046c68882" title="Privacy" role="menuitem">
+				<span class="footer-link-text">Privacy</span>
+			</a>
+			|
+			<a class="footer-link" href="./ucp.php?mode=terms&amp;sid=a5de50bc9e95b7072db587f046c68882" title="Terms" role="menuitem">
+				<span class="footer-link-text">Terms</span>
+			</a>
+		</p>
+					</div>
+
+	<div id="darkenwrapper" class="darkenwrapper" data-ajax-error-title="AJAX error" data-ajax-error-text="Something went wrong when processing your request." data-ajax-error-text-abort="User aborted request." data-ajax-error-text-timeout="Your request timed out; please try again." data-ajax-error-text-parsererror="Something went wrong with the request and the server returned an invalid reply.">
+		<div id="darken" class="darken">&nbsp;</div>
+	</div>
+
+	<div id="phpbb_alert" class="phpbb_alert" data-l-err="Error" data-l-timeout-processing-req="Request timed out.">
+		<a href="#" class="alert_close">
+			<i class="icon fa-times-circle fa-fw" aria-hidden="true"></i>
+		</a>
+		<h3 class="alert_title">&nbsp;</h3><p class="alert_text"></p>
+	</div>
+	<div id="phpbb_confirm" class="phpbb_alert">
+		<a href="#" class="alert_close">
+			<i class="icon fa-times-circle fa-fw" aria-hidden="true"></i>
+		</a>
+		<div class="alert_text"></div>
+	</div>
+</div>
+
+</div>
+
+<div>
+	<a id="bottom" class="anchor" accesskey="z"></a>
+	</div>
+
+<script src="./assets/javascript/jquery-3.6.0.min.js?assets_version=39"></script>
+<script src="./assets/javascript/core.js?assets_version=39"></script>
+
+
+
+<script src="./styles/prosilver/template/forum_fn.js?assets_version=39"></script>
+<script src="./styles/prosilver/template/ajax.js?assets_version=39"></script>
+
+
+
+</body>
+</html>

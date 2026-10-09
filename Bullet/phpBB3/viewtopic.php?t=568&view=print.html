@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; My exotic approach to GPU collision detection</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>My exotic approach to GPU collision detection</h2>
+		<p><a href="viewtopic.php%3Ft=568.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=568</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>My exotic approach to GPU collision detection</h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 12:51 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">Here is my thoughts and some practical results in GPU collision detection:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/papers/&amp;file=GPU_Collision_Detection.pdf" class="postlink">http://www.continuousphysics.com/ftp/pu ... ection.pdf</a><br>
+<br>
+Probably it can be useful and for CPU collision detection. I like the idea to unify all kind of shapes in ONE entity (triangle independent)...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: My exotic approach to GPU collision detection</h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 1:19 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Can you find an easier way for us to download this?  That site you've got it hosted on is a pain in the ass to use!  It wants me to sign up for who-knows-what just to see your file!<br>
+<br>
+If you'd like to email it to me at &lt;<a href="mailto:sjbaker1@airmail.net">sjbaker1@airmail.net</a>&gt; I'll put it up on my web site for people to get at.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 1:29 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">There is "FREE" button at the bottom of that page  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> No registration reuired if you click "FREE". I'll also send it to you via email...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 3:15 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks a lot for sharing the GPU ideas!<br>
+<br>
+I uploaded the file onto the Bullet website, next time just mail the file to me (erwin _at_ continuousphysics.com ) and I'll upload it (or mail Steve Baker, and he can put it on his website).<br>
+<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/papers/&amp;file=GPU_Collision_Detection.pdf" class="postlink">http://www.continuousphysics.com/ftp/pu ... ection.pdf</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 4:17 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Well, I guess the first issue is that you need a 3D texture with four components at whatever resolution you need your objects to be collided against.  If you wanted (say) one part in 128 precision for your surface you'd need a 128x128x128x4x2 = 16Mbytes texture.  You won't get many of those from a typical 256Mbyte graphics card (especially not if your graphics need lots of texture too).<br>
+<br>
+But I guess if you stuck with one of these maps for all spheres, another for all cubes, another for all cylinders - you might only need maybe half a dozen of these maps...but that's still close to 40% of your texture map memory.<br>
+<br>
+For more complex items (eg a chair or a table or something), a 128x128x128 map is nowhere near enough.  Going to the next size up (256x256x256) eats 8 times as much texture!!!  So you could definitely forget the idea that you could have a room with one map for a chair, another for the table, another for the room itself, another for...you get the problem!<br>
+<br>
+So *maybe* you could use this for standardized shapes such as spheres and cubes and such - but for those simple mathematical shapes, why not just describe the shape mathematically inside the shader and save all of that memory?   For spheres and such the math is easy.  The hardest is the cube - but your algorithm requires that you find the closest point on the texture - which is the exact same calculation.  So this is only really helpful for shapes that are hard to describe with math...and I think that in a practical setting, the memory requirements kill you.<br>
+<br>
+I wonder though whether this idea can be salvaged.<br>
+<br>
+Suppose we use a 'cubeMap' - which is (effectively) six maps packed into one - each one being (notionally) one face of a cube.  So you'd have the distance from any point on the outside of the bounding box of your irregular-shaped object to the actual surface.  I'm not sure whether that's enough - but it's orders of magnitude less texture map memory!<br>
+<br>
+The other thing that's problematic is this.  If your shapes are lots of arbitary things then the shader that does the comparisons has to have access to all of those textures.  But there is a limit of only 16 maps per shader - so in one pass of the algorithm, you can't compare one object against more than 15 others in one pass.  Again, that's not TOO much of a problem if you use standardized shapes - but chairs and tables are out.<br>
+<br>
+So my opionion is that what you suggest isn't useful for encoding complicated shapes (because you'll run out of texture memory in any 'real' example) - and for simple shapes you are better off using math than a 3D texture.<br>
+<br>
+Think of your 3D texture as a lookup table that implements a mathematical function that expresses the distance and direction from any point in the volume to the nearest point on the surface.  When would you want to use a lookup table and when would you want to use an equation?  For a sphere, it's OBVIOUS that an equation would be faster (and much, much less space) than a texture lookup.  For a chair, it's equally obvious that math ain't going to cut it and a lookup table is the way to go.<br>
+<br>
+So the argument hinges on whether you can store enough complex shapes to make doing this worth-while - or whether you are better off representing a chair as a bunch of spheres, cuboids and cylinders?   This is a straight trade between speed and space.  A single 3D texture lookup for a chair is going to be faster than (say) six cubes...but we don't have enough texture memory to do the entire game world in 3D textures.<br>
+<br>
+Hence - I'll be concentrating on doing spheres, cylinders and cubes...with triangle meshes remaining a major problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 5:03 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>Well, I guess the first issue is that you need a 3D texture with four components at whatever resolution you need your objects to be collided against.  If you wanted (say) one part in 128 precision for your surface you'd need a 128x128x128x4x2 = 16Mbytes texture.  You won't get many of those from a typical 256Mbyte graphics card (especially not if your graphics need lots of texture too).<br>
+<br>
+But I guess if you stuck with one of these maps for all spheres, another for all cubes, another for all cylinders - you might only need maybe half a dozen of these maps...but that's still close to 40% of your texture map memory.<br>
+<br>
+For more complex items (eg a chair or a table or something), a 128x128x128 map is nowhere near enough.  Going to the next size up (256x256x256) eats 8 times as much texture!!!  So you could definitely forget the idea that you could have a room with one map for a chair, another for the table, another for the room itself, another for...you get the problem!<br>
+<br>
+So *maybe* you could use this for standardized shapes such as spheres and cubes and such - but for those simple mathematical shapes, why not just describe the shape mathematically inside the shader and save all of that memory?   For spheres and such the math is easy.  The hardest is the cube - but your algorithm requires that you find the closest point on the texture - which is the exact same calculation.  So this is only really helpful for shapes that are hard to describe with math...and I think that in a practical setting, the memory requirements kill you.<br>
+<br>
+I wonder though whether this idea can be salvaged.<br>
+<br>
+Suppose we use a 'cubeMap' - which is (effectively) six maps packed into one - each one being (notionally) one face of a cube.  So you'd have the distance from any point on the outside of the bounding box of your irregular-shaped object to the actual surface.  I'm not sure whether that's enough - but it's orders of magnitude less texture map memory!<br>
+<br>
+The other thing that's problematic is this.  If your shapes are lots of arbitary things then the shader that does the comparisons has to have access to all of those textures.  But there is a limit of only 16 maps per shader - so in one pass of the algorithm, you can't compare one object against more than 15 others in one pass.  Again, that's not TOO much of a problem if you use standardized shapes - but chairs and tables are out.<br>
+<br>
+So my opionion is that what you suggest isn't useful for encoding complicated shapes (because you'll run out of texture memory in any 'real' example) - and for simple shapes you are better off using math than a 3D texture.<br>
+<br>
+Think of your 3D texture as a lookup table that implements a mathematical function that expresses the distance and direction from any point in the volume to the nearest point on the surface.  When would you want to use a lookup table and when would you want to use an equation?  For a sphere, it's OBVIOUS that an equation would be faster (and much, much less space) than a texture lookup.  For a chair, it's equally obvious that math ain't going to cut it and a lookup table is the way to go.<br>
+<br>
+So the argument hinges on whether you can store enough complex shapes to make doing this worth-while - or whether you are better off representing a chair as a bunch of spheres, cuboids and cylinders?   This is a straight trade between speed and space.  A single 3D texture lookup for a chair is going to be faster than (say) six cubes...but we don't have enough texture memory to do the entire game world in 3D textures.<br>
+<br>
+Hence - I'll be concentrating on doing spheres, cylinders and cubes...with triangle meshes remaining a major problem.</div></blockquote>
+
+1) 128x128x128 it is of course too much  <img class="smilies" src="images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked"> I played with 32x32x32 (64x64x64)<br>
+2) No. The idea is not to replace simple shapes (spheres, cubes,...). ANY SHAPE.<br>
+3) Let's not speak about chair at this time. Chair is concave object. Let's speak about convex ones....<br>
+4) I do not understand what you mean under six in one...<br>
+5) For DirectX 9 we need to put all shapes into one BIG volume texture. In DirectX 10 (as I understand) you will be able to access any number of texture buffers.<br>
+6) "For a sphere, it's OBVIOUS that an equation would be faster". Are you sure? If I show you the shader, you will see how EASY and FAST lookups are. <br>
+7) Memory. Yes. It is a problem. And I mentioned that we need <strong class="text-strong">variable dense textures</strong>. It is to think how it could be implemented in GPU (maybe hardware manufactures are to add something in their hardware). But there is no problem to do it in CPU. Variable dense textures will require as much memory as body surface size (not volume size). Variable dense volume textures will grow as square (not cube). And it becomes ACCEPTABLE.<br>
+8. And do not forget about cloth  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 6:36 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>
+1) 128x128x128 it is of course too much  :shock: I played with 32x32x32 (64x64x64)
+</div></blockquote>
+At that resolution, pretty much everything is a 'blob'!  Why bother?<br>
+
+<blockquote class="uncited"><div>2) No. The idea is not to replace simple shapes (spheres, cubes,...). ANY SHAPE.
+</div></blockquote>
+Then I don't think you'll have enough texture map memory for anything useful.<br>
+
+<blockquote class="uncited"><div>3) Let's not speak about chair at this time. Chair is concave object. Let's speak about convex ones....</div></blockquote>
+Yes - of course.  Sorry - I latched onto one example of something moderately complex. Replace all instances of 'chair' with something complicated and convex.<br>
+
+<blockquote class="uncited"><div>
+4) I do not understand what you mean under six in one...
+</div></blockquote>
+A cube-map is an arrangement in which six separate square textures are packed into one special map that is accessed as if the six pieces were one texture that's wrapped onto the faces of a cube.  I believe it would be nearly as good as a full volume texture - but at vastly less storage.<br>
+
+<blockquote class="uncited"><div>5) For DirectX 9 we need to put all shapes into one BIG volume texture. In DirectX 10 (as I understand) you will be able to access any number of texture buffers.
+</div></blockquote>
+OK - I guess so.<br>
+
+<blockquote class="uncited"><div>6) "For a sphere, it's OBVIOUS that an equation would be faster".  Are you sure? If I show you the shader, you will see how EASY and FAST lookups are. </div></blockquote>
+
+Well, first you have to find the nearest point on the texture to your last collision point - right?  If you use a continuous function you don't have to do that.  Secondly, texture accesses in the GPU are only reasonably fast if they have good cache coherency - yours most certainly won't.  Randomly accessed texture performance is terrible.  But with a sphere, you can calculate the distance from any point in space to the nearest point on the sphere by computing the distance from the center of the sphere (pythagoras) and subtracting the radius.  The GPU can do that in a couple of instructions - which is liekly to be several times faster than a cache hit and maybe 20 times faster than a cache miss.<br>
+Yeah - it'll be a LOT faster.<br>
+
+<blockquote class="uncited"><div>7) Memory. Yes. It is a problem. And I mentioned that we need <strong class="text-strong">variable dense textures</strong>. It is to think how it could be implemented in GPU (maybe hardware manufactures are to add something in their hardware).</div></blockquote>
+OK - I'm prepared to look into algorithms that work only on the very latest graphics hardware - but I'm certainly not going to work on anything where I have to hope the H/W manufacturers will change their designs to help!   But what you are calling for is using an INSANE amount of memory - it's not even close to practicable for a real game level.  Just stop and think about this for a while!<br>
+
+<blockquote class="uncited"><div>But there is no problem to do it in CPU. Variable dense textures will require as much memory as body surface size (not volume size). Variable dense volume textures will grow as square (not cube). And it becomes ACCEPTABLE.<br>
+8. And do not forget about cloth  :wink:</div></blockquote>
+
+I *AM* thinking about cloth.  I'm thinking about how non-convex it is.   I'm thinking about how incredibly thin it is - and therefore about what resolution of texture I'd need to represent it.  I'm thinking about how much effort it'll take to recompute your 3D distance texture as the cloth animates...I'm thinking that it could take longer to do that than to compute the collisions. ....So I'm thinking that the one thing your algortihm will REALLY suck at is cloth!<br>
+<br>
+If you think that's a good application for this then there must still be something I don't understand about what you are proposing.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 6:36 am</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>
+<br>
+I *AM* thinking about cloth.  I'm thinking about how non-convex it is.   I'm thinking about how incredibly thin it is - and therefore about what resolution of texture I'd need to represent it.  I'm thinking about how much effort it'll take to recompute your 3D distance texture as the cloth animates...I'm thinking that it could take longer to do that than to compute the collisions. ....So I'm thinking that the one thing your algortihm will REALLY suck at is cloth!<br>
+<br>
+If you think that's a good application for this then there must still be something I don't understand about what you are proposing.</div></blockquote>
+
+Under cloth I see set of points connected with springs. Cloth is NOT a volume texture. If you need to detect CONVEX-CLOTH collision, then it becomes very easy. Just a texture lookup for each cloth point. Is not it?<br>
+<br>
+Here is shader (just to see what it is):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=568&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void PSCollision(
+	float4			vIndex			: TEXCOORD0,
+	float2			vPointUV		: TEXCOORD1,
+	out float4		oCP				: COLOR0,
+	out float4		oCN				: COLOR1,
+	uniform sampler	SamplerMatrix	: register(s0),
+	uniform sampler	SamplerCollision: register(s1),
+	uniform sampler	SamplerShape[2]	: register(s2))
+{
+	float3x4	mat1, mat2;
+		
+	const float4 Size1 = tex2D(SamplerMatrix, vIndex.xz);
+	const float4 Size2 = tex2D(SamplerMatrix, vIndex.yz);
+	
+	{
+		float4		vPoint = tex2D(SamplerCollision, vPointUV);	
+		
+		vIndex.z += vIndex.w;
+		mat1[0] = tex2D(SamplerMatrix, /*vTex1*/vIndex.xz);
+		mat2[0] = tex2D(SamplerMatrix, /*vTex2*/vIndex.yz);
+		vIndex.z += vIndex.w;
+		mat1[1] = tex2D(SamplerMatrix, /*vTex1*/vIndex.xz);
+		mat2[1] = tex2D(SamplerMatrix, /*vTex2*/vIndex.yz);
+		vIndex.z += vIndex.w;
+		mat1[2] = tex2D(SamplerMatrix, /*vTex1*/vIndex.xz);
+		mat2[2] = tex2D(SamplerMatrix, /*vTex2*/vIndex.yz);
+		
+		vPoint.w = 1;
+		
+		float3 vPoint1 = mul(mat1, vPoint);
+		float3 vPoint2 = mul(mat2, vPoint);
+		
+		//-----------
+		const float3 ss1 = clamp(vPoint1, 0, Size1);
+		const float3 ss2 = clamp(vPoint2, 0, Size2);
+		
+		const float3 vP1 = vPoint1 - ss1;
+		const float3 vP2 = vPoint2 - ss2;
+		
+		const float3 Coord1 = (ss1 / Size1);
+		const float3 Coord2 = (ss2 / Size2); 
+		
+		float4 T1,T2;
+		T1 = tex3D(SamplerShape[0], Coord1);
+		T2 = tex3D(SamplerShape[0], Coord2);
+						 
+		vPoint1 = T1.xyz - vP1;
+		vPoint2 = T2.xyz - vP2;
+		//-----------
+		
+		vPoint1 = mul(vPoint1, (float3x3)mat1);
+		vPoint2 = mul(vPoint2, (float3x3)mat2);
+		
+		vPoint.xyz += (vPoint1+vPoint2)/2;
+		vPoint.w = T1.w + T2.w;
+				
+		oCP = vPoint;
+		oCN.xyz = normalize(vPoint1-vPoint2);
+		oCN.w = 1;
+		
+	}
+		
+}</code></pre></div>
+
+Cube texture. It will not work correctly, but maybe there is something useful in that idea....I need to think...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 1:05 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">You should realise that the problem with using a cube-map is that there isn't a convenient way to pack lots of different shapes into a single cube-map.   So my earlier concern about the number of textures you'd have to read in the shader would then be justified.<br>
+<br>
+This code actually works?  I'm a little surprised because the two 'clamp' calls don't do what I think you want them to do.  If Size1 is (say) (1,1,1) and vPoint1 is (1,100,1), what that clamp will give you for ss1 is (1,1,1) - but what you want (if I understand your shader correctly - which I may not) is (0.01, 1, 0.01)...clamp doesn't intersect the vector with a box - it does a component-by-component clamp.<br>
+<br>
+This is a fragment shader?  Well, no - I don't think so because you are writing out two colours and I don't think you can do that from a frag shader.   If it's a vertex shader then it has to run N^2 times - which means you have almost no parallelism and you'd be better off doing it in the CPU.  My Cg is a little rusty though - maybe I don't understand something.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 1:31 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>You should realise that the problem with using a cube-map is that there isn't a convenient way to pack lots of different shapes into a single cube-map.   So my earlier concern about the number of textures you'd have to read in the shader would then be justified.<br>
+<br>
+This code actually works?  I'm a little surprised because the two 'clamp' calls don't do what I think you want them to do.  If Size1 is (say) (1,1,1) and vPoint1 is (1,100,1), what that clamp will give you for ss1 is (1,1,1) - but what you want (if I understand your shader correctly - which I may not) is (0.01, 1, 0.01)...clamp doesn't intersect the vector with a box - it does a component-by-component clamp.<br>
+<br>
+This is a fragment shader?  Well, no - I don't think so because you are writing out two colours and I don't think you can do that from a frag shader.   If it's a vertex shader then it has to run N^2 times - which means you have almost no parallelism and you'd be better off doing it in the CPU.  My Cg is a little rusty though - maybe I don't understand something.</div></blockquote>
+
+1) Yes. But it is not the only problem. Cube texture is not enough. If collision point is inside the texture, then we need more data. <br>
+2) Yes. It works  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> It is real code. Before clamp it goes thru inverse transform. And some additional math is encoded in the mat1 and mat2 (some shifts as I remember).<br>
+I do not need ray intersection. Just projection on the texture plane. So clamp is OK.<br>
+3) Yes. It is  fragment shader. Two colours -&gt; it is MRT (Multiple Render Tergets). You can write up to 4 colors<br>
+<br>
+By the way, idea with you cube texture might work OK for CUBES and SPHERES. And shader maybe even shorter. I think, for cube shape it is enough just 2x2 cube texture (very GPU friendly). For SPHERES probably something like 16x16 (32x32). So, CUBE-CUBE, CUBE-SPHERE, SPHERE-SPHERE can be done extremely fast. But it needs more investigations...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 2:29 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">More ideas.<br>
+<br>
+If you are happy with CUBEs and SPHEREs. And do not want something else, then I think CUBE-CUBE, CUBE-SPHERE, SPHERE-SPHERE collisions can be done without proxy texture. And speed will be beyond any imagination (as fast as GPU fill rate  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> ).<br>
+<br>
+Do not try to calculate collision point directly (using some equation). CUBE-CUBE intersection is not a simple task. Mantain collision point for each pair and calculate only CP adjustment on each frame (this task is very simple -&gt; leads to very short shader).  <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 5:25 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">So let's talk about simple shapes:<br>
+<br>
+Sphere/Sphere:<br>
+<br>
+My present code (in SVN - check it out!) is doing 'typical' sphere/sphere collision tests at the following speeds:<br>
+<br>
+4 cubes: other = 0.25ms collisions = 0.75ms<br>
+16 cubes: other = 0.25ms collisions = 0.75ms<br>
+64 cubes: other = 0.25ms collisions = 0.84ms<br>
+256 cubes: other = 0.29ms collisions = 1.75ms<br>
+1024 cubes: other = 0.34ms collisions = 16.72ms<br>
+4096 cubes: other = 0.63ms collisions = 252.78ms<br>
+16384 cubes: other = 1.61ms collisions = 5517.420ms<br>
+<br>
+So - for 1024 spheres against 1024 spheres in 16.72ms - that's a million tests - so we're looking at an average of around 17 nanoseconds per collision on a vanilla 6800 (not a 'GT' or an 'ULTRA' - those would be a lot faster).  Thats about as fast as the results could possibly be written out to the 6800's RAM - there is no way to speed that up (except by buying a faster graphics card or doing fewer tests of course - but that's a 'broadphase' issue).  Then, my results are as accurate as floating point - and it uses no texture memory for shape storage.<br>
+<br>
+Cube/Cube:<br>
+<br>
+Your approach requires that when CP is outside the texture volume, you figure out where on the outside of the texture map you hit.  (I still don't think your 'clamp' is doing that right...but whatever) If you have to do that - then you could imagine that the cube we are testing against completely fills the texture - so all of the volume map represents the interior of the cube except for the outermost cells which are full of 0's.  That being the case, you don't need the texture - you can just pretend it's all zeroes. So in the cube/cube case, there is no possible way that using a 3D texture can speed things up versus just using math....it's not possible.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 7:01 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>So let's talk about simple shapes:<br>
+<br>
+Sphere/Sphere:<br>
+<br>
+My present code (in SVN - check it out!) is doing 'typical' sphere/sphere collision tests at the following speeds:<br>
+<br>
+4 cubes: other = 0.25ms collisions = 0.75ms<br>
+16 cubes: other = 0.25ms collisions = 0.75ms<br>
+64 cubes: other = 0.25ms collisions = 0.84ms<br>
+256 cubes: other = 0.29ms collisions = 1.75ms<br>
+1024 cubes: other = 0.34ms collisions = 16.72ms<br>
+4096 cubes: other = 0.63ms collisions = 252.78ms<br>
+16384 cubes: other = 1.61ms collisions = 5517.420ms<br>
+<br>
+So - for 1024 spheres against 1024 spheres in 16.72ms - that's a million tests - so we're looking at an average of around 17 nanoseconds per collision on a vanilla 6800 (not a 'GT' or an 'ULTRA' - those would be a lot faster).  Thats about as fast as the results could possibly be written out to the 6800's RAM - there is no way to speed that up (except by buying a faster graphics card or doing fewer tests of course - but that's a 'broadphase' issue).  Then, my results are as accurate as floating point - and it uses no texture memory for shape storage.<br>
+<br>
+Cube/Cube:<br>
+<br>
+Your approach requires that when CP is outside the texture volume, you figure out where on the outside of the texture map you hit.  (I still don't think your 'clamp' is doing that right...but whatever) If you have to do that - then you could imagine that the cube we are testing against completely fills the texture - so all of the volume map represents the interior of the cube except for the outermost cells which are full of 0's.  That being the case, you don't need the texture - you can just pretend it's all zeroes. So in the cube/cube case, there is no possible way that using a 3D texture can speed things up versus just using math....it's not possible.</div></blockquote>
+
+Simple shapes (Sphere, Cube) can be done without 3D texture. But using permanent CP can speed up it! I think.<br>
+16.72ms it is 60 fps. Believe me 6800 can fill much more then 60 million texels per second.<br>
+6800 Ultra:<br>
+Fill Rate 6.4 billion texels/sec<br>
+Memory Bandwidth 35.2 GB/sec <br>
+<br>
+Fill Rate is 100 times greater then your 60 millions.<br>
+Your  Bandwidth 1024*1024*16*60 = 960MB/sec<br>
+<br>
+I realized that your card is not Ultra. But your card is not even 2 times worse, I think.<br>
+And your result is for the simplest case SPHERE-SPHERE. For CUBE-CUBE your FPS will be much below 60, I think.<br>
+<br>
+Can you paste here fragment shader?....</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 7:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>
+<br>
+I realized that your card is not Ultra. But your card is not even 2 times worse, I think.<br>
+And your result is for the simplest case SPHERE-SPHERE. For CUBE-CUBE your FPS will be much below 60, I think.<br>
+<br>
+Can you paste here fragment shader?....</div></blockquote>
+
+Latest work-in-progress Bullet and GPUphysics is available in the sourceforge Subversion repository.<br>
+<br>
+You can browse this online here:<br>
+<a href="http://svn.sourceforge.net/viewvc/bullet/trunk/Extras/GPUphysics/" class="postlink">http://svn.sourceforge.net/viewvc/bulle ... PUphysics/</a><br>
+<br>
+You can also use a Subversion client (even graphical UI like <a href="http://tortoisesvn.org" class="postlink">http://tortoisesvn.org</a> ) and get the sources. Point to<br>
+<a href="https://svn.sourceforge.net/svnroot/bullet/trunk" class="postlink">https://svn.sourceforge.net/svnroot/bullet/trunk</a><br>
+commandline this is:<br>
+svn co <a href="https://svn.sourceforge.net/svnroot/bullet/trunk" class="postlink">https://svn.sourceforge.net:/svnroot/bullet/trunk</a> bullet<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 01, 2006 7:17 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">Did you try it on CPU? I wonder how many "ms" you will get for 1024 spheres against 1024 spheres on CPU? Do you have such statistics?<br>
+<br>
+17 nanoseconds it is 34 clock cycles on 2GHz CPU. Not too much, but not too small. Probably SIMD optimized CPU program could beat your GPU result..... <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> What if we take Dual-Core CPU?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

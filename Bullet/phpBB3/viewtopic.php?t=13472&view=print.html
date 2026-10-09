@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btCollisionWorld::convexSweepTest Performance Implications On Switch</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btCollisionWorld::convexSweepTest Performance Implications On Switch</h2>
+		<p><a href="viewtopic.php%3Ft=13472.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13472</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btCollisionWorld::convexSweepTest Performance Implications On Switch</h3>
+				<div class="date">Posted: <strong>Sat Aug 13, 2022 8:07 pm</strong></div>
+				<div class="author">by <strong>Kaiser</strong></div>
+				<div class="content">I am implementing a collision system involving moving an object composed of a cylinder through the world via btCollisionWorld::convexSweepTest to perform slide movement. The code setup is very similar to that of player slide physics code as seen in <a href="https://github.com/RobertBeckebans/RBDOOM-3-BFG/blob/master/neo/d3xp/physics/Physics_Player.cpp#L175" class="postlink">https://github.com/RobertBeckebans/RBDO ... r.cpp#L175</a> in which the slide movement routine may go through several iterations (up to 5) until the direction of movement is parallel with all the collision planes as well as several additional tests for checking stairs, ramps, etc.<br>
+<br>
+I've noticed that the most trivial usage of convexSweepTest on the Nintendo Switch would take up to ~0.5ms to even 1.5ms for just the player alone. There are expectations that there will be multiple objects that will also need to perform slide movement, so performance is already becoming a huge concern. I even found performance to take a significant drop when colliding against creases and other corners. Upon profiling, I saw that the majority of the CPU time spent in was in btGjkPairDetector::getClosestPointsNonVirtual.<br>
+<br>
+The level is composed roughly of ~220 collision objects, which consists of chunks of the level with different filter settings, all using btBvhTriangleMeshShape for the shape type. For moving the object, I use a btCylinderShapeZ for the shape and then calling convexSweepTest to move the object. I also use a custom class that inherits btCollisionWorld::ClosestConvexResultCallback to perform custom filtering as some surfaces are flagged to allow certain objects to collide / don't collide with, such as climbable surfaces, water, shoot-through, etc.<br>
+<br>
+So I am trying to understand *why* its so expensive, even from doing a simple movement from point A to point B. Is it because there are too many static collision objects? I also have setForceUpdateAllAabbs enabled, which otherwise performance would be even worse than what it is right now. Also note that I am testing on a shipping/non-debug build with all optimizations enabled.<br>
+<br>
+I appreciate anyone's time.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btCollisionWorld::convexSweepTest Performance Implications On Switch</h3>
+				<div class="date">Posted: <strong>Mon Aug 15, 2022 3:49 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I too have seen high CPU costs when sweeping against <strong class="text-strong">btBvhTriangleMeshShape</strong>.  This is what I remember:<br>
+<br>
+<strong class="text-strong">(1)</strong> Make sure your mesh is actually using a Boundary Volume Hierarchy.  The current version of the <strong class="text-strong">btBvhTriangleMeshShape</strong> ctor I'm seeing looks like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13472&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btBvhTriangleMeshShape(btStridingMeshInterface * meshInterface, bool useQuantizedAabbCompression, bool buildBvh = true);</code></pre></div>
+However, older versions (from five or six years ago?) had the default <strong class="text-strong">buildBvh=false</strong>, so check your header.<br>
+<br>
+<strong class="text-strong">(2)</strong> <strong class="text-strong">btBvhTriangleMeshShape</strong> works well when the triangles are bigger than the things colliding against it.  In other words: if you use a <strong class="text-strong">btBvhTriangleMeshShape</strong> for a big terrain with little slow cylinders moving along it then great!  but if you use <strong class="text-strong">btBvhTriangleMeshShape</strong> for a house and then throw a big fast truck at it that is nearly as big as the house itself... then you're in for a very expensive collision because the overlap will query nearly every triangle.<br>
+<br>
+<strong class="text-strong">(3)</strong> Prefer triangles with approximately equal sides in your mesh. Long thin triangles that span the mesh tend to make for poor BVH structure.  I suspect drastic triangle size variations also make the BVH suffer, but I haven't investigated this: e.g. a mesh with a mix of very large triangles and very tiny.<br>
+<br>
+Edit: I forgot to mention: in my case I decided to NOT perform sweep tests against the meshes because it was just too expensive and I couldn't control the complexity/quality of the meshes (user generated content).  I settled on a dynamic character that performed many short ray-traces instead of sweeps.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Stable Joints</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Stable Joints</h2>
+		<p><a href="viewtopic.php%3Ft=912.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=912</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Stable Joints</h3>
+				<div class="date">Posted: <strong>Thu Jan 11, 2007 8:45 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">hi,<br>
+In case anyone's interested in an alternate approach to joints, I've managed to get a particle-based method working which is rather rigid, and quite well-behaved. Check it out here: <a href="http://harveycartel.org/raigan/pbdTest16.swf" class="postlink">http://harveycartel.org/raigan/pbdTest16.swf</a><br>
+<br>
+(click in the window to give the flashplayer focus)<br>
+a,s: change the joint angles<br>
+z: grab a particle w/ the mouse<br>
+1,2: change which particle you're grabbing<br>
+~: toggle the first "body" between pinned and free<br>
+spacebar: reset<br>
+<br>
+This is based on the method presented in "Position Based Dynamics" by Muller, however it uses a different formulation for the angle joints (using atan instead of acos). After several failed attempts at doing it by hand, I cheated and used LiveMath to determine the formula for the Jacobian <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"> <br>
+<br>
+I'm using only 4 iterations; things are much nicer/stiffer with more, but as it is I'm pushing the flashplayer.<br>
+<br>
+raigan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 12, 2007 7:59 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">Do you use the same equations for the preview of the vertices as Mueller? Because this is physical incorrect since he first computes the new velocities using the external forces and then the positions with the new velocities (instead of using the old velocities and the forces). If a body falls down for one second (due to gravity g) this leads to a position error of 0.5*g which is quite big (in my opinion). <br>
+<br>
+Or how do you implemented the preview?<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 12, 2007 4:23 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">Integration is something I could stand to learn a bit more about; I'm just using good old semi-implicit Euler/"Newton-Stormer-Verlet"/whatever it's called, which I've always used, simply because it's always worked for me and I've never bothered to look for anything better:<br>
+<br>
+vel += accel<br>
+pos += vel<br>
+<br>
+I actually thought that using the new velocity to update position was a benefit, as it reduced the error due to "extrapolating" blindly compared to regular Euler. AFAIK many integrations schemes use future velocity to update current position -- if I understand correctly, that's the basis of predictor-corrector integrators.<br>
+<br>
+I'm not sure if it's accurate, but I think it looks convincing: bodies in freefall accelerate downwards, bursts of particles have arc-like trajectories. Also, the only use I've ever had for "forces" is gravity, which should be the same regardless of whether you're evaluating it at the old or new position. In the demo I posted, g = 0.1, so 0.5*g is only 0.05 pixels; an error of 1 pixel per 20 frames isn't that bad, is it?<br>
+<br>
+I'm certainly quite ignorant about the mathematical vagaries of numerical integration though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 12, 2007 9:14 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+If a body falls down for one second (due to gravity g) this leads to a position error of 0.5*g which is quite big (in my opinion). 
+</div></blockquote>
+
+Given a gravity of -10 and one timestep of 1s the error would be indeed 5m, but this is an unrealistic assumption. The position difference scales with the size of the timestep. So for a more realistic assumption of a timestep of 1/60 the absolute position difference is 83 mm after 1s. Also noting that all particles are subject to quite alot constraints this is really 	negligible. The only thing you want to make sure is that the solver sees the gravity directly and not with one frame delay like for the normal Euler. Yours and Muller's solver do this. <br>
+<br>
+I have written a small sample app so you can verify this. <br>
+<br>
+ <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=912&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#include &lt;iostream&gt;
+
+const float g = -10.0f;
+const float dt = 1.0f / 60.0f;
+
+
+int main( void )
+	{
+	float x1 = 10.0f;
+	float v1 =  0.0f;
+
+	float x2 = 10.0f;
+	float v2 =  0.0f;
+
+	float x3 = 10.0f;
+	float v3 =  0.0f;
+
+	for ( int i = 0; i &lt; 60; ++i )
+		{
+		//
+		// Euler
+		//
+		// x(t+dt) = x(t) + v(t) * dt
+		// v(t+dt) = v(t) + a(t) * dt
+		//
+		x1 += v1 * dt;
+		v1 +=  g * dt;
+
+		// 
+		// Semi-implicit Euler
+		//
+		// v(t+dt) = v(t) + a(  t ) * dt
+		// x(t+dt) = x(t) + v(t+dt) * dt
+		// 
+		v2 +=  g * dt;
+		x2 += v2 * dt;
+
+		//
+		// 2. Order Euler
+		//
+		// x(t+dt) = x(t) + v(t) * dt + 0.5 * a(t) * dt^2
+		// v(t+dt) = v(t) + a(t) * dt
+		x3 += v3 * dt + 0.5f * g * dt * dt;
+		v3 +=  g * dt;
+
+		printf( "E1: (%.3f, %.3f), E2: (%.3f, %.3f), E3: (%.3f, %.3f)\n", x1, v1, x2, v2, x3, v3 );
+		}
+
+	return 0;
+	}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 12, 2007 10:18 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">You cannot simulate a simple mass-spring system with 1st order or 2nd order Euler. You have to add damping. A small time step won't help.<br>
+<br>
+That is quite unrealistic.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jan 13, 2007 8:52 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">This is no spring. It is a particle vertically falling down. I just wanted to show that the position difference between first and second order Euler is not 0.5 * g after one second for this particular case. Basically the point was if it makes a difference in the "Position Based Dynamics" paper to use this:<br>
+<br>
+IntegrateAllParticlesUsingSemiImplictEuler();<br>
+SatisfyAllConstraints();<br>
+<br>
+versus<br>
+<br>
+IntegrateAllParticlesUsingSecondOrderEuler();<br>
+SatisfyAllConstraints();<br>
+<br>
+Jan is correct for pointing this out and I guess you can use this, but I questioned that this makes such a big difference as he stated above. Another reason for the first solution might be that they use CCD what might make their life a little easier when dealing with the collision constraints. Just out of couriosity - has anybody success in simulating skirts with this method or any other more complicated contact setup?<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Jan 14, 2007 12:00 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Given a gravity of -10 and one timestep of 1s the error would be indeed 5m, but this is an unrealistic assumption. The position difference scales with the size of the timestep. So for a more realistic assumption of a timestep of 1/60 the absolute position difference is 83 mm after 1s.</div></blockquote>
+
+8.3 cm error during 1/60 s is quite much in my opinion but since you already know I am a fan of accuracy. In my PhD thesis I often work with a maximal allowed tolerance of 10^-6 m. Compared to this 8.3 cm is very much  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

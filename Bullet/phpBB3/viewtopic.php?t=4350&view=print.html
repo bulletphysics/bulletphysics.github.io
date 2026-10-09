@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Baraff/Witkin's integration matrix not positive: what to do?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Baraff/Witkin's integration matrix not positive: what to do?</h2>
+		<p><a href="viewtopic.php%3Ft=4350.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4350</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Mon Nov 23, 2009 11:16 am</strong></div>
+				<div class="author">by <strong>mathis</strong></div>
+				<div class="content">I implemented the algorithm described by Baraff and Witkin in "Large Steps in Cloth Simulation" (SIGGRAPH 98) and encountered severe instabilities with large stiffness and damping values. I found out the reason, namely that the system matrix used by the implicit integration is NOT positive definite for such values, and thus the conjugate gradient method is not applicable.<br>
+<br>
+For example, consider the case of a spring-like energy E = k/2 (|x| - d)^2. The second derivative is<br>
+d2E/dx2 = k (1 - d/|x|)  +  k (d/|x|^3) x x^T<br>
+<br>
+Now if the current extension |x| is less than the rest length d, take a direction y perpendicular to x. Then<br>
+y^T d2E/dx2 y = k (1 - d/|x|) &lt; 0,<br>
+so d2E/dx2 is not positive definite (the function E is not convex).<br>
+<br>
+For timestep dt, the system matrix is M + dt^2 * d2E/dx2. For large dt, this matrix loses its positive definiteness due to the d2E/dx2-contribution. This is in contradiction to the claim of Baraff/Witkin that the matrix is positive definite (which they didn't proof).<br>
+<br>
+<br>
+Now my question: Does anyone know of a paper where this issue (handling a non-positive matrix) is addressed?  I could reduce the time step, but that would foil the advantages of implicit integration. Or I could use normal equations (A^T A instead of A as matrix), but then I need a lot more iterations in the CG solver.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Tue Nov 24, 2009 10:32 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Are you sure you use the correct gradients? I lately checked the paper of DiMacri and from a quick scan I think they are not correct. Basically I took another root. Instead of building the gradients directly I built the time derivatives and found the Jacobian (gradient) and Hessian (second derivativess) by inspection. Basically:<br>
+<br>
+dC/dt = del_C/del_x * dx/dt + del_C / del_t <br>
+<br>
+The constraints don't depent explicitely on time so we can simplify:<br>
+<br>
+dC/dt = J * v<br>
+<br>
+Now we build the second time derivative:<br>
+<br>
+d2C/dt^2 = dJ/dt * v + J * dv/dt<br>
+<br>
+The problem is the time derivative of the Jacobian which is a rank three tensor (actually an arry of Hessian matrices). From there you can find the Hessian by inspection.<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk<br>
+<br>
+<br>
+PS: del_ should indicate partial derivatives</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Tue Nov 24, 2009 11:42 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I quickly checked you derivative for the spring. For my derivations I used the following identities:<br>
+<br>
+C(x) = |x|  =&gt; del_C/del_x = x / |x|<br>
+C(x) =  x / |x| =&gt; del_C/del_x = 1/|x| * ( E3 - x*x^T / (x^T*x) )<br>
+<br>
+Here E3 is a 3x3 identity matrix.<br>
+<br>
+Now for the energy function:<br>
+E = k/2 * ( |x| - L )^2<br>
+<br>
+del_E/del_x = k * ( |x| - L ) * x / |x|<br>
+<br>
+Now I use: del_( phi * F ) / del_x =  phi * del_F / del_x + F * ( del_phi / del_x )^T where phi = ( |x| - L ) and F = x / |x|<br>
+del_2E/del_x2 = k * ( |x| - L ) * 1/|x| * ( E3 - x*x^T / (x^T*x) ) + ( x / |x| ) * ( x / |x| )^T<br>
+<br>
+Note that  ( x / |x| ) * ( x / |x| )^T = x*x^T / (x^T*x)  using |x|^2 = x^2 = x^T * x<br>
+<br>
+del_2E/del_x2 = k * ( |x| - L ) * 1/|x| * ( E3 - x*x^T / (x^T*x) ) + x*x^T / (x^T*x)<br>
+del_2E/del_x2 = k * ( |x| - L ) * E3 + ( 1 - k * ( |x| - L ) ) * x*x^T / (x^T*x)<br>
+<br>
+<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Thu Nov 26, 2009 9:28 am</strong></div>
+				<div class="author">by <strong>mathis</strong></div>
+				<div class="content">Thanks for the reply, Dirk. In your second post, the derivation is wrong (check the physical units). I also get<br>
+<br>
+del_E/del_x = k * ( |x| - L ) * x / |x|<br>
+<br>
+Then write this as:<br>
+<br>
+del_E/del_x = k * ( 1 - L/|x| ) * x<br>
+<br>
+With del_(1/|x|)/del_x = -1/|x|^3 * x I get<br>
+<br>
+del_2E/del_x2 = k * ( 1 - L/|x| ) * E3  +  (k * L / |x|^3) x*x^T<br>
+<br>
+<br>
+Now the point is that Baraff/Witkin construct the system matrix M + h^2 del_2E/del_x2 with time step h and mass matrix M, and they claim that this is positive definite. Positive definiteness is also required for the CG solver. But if you look at del_2E/del_x2, you see that the factor of E3 becomes negative if |x| is less than the rest length L, and then the matrix del_2E/del_x2 is no longer positive definite: You can choose a direction y perpendicular to the current difference vector x, and then y^T del_2E/del_x2 y = k * ( 1 - L/|x| ) * y^T y &lt; 0! This means that for large time steps h, the whole system matrix is not positive definite.<br>
+<br>
+del_2E/del_x2 is positive definite for simpler energies like k/2 (x-c)^2 with a "rest vector" c. Such an energy is typically used in 1-dimensional models, but not for 3 dimensions, where we want to use a rest length and thus have to compute the modulus.<br>
+<br>
+I am currently trying to split the system matrix into a positive and a negative part, and then to estimate a maximum time step where the matrix is still positive definite.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Thu Nov 26, 2009 9:42 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You are right. I just assumed that the mistake was in the gradient because if you read the cloth papers people always state that the matrix is PD. <br>
+<br>
+Viel Erfolg! <br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Thu Nov 26, 2009 10:14 am</strong></div>
+				<div class="author">by <strong>mathis</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>if you read the cloth papers people always state that the matrix is PD. 
+</div></blockquote>
+
+Yes, this is also my impression. These papers seem to be a bit optimistic.<br>
+<br>
+The case of non-PD is not academic, it occurs already for typical time steps together with stiff cloth. For positive definiteness, you get the condition m + h^2 k (1 - L/|x|) &gt; 0, so for |x| &lt; L:<br>
+<br>
+h^2 &lt; m / (k * (L/|x| - 1))<br>
+<br>
+This is the typical relationship between stiffness and time step which is already known from explicit euler integration, but with an additional division by (L/|x| - 1). Now one could argue that for stiff springs, |x| is always close to L, so the division is by a small number and large time steps are possible. But in a test with damped stiff structural and bending springs (bending springs being based on angles), I had to use time steps of about 1/1000 second.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Sat Nov 28, 2009 8:52 am</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">Hi:<br>
+   I roughly read the paper, but it seems baraff only mentioned that the K matrix(d2E/dx2 )<br>
+is a symmetric Matrix not a PD matrix (cha 4.1).<br>
+and in 6.1 he mentioned that CG methods, however, require symmetric matrices and there is also a label "In fact, they work best on positive definite symmetric matrices", I don't knwon CG Method  so I suppose that CG should work not only with a PD matrix but symmetric is enough?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Sat Nov 28, 2009 4:20 pm</strong></div>
+				<div class="author">by <strong>mathis</strong></div>
+				<div class="content">They state: "The matrices we ultimately hand to our CG method are positive definite." and "Let us define the symmetric positive definite matrix A by A = M - h df/dv - h^2 df/dx."<br>
+<br>
+If you read mathematical papers on the CG method, there is the requirement of positivity. Maybe that you are lucky and CG converges also for some special situations with indefinite matrices, but that's not guaranteed. Theoretically, if A is indefinite for large h, you can also find a h where A is not invertible (the h where A switches from positive definite to indefinite). But with CG we want to solve Ax=b, so we need an invertible A.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Sat Nov 28, 2009 4:28 pm</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">Is it possible that they don't use the spring-like energy . I remeber they only use stretch ,bend and shear energy. May be these energy will cause a PD matrix but not all energy you derive will be a PD matrix?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Mon Nov 30, 2009 8:20 am</strong></div>
+				<div class="author">by <strong>mathis</strong></div>
+				<div class="content">Yes, they only use stretch/bend/shear-terms, but the stretch-term is a spring. They have a more general setting with triangles and uv-coordinates so that the behaviour is not so dependent on the tesselation, but for a triangle with one u- and one v-parallel edge, the formula for the stretch-term is exactly that of a spring (or actually two springs, one for the u-edge and one for the v-edge, but that doesn't matter).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Mon Nov 30, 2009 8:46 am</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">Hi mathis :<br>
+  Have you ever tested to derive the derivation from Baraff's stretch enegry directly but not use your spring form? Because I think there is still a little difference beacasue baraff use the particle's position as varaible rather than the extension of the spring , could this induce the K matrix to be different of  yours,just my guess .</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Mon Nov 30, 2009 9:19 am</strong></div>
+				<div class="author">by <strong>mathis</strong></div>
+				<div class="content">The formulas are the same for a uv-aligned triangle. Let (x0, x1, x2) be such a triangle with the uv-coordinates (0, 0), (L1, 0), (0, L2). L1 and L2 are the rest lengths of the edges x0-x1 and x0-x2, respectively. This fulfills the requirement of the paper that |dw/du| = |dw/dv| = 1 if w is the rest state w(u,v) = (u,v,0), where w in general maps (u,v) into the current 3d vertex position.<br>
+<br>
+Now for the current state w, the paper approximates<br>
+<br>
+(dw/du, dw/dv) = (x1-x0, x2-x0) * ((u1-u0, u2-u0), (v1-v0, v2-v0))^-1<br>
+<br>
+In our case, the matrix ((u1-u0, u2-u0), (v1-v0, v2-v0)) is a diagonal with the entries L1, L2, so the formula simplifies to<br>
+<br>
+dw/du = (x1 - x0) / L1<br>
+dw/dv = (x2 - x0) / L2<br>
+<br>
+Now the paper uses C(x0,x1,x2) = a * (|dw/du| - bu, |dw/dv| - bv) as constraint and k/2 C^T C as energy. This leads to the energy<br>
+<br>
+E = a^2 k / 2 * ( ((x1 - x0)/L1 - bu)^2 + ((x2 - x0)/L2 - bv)^2 )<br>
+<br>
+which is the sum of the energy of two springs with rest lengths bu*L1, bv*L2 and spring constants a^2 k / L1^2, a^2 k / L2^2. And this energy leads to a non-PD system matrix for large time steps and extensions less than the rest lengths.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Tue Dec 01, 2009 6:44 am</strong></div>
+				<div class="author">by <strong>fishboy82</strong></div>
+				<div class="content">Oh, I now realize they are the same, so this mean the matrix in baraff 's original paper of stretch enegy is not a PD matrix ..strange</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Fri Dec 04, 2009 4:22 pm</strong></div>
+				<div class="author">by <strong>mathis</strong></div>
+				<div class="content">Well, it is not PD only for large time steps and large stiffness/damping constants, but as their paper is entitled "large steps in cloth simulation", they should have realized this <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+I realized it already with my second test of my implementation where the simulation just exploded. After some hours of further testing, I discovered the non-PD-ness of the matrix.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Baraff/Witkin's integration matrix not positive: what to do?</h3>
+				<div class="date">Posted: <strong>Thu Sep 17, 2020 2:22 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Finally, it took 11 years but it was worth waiting: a new paper by Theodore Kim addresses the problem, and one of the references points to this forum thread. See <a href="http://www.tkim.graphics/FEMBW" class="postlink">http://www.tkim.graphics/FEMBW</a> or <a href="https://twitter.com/_TheodoreKim/status/1300774070997393409" class="postlink">https://twitter.com/_TheodoreKim/status ... 0997393409</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

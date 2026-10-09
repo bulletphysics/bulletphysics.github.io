@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; softbody cloth and character motion</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>softbody cloth and character motion</h2>
+		<p><a href="viewtopic.php%3Ft=319.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=319</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>softbody cloth and character motion</h3>
+				<div class="date">Posted: <strong>Fri Apr 28, 2006 7:24 pm</strong></div>
+				<div class="author">by <strong>asmithers</strong></div>
+				<div class="content">I'm having a major problem with stretching of my cloth simulation when attached to a moving object.  When the cloth is at rest that is I am not pinning a point to a moving object its fine.  Due to the nature of my spring constraints ( i've implemented 1st and 2nd order).<br>
+<br>
+so if I have a particle group 1unit apart, but the character moves 100units in a second.  The constraints basically arent keeping it together fast enough over such large distances. It stretches. I understand why this happens.  Though I think when applying force to a particle, I need to apply forces to the<br>
+<br>
+I had a barraf based force model before moving to a verlet, this might have helped but the instability is too great.  Under vertlet velocites are generated, and therefore I would lose the velocities. Though I am thinking if I took the velocity of the pinned vertex and accumulated it through and subtracted it from the old positions would this work effectively ?<br>
+<br>
+anyway, I hope I've described the problem adequately, any suggestions for attaching softbodies to animations would be extremely helpful right now <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+andi</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Apr 28, 2006 9:37 pm</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">Some of your message got lost there.  "I need to apply forces to the  "  What, man!  Spit it out!  The suspense is killing me!   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+I'm not clear on if you are currently using a first order (position based constraints ) aka verlet or a velocity/acceleration based constraint solver.  Seems like you tried both.  Did you use an implicit integrator with your second order ( velocity based ) constraints?<br>
+<br>
+I had success keeping cloth on a fast moving body with the help of a combination of a couple of techniques.  Simply translating the entire cloth mesh along with the root of the body by some factor helps, you need to fiddle with the actual interpolation function to get it looking right.  Also instead of having a vertex either pinned or not pinned you can have it soft-pinned.  A soft-pinned vert is interpolated to a target position on the body by a interpolation function.  Once again, experimentation is needed here to get it right.  This is assuming a first order constraint solver.<br>
+<br>
+The main problem with the first-order solver ( verlet ) is that you have to do many collision detection checks, up to one for every integration.  This turns out to be very expensive.  With a second order solver, you just need one collision check, but we've had a hard-time getting it stable.  Have you managed to get a stable second order solver?<br>
+<br>
+- Michael Alexander Ewert</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 01, 2006 11:25 pm</strong></div>
+				<div class="author">by <strong>asmithers</strong></div>
+				<div class="content">no, I couldnt keep it stable for more than maybe 20 minutes.  It would slowly due to numerical inaccuracy start to behave strange. Or I would add a force that would act like a bowling ball on it and blow all the vertices out.  I also found that forces would dampen out the pendulum motion. <br>
+<br>
+it was rather frustrating <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I moved to a verlet and it fixed majority of issues.  I have found though new problems since last week. Mainly because I based my code on unit length of 1.  Which isnt scaling well.  I've had a problem with airfriction as I was using velocitysquared and computing air friction base on that.<br>
+<br>
+btw I think I meant to say "I need to apply forces to the constriants", which is the barraf approach. Forces between the particles.  I tried this on friday, and I tried the root translation too,  problems are pretty bad.<br>
+<br>
+I'm guessing here I need a more versatile constraint system that will rapidly itterate through. The problem with translation of root bone it doesnt handle rotations too well.  My test is a handkerchief and its attached to a hand.. rotate and I get motion left and right quite large motion.  <br>
+<br>
+I can run the constraint solver 6 times and it removes a vast amount of this.  I think that because I'm using pinning and not collision this too effects things, because the collision would effect much more of the mesh, effectively dragging it.  Though even just pinching it ( like an 18th century french aristocrate ), I think in a 2nd order model ALL the particles would have acceleration to them, not just the pinned particle, because this data isnt getting added ... its stretching.. <br>
+<br>
+I also tried taking the energy in the pinned transform, and applying it to the rest of the mesh as acceleration added to the velocity derived in the verlet, this would dampen out using length^2 from the pin motion. I dont like this though because of itterating through multiple pins.<br>
+<br>
+so its back to the constraint pairs.  I believe the fix should be here.  I do need to avoid mulitple itterations though.  I am wondering if there is some midpoint that always comes out between large movement of a single pin that could be calculated to approximate, IE detect large pinn motion, then use an approximation solver, then run regular solver once.  <br>
+<br>
+most of this is still 'thinking out loud' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+andi</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 02, 2006 6:05 pm</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">You say you need to avoid multiple iterations of your constraint solver.  This is something that is necessary, though, that's what a relaxation solver depends on.  I don't know how big your mesh is, but 6 iterations is quite low, unless you want stretchy cloth.  I'm talking in the neighbourhood of a 3,000 poly mesh. The number of iterations you need scales with the size of the mesh.  You can use an over-relaxation parameter to improve convergence.  The core constraint solver loop can be optimized nicely, esp with an Altivec processor.  Watch for cache coherency, unroll loops to process multiple edges at a time and things like that.  The extra collision detection passes are a killer, though.<br>
+<br>
+I think as a mesh gets much bigger, the fact that a first order simulator needs multiple collision iterations will make it more expensive to solve than a second order simulator.  Only problem is getting that second order simulator stable in a game situation.<br>
+<br>
+- Michael Alexander Ewert</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 02, 2006 11:42 pm</strong></div>
+				<div class="author">by <strong>asmithers</strong></div>
+				<div class="content">Michael,<br>
+<br>
+I can totally see the logic behind this,  I'm trying to get the constraint system down to the least number of itterations.  I do have a single pass constriaint solver that runs very nicely, unless I add large motion to it, which then stretches.  Gravity and wind effects dont cause any problems, unless wind hits galeforces <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I also think that there is a fundemental problem with pinning, that I need to itterate through the positional changes as well.<br>
+<br>
+this is getting costly <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I'm currently compiling a delta positional change version, so each itteration of the constraints also has an itteration of the integrator with a fractional change to it. <br>
+<br>
+I will probably look into a local space version if this works though, its far to expensive<br>
+<br>
+andi</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 03, 2006 12:25 am</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">Is your single pass constraint solver a single pass of a relaxation solver?  Or do you have a global solver?  ( i.e. each constraints is solved based on the forces on all other constraints each frame ).  Or something in-between?  If you had a full global solver, then stretching at the pins shouldn't be a problem.  ( as you stated earlier )   How big is your mesh?<br>
+<br>
+A single pass per frame of a relaxation solver ( where you update one edge at a time ) would never be stiff enough for a complicated mesh.  You can use the trick of biasing ( and ordering your constraint edge updates ) towards the pins, but in my experience this leads to strange artifacts for anything but a simple mesh.<br>
+<br>
+With one iteration, it will take n frames to propagate any constraint stretching applied at a pin to get to a vertex n edges away.  Unless you are using biasing and your mesh is hanging straight down from the pins.   Then it is possible to solve in one pass.  As soon as it deviates from there, you don't have much chance.<br>
+<br>
+- Michael Alexander Ewert</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 03, 2006 1:15 am</strong></div>
+				<div class="author">by <strong>asmithers</strong></div>
+				<div class="content">michael,<br>
+<br>
+its actually not quite a relaxation solver, but its also not a global,  best described as a relax and rigidity solver as I have two types of springs in operation and both are processed.   They have slightly different properties but it does add anormous stability to the cloth.<br>
+<br>
+I originally started out with a global solver, forces acting on springs, so my current system evolved from that.  Making it pretty unique I feel <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">  With uniqueness comes problems <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+So, today I managed to get this working nicely from a global approach.  I can drag the cloth through pinning or collision or whatever means.  And it runs solid.  It basically requires though that any pin motion to be itterated over with the cloth model,  so if I move a pin 10 metres, I actually itterate length moved / spring length.  This works perfectly.  Of course constraints get multiple itterations, but they are run inconjunction with the integrated positions.  I am guessing that I could set the time step to 1/8th of a frame and run 8 times, updating the positions of pins through that.  I still can see where this will fail on large steps.<br>
+<br>
+so, it fails in that its far to costly an approach for realtime games, even under SPU or a dedicated thread on multicore.<br>
+<br>
+so I have has some interesting ideas on getting this to work from a local space approach <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> I'll be starting on this tomorrow... <br>
+<br>
+andi</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 03, 2006 6:08 pm</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">Sounds very interesting.  Guess I can't help much, since I don't really know what your algorithm is.  Since you do have a some sort of global solver, if you formulate the constraints at the pins properly, it should work itself out, no?  Like setting the inverse mass of those particles to 0 or the inverse spring stiffness to 0 when you calculate your Jacobian's.  If it's more of a relaxation solver, the order in which you apply the pinning can make a difference.  i.e. integrate, pin, solve rather than pin, integrate, solve<br>
+<br>
+Good luck with it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 03, 2006 7:36 pm</strong></div>
+				<div class="author">by <strong>asmithers</strong></div>
+				<div class="content"><img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br>
+<br>
+ok, you just gave me a corking idea to try,  it didnt occur to me to pin after integration,  I'll think on that a lot more.  The problem with pinning is its a fake property, its infinite mass and constant collision.  The pinning causes me a LOT of problems.  Remove pinning and things run quite fine <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">  I never liked the fact I am forced to pin cloth to attach, where I should just have a good solid collision system to handle it  all <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+anyway, I do have a working solution currently, although its got a long way to go <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> I'm probably going to work on the graphics for a week or two.<br>
+<br>
+thats always fun <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 05, 2006 10:18 pm</strong></div>
+				<div class="author">by <strong>mewert</strong></div>
+				<div class="content">Applying the pinning after integration is better since it treats it more like another constraint.<br>
+<br>
+It's hard to get away with no pinning, since the characters in most games don't really obey the laws of physics.  They move so fast and change directions so quickly, non-pinned clothes fly right off their bodies, and ( depending on what textures you have underneath ) guarantee you at least an M rating  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 05, 2006 10:54 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Sorry for hijacking. I've just attended a pretty decent talk by a guy named Eitan Grinspun about another approach of modeling cloth.<br>
+<br>
+<a href="http://multires.caltech.edu/pubs/ds.pdf" class="postlink">http://multires.caltech.edu/pubs/ds.pdf</a><br>
+<br>
+This approach avoid the spring/masses that tend to lead to stiffness.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

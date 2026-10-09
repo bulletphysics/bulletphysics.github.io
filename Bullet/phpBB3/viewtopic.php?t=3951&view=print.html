@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Collision Camera Demo (source code)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Collision Camera Demo (source code)</h2>
+		<p><a href="viewtopic.php%3Ft=3951.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=3951</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Collision Camera Demo (source code)</h3>
+				<div class="date">Posted: <strong>Sun Aug 16, 2009 8:23 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content">Hi everybody,<br>
+<br>
+I've finally ported my semi-physic camera implementation (the angular part is not physically simulated) from my Bullet-Ogre environment to plain Bullet-OpenGL and I've added an attachment with the source code here. Hope you like it.<br>
+<br>
+The physic camera topic has already been discussed here: <a href="viewtopic.php%3Ft=3619.html" class="postlink">http://www.bulletphysics.com/Bullet/php ... f=9&amp;t=3619</a>.<br>
+<br>
+I haven't included an .exe file yet, because I don't know if there are limits in the attachment's size or type (maybe I'll try in a follow-up).<br>
+<br>
+<span style="color:#800000">INSTALLATION:</span><br>
+The code does not include any project file, so the fastest way to compile it is probably to temporary replace the BasicDemo files with the ones in the attachment (or to clone the project settings and replace the files). I compiled the code with the VC++ 2008 Express compiler and with current (at the time of writing) Bullet SVN version.<br>
+<br>
+<span style="color:#800000">FEATURES:</span><br>
+-&gt; ghost object frustum culling (explained here: <a href="viewtopic.php%3Ft=3896.html" class="postlink">http://www.bulletphysics.com/Bullet/php ... f=9&amp;t=3896</a>)<br>
+-&gt; alternative navigation system (now camera is no more bound to a target point)<br>
+-&gt; semi-physic camera moved by setLinearVelocity(...) methods (but by defining USE_THE_FORCE in "btCamera.cpp" we can use applyCentralForce(...) methods). I know, it's the simplest possible collision camera and not a full physic solution, but the code can be easily extended to improve it.<br>
+-&gt; alternative colors as proposed by orange here: <a href="viewtopic.php%3Ft=3941.html" class="postlink">http://www.bulletphysics.com/Bullet/php ... f=9&amp;t=3941</a><br>
+<br>
+<span style="color:#800000">CONTROLS:</span><br>
+arrow keys + pgUp/pgDown -&gt; camera movement<br>
+LMB + mouse move -&gt; camera rotation<br>
+MMB -&gt; picking<br>
+RMB -&gt; shooting boxes<br>
+F1/F2 -&gt; adjust camera velocity<br>
+<br>
+<span style="color:#800000">LICENSE:</span><br>
+Free of course, you can use the code as you like it (maybe we can put it in a Bullet Demo, but I don't think that the quality is good enough...).<br>
+<br>
+<span style="color:#800000">CODE SNIPPET:</span><br>
+In case somebody is too lazy to look through the code, here is the important stuff:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3951&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void btDefaultCamera::bindBtCameraToInput(btScalar mousePositionRelativeToLastFrameX,btScalar mousePositionRelativeToLastFrameY,const btVector3&amp; cameraRelativeTranslationVector,btMatrix3x3* semiPhysicCameraOrientation,btScalar* m_azi,btScalar* m_ele)	{		
+		bool cameraAngleModified = (mousePositionRelativeToLastFrameX!=0 || mousePositionRelativeToLastFrameY!=0);
+		if (cameraAngleModified)	{
+			btMatrix3x3&amp; q=*semiPhysicCameraOrientation;	// From now on q is the Matrix that represents the camera orientation
+			btMatrix3x3 oldQ=q;								// We clone q
+			btScalar&amp; yaw = *m_azi;							// From now on yaw is *m_azi ( global yaw, not a relative delta )
+			btScalar&amp; pitch = *m_ele;						// From now on pitch is *m_ele ( global pitch, not a relative delta )
+			
+			pitch+= (-mousePositionRelativeToLastFrameY);	// User input modifies pitch
+			yaw+= (-mousePositionRelativeToLastFrameX);		// User input modifies yaw
+			if (pitch&lt;-90.0) pitch=-90.0;					// Clamp pitch
+			else if (pitch&gt;90.0) pitch=90.0;
+			
+			btQuaternion qQ = btQuaternion(btRadians(yaw),btRadians(pitch),0);	// Instead we use an additional temporary quaternion, whose ctr with setEuler(...) is very reliable
+			q.setRotation(qQ);													// and use it to modify the camera matrix (q) directly (because it's SEMI-physic)			
+			
+			// This code is a W.I.P. snippet that should "lead" the camera linear velocity in the
+			// new direction of the camera (if the camera is moved by inertia and you rotate it, you
+			// expect that some of its global velocity turns, as it's you that drive the camera...) 
+			// Turn existing camera linear velocity (it's stored in world space):	
+			oldQ = oldQ.inverse() * q;	// This matrix should give the differential orientation of the camera... well, let's hope so!
+				
+			btVector3 linearVelocity=this-&gt;getLinearVelocity();
+			linearVelocity = oldQ.getColumn(0)*linearVelocity.x() + oldQ.getColumn(2)*linearVelocity.z();	// We take off the y component and "turn" the x and z components
+			linearVelocity.setY(this-&gt;getLinearVelocity().y());	//We only turn XZ components to avoid unwanted up/down movements
+
+			this-&gt;setLinearVelocity(0.2f*this-&gt;getLinearVelocity()+0.8*linearVelocity);	// We do a wise mix				
+				
+		}
+	
+		bool cameraPositionModified = (cameraRelativeTranslationVector!=btVector3(0.,0.,0.));
+		if (cameraPositionModified)	{
+			this-&gt;setDamping(0.15,0.0);		// Ideally it should be left to zero (better input range), but it's better to leave some damping on the camera always, since it can be moved by collisions that we do not handle.
+					
+			btQuaternion q;
+			semiPhysicCameraOrientation-&gt;getRotation(q);
+			this-&gt;setLinearVelocity(0.4f*this-&gt;getLinearVelocity()+0.6*65*m_speed*quatRotate(q,cameraRelativeTranslationVector));	
+		}
+	
+}
+
+void btDefaultCamera::onTranslationalKeyReleased()	{
+	this-&gt;setDamping(0.65f,.0);	// Modify the first argument to increase damping strength.
+	this-&gt;applyDamping(1.2);	// Decrease the argument to increase the camera "stopping time".
+}</code></pre></div>
+P.S. btDefaultCamera inherits from btCameraBase that extends btRigidBody and provides the two pure virtual methods above.<br>
+<br>
+Hope you enjoy it  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> !</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision Camera Demo (source code)</h3>
+				<div class="date">Posted: <strong>Sun Aug 16, 2009 8:38 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content">Here I'm trying to attach a compiled version (requires VC++ 2008 redist. package, because I compiled it with the /MD option). <br>
+<br>
+Unluckily I needed the .7z extension to include glut.dll and have a file size &lt; 256 kiB.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

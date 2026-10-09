@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Loading a .bullet file, creating objects</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Loading a .bullet file, creating objects</h2>
+		<p><a href="viewtopic.php%3Ft=6217.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6217</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Loading a .bullet file, creating objects</h3>
+				<div class="date">Posted: <strong>Wed Jan 12, 2011 4:51 pm</strong></div>
+				<div class="author">by <strong>jrk</strong></div>
+				<div class="content">I'm really excited about using blender to create my bullet world  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy">  and I think I'm close but I seem to be missing something.<br>
+<br>
+I got the custom build of blender that exports .bullet files from here:<br>
+<a href="http://code.google.com/p/bullet-physics-editor/downloads/list" class="postlink">http://code.google.com/p/bullet-physics ... loads/list</a><br>
+<br>
+I extracted the .bullet file from the example (the example is a house being knocked down with a big bullet)<br>
+<br>
+then I imported it into my code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6217&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>fileLoader = new btBulletWorldImporter(dynamicsWorld);
+fileLoader-&gt;loadFile("testFile.bullet");
+int body_count = fileLoader-&gt;getNumRigidBodies();
+</code></pre></div>
+
+unfortunately getNumRigidBodies() returns 0.  Why is that?<br>
+<br>
+I then found the file inspector:<br>
+<a href="http://code.google.com/p/gamekit/downloads/detail?name=FileInspector-Win32-749.zip&amp;can=2&amp;q=#makechanges" class="postlink">http://code.google.com/p/gamekit/downlo ... akechanges</a><br>
+<br>
+I loaded the bullet file mentioned above and the .bullet file included with the inspector and found neither had rigid Bodies.<br>
+According the the "Explorere" tab it did have btRigidBodyFloatData which had m_collisionObjectData<br>
+But, the m_collisionObjectData m_name member was blank.<br>
+<br>
+So, I don't understand the process.  Do I load the serialized file then create rigidBodies from the "btRigidBodyFloatData"?<br>
+If so, how do I get a list or array of those things through which to iterate?<br>
+Also, if all the names are blank, how do I know what is what?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Loading a .bullet file, creating objects</h3>
+				<div class="date">Posted: <strong>Mon Feb 07, 2011 7:33 pm</strong></div>
+				<div class="author">by <strong>Kanttori</strong></div>
+				<div class="content">I bet you're trying to export a "Triangle Mesh" collision type, it's the one I'm having problems with too... you can switch to a convex hull or something else and it should work.<br>
+<br>
+I'm looking at File Inspector's output and it seems like triangle meshes aren't really exported at all; just a generic btCollisionShapeData appears when I switch from a convex hull to a triangle mesh. It's either how blender handles the triangle meshes or they just don't get exported correctly by bullet. I'll have a look around the code at some point though I'm not sure if I could fix (or even find) the problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Loading a .bullet file, creating objects</h3>
+				<div class="date">Posted: <strong>Wed Feb 09, 2011 8:40 am</strong></div>
+				<div class="author">by <strong>Kanttori</strong></div>
+				<div class="content">The problem is that Blender (2.49b at least) is using btScaledBvhTriangleMeshShape internally for "instances" of the mesh and that class isn't serialized yet. I made a patch where the instances use the non-scaled shared btBvhTriangleMeshShape directly, but then I ran into an issue of bullet 2.77 segfaulting in processTriangles() when the mesh-object collided in simulation. There are no problems though when I use bullet-svn-r2243 with my code and this may be because there have been changes done since 2.77 in the mesh-code in worldimporter and elsewhere.<br>
+<br>
+The (very temporary) patch, needs to be reversed when btScaledBvhTrianbleMeshShape is serialized. <div class="inline-attachment">
+			
+		
+		
+				<dl class="file">
+			<dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="download/file.php%3Fid=647">no_btscaledbvhtrianglemeshshape.zip</a></dt>
+						<dd>(771 Bytes) Downloaded 1057 times</dd>
+		</dl>
+		
+			</div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Loading a .bullet file, creating objects</h3>
+				<div class="date">Posted: <strong>Wed Mar 02, 2011 12:40 am</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">is this problem still prevalent? I am using 2.77 and about to try getting data out of blender for my physics simulation. I am basically at the stage of getting blender to export a .bullet mesh (with major difficulty down to the precompiled patched blender program not working) trying to make a new patch-blender version now any tips would be greatly appreciated as I dont want to waste a day getting blender working <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+<br>
+Thanks<br>
+<br>
+Enlightened One</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Loading a .bullet file, creating objects</h3>
+				<div class="date">Posted: <strong>Thu Mar 03, 2011 7:44 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Please report an issue about btScaledBvhTrianbleMeshShape  serialization and attach the patch in the tracker here: <a href="http://code.google.com/p/bullet/issues/list" class="postlink">http://code.google.com/p/bullet/issues/list</a><br>
+<br>
+Then we will provide an updated Blender 2.49b precompiled binary with .bullet export.<br>
+<br>
+Can you reply here if you submitted the issue?<br>
+THanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Loading a .bullet file, creating objects</h3>
+				<div class="date">Posted: <strong>Sat Mar 05, 2011 4:54 am</strong></div>
+				<div class="author">by <strong>EnlightenedOne</strong></div>
+				<div class="content">I appear to have hit the same problem. The Bullet Physics Editor can load in the mesh file yet the serializer demo does not recognise it. It is what I was planning to use for my terrain so perhaps I better rollback bullet versions and address my stark inability to compile patches for blender (unless your feeling generous enough to upload it as a zip file somewhere Kanttori  <img class="smilies" src="images/smilies/icon_mrgreen.gif" width="15" height="15" alt=":mrgreen:" title="Mr. Green"> ). Is this issue limited only to Blenders exporter?<br>
+<br>
+I will watch the issue and wait, I do not want to badger Erwin again after he got me loading in meshes!<br>
+<br>
+I am looking into a quick fix working out from the convertCollisionShape function; I only care about loading mesh data in rather than saving it again and a convex hull is not going to cut it. Well maybe it could but I would have to be more desperate/less stubborn to change from my original plan. I will keep you posted on any useful hack in loading in blender triangle mesh data without a .patch, but don't hold your breathe as this SDK will take a while to master!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

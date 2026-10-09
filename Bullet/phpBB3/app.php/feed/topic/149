@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/149" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-10-31T18:03:00+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/149</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2005-10-31T18:03:00+00:00</updated>
+
+		<published>2005-10-31T18:03:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=419#p419</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=419#p419"/>
+		<title type="html"><![CDATA[Constraining body orientations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=419#p419"><![CDATA[
+I got the limits working. The first thing todo is use Lagrange multipliers on a body-body basis. Basically you take these steps:<br><br>1.) Setup the Jacobian for the limit<br>2.) Compute the limit error dv<br>3.) Transform the mass matrix into constraint space: VM = J * W * JT<br>4.) Invert the resulting square matrix<br>5.) Compute the Langrange multipliers: lambda = VM^-1 * dv<br>6.) Project result back into world coordinates: I = JT * lambda<br>7.) Apply impulses<br><br>In the Guendelman approach the constraint error is simple computed as follows:<br><br>float delta = alpha - limit;<br><br>Then you can transformthe delta  into a velocity like this:<br><br>float dv = softness * delta / dt;<br><br>Don't set the angular velocity to zero like proposed in in the Baltman paper. For further information look at the Jiggle code.<br><br>You also like to look here for further information:<br><br><a href="http://www.gamedev.net/community/forums/topic.asp?topic_id=353071" class="postlink">http://www.gamedev.net/community/forums ... _id=353071</a><br><br>For a working example you can look here:<br><a href="http://www.dirkgregorius.de/primo03.rar" class="postlink">http://www.dirkgregorius.de/primo03.rar</a><br><br>(Simply drag and drop the *.phx files onto the framework.exe)<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Oct 31, 2005 6:03 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Tobs]]></name></author>
+		<updated>2005-10-22T02:05:45+00:00</updated>
+
+		<published>2005-10-22T02:05:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=402#p402</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=402#p402"/>
+		<title type="html"><![CDATA[Constraining body orientations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=402#p402"><![CDATA[
+I've implemented a system based on that same paper and I'm having similar problems.<br><br>I'm not looking into the slow convergence at the moment but you've reminded me that it's a problem.<br><br>It doesn't seem like there's an awful lot of help out there for implemented orientation constraints using this approach which is definitely frustrating!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=330">Tobs</a> — Sat Oct 22, 2005 2:05 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2005-10-21T08:36:47+00:00</updated>
+
+		<published>2005-10-21T08:36:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=400#p400</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=400#p400"/>
+		<title type="html"><![CDATA[Constraining body orientations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=400#p400"><![CDATA[
+The inital quaternion is the relative orientation of the two bodies when you setup your system.<br><br>Angle limits is a problem I am stuck at the moment as well. I have only a working solution for one limit. This doesn't work at the moment for two limits, e.g. a universal joint. So here is what I do:<br><br>Whenever I find that a limit is exceeded I set the relative angular velocity around that axis to zero. <br><br>Let s be the rotation axis in world space:<br><br>v32 dw;<br>Vec3Sub( dw, w1, w2 );<br>Vec3Project( dw, s );<br><br>// Bounciness<br>Vec3Scale( dw, dw, 1.0f + e );<br><br>w1 += MatInv( J1 ) / ( MatInv( J1 ) + MatInv( J2 ) ) * dw;<br>w2 += MatInv( J2 ) / ( MatInv( J1 ) + MatInv( J2 ) ) * dw; <br><br>Please let me know if this works for you. For a hinge the limit works. <br>You maybe want to look at the paper of Baltman "Verlet Integration and Constraints in a Six Degree of Freedom Rigid Body System". For computing the relative quaternions I suggest looking at the ODE source code - joints.cpp: hinge, hing2 and universal. Also Kenny Erleben's Dissertation will be useful to understand this.<br><br>What are you implementing - Jakobson, Baltman, Guendelman, ...? I extend the Guendelman approach, but currently I am stuck with limits as well. My system doesn't converge anymore or only incredibly slowly when adding two angle limits...<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Fri Oct 21, 2005 8:36 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Tobs]]></name></author>
+		<updated>2005-10-20T23:09:47+00:00</updated>
+
+		<published>2005-10-20T23:09:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=399#p399</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=399#p399"/>
+		<title type="html"><![CDATA[Constraining body orientations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=399#p399"><![CDATA[
+Hi Don<br><br>Your suggestion is pretty much what I'm doing apart from using an initial quaternion.<br><br>What exactly is the initial quaternion you mention?<br><br>Also do you have any insight into my second question about how I can extend this by subtracting the difference from some twist limits?<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=330">Tobs</a> — Thu Oct 20, 2005 11:09 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2005-10-20T11:30:52+00:00</updated>
+
+		<published>2005-10-20T11:30:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=398#p398</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=398#p398"/>
+		<title type="html"><![CDATA[Constraining body orientations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=398#p398"><![CDATA[
+Let dq be your relative orientation. Note that you should consider that the inital orientation might not be an identity quaternion. Then the formula is:<br><br>q32 dq = Conj( q2 ) * q1 * Conj( q_initial )<br><br>Orientations are represented by uint quaternions. Therefore Conj( q ) == Inv( q )<br><br>1.) Extract the rotation axis:<br><br>v32 axis( dq.x, dq.y, dq.z );<br>Vec3Normalize( axis, axis );<br><br>2.) Extract angle<br><br>f32 angle = 2.0f * ArcCos( dq.w );<br><br>3.) This is a rotation so build angular velocity<br><br>f32 v_angle = angle / dt;<br><br>4.) Build angular velocity vector<br><br>v32 dw;<br>Vec3Scale( dw, axis, v_angle );<br><br>The next problem is to divide the delta velocity between the two bodies. You need to consider the masses or more precisely the moment of inertia.<br><br>w1 += MatInv( J1 ) / ( MatInv( J1 ) + MatInv( J2 ) ) * dw;<br>w2 += MatInv( J2 ) / ( MatInv( J1 ) + MatInv( J2 ) ) * dw; <br><br>HTH<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Thu Oct 20, 2005 11:30 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Tobs]]></name></author>
+		<updated>2005-10-20T01:09:06+00:00</updated>
+
+		<published>2005-10-20T01:09:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=396#p396</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=396#p396"/>
+		<title type="html"><![CDATA[Constraining body orientations]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=396#p396"><![CDATA[
+Hi<br><br>This might sound like madness but I'm trying to constrain the orientation of two bodies using torque impulses.  In theory this could work but I'm having trouble calculating the correct torques.<br><br>My approach is to try and find the angular velocities that the bodies would need to correct their current orientation.  I think I have it working for rigid constraints so I'll explain how I've done that first:<br><br>I find the difference in orientation between the two bodies:<br><em class="text-italics">DiffQuat = Quat1 * Inv(Quat2)</em><br><br>I then use this difference to find an angular velocity (I'm not convinced this part if correct):<br><em class="text-italics">AngVel = Vec(DiffQuat.x, DiffQuat.y, DiffQuat.z) * 2<br>AngVel += Body1-&gt;AngVel - Body2-&gt;AngVel</em><br><br>From this I'm then calculating angular velocities for each body using a ratio I've calculated based on their different inertias.  I then apply the torques and things seem to work even if the results are a little loose.<br><br>My first question is then: Is what I've done reasonable or madness?<br><br>My second question is: How do I extend this approach so the constraint only works when the orientations exceed some limits I want to specify somehow?<br><br>p.s. I'm aware there are better ways of implementing constraints however understanding that stuff is a way off for me.  Please be gentle <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=330">Tobs</a> — Thu Oct 20, 2005 1:09 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

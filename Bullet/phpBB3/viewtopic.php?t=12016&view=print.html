@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; STATE_LOGGING_VIDEO_MP4 in DIRECT mode?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>STATE_LOGGING_VIDEO_MP4 in DIRECT mode?</h2>
+		<p><a href="viewtopic.php%3Ft=12016.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12016</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>STATE_LOGGING_VIDEO_MP4 in DIRECT mode?</h3>
+				<div class="date">Posted: <strong>Tue Feb 06, 2018 3:39 pm</strong></div>
+				<div class="author">by <strong>deepcode</strong></div>
+				<div class="content">it seems like you can only record mp4 video in GUI mode, is that correct?<br>
+<br>
+is there any way to record a video session of what is happening when running in DIRECT mode?<br>
+Im running multiple simulations on a linux server and I review sessions of my simulations.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: STATE_LOGGING_VIDEO_MP4 in DIRECT mode?</h3>
+				<div class="date">Posted: <strong>Wed Feb 07, 2018 3:52 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Indeed, STATE_LOGGING_VIDEO_MP4 is only available when using OpenGL (GUI or SHARED_MEMORY).<br>
+Thinking of it, we could implement this also in DIRECT mode, using the TinyRenderer to generate images.<br>
+<br>
+Some people log the state of objects, and create the video/playback afterwards.<br>
+<br>
+Another option is to use PyBullet.getCameraImage (which also works in DIRECT mode, it uses a CPU renderer) and write those images to create a video using Python. You can write individual images to disk and use a tool to convert it into a video. OpenAI Gym has also some utility for this, various PyBullet Gym environments provide the 'render' method.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: STATE_LOGGING_VIDEO_MP4 in DIRECT mode?</h3>
+				<div class="date">Posted: <strong>Mon Mar 19, 2018 10:03 pm</strong></div>
+				<div class="author">by <strong>deepcode</strong></div>
+				<div class="content">I used the render code from the openAI gym examples, and it sort of works, I have 2 objects loaded,  both via urdf/obj files.<br>
+Only one of the objects appears in the image even though they are next to each other. This would seem like a pybullet issue, is there a way to make sure all the objects get rendered.<br>
+<br>
+here is the render code I use:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12016&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    def _render(self, mode="rgb_array", close=False):
+        print("opoWTF")
+        print(mode)
+        mode ="rgb_array"
+        if mode != "rgb_array":
+            return np.array([])
+        base_pos = [0,0,0]
+        _cam_dist = 5  #.3
+        _cam_yaw = 50
+        _cam_pitch = -35
+        _render_width=480
+        _render_height=480
+
+        view_matrix = pb.computeViewMatrixFromYawPitchRoll(
+            cameraTargetPosition=base_pos,
+            distance=_cam_dist,
+            yaw=_cam_yaw,
+            pitch=_cam_pitch,
+            roll=0,
+            upAxisIndex=2)
+        proj_matrix = pb.computeProjectionMatrixFOV(
+            fov=90, aspect=float(_render_width)/_render_height,
+            nearVal=0.01, farVal=100.0)
+        #proj_matrix=[1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0000200271606445, -1.0, 0.0, 0.0, -0.02000020071864128, 0.0]
+        (_, _, px, _, _) = pb.getCameraImage(
+            width=_render_width, height=_render_height, viewMatrix=view_matrix,
+            projectionMatrix=proj_matrix, renderer=pb.ER_TINY_RENDERER) #ER_BULLET_HARDWARE_OPENGL)
+        rgb_array = np.array(px, dtype=np.uint8)
+        rgb_array = np.reshape(rgb_array, (_render_height, _render_width, 4))
+        rgb_array = rgb_array[:, :, :3]
+        return rgb_array</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: STATE_LOGGING_VIDEO_MP4 in DIRECT mode?</h3>
+				<div class="date">Posted: <strong>Tue Mar 20, 2018 1:28 pm</strong></div>
+				<div class="author">by <strong>deepcode</strong></div>
+				<div class="content">if I  use ER_TINY_RENDERER, it is not rendering everything.<br>
+<br>
+if I use ER_BULLET_HARDWARE_OPENGL, it works fine.  I can't reliably use HARDWARE_OPENGL because I can't control If other computers have hardware OpenGL though.  is this a bug with TINY_RENDERER? the object it doesn't display is an obj file that was created with the vhacd tools in bullet. should any bug be filed for this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: STATE_LOGGING_VIDEO_MP4 in DIRECT mode?</h3>
+				<div class="date">Posted: <strong>Wed Mar 21, 2018 3:19 pm</strong></div>
+				<div class="author">by <strong>Kukanani</strong></div>
+				<div class="content">It would probably be useful to have this information in the quickstart guide.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

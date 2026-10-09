@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Three axis SweepAndPrune</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Three axis SweepAndPrune</h2>
+		<p><a href="viewtopic.php%3Ft=1123.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1123</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Three axis SweepAndPrune</h3>
+				<div class="date">Posted: <strong>Mon May 07, 2007 1:10 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">What is the advantage of a three axis SAP over simply testing only one axis and then directly test the two remaining axes of the potential pair. The two AABBs are at that moment already in the cache so the test should be relatively fast. I looked at the implementation in Bullet where potential pairs are added and removed whenever a potential pair is identified as either colliding or separating. That  moves way to many memory in my opinion.  <br>
+<br>
+I see that this could in the worst case become an O(n^2) test, right? But you could choose any arbitrary axis which fits your game. Any experiences with this?<br>
+<br>
+Anyway what other strategies exist to keep track of the potential pairs instead of constantly adding and removing them into a list? Ideas?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Three axis SweepAndPrune</h3>
+				<div class="date">Posted: <strong>Mon May 07, 2007 1:27 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The 3d version of sweep and prune works better then 1d in general cases, where there is a lot of coherence and the motion happens in all directions. The 1d axis version underperforms when the motion is orthogonal to the chosen axis, but it can work out well in certain cases.<br>
+<br>
+Pair management is separate from sweep and prune. Bullet latest sweep and prune implementation doesn't remove pairs from the pair array, to avoid random memory access. It only adds new pairs, and the removal of pairs (duplicates and non-overlapping) is postponed to a later stage: it sorts the pair array and performs an additional aabb check to determine if pairs are still overlapping. This gives more cache friendly access (no random access for removal) and it can be better parallelized accross several cores/spus.<br>
+<br>
+Some 3d environments / games can benefit from a specific tuned broadphase. For example if there is little coherence (chaotic movement), using a hash space can work better. Another benefit of using a hash space is that you can re-create the entire pair array from scratch, so you save some memory.<br>
+<br>
+But in general 3d sweep and prune does a good job in my experience. There are ways to parallelize it, and improve the performance (in particular adding many new objects, like in steaming worlds). I will implement this in Bullet at some stage, and then discuss the parallelization further.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 07, 2007 1:34 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+Bullet latest sweep and prune implementation doesn't remove pairs from the pair array, to avoid random memory access
+</div></blockquote>
+
+Does this mean you can add a pair up to three pairs for each axis per frame? So your array size must be big enough to hold 3x the number of potential pairs and also the pairs from the last one?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 07, 2007 1:53 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+Does this mean you can add a pair up to three pairs for each axis per frame? So your array size must be big enough to hold 3x the number of potential pairs and also the pairs from the last one?
+</div></blockquote>
+
+In practice, there are not that many new and removed pairs each frame, compared to the total number of pairs in the pair array. So only a few duplicate pairs are to be expected.<br>
+<br>
+If your environment is extremely chaotic, this might become an issue. In such case you better use a hash space. In environments with a lot of coherence, this theoretical bad case is less likely to happen that winning the lottery.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 07, 2007 2:00 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think it is either in the dynamic examples or I read it in a post of Gino on some mailing list (maybe GraphicAlgorithms or so)...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Idea</h3>
+				<div class="date">Posted: <strong>Mon May 07, 2007 10:29 pm</strong></div>
+				<div class="author">by <strong>coderchris</strong></div>
+				<div class="content">I have been working on an idea recently that I dont think anyone has tried yet, which combines ideas from both sweep and prune and the hash table. Basically, this is the general idea:<br>
+<br>
+*instead of having a hashtable where all three components (x,y,z) are used to generate an index, use only one (x for example); think of this as the "row"<br>
+<br>
+*after computing this index, add it to the current list of objects that are all located on that row<br>
+<br>
+*after you have a bunch of "rows" which all contain a list of objects in that row, sort each one seperately along the z axis (objects dont tend to cluster very much on the y axis)<br>
+<br>
+*then, you will have a bunch of sorted lists, which you can then sweep through each one as you would in sweep and prune, but without the axis clustering problem of a normal sweep and prune, and without any wasted memory and pair tracking nessesary with a 3-axis sweep and prune<br>
+<br>
+*In addition, instead of re-inserting them each frame like in a hashtable approach, you can simply sort each list again, thus maintaining the sorted order as in a normal sweep and prune approach. If the object moves to a different row, simply remove it from the current row and insert it into the new row roughly where it should be placed (can use a binary search since the rows are in sorted order)<br>
+<br>
+<br>
+Its not perfect yet, and I have yet to get it working the way I like it, but I think its a good idea for a new type of broadphase. What do you guys think about ithe idea?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 08, 2007 6:19 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Interesting idea.<br>
+<br>
+I am working on a parallel version of Bullet for Playstation 3 SPUs (and the parallelization work on PC and other multi-core platforms too), including parallel sweep and prune, and also use spatial hashing to find independent sets of objects that can be swept for an individual axis in parallel.<br>
+<br>
+The nice thing of using these spatial hash cells is that they can also be used to parallelize the constraint solver (ignoring simulation islands). This means you can parallelize a huge stack of objects on multiple SPUs (PS3 Cell chips), without size limitation.<br>
+<br>
+Comparison of sequential sweep and prune versus parallel sweep and prune:<br>
+<br>
+1) Sequential (traditional SAP)<br>
+For each object, for each axis, swap begin and end point. Certain swaps can cause addition or removal of new overlapping pairs. Check the other axis (which can be either old aabb begin/endpoint position or new aabb begin/endpoint position!).<br>
+<br>
+2) Parallel 3D Sweep and Prune<br>
+<br>
+Idea is to find groups of objects that can be swapped on some axis, without interfering with other objects swapped on other axis (in parallel). Finding those objects can be done using spatial hashing of the _temporal_ bounding box (aabb enclosing the begin and end position). Then creating a dependency matrix for those hash cells (a cell is dependent on another cell iff it shares one or more objects).<br>
+<br>
+For each parallel thread: find a cell that is not dependent on another busy thread (using dependency matrix), and sweep/swap the objects to new position (adding/removing pairs if necessary)<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Jun 20, 2007 4:19 pm</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content">About pair management... I just posted these notes:<br>
+<br>
+<a href="http://www.codercorner.com/IncrementalSAP.txt" class="postlink">http://www.codercorner.com/IncrementalSAP.txt</a><br>
+<br>
+I think I was doing the same as Erwin (removals in a second pass), except I don't need to sort anything in this version. Might be useful. (Or not <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Just posting the link in case it helps anybody).<br>
+<br>
+- Pierre</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

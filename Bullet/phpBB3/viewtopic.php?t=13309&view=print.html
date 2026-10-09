@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Issues with multi-threading and compound shapes</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Issues with multi-threading and compound shapes</h2>
+		<p><a href="viewtopic.php%3Ft=13309.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13309</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Issues with multi-threading and compound shapes</h3>
+				<div class="date">Posted: <strong>Thu Oct 28, 2021 6:18 pm</strong></div>
+				<div class="author">by <strong>desaic</strong></div>
+				<div class="content">I'm working on a demo with both compound shapes and multi-threading. I observed the number of contact manifolds keep increasing overtime (m_manifoldsPtr in <a href="https://github.com/bulletphysics/bullet3/blob/master/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp" class="postlink">btCollisionDispatcherMt</a>), this eventually slows down the simulation. I did a few experiments and here is what I found:<br>
+<br>
+When using both multi-threading and compound shapes, the function <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L77" class="postlink">btCollisionDispatcherMt::releaseManifold </a> will be called, but the variable <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L81" class="postlink">m_batchUpdating </a> will always be true during the simulation. Then I found the compoundcompound collision algorithm will attempt to <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCompoundCompoundCollisionAlgorithm.cpp#L395" class="postlink">deallocate collision algorithms</a> while it is processing collisons. When the collision algorithm deallocates, it will <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.cpp#L206" class="postlink">release the contact manifold</a> and in then calls the <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L77" class="postlink"> btCollisionDispatcherMt::releaseManifold</a>. But because this funciton is called while the compound algorithm is processing collisions, the member m_batchUpdating will always be true, because the collision is processed in the <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L141" class="postlink">parallel for </a> after m_batchUpdating is set to true. As a result, <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L83" class="postlink">this section of the code</a> will never get run during the simulation and m_manifoldsPtr will keep increasing.<br>
+<br>
+Is this a potential bug, or I'm missing something?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Issues with multi-threading and compound shapes</h3>
+				<div class="date">Posted: <strong>Mon Dec 06, 2021 5:32 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">I seem to be having this same issue however it's only happening on 1 of my 5 test machines.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to compute torque needed to rotate to a point</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to compute torque needed to rotate to a point</h2>
+		<p><a href="viewtopic.php%3Ft=6618.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6618</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How <span class="posthilit">to</span> compute <span class="posthilit">torque</span> <span class="posthilit">needed</span> <span class="posthilit">to</span> <span class="posthilit">rotate</span> <span class="posthilit">to</span> a point</h3>
+				<div class="date">Posted: <strong>Fri Apr 08, 2011 6:53 am</strong></div>
+				<div class="author">by <strong>Jim Offerman</strong></div>
+				<div class="content">I've been trying <span class="posthilit">to</span> write a function that computes how much <span class="posthilit">torque</span> must be applied <span class="posthilit">to</span> <span class="posthilit">rotate</span> a rigidbody <span class="posthilit">to</span> face a certain point:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6618&amp;hilit=torque+needed+to+rotate&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void RigidBody::RotateToPoint(const Vector3&amp; point, float maxTorque)
+{
+	const Entity&amp; entity = GetEntity();
+	
+	// Angular distance between current orientation and desired orientation.
+	Vector3 localDir = entity.PointToLocal(point).Normalized();
+	float x = atan2f(localDir.y, localDir.z);
+	float y = 0.f; // atan2f(localDir.z, localDir.x);
+	float z = 0.f; // atan2f(localDir.y, localDir.z);
+	Vector3 delta = entity.VectorToWorld(Vector3(x, y, z));
+
+	// Compute the angular velocity we need <span class="posthilit">to</span> reach the point in t seconds.
+	float t = Time_GetDeltaTime();
+	Vector3 omega = delta / t;
+
+	// Subtract current velocity
+	omega -= GetAngularVelocity();
+
+	// Compute acceleration <span class="posthilit">needed</span> <span class="posthilit">to</span> reach new velocity in t seconds.
+	Vector3 alpha = omega / t;
+
+	// Compute <span class="posthilit">torque</span> <span class="posthilit">needed</span> <span class="posthilit">to</span> achieve acceleration
+	Matrix I = GetWorldInertiaTensor();
+	Vector3 tau = I * alpha;
+
+	// Don't exceed our limit
+	if (tau.Length() &gt; maxTorque)
+		tau = tau.Normalized() * maxTorque;
+
+	// Go!
+	ApplyTorque(tau);
+}
+</code></pre></div>
+
+(RigidBody is a thin wrapper around btRigidBody that hooks it into my engine's component system and takes care of right-handed &lt;-&gt; left-handed conversions)<br>
+<br>
+The above code works as long as I restrict my calculations <span class="posthilit">to</span> a single axis. Unfortunately, it completely breaks down when I try the general version.<br>
+<br>
+I suspect the problem is in how I compute the angular distance that the body must travel. Could any of you help me out with that?<br>
+<br>
+thanks,<br>
+Jim.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How <span class="posthilit">to</span> compute <span class="posthilit">torque</span> <span class="posthilit">needed</span> <span class="posthilit">to</span> <span class="posthilit">rotate</span> <span class="posthilit">to</span> a point</h3>
+				<div class="date">Posted: <strong>Fri Apr 08, 2011 4:24 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Checkout calculateVelocity in src/LinearMath/btTransformUtil.cpp<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How <span class="posthilit">to</span> compute <span class="posthilit">torque</span> <span class="posthilit">needed</span> <span class="posthilit">to</span> <span class="posthilit">rotate</span> <span class="posthilit">to</span> a point</h3>
+				<div class="date">Posted: <strong>Sat Apr 09, 2011 10:49 am</strong></div>
+				<div class="author">by <strong>Jim Offerman</strong></div>
+				<div class="content">Thanks for the tip! I've copied the delta axis/angle calculations from the calculateDiffAxisAngle() call in calculateVelocity:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6618&amp;hilit=torque+needed+to+rotate&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		// Get current orientation
+		Matrix basis0 = entity.Orientation();
+		
+		// Compute desired orientation
+		Vector3 az = (point - pos).Normalized();
+		Vector3 ax = Cross(entity.Up(), az).Normalized();
+		if (ax.LengthSquared() &lt; FLT_EPSILON * FLT_EPSILON)
+			ax = Vector3(1.f, 0.f, 0.f);
+		Vector3 ay = Cross(az, ax).Normalized();
+		Matrix basis1(ax.x, ay.x, az.x, 0.f,
+					  ax.y, ay.y, az.y, 0.f,
+					  ax.z, ay.z, az.z, 0.f,
+					  0.f,  0.f,  0.f,  1.f);
+		
+		// Code copied from calculateDiffAxisAngle()
+		Quaternion dorn = basis1 * basis0.Inverse();
+		dorn.Normalize();
+		
+		float angle = dorn.Angle();
+		Vector3 axis(dorn.x, dorn.y, 0.f/*dorn.z*/);
+		float len2 = axis.LengthSquared();
+		if (len2 &lt; FLT_EPSILON * FLT_EPSILON)
+			axis = Vector3(1.f, 0.f, 0.f);
+		else
+			axis /= Sqrt(len2);
+		
+		Vector3 delta = axis * angle;
+		...
+</code></pre></div>
+
+Unfortunately, this makes my function even more unstable <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"><br>
+Anything else I could be doing wrong?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How <span class="posthilit">to</span> compute <span class="posthilit">torque</span> <span class="posthilit">needed</span> <span class="posthilit">to</span> <span class="posthilit">rotate</span> <span class="posthilit">to</span> a point</h3>
+				<div class="date">Posted: <strong>Mon Apr 11, 2011 6:46 am</strong></div>
+				<div class="author">by <strong>Jim Offerman</strong></div>
+				<div class="content">Works now!<br>
+<br>
+I finally settled on using the local-space heading and elevation angles <span class="posthilit">to</span> compute delta, which produces stable results for me. I still get some overshoot when the angles between the current heading and target are &gt;90 degrees, but for frame-<span class="posthilit">to</span>-frame course correction it works very well.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

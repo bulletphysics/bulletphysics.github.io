@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13508" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-12-15T05:47:21+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13508</id>
+
+		<entry>
+		<author><name><![CDATA[ahzeke]]></name></author>
+		<updated>2022-12-15T05:47:21+00:00</updated>
+
+		<published>2022-12-15T05:47:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44182#p44182</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44182#p44182"/>
+		<title type="html"><![CDATA[btTriangleMeshShape Read Access Violation]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44182#p44182"><![CDATA[
+Recently implemented the btTriangleMeshShape into a game engine I've been working on. For some reason I get this error:<br><br>"Exception thrown: read access violation.<br>graphicsbase was 0x23176382370."<br><br>But not on start up/creation rather when a dynamic body collides with it. Looking through the docs "graphicsbase" seems to have something to do with indexing the triangle array. Line 133 of btBvhTriangleMeshShape.cpp:<div class="codebox"><p>Code: </p><pre><code>for (int j = 2; j &gt;= 0; j--){int graphicsindex = indicestype == PHY_SHORT ? ((unsigned short*)gfxbase)[j] : gfxbase[j];if (type == PHY_FLOAT){float* graphicsbase = (float*)(vertexbase + graphicsindex * stride);m_triangle[j] = btVector3(graphicsbase[0] * meshScaling.getX(), graphicsbase[1] * meshScaling.getY(), graphicsbase[2] * meshScaling.getZ());}else{double* graphicsbase = (double*)(vertexbase + graphicsindex * stride);    m_triangle[j] = btVector3(btScalar(graphicsbase[0]) * meshScaling.getX(), btScalar(graphicsbase[1]) * meshScaling.getY(), btScalar(graphicsbase[2]) * meshScaling.getZ());}}</code></pre></div>My guess would that it has something to do with the striding but I don't think I'm doing anything wrong. Here's how I create the shape:<div class="codebox"><p>Code: </p><pre><code>// btTrangleIndexVertexArray constructor argumentsint triangleCount = (meshComponent.vertexData.indices[1] - meshComponent.vertexData.indices[0]) / 3.0f; //  Triangle stored as 3 indices, so num of indices / 3int* indexData = (int*)const_cast&lt;INDEX_TYPE*&gt;(meshComponent.vertexData.pIndexData + meshComponent.vertexData.indices[0]); // The offset of the index data into the global index bufferint triangleSize = sizeof(INDEX_TYPE) * 3;int vertexCount = meshComponent.vertexData.vertexCount;btScalar* vertexData = (btScalar*)const_cast&lt;Vertex*&gt;(meshComponent.vertexData.pVertexData); // pointer magic to remove constint vertexSize = sizeof(Vertex);meshComponent.pTriangleArray = new btTriangleIndexVertexArray(triangleCount, indexData, triangleSize, vertexCount, vertexData, vertexSize);// Create the collision shape using the loaded triangle arraymeshComponent.pTriangleMeshShape = new btBvhTriangleMeshShape(meshComponent.pTriangleArray, true, true);</code></pre></div>Any help is greatly apprectiated.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14488">ahzeke</a> — Thu Dec 15, 2022 5:47 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

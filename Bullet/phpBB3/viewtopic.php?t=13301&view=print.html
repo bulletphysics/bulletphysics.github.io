@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Collision Shape From FBX SDK Vertices</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Collision Shape From FBX SDK Vertices</h2>
+		<p><a href="viewtopic.php%3Ft=13301.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13301</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Collision Shape From FBX SDK Vertices</h3>
+				<div class="date">Posted: <strong>Fri Oct 22, 2021 11:36 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">I am using extracting vertex information from the FBX SDK to construct a btBvhTriangleMeshShape. Firstly I'm not sure if this is the most appropriate type of collision shape to use and secondly the collision shape appears to be deformed. Objects sometimes only collide with one side of some other objects. Objects also sometimes do not collide with some other objects if they are moving too fast. I do not believe this is a Continuous Collision Detection issue, however I will not rule that out as the issue. Let me show you what I'm doing to better understand.<br>
+<br>
+We load in a .fbx file which is split up into multiple child mesh objects. First we must calculate a transform based on the child mesh translation/rotation/scale which will later be applied to offset our vertices from local to global positions:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13301&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>FbxAMatrix matrixGeo;
+matrixGeo.SetIdentity();
+if (Node-&gt;GetNodeAttribute())
+{
+	const fbxsdk::FbxVector4 lT = Node-&gt;GetGeometricTranslation(FbxNode::eSourcePivot);
+	const fbxsdk::FbxVector4 lR = Node-&gt;GetGeometricRotation(FbxNode::eSourcePivot);
+	const fbxsdk::FbxVector4 lS = Node-&gt;GetGeometricScaling(FbxNode::eSourcePivot);
+	matrixGeo.SetT(lT);
+	matrixGeo.SetR(lR);
+	matrixGeo.SetS(lS);
+}
+FbxAMatrix globalMatrix = Node-&gt;EvaluateGlobalTransform();
+FbxAMatrix matrix = globalMatrix * matrixGeo;</code></pre></div>
+
+Then we use 'matrix' to offset the vertices and save them into a buffer for later use:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13301&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const FbxMesh* Mesh = FbxCast&lt;const FbxMesh&gt;(Node-&gt;GetNodeAttribute());
+fbxsdk::FbxVector4* Vertices = Mesh-&gt;GetControlPoints();
+uint32_t IndexCount = 0;
+for (unsigned int j = 0; j &lt; Mesh-&gt;GetPolygonCount(); j++) {
+	const unsigned int NumVerts = Mesh-&gt;GetPolygonSize(j);
+	if (NumVerts != 3) { continue; }
+	for (unsigned int k = 0; k &lt; NumVerts; k++) {
+		Vertex* NewVertex = new Vertex;
+		const unsigned int Index = Mesh-&gt;GetPolygonVertex(j, k);
+		//NewVertex-&gt;pos.x = (float)(Vertices[Index].mData[0]);
+		//NewVertex-&gt;pos.y = (float)(Vertices[Index].mData[1]);
+		//NewVertex-&gt;pos.z = (float)(Vertices[Index].mData[2]);
+		fbxsdk::FbxVector4 result = matrix.MultT(Vertices[Index]);
+		NewVertex-&gt;pos.x = (float)result.mData[0];
+		NewVertex-&gt;pos.y = (float)result.mData[1];
+		NewVertex-&gt;pos.z = (float)result.mData[2];
+
+		NewFBX-&gt;Meshes.back()-&gt;Indices.push_back(IndexCount++);
+		NewFBX-&gt;Meshes.back()-&gt;Vertices.push_back(*NewVertex);
+	}
+}</code></pre></div>
+
+Before we continue, I would like to mention that once a vertex is stored into its array it is not altered in any way shape or form. The same array of vertices are passed over to bullet to create the collision object and also passed to the renderer for visual display and representation. Visually the meshes are being rendered correctly with no noticeable defects from that which is shown in the 3d modeling software.<br>
+<br>
+After constructing array of vertices we pass this array over to create a collision shape with bullet:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13301&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>TriangleMesh* Mesh = new TriangleMesh(_Driver, Pipe, FBXMesh, DiffuseTex);
+btCollisionShape* ColShape;
+btTriangleMesh* trimesh = new btTriangleMesh();
+for (unsigned int i = 0; i &lt; FBXMesh-&gt;Indices.size() / 3; i++) {
+	auto V1 = FBXMesh-&gt;Vertices[i * 3].pos;
+	auto V2 = FBXMesh-&gt;Vertices[i * 3 + 1].pos;
+	auto V3 = FBXMesh-&gt;Vertices[i * 3 + 2].pos;
+		
+	trimesh-&gt;addTriangle(btVector3(V1.x, V1.y, V1.z), btVector3(V2.x, V2.y, V2.z), btVector3(V3.x, V3.y, V3.z));
+}
+ColShape = new btBvhTriangleMeshShape(trimesh, true);</code></pre></div>
+
+Create our 'btTransform' which, please correct me if I am wrong, does not need an origin or rotation, the commented out lines here were back from before I was using FBX SDK to transform vertex positions into global space, and as such required me to manually translate/rotate/scale the objects into their intended positions (otherwise all the child mesh objects would be bunched up at 0,0,0 with incorrect rotations and scale)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13301&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform Transform;
+Transform.setIdentity();
+//Transform.setOrigin(btVector3(FBXMesh-&gt;translation[0], FBXMesh-&gt;translation[1], FBXMesh-&gt;translation[2]));
+//Transform.setRotation(btQuaternion(glm::radians(FBXMesh-&gt;rotation[1]), glm::radians(FBXMesh-&gt;rotation[0]), glm::radians(FBXMesh-&gt;rotation[2])));</code></pre></div>
+
+Finally construct our rigid body and store important objects into various locations:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13301&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>SceneNodeMotionState* MotionState = new SceneNodeMotionState(MeshNode, Transform);
+btRigidBody::btRigidBodyConstructionInfo rbInfo(Mass, MotionState, MeshNode-&gt;_CollisionShape, localInertia);
+MeshNode-&gt;_RigidBody = new btRigidBody(rbInfo);
+MeshNode-&gt;_RigidBody-&gt;setUserPointer(MeshNode);
+dynamicsWorld-&gt;addRigidBody(MeshNode-&gt;_RigidBody);</code></pre></div>
+
+So that's the important bits of the process. Visually everything looks okay, physically there are problems.<br>
+<br>
+I would like to draw your attention to this section of code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13301&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		//NewVertex-&gt;pos.x = (float)(Vertices[Index].mData[0]);
+		//NewVertex-&gt;pos.y = (float)(Vertices[Index].mData[1]);
+		//NewVertex-&gt;pos.z = (float)(Vertices[Index].mData[2]);
+		fbxsdk::FbxVector4 result = matrix.MultT(Vertices[Index]);
+		NewVertex-&gt;pos.x = (float)result.mData[0];
+		NewVertex-&gt;pos.y = (float)result.mData[1];
+		NewVertex-&gt;pos.z = (float)result.mData[2];</code></pre></div>
+Flipping which lines here are commented out results in absolutely no issues with the collision system. Essentially swapping which lines are commented here will no longer use the global matrix to translate vertex positions and instead directly store positions as they are read from the .fbx file (albeit with incorrect position/rotation/scale). So this leads me to believe the vertex transformation isn't quite right, but then why does everything look okay visually..? I have also inspected the vertex buffer with a break point and nothing stands out as odd..<br>
+<br>
+Any ideas?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision Shape From FBX SDK Vertices</h3>
+				<div class="date">Posted: <strong>Mon Oct 25, 2021 3:07 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content"><strong class="text-strong">btBvhTriangleMeshShape</strong> only supports static objects, not objects with non-zero velocity.  For dynamic objects use <strong class="text-strong">btCompoundShape</strong> with convex decompositions of your concave shapes, or maybe the <strong class="text-strong">GImpactShapes</strong>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision Shape From FBX SDK Vertices</h3>
+				<div class="date">Posted: <strong>Mon Oct 25, 2021 7:12 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Thank you for the reply, yes the objects using btBvhTriangleMeshShape are static objects and anything else is currently using btCompoundShape via convex decomposition.<br>
+<br>
+excerpt of static btBvhTriangleMeshShape creation:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13301&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>			btScalar Mass(0.0f);
+			bool isDynamic = (Mass != 0.f);
+
+			btVector3 localInertia(0, 0, 0);
+			if (isDynamic) {
+				MeshNode-&gt;_CollisionShape-&gt;calculateLocalInertia(Mass, localInertia);
+			}
+
+			SceneNodeMotionState* MotionState = new SceneNodeMotionState(MeshNode, Transform);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(Mass, MotionState, MeshNode-&gt;_CollisionShape, localInertia);</code></pre></div>
+
+I think the issue *may* be related to FBX SDK vertex transformations, my vertex positions may not be quite right since btCompoundShape objects created with convex decomposition appear to have a physics shape that is roughly 1.3X larger than the visual representation. Again nothing seems wrong/out-of-place with the physical or visual representation of objects using my "old method", it is only now that I have applied vertex transformations with the FBX SDK that things are starting to get buggy.<br>
+I am here making sure I haven't done anything wrong on the bullet side of things..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision Shape From FBX SDK Vertices</h3>
+				<div class="date">Posted: <strong>Tue Oct 26, 2021 12:07 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Sorry, I misunderstood the collision problems you were describing: it sounded like the mesh objects were moving around.  I re-read your post more carefully and offer this numerated summary of the problems you are experiencing, with some re-wording for clarity.  If I got any of these wrong please offer a suggestion as to how to make them correct:<br>
+<br>
+<strong class="text-strong">(1)</strong> the collision shape appears to be deformed<br>
+<strong class="text-strong">(2)</strong> dynamic objects sometimes only collide with one side of some static mesh objects<br>
+<strong class="text-strong">(3)</strong> fast dynamic objects also sometimes do not collide with some static mesh objects<br>
+<br>
+I assume items <strong class="text-strong">(2)</strong> and <strong class="text-strong">(3)</strong> are evidence of item <strong class="text-strong">(1)</strong>.  That is, something appears to be wrong with the collision shape because <strong class="text-strong">(2)</strong> and <strong class="text-strong">(3)</strong> are happening.  If this is an incorrect assumption then please clarify <strong class="text-strong">(1)</strong>.<br>
+<br>
+First of all, tunneling <strong class="text-strong">(3)</strong> can definitely a problem with mesh objects because their triangles are so thin.  However, if <strong class="text-strong">(2)</strong> is happening then I could see how <strong class="text-strong">(3)</strong> would be exacerbated.  So let us consider item <strong class="text-strong">(2)</strong>...<br>
+<br>
+One idea that occurs to me is if the axis-aligned bounding box (AABB) of the mesh is incorrect in the broadphase then you can experience intermittent collisions like that, where dynamic objects collide correctly in one corner (where the AABB overlaps the mesh) but not in another (outside the AABB).  Often this error results in "snagging" where the dynamic object appears to get tangled inside the mesh, at the edge where the AABB cuts through the mesh.  <strong class="text-strong">Advice: sanity-check the AABB to make sure it is correct and contains all the mesh points.</strong>  Note, there is a version of the ctor that accepts explicit AABB min/max corners, so you could override the AABB with a very big generous box just to quickly determine if the problem goes away.<br>
+<br>
+<strong class="text-strong">btBvhTriangleMeshShape</strong> uses a Boundary Volume Hierarchy (hence the <strong class="text-strong">Bvh</strong> prefix) data structure on the inside.  This to optimize overlap queries to limit the number of triangles submitted to the narrowphase.  I mention this because: I wonder if the Bvh is getting messed up somehow?  I can't imagine how that would be... unless you are submitting zero-area triangles which I think might mess it up.  <strong class="text-strong">Advice: sanity check each triangle you are adding to the mesh to make sure it isn't degenerate.</strong><br>
+<br>
+Note: Depending on the shape and nature of your whole mesh it might be advantageous to combine all the submeshes into one big mesh and let the Bvh sort them for you.  That is, I perhaps your problem goes away when you do this?  However if the big mesh is volatile in any way (i.e. you need to add/remove/modify submesh parts at runtime), or if the big mesh is very sparse, then splitting it into multiple meshes will probably be better.  The time to recompute the Bvh structure of a large mesh can interfere with real-time performance when the triangle count gets high, and compact+complex submeshes are often better when split out into their own <strong class="text-strong">btCollisionObject</strong> instance.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

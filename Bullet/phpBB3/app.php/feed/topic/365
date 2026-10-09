@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/365" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-08-24T08:46:31+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/365</id>
+
+		<entry>
+		<author><name><![CDATA[gee]]></name></author>
+		<updated>2006-08-24T08:46:31+00:00</updated>
+
+		<published>2006-08-24T08:46:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1579#p1579</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1579#p1579"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1579#p1579"><![CDATA[
+Thanks Dirk, I'll look into that.<br><br>@Mewert : I guess what he means is that calculating this LCP does not cost a lot, as the error is small the calculation of the right small impulse, should be faster than a whole LCP at the position level.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=728">gee</a> — Thu Aug 24, 2006 8:46 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mewert]]></name></author>
+		<updated>2006-08-21T22:48:58+00:00</updated>
+
+		<published>2006-08-21T22:48:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1561#p1561</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1561#p1561"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1561#p1561"><![CDATA[
+&gt; 1) The Jacobian is the same for both LCP, so when implemented correctly the second LCP comes for free <br><br>Maybe I'm missing something but I don't see a whole lot of savings here.  <br><br>Here is the system you are solving:<br>Ax = b   subject to LCP constraints<br>Ay = c   "<br><br>When solving this system with a sequential impulses technique, you compose the blocks of A on the fly.<br><br>So all I get for free by solving both systems at once ( rather than in two passes ) is I avoid 1 maxtrix-matrix multiply, for composing the Jacobian.  Which is not much, really.  This is at the cost of having to keep around the ( stack, or SPU ) memory allocated for y, c and a temporary vector or two.  Plus increasing my code size a bit.  There is the nice fact that you get good cache coherency, etc.. so there should be some savings in that respect.  When looking at SPU's limited memory, I'm not crazy out about the idea, though.<br><br>Have I missed something?  Is there anything else I should be getting for free?  Can I avoid an additional complemenatiry test or something?<br><br>Maybe the free bit you are refering to is the precomputed J elements ( where A = JMJ').<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=323">mewert</a> — Mon Aug 21, 2006 10:48 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-08-18T14:52:56+00:00</updated>
+
+		<published>2006-08-18T14:52:56+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1543#p1543</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1543#p1543"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1543#p1543"><![CDATA[
+I made the same observation (e.g. when implementing cloth using sequentiel impulses). There seems to be a dependency between the number of constraints and the Baumgarte coefficent. The formula I used was:<br><br>tau ~ 1 / Sqrt( n )<br><br>where n is the number of constraints<br><br>Actually I read through a lot of papers recently in order to find better stabilization. The problem with Baumgarte stabilization is that it combats the drift, but not necessarily on the best trajectory. I think for contacts it is really ok, but for several joints building an articulated structure it might be a problem (see e.g. papers of Uri Asher on DAE). I am currently interessted in high quality joints (e.g. to couple animation and physics), but iterative solvers don't seem to be good enough. In the newest paper of R. Weinstein she actually moves from here iterative solver approach to a direct least square solver that minimes the residum...<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Fri Aug 18, 2006 2:52 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[gee]]></name></author>
+		<updated>2006-08-18T14:04:32+00:00</updated>
+
+		<published>2006-08-18T14:04:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1542#p1542</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1542#p1542"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1542#p1542"><![CDATA[
+Hello,<br><br>1) True.<br>2) Yes, that I know, I just thought from Erin answer that there was a way with only 1 LCP (trying to resolve 2 systems at the same time did not seem like a good idea so I wondered).<br>3) And yes I know, I was just using something simple. By the way using a baumgarte correction for now, I have to use a really small coefficient, while with joints 0.8 is fine most of the time. With contacts I have something around 1e-6 (well that is for around 200 balls in contact, for 3-6 balls a higher value is ok).<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=728">gee</a> — Fri Aug 18, 2006 2:04 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-08-17T16:43:32+00:00</updated>
+
+		<published>2006-08-17T16:43:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1538#p1538</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1538#p1538"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1538#p1538"><![CDATA[
+Basically you are right, you can see it as two LCPs if you want. The advantage of what I suggested is:<br><br>1) The Jacobian is the same for both LCP, so when implemented correctly the second LCP comes for free<br>2) Since you now know the "penalty" impulse to catch up the position error you can simple find the displacement from this without adding to the velocity.<br><br>dv = P * m =&gt; dx/dt = P * m =&gt; dx = P * m * dt<br><br>So you apply this displacement directly and dont add it to the velocity<br><br>HTH,<br>-Dirk<br><br>PS: Please note that in your formula here you are missing the scaling constant for the Baumgarte term - this:<br><br> J*W*JT * lambda = -C(x) / dt - J*( v(t) + W * f_ext * dt ) <br><br>must be for example<br><br> J*W*JT * lambda = -0.1 * C(x) / dt - J*( v(t) + W * f_ext * dt ) <br><br>See Erin's GDC 2005 presentation for a derivation on how to choose values here...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Thu Aug 17, 2006 4:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[gee]]></name></author>
+		<updated>2006-08-17T08:56:36+00:00</updated>
+
+		<published>2006-08-17T08:56:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1534#p1534</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1534#p1534"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1534#p1534"><![CDATA[
+Hello,<br><br>I'll try that later and see how this works. But this is still solving 2 LCPs as I thought, not just one <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>Also another way would be to compute<br> J*W*JT * lambda = -C(x) / dt - J*( v(t) + W * f_ext * dt ) <br><br>and then compute :<br>J*W*JT * lambda = -J*( v(t) + W * f_ext * dt )<br>using the old lambda values for warm start no ? As the errror should be small the lambda values should be close to new ones I think.<br><br>I will try this for contact, and maybe keeping it as the first equation for joints (well I will try both, but as you said it does not seem to be always a good idea).<br><br>Thank you for your help.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=728">gee</a> — Thu Aug 17, 2006 8:56 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2006-08-16T17:12:04+00:00</updated>
+
+		<published>2006-08-16T17:12:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1530#p1530</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1530#p1530"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1530#p1530"><![CDATA[
+You can think of it like this. Instead of solving:<br><br>J*W*JT * lambda = -C(x) / dt - J*( v(t) + W * f_ext * dt )<br><br>you solve the two MLCPs individually:<br><br>J*W*JT * lambda1 = -C(x) / dt<br>J*W*JT * lambda2 = -J*( v(t) + W * f_ext * dt )<br><br>Instead of superpositioning both results, you bybass the velocity for the position correction (Baumgarte term).<br><br>I think this is little different from the original post-stabilization idea like e.g. in the Cline thesis, where you really compute a second MLCP *after* the position update - with a new Jacobian and delta velocity. The idea of Erin is that the position correction should not effect the velocity state (the persistent momentum) of the rigid bodies. Note that this works actually not well for all scenarios. I think Erin mentioned in this forum that he ran into problems with the brige example. For contacts it seems to be a nice idea and let's contacts appear much more rigid...<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Wed Aug 16, 2006 5:12 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[gee]]></name></author>
+		<updated>2006-08-16T08:16:51+00:00</updated>
+
+		<published>2006-08-16T08:16:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1527#p1527</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1527#p1527"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1527#p1527"><![CDATA[
+Hello,<br><br>thanks for the reply but I cannot see how you do that. I've tried to look at box2D, but I'm not getting it completely.<br><br>If I do a 'normal' MLCP to resolve collisions I will only get one impulse array for my contacts right ? then if I want to have impulses with and without the baumgart error term I need to do this twice no ? I think this is what I'm thinking wrong, but as I'm not the doing doing the LCP I might miss some knowledge here, and my colleague does not seem to know another way as well.<br><br>By the way, on monday I tried a position correction only, and stacking was not that better also, and to do a good one I had to recalculate the constraints which is doing twice the job per iteration, for a not so good result (this without contact caching).<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=728">gee</a> — Wed Aug 16, 2006 8:16 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2006-08-15T02:18:37+00:00</updated>
+
+		<published>2006-08-15T02:18:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1522#p1522</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1522#p1522"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1522#p1522"><![CDATA[
+Yes, the impulse splitting can be done in separate loops, but it may be more efficient to combine the loops. Only velocity impulses should be cached.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Tue Aug 15, 2006 2:18 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[gee]]></name></author>
+		<updated>2006-08-14T08:42:33+00:00</updated>
+
+		<published>2006-08-14T08:42:33+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1514#p1514</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1514#p1514"/>
+		<title type="html"><![CDATA[Energy drift]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1514#p1514"><![CDATA[
+<blockquote class="uncited"><div>If the drift is due to penetration depth recovery, there are solutions (besides using continuous collision detection of course):<br>Split the constraint solver impulse, and only use the penetration depth impulse for the integration, but not for the next frames velocity.<br><br>See Erin's comment on the ODE mailing list:<br><blockquote class="uncited"><div><br>I didn't have time to check the patch, but I updated my 2D physics engine<br>Box2D. This engine uses sequential impulses, which are mathematically<br>equivalent to PGS. Here's how I did it:<br><br>- Each body has a bias velocity that is only used for correcting overlap.<br>- A separate bias impulse is accumulated for each contact.<br>- The bias velocity and impulse are initialized to zero each time step (no<br>warm starting).<br><br>The bias impulse and velocity are completely independent of the regular<br>impulses and velocity, so they could be solved in parallel. However, it was<br>convenient to solve them together and that should be more cache friendly.<br><br>You can get the code here: <a href="http://www.gphysics.com/files/Box2D.zip" class="postlink">http://www.gphysics.com/files/Box2D.zip</a><br><br>You can switch between the two methods by using the macro<br>BIAS_PRESERVES_MOMENTUM in Arbiter.cpp. With the split velocity I was able<br>to use a large bias factor (0.<img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool">. This means that overlap is reduced 80% per<br>step. Such a large bias factor leads to serious bouciness with the merged<br>velocity.<br><br>I also tried using a split velocity for joints. The results were not nearly<br>so nice, especially for my suspension bridge test. I think that particular<br>arrangement is more stable with some compliance in the joints.<br><br>Erin</div></blockquote></div></blockquote>Hello,<br><br>I'm sorry but I cannot see the difference between doing that and doing another LCP at the position update step. Why doing it at the velocity one ?<br><br>My main problem today is that error correction applied on the velocity completely brake the contact caching thing (and of course it's not stable at all with stacking). I have other problems but which can be solved with all I can read here and there.<br><br>By the way I'm writing a simulator based mostly on kenny's thesis, and I would like to thank him, and all of you for every thing I've learned through your papers and this forum.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=728">gee</a> — Mon Aug 14, 2006 8:42 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

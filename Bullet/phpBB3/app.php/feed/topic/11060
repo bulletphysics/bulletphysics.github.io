@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11060" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2016-05-13T11:21:45+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11060</id>
+
+		<entry>
+		<author><name><![CDATA[mobeen]]></name></author>
+		<updated>2016-05-13T11:21:45+00:00</updated>
+
+		<published>2016-05-13T11:21:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37552#p37552</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37552#p37552"/>
+		<title type="html"><![CDATA[Re: Penetration depth for STL files]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37552#p37552"><![CDATA[
+Erwin I think probably this is the paper you are talking about. It does detail a bit about how they integrated sdf in bullet<br><br><a href="http://elib.dlr.de/102551/1/Sagardia_VPS_Bullet_Paper_EuroVR_2014.pdf" class="postlink">http://elib.dlr.de/102551/1/Sagardia_VP ... R_2014.pdf</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=8124">mobeen</a> — Fri May 13, 2016 11:21 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2016-05-12T20:31:03+00:00</updated>
+
+		<published>2016-05-12T20:31:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37550#p37550</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37550#p37550"/>
+		<title type="html"><![CDATA[Re: Penetration depth for STL files]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37550#p37550"><![CDATA[
+Global penetration depth for general concave triangle meshes (that you get from an STL file) is a very (NP) hard problem.<br><br>Bullet only implements local penetration depth (between for two triangles) between two btGimpactShapes, <br>and this has issues when the penetration is larger than the features involved (triangles).<br><br>You can avoid this, by using convex decomposiion, and making sure the penetration depth is less than the size of the convex parts.<br>You can get a pretty good approximate convex decomposition using HACD:<br><a href="https://github.com/kmammou/v-hacd" class="postlink">https://github.com/kmammou/v-hacd</a><br>There is an older pull request updating to HACD that I haven't processed (yet) here:<br><a href="https://github.com/bulletphysics/bullet3/pull/477" class="postlink">https://github.com/bulletphysics/bullet3/pull/477</a><br><br>Another promising method is using signed distance fields (SDF). This is not implemented in Bullet yet. Some users integrated SDF into Bullet, but didn't contribute the code back.<br>It is useful for robotics, so I likely implement it for Bullet at some stage.<br><br>One other solution would be to avoid penetration at all cost, using continuous collision detection (CCD). <br>Getting CCD for triangles meshes needs some work in Bullet, and you may run into performance issues.<br><br>So either use btCompoundShape and convex decomposition (HACD) or be look for another solution, be prepare to do more work and/or open a can of worms...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu May 12, 2016 8:31 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[blabla]]></name></author>
+		<updated>2016-03-01T11:27:07+00:00</updated>
+
+		<published>2016-03-01T11:27:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37103#p37103</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37103#p37103"/>
+		<title type="html"><![CDATA[Penetration depth for STL files]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37103#p37103"><![CDATA[
+Hi!<br><br>I have been developing a simple simulation software, where I want to load few STL files, and determine the penetration depth if collision occurs.<br>I managed to load STL file into btTriangleIndexVertexArray format, so converted to btGImpactMeshShape format, which was easy to handle as a btCollisionObject. I can now easily detect collisions, but if I want to determine the minimum translation vector that brings the objects into contact, the calculated solution I get is wrong. In short, I first perform a discrete collision detection, iterate on the manifolds/contact points, and display the contact points (getPositionWorldOnA() / getPositionWorldOnB()) with the deepest penetration depth found.<br><br>The interesting thing is, if I insert a sphere instead of an STL model, the calculated penetration depth/vector is correct. As you can see in the attached image (green one is the STL model, red points are the contact points correspond to the deepest penetration, white one is the sphere), if I translate the STL model along the penetration vector (vector which connects the two red points), we can imagine the two objects exactly come into contact. <br>The point is, with two complex 3D model, this penetration calculation method does not work (it provides two very very close contact points instead), but changing one of them to a sphere "solves" the problem (so it calculates correct/deepest contact points).<br>So my question would be, is it possible to calculate accurately the penetration depth for two complex btGImpactMeshShape with Bullet library?<br>I'm quite new to Bullet Library, so sorry if I'm asking something obvious.<br><br>Thanks,<br>Blabla<br><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1383" class="postimage" alt="stlVSstl.JPG" onclick="viewableArea(this);" /></dt></dl></div><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1382" class="postimage" alt="sphereVSstl.JPG" onclick="viewableArea(this);" /></dt></dl></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11639">blabla</a> — Tue Mar 01, 2016 11:27 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; himing missiles and bullet</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>himing missiles and bullet</h2>
+		<p><a href="viewtopic.php%3Ft=9966.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9966</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>himing missiles and bullet</h3>
+				<div class="date">Posted: <strong>Tue May 27, 2014 7:49 am</strong></div>
+				<div class="author">by <strong>addmx</strong></div>
+				<div class="content">Hi<br>
+<br>
+In my game i have cars with rocket launchers and need to fire rockets from them.<br>
+<br>
+Rocket is a simple capsule shape, for common rocket this is quite simple I place <br>
+newly create btRigidBody (with capsule shape inside) on launcher, orient it the way it should be<br>
+and set it's current velocity to that of car chassis (setLinearVelocity) and then kick it off using applyCentralImpulse in the direction I want.<br>
+Then every step I add small impulse (again using applyCentralImpulse) in the 'front' direction of body - simulating engine thrust.<br>
+This works fine from gameplay point of view. (rocket have callback set, so when it get's any collision it 'explodes').<br>
+<br>
+Now the harder thing - homing missiles - the first step is that same as with common rocket, but now each step i need to adjust<br>
+the direction of body to 'follow' the selected target (witch also moves).<br>
+so i first aplly torque (applyTorqueImpulse (ofcouse there is limit of how much torque i can add each step)) to adjust direction, then i applyCentralImpulse to simulate engie thrust, it sometimes works<br>
+but is very unstable (eg. applying torque couses the missile to lost it's stability and begin to spin rapidly)<br>
+<br>
+Is there better approach to this ?<br>
+<br>
+My simulation is done in CONSTANT steps (60Hz) so i do not worry about instability due to the fps drops (so no need to hackign gravity vector instead of impulse)<br>
+<br>
+PS. I'm using bullet 2.82 (trunk revision: 2719) on mobile device (both Android and iOS are targeted)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: himing missiles and bullet</h3>
+				<div class="date">Posted: <strong>Tue May 27, 2014 9:50 am</strong></div>
+				<div class="author">by <strong>nikomaster</strong></div>
+				<div class="content">You can switch the rocket to a kinematic object and control its movement, however it would lose its realism as it won't be affected by gravity but collisions would be enabled, or you can implement drag and wind resistance and control the rocket using airfoil surfaces as in real life. Wind would be an opposite force in direction of the linear velocity of the object applied to the object and to the airfoil surfaces.<br>
+<br>
+You can add constraints to the rocket in box shapes to act as airfolis  on a fixed angle like 5 degrees, and apply calculated drag force using the formula drag-force=dragcoeff * airdensity * velocity^2 * area_of_the_face_affected_by_force. You could use the bounding box of the object to set the faces of the air foil.<br>
+<br>
+The tricky part here is to determine which faces of aabb of the  shape are affected by the dragforce but in reality this is really easy to implement. In fact I have implemented this on my small sandbox vehicle construction game, and I have built airplanes and propellers with just boxes and work like a charm. It's is just a simple approach to aerodynamics that gives more realism to the simulation.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: himing missiles and bullet</h3>
+				<div class="date">Posted: <strong>Tue May 27, 2014 10:57 am</strong></div>
+				<div class="author">by <strong>nikomaster</strong></div>
+				<div class="content">Here is the code I use to apply drag to moving rigidbodies in bullet. Please notice I re-wrote this code to fit bullet data types as I own my own types so I did not test it on the compiler, nevertheless is the same code with different types.<br>
+Also please notice function getOrientationEuler is not included nor eulerToDirection. The graphics engine I use (irrlicht) uses euler angles on rotation so you must get a way to to get the direction vector or workaround to get the direction vector of each face of the aabb.  It is not much but works<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9966&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>struct object_faces{
+	enum {TOP,BOTTOM,FRONT,BACK,LEFT,RIGHT};
+	float areas[6];
+	btVector3 normal[6];
+	btVector3 halfExtents;
+	
+	void calcAreas(){
+		//top and bottom
+		extents=halfExtents * 2;
+		float area=extents.getX() * extents.getZ();
+		areas[TOP]=area;
+		areas[BOTTOM]=area;
+		normal[TOP]=btVector3(0,1,0);
+		normal[BOTTOM]=btVector3(0,-1,0);
+		
+		area=extents.getY() * extents.getZ();
+		areas[FRONT]=area;
+		areas[BACK]=area;
+		normal[FRONT]=btVector3(1,0,0);
+		normal[BACK]=btVector3(-1,0,0);
+		
+		area=extents.getY() * extents.getX();
+		areas[RIGHT]=area;
+		areas[LEFT]=area;
+		normal[RIGHT]=btVector3(-1,0,0);
+		normal[LEFT]=btVector3(1,0,0);
+	}
+	
+}
+//simple implementation of drag force for bullet using the bounding box as reference, not the most realistic model but fast compared to other methods
+//call this function on the main loop for each object you would like to apply drag to
+void applyDrag(btRigidBody *rb,const object_faces &amp;faces){
+	btVector3 velocity=rb-&gt;getLinearVelocity();
+	btVector3 normalizedVelocity=velocity-&gt;normalized();
+	btVector3 position=rb-&gt;getCenterOfMassPosition();
+	float velLength=velocity-&gt;length();
+	float airDensity;
+	//need this to get direction vector
+	
+	btVector3 orientation=getOrientationEuler(rb-&gt;getOrientation());//graphics engine use a sistem rotation on euler angles so this func must be implemented
+	//or get a work around to get the direction vector of the face of the aabb in relation with the orientation of the object
+	
+	btVector3 directionVector1,directionVector2;
+	btVector3 r;
+	btVector3 forcePivot;
+	float l1,l2,dragforce;
+	//Apply some reduction or scaling to velocity if needed
+	//
+	airDensity=atmosphere::getDensity(position.getY());//or just set an arbirtrary value 1.2 is at sea level
+	rb-&gt;activate(true);
+	for(int i=0;i&lt;6;i+=2){
+		dragforce=0;
+	//you can workaround this step to get the direction vector of the object faces, this can be done with rotation matrix too
+		directionVector1=eulerToDirection(orientation,faces.normal[i]);//first parameter euler angle second, forwards vector returns unity vector in direciton normal[i]
+		r=normalizedVelocity - directionVector1;
+		l1=r.length();
+		
+		directionVector2=eulerToDirection(orientation,faces.normal[i+1]);//opposite face
+		r=normalizedVelocity - directionVector2;
+		l2=r.length();
+		
+		if(l1&lt;l2){ //the shortest vector means is closer to velocity direction therefore it is the face where force will be applied
+			dragforce=1.05 * airDensity * velLength * velLength * faces.areas[i];//1.05 drag coefficient of the box
+			forcePivot=faces.halfExtents * faces.normal[i];//apply force on the surface
+			r=directionVector1 + normalizedVelocity;
+		}else if(l1&gt;l2){
+			dragforce=1.05 * airDensity * velLength * velLength * faces.areas[i+1];
+			forcePivot=faces.halfExtents * faces.normal[i+1];//apply force on the surface
+			r=directionVector2 + normalizedVelocity;
+		}
+		//l1==l2 no force applied because face is 90 degrees from velocity
+		r*=-dragforce;//apply scaling to force if it affects to much objects on the dynamic world, dragforce oposite sign means opposite direciton of velocity
+		rb-&gt;applyForce(r,forcePivot);//
+	}
+	
+}</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: himing missiles and bullet</h3>
+				<div class="date">Posted: <strong>Fri May 30, 2014 12:17 pm</strong></div>
+				<div class="author">by <strong>nikomaster</strong></div>
+				<div class="content">You probably have lost interest on this topic.<br>
+<br>
+But I just remember another way to achieve your homing missiles without having the need to go for kinematic objects. <br>
+You could add a constraint to the tip of the missile and from there apply an impulse direct to the position of the target. For this you need to get the position of the target and the position of the missile.<br>
+<br>
+Something like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9966&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>result=target - missile_position;
+result.normalize();
+body_on_missile_tip.applyCentralImpulse(result * missile_thrust);
+</code></pre></div>
+In this way the missile will travel directly to the target using impulse. Apply that code on each update frame so the code could update the result vector and never lose track. It would work much better if you apply the wind resistant function too and add constraint ailerons attached to the missile so it could go straight and avoid unwanted spinning.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: himing missiles and bullet</h3>
+				<div class="date">Posted: <strong>Wed Mar 25, 2015 6:08 am</strong></div>
+				<div class="author">by <strong>shizuo</strong></div>
+				<div class="content">I was trying to find the code about the missile to keep on tracking on the spot, but here it is thanks dude.<br>
+<br>
+<br>
+________________________________________________________________<br>
+<a href="http://www.weapons-universe.com/switchblades.htm" class="postlink">switchblade</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: himing missiles and bullet</h3>
+				<div class="date">Posted: <strong>Tue Jun 15, 2021 9:14 pm</strong></div>
+				<div class="author">by <strong>Brian Beuken</strong></div>
+				<div class="content">Arise dead thread, I have need of thee<br>
+<br>
+<br>
+How exactly do you add a constraint to the end of the missile? I am struggling to make that work, and will it change the orientaion of the main RB its attached to so that you pull a missile or ship along?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

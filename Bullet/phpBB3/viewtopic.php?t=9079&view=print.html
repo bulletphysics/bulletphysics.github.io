@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Chris Hecker's impulse calculation versus block solver</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Chris Hecker's impulse calculation versus block solver</h2>
+		<p><a href="viewtopic.php%3Ft=9079.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9079</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 12:32 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Hi there,<br>
+<br>
+I was hoping someone could answer a simple question for me.  Chris Heckers GD article is widely referenced as a starting point for building your own physics engine.  I know I looked at the article and it helped me a great deal when I was first starting out.  Now I got a GJK/EPA collision engine coupled with dynamics that resemble bullet's block solver.  It works well.  Now, I would like to look back and say Chris Hecker's method is like bullet, only not block-solver, but something baffles me.  In that article, we take the cross product twice to what should be the Jacobian, but I just checked my block solver and we only take the cross product once.  Is this the reason why the block solver method performs better?  I think there are a multitude of reasons why my engine performs better without the "jiggle", including help I have received from this forum and bullet's methodology.  But yeah, that double cross-product doesn't seem to be anywhere.  Anyone can shed some light on this?<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 2:26 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">It doesn't matter how you compute the effective mass. You hopefully get the same result with both computations. Otherwise one is wrong. The inverse effective mass for the non-penetration constraint is:<br>
+<br>
+K = invM1 + invM2 + (r1 x n)^T * invI1 * (r1 x n) + (r2 x n)^T * invI2 * (r2 x n) <br>
+<br>
+The reason the Bullet solver works better is because he clamps against the accumulated impulse. Instead of just applying only positive impulses.<br>
+<br>
+I am not sure I understand what you mean with block solver. A block solver usually means that you solve n-constraints as a block. E.g. you have a hinge which is defined by 5 constraints. Instead of solving 5 scalar equations you solve a 5x5 linear system. The 5x5 inverse effective mass will be symmetric positive definite.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Thu May 09, 2013 4:05 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Ah!  Well first of all thank you for your reply.  I think I was getting lost in my own block solver.  Basically, I look at physics calculations in two different approaches:<br>
+1) matrix style (block solver) which I got into knowing thanks to Erin's paper<br>
+2) impulse addition/subtraction (Paul Firth's speculative contact algorithm is an example of this).<br>
+<br>
+Basically, it's all the same, but I didn't understand it at first.  I was specifically talking about Figure 4 in <a href="http://chrishecker.com/images/b/bb/Gdmphys4.pdf" class="postlink">http://chrishecker.com/images/b/bb/Gdmphys4.pdf</a>  He takes the cross-product twice and we don't do that with the Jacobian in the "block-solver"--I should just say "in how bullet does it".<br>
+<br>
+While I have your attention, I got another question for you: I moved my gravity calculation out of a pre-solver step and put it into the solver as "F_ext" as Erin describes in Iterative Dynamics.  Then I put an if statement for contact points: if there is no contact manifold on the rigid body, then apply gravity to velocity outside of the solver (otherwise nothing moves if it's not colliding yet).  This seems to almost work as my boxes stack okay now (they weren't able to before), but the whole stack wobbles continuously.  Do you have any thoughts as to what I could do to fix this?  BASE_CONTACT_BREAKING_THRESHOLD = 0.02 which is the equivalent of m_contactBreakingThreshold in bullet.  If I make this smaller the wobbling is less noticeable, but manifolds aren't as persistent anymore and it looks like it's just wobbling at a higher frequency.  If I don't do the gravity application in the solver and keep it as a pre-step, then no box stacking, but no wobbling either.  Let me know your thoughts.  I would be so appreciative if you could shed some light on this.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 12:07 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think we refer to 1) as Projected Gauss Seidel (PGS) here in the forum. And 2) is refereed to as Sequential Impulses (SI). Both are equivalent iterative solvers and only differ in the implementation.<br>
+<br>
+You should add gravity to your velocity before you send it to the solver. The contact solver should see the velocity! The jitter you are seeing might due to other reasons. Make sure that you don't correct the full penetration, but keep objects slightly touching. E.g. define some amount of allowed penetration (e.g. 0.5 cm) and only correct penetration if you exceed this number. Something along the lines like this:<br>
+<br>
+float PenetrationToResolve = min( Penetration + cAllowedPenetration, 0 )</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 12:11 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I don't know why there are two cross products in Chris Hecker's paper. The formula I gave you is correct and we can solve more interesting problems instead of digging into this too much. Don't worry about it! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 2:43 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Ah I see.  The following is my constraint code:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9079&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>oid MEHEditorConstraint::ToContact(const MEHVector3 &amp;overlap, const MEHVector3 &amp;radius1, const MEHVector3 &amp;radius2, 
+                              const MEHVector3 &amp;normal, scalar erp, scalar cfm)
+{
+   m_jacobiVectors[0] = normal;
+      
+   m_jacobiVectors[1] = radius1;
+   m_jacobiVectors[1].ToCrossProductWith(normal);
+   
+   m_jacobiVectors[2] = normal;
+   m_jacobiVectors[2] *= (scalar)-1.0;
+
+   m_jacobiVectors[3] = normal;
+   m_jacobiVectors[3].ToCrossProductWith(radius2);
+  
+   m_constraint = overlap.DotProductWith(normal);
+   
+   m_erp = erp;
+   m_cfm = cfm;
+   m_calcDamping = false;
+
+   m_lowerBound = 0.0;
+   m_upperBound = (scalar)1e10;
+}
+
+void MEHEditorConstraint::ToNormal(const MEHVector3 &amp;radius1, const MEHVector3 &amp;radius2, const MEHVector3 &amp;normal,
+                           MEHEditorRigidBody *bodyA, MEHEditorRigidBody *bodyB, scalar penetrationVelocity, 
+                           scalar erp, scalar cfm)
+{
+   m_jacobiVectors[0] = normal;
+   
+   m_jacobiVectors[1] = radius1;
+   m_jacobiVectors[1].ToCrossProductWith(normal);
+      
+   m_jacobiVectors[2] = normal;
+   m_jacobiVectors[2] *= (scalar)-1.0;
+
+   m_jacobiVectors[3] = normal;
+   m_jacobiVectors[3].ToCrossProductWith(radius2);
+      
+   scalar num1 = 0.0;
+   
+   num1 = m_jacobiVectors[0].DotProductWith(bodyA-&gt;GetVelocity()) + m_jacobiVectors[1].DotProductWith(bodyA-&gt;GetAngularVelocity());
+
+   scalar num2 = 0.0;
+   
+   if (bodyB &amp;&amp; bodyB-&gt;GetMass() != MEHMAXSCALAR)
+      num2 = m_jacobiVectors[2].DotProductWith(bodyB-&gt;GetVelocity()) + m_jacobiVectors[3].DotProductWith(bodyB-&gt;GetAngularVelocity());
+
+   scalar numerator = (scalar)(-1.0 + 0.0)*(num1 + num2) - (penetrationVelocity &gt; 0.0 ? penetrationVelocity : penetrationVelocity * erp);
+     
+   m_constraint = numerator;
+  
+   m_erp = 1.0;
+   m_cfm = cfm;
+   m_calcDamping = false;
+   m_isContact = true;
+
+   m_lowerBound = 0.0;
+   m_upperBound = (scalar)1e10;
+}
+</code></pre></div>
+
+The first constraint is Baumgarte stabilization, but you'll notice we're doing it in the contact constraint too (the 2nd function).  The first function takes the overlap magnitude as the error value while the 2nd one incorporates the overlap magnitude divided by elapsedSeconds which is penetration velocity.  So you're saying to put the overlap through a min(overlap + value)?<br>
+<br>
+As far as the jitter goes, I thought it was because I was using GJK/EPA and not box clipping like bullet.  Then I rehashed bullet's boxbox algorithm to use GJK/EPA and it can stack boxes pretty well compared to mine.  So now I just got to track (and learn) what bullet is doing that I'm not.  I really should give back to bullet somehow, I wish I could.  I have written a Win32 editor that let's you define game objects ("widgets") in XML files and then compile the widgets into a packed data structure to be used in your game.  It has a 3D view too.  I could pitch it in with bullet if you guys want.  Right now I'm working on a rag-doll viewer with a mouse joint.  Let me know if this sounds interesting.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 7:13 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">So it turns out that 2nd cross product is very necessary.  It's why my boxes wouldn't stack!  Ha!  Go Chris Hecker!  For some reason, I thought the dividing by d<em class="text-italics"> in PGS from Erin's paper was this calculation so I left it out, but I added it and voila, nice stability.  Thanks for all your help.<br>
+<br>
+Mike</em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 6:05 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Sorry, which equation number of Hecker's is wrong? Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Fri May 10, 2013 6:07 pm</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">No no, nothing is wrong.  It was my mistake.  Thank you.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Mon May 13, 2013 5:13 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Ahh, okay, thanks. I misunderstood.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Chris Hecker's impulse calculation versus block solver</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 6:41 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Yeah specifically, there is a triple product identity.  Turns out taking the cross-product twice is the same thing as taking the cross product and dotting it with itself. Or something.  Let me see if I can figure it out:<br>
+<br>
+Chris Hecker's impulse formula: (r x n) x r <br>
+Widely used impulse formula in solvers: (r x n) . (r x n) = n . ((r x n) x r) by scalar triple product identity<br>
+<br>
+There it is!  The jacobian entry is the normal so it is dotted with Chris Hecker's formula.  Ok I don't feel stupid anymore.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

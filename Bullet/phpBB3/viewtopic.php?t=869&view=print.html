@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Adding Joint Makes Collison Spongy (Sequential Impulses)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Adding Joint Makes Collison Spongy (Sequential Impulses)</h2>
+		<p><a href="viewtopic.php%3Ft=869.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=869</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Adding Joint Makes Collison Spongy (Sequential Impulses)</h3>
+				<div class="date">Posted: <strong>Sat Dec 30, 2006 11:17 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">I'm using sequential impulses for my 2d engine. Most the code is very similar to Erin Cattos sequential impulse paper.<br>
+<br>
+I've notice when I add revolute joints between bodies the collision of the connected bodies with other bodies becomes spongy.<br>
+<br>
+Example: If I make a car and attach 2 wheels using revolute joints, then place the car on a static body the wheels sink into the body more than if the bodies were not attached by a joint. I noticed it only occurs when the force is acting from one body, thru the joints, and into the second body.  In this case, the second bodies collision with the underlying static body will lose a lot of it's rigidness. <br>
+<br>
+The only thing I found to counter this is to swap the order in which I apply collision response impulses and joint correction impulses.  If I do collision impulse first and joint correction second, I get the spongy behavior. If instead I do the joint correction first, I do not see the spongy behavior.<br>
+<br>
+So, my question is does it matter in which order I do these? Is one way better than another. (for me it is, but I could have something else wrong.)<br>
+<br>
+-thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Dec 31, 2006 6:47 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">One limitation of most iterative methods is that they aren't stable when you have a low mass body (wheels) supporting a higher mass body (chassis). This can be resolved by:<br>
+1) Using more iterations<br>
+2) Faking the masses (make the wheels heavier than they would normally be).<br>
+3) Using rays instead of wheels (my preferred solution). This requires a custom suspension+friction contact constraint.<br>
+<br>
+Also, make sure your code has joints and contacts in the same iteration loop. This helps them <em class="text-italics">see</em> each other.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Dec 31, 2006 1:28 pm</strong></div>
+				<div class="author">by <strong>crashlander</strong></div>
+				<div class="content">This occurs even when the wheels and mass are equal.<br>
+<br>
+I suspect this: "Also, make sure your code has joints and contacts in the same iteration loop. This helps them see each other." may be my issue.<br>
+<br>
+So, currently I do this (psuedo code):<br>
+<br>
+1. for each joint do PreStep<br>
+<br>
+2. for each joint apply correction impulses (iterate 10 times)<br>
+<br>
+3. for each contact do PreStep<br>
+<br>
+4. for each contact apply correction impulses (iterate 10 times)<br>
+<br>
+Looking at your Box2D code, this should be something like:<br>
+<br>
+1. for each joint do PreStep<br>
+<br>
+2. for each contact do PreStep<br>
+<br>
+3. for each joint and contact apply correction impulses (iterate 10 times)?<br>
+<br>
+Not sure how I missed that.   <br>
+<br>
+Thanks for the help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Jan 05, 2007 12:52 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">Hi, <br>
+
+<blockquote class="uncited"><div>1. for each joint do PreStep<br>
+<br>
+2. for each contact do PreStep<br>
+<br>
+3. for each joint and contact apply correction impulses (iterate 10 times)? 
+</div></blockquote>
+
+This should work better than the first version since you correct joints and contacts in the same iteration. Both, joints and contacts, define a position constraint and they have to be solved at the same time. Otherwise the dependencies between both are not taken into consideration.<br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

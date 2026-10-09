@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; A verlet based approach for... 3D physics?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>A verlet based approach for... 3D physics?</h2>
+		<p><a href="viewtopic.php%3Ft=9021.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9021</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>A verlet based approach for... 3D physics?</h3>
+				<div class="date">Posted: <strong>Mon Apr 15, 2013 5:56 pm</strong></div>
+				<div class="author">by <strong>ConvexHull</strong></div>
+				<div class="content">Hi guys,<br>
+I've readed recently <a href="http://www.gamedev.net/page/resources/_/technical/math-and-physics/a-verlet-based-approach-for-2d-game-physics-r2714" class="postlink">http://www.gamedev.net/page/resources/_ ... sics-r2714</a><br>
+article and tried to apply it to 3D.<br>
+The main idea is to represent each vertex of rigid body with 3D Position, 3D PrevPosition, and 3D Accell and connect those vertices with Edge structures (Vertex *V1, Vertex *V2, and EdgeLenght).<br>
+Then the vertices are moved (with verlet motion equation) and edges are used to keep vertices together.<br>
+I've recoded everything in three dimensions but it seems that edges code doesnt work for by cube (8 vertices, 18 edges).<br>
+Any ideas what's causing this problem?<br>
+<br>
+Here's the code, I've just changed it to 3D.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9021&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void Physics::UpdateEdges() {
+  for( int I = 0; I &lt; EdgeCount; I++ ) {
+    Edge&amp; E = *Edges[ I ];
+
+    //Calculate the vector mentioned above
+    Vec2 V1V2 = E.V2-&gt;Position - E.V1-&gt;Position; 
+
+    //Calculate the current distance
+    float V1V2Length = V1V2.Length(); 
+    
+    //Calculate the difference from the original length
+    float Diff       = V1V2Length - E.OriginalLength; 
+    
+    V1V2.Normalize();
+
+    //Push both vertices apart by half of the difference respectively 
+    //so the distance between them equals the original length
+    E.V1-&gt;Position += V1V2*Diff*0.5f; 
+    E.V2-&gt;Position -= V1V2*Diff*0.5f;
+  }
+}</code></pre></div>
+It's like in 2D but in 3D each vertex is connected by more than 2 edges.<br>
+Please help.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: A verlet based approach for... 3D physics?</h3>
+				<div class="date">Posted: <strong>Mon Apr 15, 2013 9:37 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I can't figure out where you're coming up with 18 edges. If every vert in the cube is converted to every other, it should be 28, no? What's not working for you?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: A verlet based approach for... 3D physics?</h3>
+				<div class="date">Posted: <strong>Tue Apr 16, 2013 5:50 am</strong></div>
+				<div class="author">by <strong>Dennis</strong></div>
+				<div class="content">Without knowing that much detail, I'm pretty sure Rigs of Rods uses a 3D particle approach for "rigid" body physics, not sure if it's verlet though: <a href="http://www.rigsofrods.com" class="postlink">http://www.rigsofrods.com</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: A verlet based approach for... 3D physics?</h3>
+				<div class="date">Posted: <strong>Tue Apr 16, 2013 2:55 pm</strong></div>
+				<div class="author">by <strong>ConvexHull</strong></div>
+				<div class="content"><blockquote><div><cite>bone wrote:</cite>I can't figure out where you're coming up with 18 edges. If every vert in the cube is converted to every other, it should be 28, no? What's not working for you?</div></blockquote>
+
+6 cube sides, 8 vertices, 6 quads, each quad is two triangles (so 12 tris)<br>
+down side 4 + up side 4 + up-down connection 4 + center edge for each of 6 sides (because each side is a quad and a quad is two triangles)<br>
+4 + 4 + 4 + 6 = 18<br>
+<br>
+I need some kind of rigid-spring solver?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: A verlet based approach for... 3D physics?</h3>
+				<div class="date">Posted: <strong>Tue Apr 16, 2013 5:21 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">My previous post should have said "connected" not "converted". Anyway ...<br>
+<br>
+Your original post said: "it seems that edges code doesnt work for by cube." I'm asking what isn't working. Does the cube collapse? Blow up? In other words, in what way does it not work? I'm guessing it collapses.<br>
+<br>
+Also, I don't think simply taking a 2-D quad and applying it 6 times for a cube is going to work (and I'm still not quite understanding your description of how you count them, sorry). You need something to preserve the volume in the middle of the cube. In particular, each vert should probably have a connection to its opposite vert - the one furthest away. In other words, four (4) edges that cross right through the middle of the cube.<br>
+<br>
+I'd probably also include both diagonals of each face (so 2x6=12). Finally, of course the normal 12 cube edges. 4+12+12=28.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: A verlet based approach for... 3D physics?</h3>
+				<div class="date">Posted: <strong>Wed Apr 17, 2013 9:15 pm</strong></div>
+				<div class="author">by <strong>ConvexHull</strong></div>
+				<div class="content">You were right, I had to add more edges (more than box triangles geometry had).<br>
+Now the question is how to generate contact points between boxes defined by 8 vertices each? They are not axis aligned....<br>
+I know how to implement GJK and SAT but I dont know how to get separate contact point for EACH vertex.<br>
+Any ideas?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: A verlet based approach for... 3D physics?</h3>
+				<div class="date">Posted: <strong>Thu Apr 18, 2013 1:35 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Indeed, that's going to be more difficult. Particularly the edge/edge case (when an edge of one cube touches the edge of another cube, yet no verts have penetrated the faces of the other cube). I believe some people just skip that case altogether.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

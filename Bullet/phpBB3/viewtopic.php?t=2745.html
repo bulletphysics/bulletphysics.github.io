@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Reducing AABB-Brush sweep tests to Ray-Brush intersection - Real-Time Physics Simulation Forum</title>
+
+	<link rel="alternate" type="application/atom+xml" title="Feed - Real-Time Physics Simulation Forum" href="/Bullet/phpBB3/app.php/feed?sid=ea55b6a3ea6d9268ff3036f9f684dba2">		<link rel="alternate" type="application/atom+xml" title="Feed - All forums" href="/Bullet/phpBB3/app.php/feed/forums?sid=ea55b6a3ea6d9268ff3036f9f684dba2">			<link rel="alternate" type="application/atom+xml" title="Feed - Forum - General Bullet Physics Support and Feedback" href="/Bullet/phpBB3/app.php/feed/forum/9?sid=ea55b6a3ea6d9268ff3036f9f684dba2">	<link rel="alternate" type="application/atom+xml" title="Feed - Topic - Reducing AABB-Brush sweep tests to Ray-Brush intersection" href="/Bullet/phpBB3/app.php/feed/topic/2745?sid=ea55b6a3ea6d9268ff3036f9f684dba2">	
+	<link rel="canonical" href="viewtopic.php%3Ft=2745.html">
+
+<!--
+	phpBB style name: prosilver
+	Based on style:   prosilver (this is the default phpBB3 style)
+	Original author:  Tom Beddard ( http://www.subBlue.com/ )
+	Modified by:
+-->
+
+<link href="./assets/css/font-awesome.min.css?assets_version=39" rel="stylesheet">
+<link href="./styles/prosilver/theme/stylesheet.css?assets_version=39" rel="stylesheet">
+<link href="./styles/prosilver/theme/en/stylesheet.css?assets_version=39" rel="stylesheet">
+
+
+
+
+<!--[if lte IE 9]>
+	<link href="./styles/prosilver/theme/tweaks.css?assets_version=39" rel="stylesheet">
+<![endif]-->
+
+
+
+
+
+</head>
+<body id="phpbb" class="nojs notouch section-viewtopic ltr ">
+
+
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+	<div id="page-header">
+		<div class="headerbar" role="banner">
+					<div class="inner">
+                        <div style="text-align: center; margin-bottom: 15px;">
+    <img src="/Bullet/phpBB3/images/cropped-pybullet.png" alt="PyBullet Banner" style="max-width: 100%; height: auto;">
+</div>
+			<div id="site-description" class="site-description">
+		<a id="logo" class="logo" href="./index.php?sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Board index">
+					<span class="site_logo"></span>
+				</a>
+				<h1>Real-Time Physics Simulation Forum</h1>
+				<p></p>
+				<p class="skiplink"><a href="#start_here">Skip to content</a></p>
+			</div>
+
+			                        <div id="search-box" class="search-box search-header" role="search" style="max-width: 220px;">
+    <script async src="https://cse.google.com/cse.js?cx=7638796233dba4863"></script>
+    <div class="gcse-searchbox-only"></div>
+</div>
+			
+			</div>
+					</div>
+				<div class="navbar" role="navigation">
+	<div class="inner">
+
+	<ul id="nav-main" class="nav-main linklist" role="menubar">
+
+		<li id="quick-links" class="quick-links dropdown-container responsive-menu" data-skip-responsive="true">
+			<a href="#" class="dropdown-trigger">
+				<i class="icon fa-bars fa-fw" aria-hidden="true"></i><span>Quick links</span>
+			</a>
+			<div class="dropdown">
+				<div class="pointer"><div class="pointer-inner"></div></div>
+				<ul class="dropdown-contents" role="menu">
+					
+											<li class="separator"></li>
+																									<li>
+								<a href="./search.php?search_id=unanswered&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" role="menuitem">
+									<i class="icon fa-file-o fa-fw icon-gray" aria-hidden="true"></i><span>Unanswered topics</span>
+								</a>
+							</li>
+							<li>
+								<a href="./search.php?search_id=active_topics&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" role="menuitem">
+									<i class="icon fa-file-o fa-fw icon-blue" aria-hidden="true"></i><span>Active topics</span>
+								</a>
+							</li>
+							<li class="separator"></li>
+							<li>
+								<a href="./search.php?sid=ea55b6a3ea6d9268ff3036f9f684dba2" role="menuitem">
+									<i class="icon fa-search fa-fw" aria-hidden="true"></i><span>Search</span>
+								</a>
+							</li>
+					
+										<li class="separator"></li>
+
+									</ul>
+			</div>
+		</li>
+
+				<li data-skip-responsive="true">
+			<a href="/Bullet/phpBB3/app.php/help/faq?sid=ea55b6a3ea6d9268ff3036f9f684dba2" rel="help" title="Frequently Asked Questions" role="menuitem">
+				<i class="icon fa-question-circle fa-fw" aria-hidden="true"></i><span>FAQ</span>
+			</a>
+		</li>
+						
+			<li class="rightside"  data-skip-responsive="true">
+			<a href="./ucp.php?mode=login&amp;redirect=viewtopic.php%3Ft%3D2745&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Login" accesskey="x" role="menuitem">
+				<i class="icon fa-power-off fa-fw" aria-hidden="true"></i><span>Login</span>
+			</a>
+		</li>
+						</ul>
+
+	<ul id="nav-breadcrumbs" class="nav-breadcrumbs linklist navlinks" role="menubar">
+				
+		
+		<li class="breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
+
+			
+							<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope><a itemprop="item" href="./index.php?sid=ea55b6a3ea6d9268ff3036f9f684dba2" accesskey="h" data-navbar-reference="index"><i class="icon fa-home fa-fw"></i><span itemprop="name">Board index</span></a><meta itemprop="position" content="1" /></span>
+
+											
+								<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope data-forum-id="21"><a itemprop="item" href="./viewforum.php?f=21&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2"><span itemprop="name">BULLET PHYSICS LIBRARY USERS</span></a><meta itemprop="position" content="2" /></span>
+															
+								<span class="crumb" itemtype="https://schema.org/ListItem" itemprop="itemListElement" itemscope data-forum-id="9"><a itemprop="item" href="./viewforum.php?f=9&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2"><span itemprop="name">General Bullet Physics Support and Feedback</span></a><meta itemprop="position" content="3" /></span>
+							
+					</li>
+
+		
+					<li class="rightside responsive-search">
+				<a href="./search.php?sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="View the advanced search options" role="menuitem">
+					<i class="icon fa-search fa-fw" aria-hidden="true"></i><span class="sr-only">Search</span>
+				</a>
+			</li>
+			</ul>
+
+	</div>
+</div>
+	</div>
+
+	
+	<a id="start_here" class="anchor"></a>
+	<div id="page-body" class="page-body" role="main">
+		
+		
+<h2 class="topic-title"><a href="./viewtopic.php?t=2745&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">Reducing AABB-Brush sweep tests to Ray-Brush intersection</a></h2>
+<!-- NOTE: remove the style="display: none" when you want to have the forum description on the topic body -->
+
+
+
+<div class="action-bar bar-top">
+	
+			<a href="./posting.php?mode=reply&amp;t=2745&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="button" title="Post a reply">
+							<span>Post Reply</span> <i class="icon fa-reply fa-fw" aria-hidden="true"></i>
+					</a>
+	
+			<div class="dropdown-container dropdown-button-control topic-tools">
+		<span title="Topic tools" class="button button-secondary dropdown-trigger dropdown-select">
+			<i class="icon fa-wrench fa-fw" aria-hidden="true"></i>
+			<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+		</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																												<li>
+					<a href="./viewtopic.php?t=2745&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2&amp;view=print" title="Print view" accesskey="p">
+						<i class="icon fa-print fa-fw" aria-hidden="true"></i><span>Print view</span>
+					</a>
+				</li>
+											</ul>
+		</div>
+	</div>
+	
+			<div class="search-box" role="search">
+			<form method="get" id="topic-search" action="./search.php?sid=ea55b6a3ea6d9268ff3036f9f684dba2">
+			<fieldset>
+				<input class="inputbox search tiny"  type="search" name="keywords" id="search_keywords" size="20" placeholder="Search this topic…" />
+				<button class="button button-search" type="submit" title="Search">
+					<i class="icon fa-search fa-fw" aria-hidden="true"></i><span class="sr-only">Search</span>
+				</button>
+				<a href="./search.php?sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="button button-search-end" title="Advanced search">
+					<i class="icon fa-cog fa-fw" aria-hidden="true"></i><span class="sr-only">Advanced search</span>
+				</a>
+				<input type="hidden" name="t" value="2745" />
+<input type="hidden" name="sf" value="msgonly" />
+<input type="hidden" name="sid" value="ea55b6a3ea6d9268ff3036f9f684dba2" />
+
+			</fieldset>
+			</form>
+		</div>
+	
+			<div class="pagination">
+			6 posts
+							&bull; Page <strong>1</strong> of <strong>1</strong>
+					</div>
+		</div>
+
+
+
+
+			<div id="p10942" class="post has-profile bg2">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10942">
+			<dt class="no-profile-rank has-avatar">
+				<div class="avatar-container">
+																<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="avatar"><img class="avatar" src="./download/file.php?avatar=2773_1265816709.jpg" width="80" height="80" alt="User avatar" /></a>														</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2773&amp;sr=posts&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">14</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Sep 25, 2008 1:36 pm</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> Germany</dd>
+							
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact Carsten">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact Carsten</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="http://www.cafu.de" title="Website" class="last-cell">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10942">
+
+					<h3 class="first">
+						<a href="./viewtopic.php?p=10942&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10942">Reducing AABB-Brush sweep tests to Ray-Brush intersection</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10942&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10942&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10942" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a></strong> &raquo; </span><time datetime="2008-10-20T14:16:59+00:00">Mon Oct 20, 2008 2:16 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">Dear folks,<br>
+<br>
+I've been comparing several algorithms for continuous collision detection between convex objects, and I was wondering how the algorithm that is used in the "Quake (1/2/3)" engines fits in.<br>
+<br>
+In a summary, the "Quake algorithm" traces AABBs along rays and determines collisions with brushes (convex polyhedra) by
+<ol style="list-style-type:decimal"><li>bloating the current brush, adding bevel planes where necessary, then</li>
+<li> tracing a ray against the bloated brush.</li></ol>
+Step 1 is quasi the explicit computation of the Minkowski sum of the AABB and the brush, so that in step 2, the result of the ray test against the bloated brush is equivalent to tracing the AABB against the original (unbloated) brush.<br>
+The most difficult and least obvious part in this algorithm is how and where the compute the bevel planes, which however can be precomputed offline for AABBs.<br>
+<br>
+I've been able to create my own implementation of this algorithm that works very fast and very stable, and I'm currently working on extending the concept so that instead of only AABBs, also arbitrary convex polyhedra can be traced against other convex polyhedra (the brushes). (Again, the only difficult problem is computing the proper bevel planes.)<br>
+<br>
+Well, I was wondering under what name this algorithm is commonly known, and how it compares to GJK?  <img class="smilies" src="./images/smilies/icon_question.gif" width="15" height="15" alt=":?:" title="Question"><br>
+<br>
+I'm not (yet) very familiar with GJK, which seems to compute the Minkowski sum implicitly, whereas the above outlined algorithm computes it more explicitly.<br>
+I also have <a href="http://realtimecollisiondetection.net/" class="postlink">Christer Ericsons great book</a>, and while it covers Minkowski sums and GJK, it doesn't seem to mention this "explicit" algorithm.<br>
+<br>
+I'd be very grateful for any hints and tips about this algorithm, where I can find more information, and how it compares to GJK.<br>
+Thank you very much!!  <img class="smilies" src="./images/smilies/icon_biggrin.gif" width="15" height="15" alt=":-D" title="Very Happy"></div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p10944" class="post has-profile bg1">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10944">
+			<dt class="no-profile-rank has-avatar">
+				<div class="avatar-container">
+																<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="avatar"><img class="avatar" src="./download/file.php?avatar=2773_1265816709.jpg" width="80" height="80" alt="User avatar" /></a>														</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2773&amp;sr=posts&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">14</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Sep 25, 2008 1:36 pm</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> Germany</dd>
+							
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact Carsten">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact Carsten</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="http://www.cafu.de" title="Website" class="last-cell">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10944">
+
+					<h3 >
+						<a href="./viewtopic.php?p=10944&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10944">Re: Reducing AABB-Brush sweep tests to Ray-Brush intersection</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10944&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10944&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10944" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a></strong> &raquo; </span><time datetime="2008-10-20T18:04:59+00:00">Mon Oct 20, 2008 6:04 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">Oh, I forgot to mention that the challenge is of course to compute the bevel planes dynamically, in real-time, for arbitrary and changing (that is, possibly different in each frame) trace objects.<br>
+Precomputing the explicit Minkowski sum ahead of time, e.g. by a convex hull algorithm for one fixed trace shape only, doesn't count. <img class="smilies" src="./images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"></div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p10953" class="post has-profile bg2">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10953">
+			<dt class="has-profile-rank has-avatar">
+				<div class="avatar-container">
+																<a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="avatar"><img class="avatar" src="./download/file.php?avatar=2.gif" width="74" height="71" alt="User avatar" /></a>														</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Erwin Coumans</a>							</dt>
+
+						<dd class="profile-rank">Site Admin</dd>			
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2&amp;sr=posts&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">4221</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Sun Jun 26, 2005 6:43 pm</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> California, USA</dd>
+																	
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact Erwin Coumans">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact Erwin Coumans</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="https://twitter.com/erwincoumans" title="Website">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																																																<a href="https://twitter.com/erwincoumans" title="Twitter">
+										<span class="contact-icon phpbb_twitter-icon">Twitter</span>									</a>
+																																																<a href="https://youtube.com/user/erwincoumans" title="YouTube" class="last-cell">
+										<span class="contact-icon phpbb_youtube-icon">YouTube</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10953">
+
+					<h3 >
+						<a href="./viewtopic.php?p=10953&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10953">Re: Reducing AABB-Brush sweep tests to Ray-Brush intersection</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10953&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10953&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10953" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Erwin Coumans</a></strong> &raquo; </span><time datetime="2008-10-22T06:32:33+00:00">Wed Oct 22, 2008 6:32 am</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">I've dealt with those issues before, and I recommend the implicit method, also known as conservative advancement (CA).<br>
+<br>
+Explicit computation of the Minkowski sum is very expensive for complex convex shapes, so if you ignore rotation you can better precompute this. And then perform ray casts against the explicit Minkowski Sum (or bevel planes in quake lingo). Bullet implements the ray cast, convex sweep/cast and rotational continuous time of impact using implicit the Minkowski sum, and it requires very few iterations. For the non-rotational version, this has been excellently described by Gino van den Bergen in his <a href="http://www.dtecta.com/papers/jgt04raycast.pdf" class="postlink">Ray Casting against General Convex Objects with Application to Continuous Collision Detection</a>. Other related papers are by Zhang/Lee/Kim, see <a href="http://graphics.ewha.ac.kr/CATCH" class="postlink">http://graphics.ewha.ac.kr/CATCH</a> and <a href="http://graphics.ewha.ac.kr/FAST/" class="postlink">http://graphics.ewha.ac.kr/FAST/</a><br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p10976" class="post has-profile bg1">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10976">
+			<dt class="no-profile-rank has-avatar">
+				<div class="avatar-container">
+																<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="avatar"><img class="avatar" src="./download/file.php?avatar=2773_1265816709.jpg" width="80" height="80" alt="User avatar" /></a>														</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2773&amp;sr=posts&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">14</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Sep 25, 2008 1:36 pm</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> Germany</dd>
+							
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact Carsten">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact Carsten</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="http://www.cafu.de" title="Website" class="last-cell">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10976">
+
+					<h3 >
+						<a href="./viewtopic.php?p=10976&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10976">Re: Reducing AABB-Brush sweep tests to Ray-Brush intersection</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10976&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10976&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10976" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a></strong> &raquo; </span><time datetime="2008-10-25T09:46:21+00:00">Sat Oct 25, 2008 9:46 am</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">Hi Erwin,<br>
+<br>
+thank you very much for your reply and the links to the great papers!<br>
+<br>
+I've finished my implementation using explicit Minkowski difference in the meanwhile. As you mentioned, the disadvantages are
+<ul><li> scary O(...) asymptotic complexity, and</li>
+<li> very difficult for "rotational sweeps" (the two objects can be arbitrarily rotated, but the sweep must be along a straight vector).</li></ul>
+Fortunately we don't need rotational sweeps, so I didn't even consider them.<br>
+<br>
+About the complexity/performance: There are indeed several loops that indicate an essentially squared behavior, for the worst case something like O(p_1*v_2 + e_1*e_2*(v_1+v_2)), where<br>
+p_i is the number of planes of object i, v_i is the number of vertices of object i, and e_i is the number of edges of object i.<br>
+<br>
+Good news though is that all the inner loops are very cheap (usually hardly more than a dot product), and there are many(!) "early-outs".<br>
+I've not yet finished performance profiling and optimization (in fact my current implementation is still quite conservative), but first tests indicate surprisingly good performance, at least in my typical application scenario: The objects are not overly complex (at 95% just simple boxes, pyramids, wedges, triangles, etc.), the broadphase is effective, etc.<br>
+Moreover, I'm considering caching the computed bevel planes (Minkowski difference) for e.g. the last 1000 pairs of objects, based on their geometry, for reuse in subsequent frames. This wouldn't help with the worst case of course, but considerably speed up the average case, as it eliminates most of the terms in the O(...) complexity.<br>
+<br>
+The advantages of the method are:
+<ul><li> it is geometrically very intuitive and thus easy to understand  <img class="smilies" src="./images/smilies/icon_mrgreen.gif" width="15" height="15" alt=":mrgreen:" title="Mr. Green">,</li>
+<li> very stable: both termination and numerical accuracy are predictable,</li>
+<li> can easily be implemented so that interpenetration does never occur,</li>
+<li> requires little knowledge about the geometric topology of the objects,</li>
+<li> still <em class="text-italics">very</em> fast  <img class="smilies" src="./images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"></li></ul>
+
+To conclude, in general, I'm quite happy with the results, although the implicit method also continues to intrigue me so that I'll likely try it in parallel later.<br>
+<br>
+So why do I bother, rather than just employ the means of Bullet?<br>
+Well, I'm currently integrating Bullet with our <a href="http://www.ca3d-engine.de" class="postlink">Ca3D-Engine</a>, and we're very happy with the results. (We've considered PhysX before, but Bullet is utterly the best <img class="smilies" src="./images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> )<br>
+The only problem we have is with player movement / character controller, where the requirements are very high: <ul><li> The player must never get stuck in solid,</li> <li> never fall through the ground or walk through walls,</li> <li> never penetrate solids (the viewpoint should never jitter),</li> <li> sliding along walls that are made of multiple solids ("bricks") must feel like a wall made from one big solid, and</li> <li> the result must usually be bit-wise reproducible as we employ client-server network architecture that employs player prediction for lag compensation.</li></ul>
+As a result, we're currently considering running two simulation worlds in parallel: The one in Bullet, where we do everything but the players, and our own, where we just do the player, inclusive trigger volume handling and entirely different tasks, e.g. ray-tracing for our Radiosity implementation etc.</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p10977" class="post has-profile bg2">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile10977">
+			<dt class="has-profile-rank has-avatar">
+				<div class="avatar-container">
+																<a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="avatar"><img class="avatar" src="./download/file.php?avatar=2.gif" width="74" height="71" alt="User avatar" /></a>														</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Erwin Coumans</a>							</dt>
+
+						<dd class="profile-rank">Site Admin</dd>			
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2&amp;sr=posts&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">4221</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Sun Jun 26, 2005 6:43 pm</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> California, USA</dd>
+																	
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact Erwin Coumans">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact Erwin Coumans</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="https://twitter.com/erwincoumans" title="Website">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																																																<a href="https://twitter.com/erwincoumans" title="Twitter">
+										<span class="contact-icon phpbb_twitter-icon">Twitter</span>									</a>
+																																																<a href="https://youtube.com/user/erwincoumans" title="YouTube" class="last-cell">
+										<span class="contact-icon phpbb_youtube-icon">YouTube</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content10977">
+
+					<h3 >
+						<a href="./viewtopic.php?p=10977&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10977">Re: Reducing AABB-Brush sweep tests to Ray-Brush intersection</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=10977&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=10977&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p10977" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Erwin Coumans</a></strong> &raquo; </span><time datetime="2008-10-25T17:13:56+00:00">Sat Oct 25, 2008 5:13 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">(moved the topic, because it becomes too Bullet centric)
+<blockquote><div><cite>Carsten wrote:</cite>
+The only problem we have is with player movement / character controller, where the requirements are very high: <ul><li> The player must never get stuck in solid,</li> <li> never fall through the ground or walk through walls,</li> <li> never penetrate solids (the viewpoint should never jitter),</li> <li> sliding along walls that are made of multiple solids ("bricks") must feel like a wall made from one big solid, and</li> <li> the result must usually be bit-wise reproducible as we employ client-server network architecture that employs player prediction for lag compensation.</li></ul>
+</div></blockquote>
+<ul>
+<li>Can you help reproducing any of the problems, so we can fix them? Bullet should be able to deal with all those tasks (player control, volume triggers, ray tracing) reliably and fast.</li>
+
+<li>Could you try exporting a sample scene that causes troubles using the Collada exporter?</li>
+<li>Have you considered using a capsule or other smooth shape as character representation, instead of an AABB?</li>
+<li>Do you consider contributing your explicit minkowski sum method, so we can compare results?</li>
+<li>Have you checked out the latest btGhostShape? It should help with volume triggers etc.</li>
+<li>What kind of acceleration structures and method do you use for ray-tracing?</li></ul>
+Thanks,<br>
+Erwin</div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+				<div id="p11095" class="post has-profile bg1">
+		<div class="inner">
+
+		<dl class="postprofile" id="profile11095">
+			<dt class="no-profile-rank has-avatar">
+				<div class="avatar-container">
+																<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="avatar"><img class="avatar" src="./download/file.php?avatar=2773_1265816709.jpg" width="80" height="80" alt="User avatar" /></a>														</div>
+								<a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a>							</dt>
+
+									
+		<dd class="profile-posts"><strong>Posts:</strong> <a href="./search.php?author_id=2773&amp;sr=posts&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">14</a></dd>		<dd class="profile-joined"><strong>Joined:</strong> Thu Sep 25, 2008 1:36 pm</dd>		
+		
+																<dd class="profile-custom-field profile-phpbb_location"><strong>Location:</strong> Germany</dd>
+							
+							<dd class="profile-contact">
+				<strong>Contact:</strong>
+				<div class="dropdown-container dropdown-left">
+					<a href="#" class="dropdown-trigger" title="Contact Carsten">
+						<i class="icon fa-commenting-o fa-fw icon-lg" aria-hidden="true"></i><span class="sr-only">Contact Carsten</span>
+					</a>
+					<div class="dropdown">
+						<div class="pointer"><div class="pointer-inner"></div></div>
+						<div class="dropdown-contents contact-icons">
+																																								<div>
+																	<a href="http://www.cafu.de" title="Website" class="last-cell">
+										<span class="contact-icon phpbb_website-icon">Website</span>									</a>
+																	</div>
+																					</div>
+					</div>
+				</div>
+			</dd>
+				
+		</dl>
+
+		<div class="postbody">
+						<div id="post_content11095">
+
+					<h3 >
+						<a href="./viewtopic.php?p=11095&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p11095">Re: Reducing AABB-Brush sweep tests to Ray-Brush intersection</a>
+		</h3>
+
+													<ul class="post-buttons">
+																																									<li>
+							<a href="./posting.php?mode=quote&amp;p=11095&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Reply with quote" class="button button-icon-only">
+								<i class="icon fa-quote-left fa-fw" aria-hidden="true"></i><span class="sr-only">Quote</span>
+							</a>
+						</li>
+														</ul>
+							
+						<p class="author">
+									<a class="unread" href="./viewtopic.php?p=11095&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2#p11095" title="Post">
+						<i class="icon fa-file fa-fw icon-lightgray icon-md" aria-hidden="true"></i><span class="sr-only">Post</span>
+					</a>
+								<span class="responsive-hide">by <strong><a href="./memberlist.php?mode=viewprofile&amp;u=2773&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="username">Carsten</a></strong> &raquo; </span><time datetime="2008-11-01T13:12:11+00:00">Sat Nov 01, 2008 1:12 pm</time>
+			</p>
+			
+			
+			
+			
+			<div class="content">Dear Erwin,<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Can you help reproducing any of the problems, so we can fix them? Bullet should be able to deal with all those tasks (player control, volume triggers, ray tracing) reliably and fast.</div></blockquote>
+I will do my best to help to get these problems fixed, but in general, I fear that we will not be able to isolate and fix all problems quickly due to the amount of code and data involved, so finding smallest-possible reproduction cases is sometimes not easy. Nonetheless, I'm positive that everything will eventually addressed while we get more familiarity and experience with Bullet.<br>
+
+<blockquote class="uncited"><div><ul> <li>Could you try exporting a sample scene that causes troubles using the Collada exporter?</li> </ul></div></blockquote>
+Yes, but it would most likely be easier to produce a small code sample. Will make one asap, just give me a bit more time.<br>
+
+<blockquote class="uncited"><div><ul> <li>Have you considered using a capsule or other smooth shape as character representation, instead of an AABB?</li> </ul></div></blockquote>
+Ah, sorry, not yet tried yet, will do so soon.<br>
+
+<blockquote class="uncited"><div><ul> <li>Do you consider contributing your explicit minkowski sum method, so we can compare results?</li> </ul></div></blockquote>
+Yes, I'm happy to. I've almost finished it, and will post it here when done (will take another 2-3 weeks though, sorry).<br>
+
+<blockquote class="uncited"><div><ul> <li>Have you checked out the latest btGhostShape? It should help with volume triggers etc.</li> </ul></div></blockquote>
+Oh, I never knew it existed - it doesn't seem to be mentioned at <a href="http://www.continuousphysics.com/Bullet/BulletFull/index.html" class="postlink">http://www.continuousphysics.com/Bullet ... index.html</a> ?<br>
+
+<blockquote class="uncited"><div><ul> <li>What kind of acceleration structures and method do you use for ray-tracing?</li> </ul></div></blockquote>
+Used to use a BSP tree with arbitrary subdivision planes (still use it for the graphics world / scene graph), but for the collision world (that also handles the ray-tracing queries), where no portal and PVS stuff is required, we now use a simpler BSP tree with axis-aligned planes only.<br>
+<br>
+In summary, I'm sorry for not having anything more concrete at this time, but I will come back to each of the issues during our continued work with Bullet.  <img class="smilies" src="./images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"></div>
+
+			
+			
+									
+						
+										
+						</div>
+
+		</div>
+
+				<div class="back2top">
+						<a href="#top" class="top" title="Top">
+				<i class="icon fa-chevron-circle-up fa-fw icon-gray" aria-hidden="true"></i>
+				<span class="sr-only">Top</span>
+			</a>
+					</div>
+		
+		</div>
+	</div>
+
+	
+
+	<div class="action-bar bar-bottom">
+	
+			<a href="./posting.php?mode=reply&amp;t=2745&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="button" title="Post a reply">
+							<span>Post Reply</span> <i class="icon fa-reply fa-fw" aria-hidden="true"></i>
+					</a>
+		
+		<div class="dropdown-container dropdown-button-control topic-tools">
+		<span title="Topic tools" class="button button-secondary dropdown-trigger dropdown-select">
+			<i class="icon fa-wrench fa-fw" aria-hidden="true"></i>
+			<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+		</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																												<li>
+					<a href="./viewtopic.php?t=2745&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2&amp;view=print" title="Print view" accesskey="p">
+						<i class="icon fa-print fa-fw" aria-hidden="true"></i><span>Print view</span>
+					</a>
+				</li>
+											</ul>
+		</div>
+	</div>
+
+			<form method="post" action="./viewtopic.php?t=2745&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2">
+		<div class="dropdown-container dropdown-container-left dropdown-button-control sort-tools">
+	<span title="Display and sorting options" class="button button-secondary dropdown-trigger dropdown-select">
+		<i class="icon fa-sort-amount-asc fa-fw" aria-hidden="true"></i>
+		<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+	</span>
+	<div class="dropdown hidden">
+		<div class="pointer"><div class="pointer-inner"></div></div>
+		<div class="dropdown-contents">
+			<fieldset class="display-options">
+							<label>Display: <select name="st" id="st"><option value="0" selected="selected">All posts</option><option value="1">1 day</option><option value="7">7 days</option><option value="14">2 weeks</option><option value="30">1 month</option><option value="90">3 months</option><option value="180">6 months</option><option value="365">1 year</option></select></label>
+								<label>Sort by: <select name="sk" id="sk"><option value="a">Author</option><option value="t" selected="selected">Post time</option><option value="s">Subject</option></select></label>
+				<label>Direction: <select name="sd" id="sd"><option value="a" selected="selected">Ascending</option><option value="d">Descending</option></select></label>
+								<hr class="dashed" />
+				<input type="submit" class="button2" name="sort" value="Go" />
+						</fieldset>
+		</div>
+	</div>
+</div>
+		</form>
+	
+	
+	
+			<div class="pagination">
+			6 posts
+							&bull; Page <strong>1</strong> of <strong>1</strong>
+					</div>
+	</div>
+
+
+<div class="action-bar actions-jump">
+		<p class="jumpbox-return">
+		<a href="./viewforum.php?f=9&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="left-box arrow-left" accesskey="r">
+			<i class="icon fa-angle-left fa-fw icon-black" aria-hidden="true"></i><span>Return to “General Bullet Physics Support and Feedback”</span>
+		</a>
+	</p>
+	
+		<div class="jumpbox dropdown-container dropdown-container-right dropdown-up dropdown-left dropdown-button-control" id="jumpbox">
+			<span title="Jump to" class="button button-secondary dropdown-trigger dropdown-select">
+				<span>Jump to</span>
+				<span class="caret"><i class="icon fa-sort-down fa-fw" aria-hidden="true"></i></span>
+			</span>
+		<div class="dropdown">
+			<div class="pointer"><div class="pointer-inner"></div></div>
+			<ul class="dropdown-contents">
+																				<li><a href="./viewforum.php?f=21&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-cat-link"> <span> BULLET PHYSICS LIBRARY USERS</span></a></li>
+																<li><a href="./viewforum.php?f=9&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; General Bullet Physics Support and Feedback</span></a></li>
+																<li><a href="./viewforum.php?f=24&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; PyBullet Support and Feedback</span></a></li>
+																<li><a href="./viewforum.php?f=18&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Release Announcements</span></a></li>
+																<li><a href="./viewforum.php?f=17&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Applications, Games, Demos or Movies using Bullet</span></a></li>
+																<li><a href="./viewforum.php?f=20&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-cat-link"> <span> PHYSICS AUTHORING TOOLS, SERIALIZATION AND STANDARDS</span></a></li>
+																<li><a href="./viewforum.php?f=12&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Physics authoring tools, serialization, standards and related topics</span></a></li>
+																<li><a href="./viewforum.php?f=19&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-cat-link"> <span> RESEARCH AND DEVELOPMENT IN COLLISION DETECTION &amp; PHYSICS. Don't post Bullet support questions here!</span></a></li>
+																<li><a href="./viewforum.php?f=4&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Research and development discussion about Collision Detection and Physics Simulation</span></a></li>
+																<li><a href="./viewforum.php?f=6&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Links, Papers, Libraries, Demos, Movies, Comparisons</span></a></li>
+																<li><a href="./viewforum.php?f=16&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" class="jumpbox-sub-link"><span class="spacer"></span> <span>&#8627; &nbsp; Career Opportunities</span></a></li>
+											</ul>
+		</div>
+	</div>
+
+	</div>
+
+
+
+			</div>
+
+
+<div id="page-footer" class="page-footer" role="contentinfo">
+	<div class="navbar" role="navigation">
+	<div class="inner">
+
+	<ul id="nav-footer" class="nav-footer linklist" role="menubar">
+		<li class="breadcrumbs">
+									<span class="crumb"><a href="./index.php?sid=ea55b6a3ea6d9268ff3036f9f684dba2" data-navbar-reference="index"><i class="icon fa-home fa-fw" aria-hidden="true"></i><span>Board index</span></a></span>					</li>
+		
+				<li class="rightside">All times are <span title="UTC">UTC</span></li>
+							<li class="rightside">
+				<a href="./ucp.php?mode=delete_cookies&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" data-ajax="true" data-refresh="true" role="menuitem">
+					<i class="icon fa-trash fa-fw" aria-hidden="true"></i><span>Delete cookies</span>
+				</a>
+			</li>
+														</ul>
+
+	</div>
+</div>
+
+	<div class="copyright">
+				<p class="footer-row">
+			<span class="footer-copyright">Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited</span>
+		</p>
+						<p class="footer-row" role="menu">
+			<a class="footer-link" href="./ucp.php?mode=privacy&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Privacy" role="menuitem">
+				<span class="footer-link-text">Privacy</span>
+			</a>
+			|
+			<a class="footer-link" href="./ucp.php?mode=terms&amp;sid=ea55b6a3ea6d9268ff3036f9f684dba2" title="Terms" role="menuitem">
+				<span class="footer-link-text">Terms</span>
+			</a>
+		</p>
+					</div>
+
+	<div id="darkenwrapper" class="darkenwrapper" data-ajax-error-title="AJAX error" data-ajax-error-text="Something went wrong when processing your request." data-ajax-error-text-abort="User aborted request." data-ajax-error-text-timeout="Your request timed out; please try again." data-ajax-error-text-parsererror="Something went wrong with the request and the server returned an invalid reply.">
+		<div id="darken" class="darken">&nbsp;</div>
+	</div>
+
+	<div id="phpbb_alert" class="phpbb_alert" data-l-err="Error" data-l-timeout-processing-req="Request timed out.">
+		<a href="#" class="alert_close">
+			<i class="icon fa-times-circle fa-fw" aria-hidden="true"></i>
+		</a>
+		<h3 class="alert_title">&nbsp;</h3><p class="alert_text"></p>
+	</div>
+	<div id="phpbb_confirm" class="phpbb_alert">
+		<a href="#" class="alert_close">
+			<i class="icon fa-times-circle fa-fw" aria-hidden="true"></i>
+		</a>
+		<div class="alert_text"></div>
+	</div>
+</div>
+
+</div>
+
+<div>
+	<a id="bottom" class="anchor" accesskey="z"></a>
+	</div>
+
+<script src="./assets/javascript/jquery-3.6.0.min.js?assets_version=39"></script>
+<script src="./assets/javascript/core.js?assets_version=39"></script>
+
+
+
+<script src="./styles/prosilver/template/forum_fn.js?assets_version=39"></script>
+<script src="./styles/prosilver/template/ajax.js?assets_version=39"></script>
+
+
+
+</body>
+</html>

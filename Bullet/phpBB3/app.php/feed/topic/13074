@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13074" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2020-09-30T12:05:40+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13074</id>
+
+		<entry>
+		<author><name><![CDATA[steven]]></name></author>
+		<updated>2020-09-30T12:05:40+00:00</updated>
+
+		<published>2020-09-30T12:05:40+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43112#p43112</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43112#p43112"/>
+		<title type="html"><![CDATA[Re: Some joint torques from getJointState(s) always zeros in pybullet]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43112#p43112"><![CDATA[
+please apply this patch as below and also remove the flag of p.URDF_USE_SELF_COLLISION to avoid too large torque.<br>hope this can help you.<br><div class="codebox"><p>Code: </p><pre><code>diff --git a/examples/SharedMemory/PhysicsServerCommandProcessor.cpp b/examples/SharedMemory/PhysicsServerCommandProcessor.cppindex ac67d51a5..6e060bf54 100644--- a/examples/SharedMemory/PhysicsServerCommandProcessor.cpp+++ b/examples/SharedMemory/PhysicsServerCommandProcessor.cpp@@ -7562,7 +7562,7 @@ bool PhysicsServerCommandProcessor::processRequestActualStateCommand(const struc                        }                        for (int d = 0; d &lt; mb-&gt;getLink(l).m_dofCount; d++)                        {-                               stateDetails-&gt;m_jointMotorForce[totalDegreeOfFreedomU] = 0;+                               stateDetails-&gt;m_jointMotorForceMultiDof[totalDegreeOfFreedomU] = 0;                                if (mb-&gt;getLink(l).m_jointType == btMultibodyLink::eSpherical)                                {</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13075">steven</a> — Wed Sep 30, 2020 12:05 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[jwhitman]]></name></author>
+		<updated>2020-09-25T14:08:07+00:00</updated>
+
+		<published>2020-09-25T14:08:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43108#p43108</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43108#p43108"/>
+		<title type="html"><![CDATA[Some joint torques from getJointState(s) always zeros in pybullet]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43108#p43108"><![CDATA[
+Hello,<br>I am using Pybullet for robotics research but I am having some issues with the joint state torque feedback.<br>When I use a hexapod model (we use this model in other simulators without issue) I consistently get a block of 0.0 as torque feedback from getJointState(s). In this case it is joints 9-13. I also observe some unrealistically large joint torques (e.g. 240) reported but I am less concerned about those as they are not persistent across all time. The zeros appear to be returned in any joint position and any control mode. <br>At first I thought it could be an issue with the urdf, but, all of the legs use the same parts and only some seemingly arbitrary subset of the joints have this problem.<br>I also observed that after enabling the enableJointForceTorqueSensor, I can get readings but the joint moment reported does not seem to have any relation to the joint state torque.<br>I have tried a few other hexapod models, which are not made from any of the same parts, and observed similar problems. <br>I have seen the same thing happen across multiple computers when running this script both in python2 and python3, and across multiple versions of pybullet. My system is Ubuntu 16.04 and is currently up to date with pybullet-3.0.4. I have attached the urdf and its stls in question, and code to reproduce the issue is below.<br>This problem is making it difficult for me to use pybullet for my research. Do you have any suggestions of what might be wrong?<br><br><br><div class="codebox"><p>Code: </p><pre><code>import pybullet as pimport pybullet_dataimport osimport numpy as npimport timephysicsClient = p.connect(p.GUI)p.resetSimulation() # remove all objects from the world and reset the world to initial conditions. p.configureDebugVisualizer(p.COV_ENABLE_GUI,0,physicsClientId=physicsClient)p.setGravity(0,0,-9.81)planeId = p.loadURDF(os.path.join(pybullet_data.getDataPath(),        "plane100.urdf"))startPosition=[0,0,0.3] # high enough that nothing touches the groundstartOrientationRPY = [0,0,0]startOrientation = p.getQuaternionFromEuler(startOrientationRPY)   robotID = p.loadURDF(             'misc_urdf/m6.urdf',                    basePosition=startPosition, baseOrientation=startOrientation,                   flags= (p.URDF_MAINTAIN_LINK_ORDER                     | p.URDF_USE_SELF_COLLISION                     | p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES))# count all joints, including fixed onesnum_joints_total = p.getNumJoints(robotID,                physicsClientId=physicsClient)# create lists of the joint names, types, and which ones are actuatedmoving_joint_names = []moving_joint_inds = []moving_joint_types = []moving_joint_limits = []moving_joint_centers = []for j_ind in range(num_joints_total):    j_info = p.getJointInfo(robotID,         j_ind)    if j_info[2] != (p.JOINT_FIXED):        moving_joint_inds.append(j_ind)        moving_joint_names.append(j_info[1])        moving_joint_types.append(j_info[2])        j_limits = [j_info[8], j_info[9]]        j_center = (j_info[8] + j_info[9])/2        if j_limits[1]&lt;=j_limits[0]:            j_limits = [-np.inf, np.inf]            j_center = 0        moving_joint_limits.append(j_limits)        moving_joint_centers.append(j_center)# set joint states to a standing up posenum_joints = len(moving_joint_names)for i in range(num_joints):    center = moving_joint_centers[i]    if i in [2,5,8]:        addition = -np.pi/2    elif i in [11,14,17]:        addition = np.pi/2    else:        addition = 0    jind = moving_joint_inds[i]    p.resetJointState( bodyUniqueId=robotID,         jointIndex = jind,        targetValue= center+addition,         targetVelocity = 0 )# enable joint sensorsfor j in moving_joint_inds:    p.enableJointForceTorqueSensor(robotID, j, 1)    # steps to take with no control input before starting up# This drops to robot down to a physically possible resting starting positionfor i in range(200):    p.stepSimulation()        joint_states = p.getJointStates(robotID,            moving_joint_inds,            physicsClientId=physicsClient)    print('----------')    print([j[3] for j in joint_states])    # print out the joint moments too#     print([j[2][3] for j in joint_states])#     print([j[2][4] for j in joint_states])#     print([j[2][5] for j in joint_states])    time.sleep(0.01)</code></pre></div><dl class="file"><dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1839">m6_urdf.zip</a></dt></dl><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13771">jwhitman</a> — Fri Sep 25, 2020 2:08 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

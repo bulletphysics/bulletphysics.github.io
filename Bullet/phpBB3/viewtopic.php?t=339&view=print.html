@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Why is stacking unstable?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Why is stacking unstable?</h2>
+		<p><a href="viewtopic.php%3Ft=339.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=339</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Why is stacking unstable?</h3>
+				<div class="date">Posted: <strong>Thu May 18, 2006 9:33 pm</strong></div>
+				<div class="author">by <strong>FD</strong></div>
+				<div class="content">Hi all!<br>
+<br>
+I've been making a physics-engine for many months, and now I'm at the stage when I'm converting everything to PGS.<br>
+<br>
+I used Lemke LCP solver, and I managed to create quite a good implementation, that is almost as fast as PGS (including Mixed LCP -&gt; Common LCP transform) when several objects are in the simulation. Unfortunately, Lemke's speed decreases dramatically with the increase of the system's dimention (I guess O(4)). So, my only choice was to convert to PGS.<br>
+<br>
+ But with PGS I've first seen such an effect as unstable stacking. 3 objects placed on top of each other show some tangental velocity and the stack collapses. When I used Lemke, nothing of the kind was observed. Stacks of any size used to be absolutely stable. <br>
+<br>
+My question might sound naive: what's the nature of this behavior? Why does the tangental velocity appear? And, of course, waht to do?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 19, 2006 12:48 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I recommend caching contact points and warm starting the PGS. But before you do that, make sure this case works:<br>
+<br>
+1) 2 boxes vertically stacked (1m x 1m x 1m).<br>
+2) 20 PGS iterations<br>
+3) Gravity = 10<br>
+4) 1/60 second time step<br>
+<br>
+That should be fairly stable.<br>
+<br>
+If you want to look into contact caching and warm starting, you can look at<br>
+<br>
+<a href="http://www.gphysics.com/files/GDC2006_ErinCatto.zip" class="postlink">http://www.gphysics.com/files/GDC2006_ErinCatto.zip</a><br>
+<br>
+The Box2D demo has warm starting enabled by default. To see the behavior without warm starting, comment out lines 69 and 70 in Arbiter.cpp:<br>
+c-&gt;accumulatedNormalImpulse = cOld-&gt;accumulatedNormalImpulse;<br>
+c-&gt;accumulatedTangentImpulse = cOld-&gt;accumulatedTangentImpulse;</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 19, 2006 5:31 am</strong></div>
+				<div class="author">by <strong>jiangwei</strong></div>
+				<div class="content">You could use error reduction parameter as OPENTISSUE and ODE did, Add Kerp * 1/delta t * -penetration distance  to term b,It can make your box stack stable in vertical direction.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 19, 2006 7:37 am</strong></div>
+				<div class="author">by <strong>FD</strong></div>
+				<div class="content">jiangwei, I do use compensation, and there's no interpenetration. It collapses due to some velocity tangental to contact normal ditrection, that drives the bodies off each other.<br>
+<br>
+Erin, I'm going to play with the warm starting after I solve the shit with the stacking. Thank you for the link, but it's not the case. The non-penetration constraint is satisfied to any reasonable precision, but there appears an odd tangental velocity, which doesn't appear in case of Lemke LCP solver. Isn't such a behavior common?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 19, 2006 4:41 pm</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content">The lemke solver is more forgiving with poor penetration depth calculations. You might be looking in the wrong place for your problem.<br>
+<br>
+It is more likely that you have a typo, or numerical degeneracy, in your friction tangent generation - that's one place where I got this behaviour. Also, check that you are clamping correctly with the tangential components.<br>
+<br>
+Both Erin's awesome presentation and Bullet have good example code.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 19, 2006 9:02 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">It should be easy to eliminate the penetration depth as the problem. You should be able to run a stable (no jitter) simulation with the penetration bias set to zero.<br>
+<br>
+In Box2D again, change line 109 from:<br>
+<br>
+c-&gt;bias = -0.1f * inv_dt * Min(0.0f, c-&gt;separation + k_allowedPenetration);<br>
+<br>
+to<br>
+<br>
+c-&gt;bias = 0.0f;<br>
+<br>
+Run it and press 3 to see stacking without penetration compensation. It actually works ok. And there is no jitter.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon May 22, 2006 12:41 am</strong></div>
+				<div class="author">by <strong>jiangwei</strong></div>
+				<div class="content">My physics engine used PGS to solve the LCP too,this undesired tangent velocity is also exist in my physics engine <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad">   <br>
+i find OPENTISSUE also have this problem,but it build a first order system to correct this error.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

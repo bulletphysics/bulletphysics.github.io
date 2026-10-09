@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/600" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-10-11T20:10:06+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/600</id>
+
+		<entry>
+		<author><name><![CDATA[FlashJackson]]></name></author>
+		<updated>2006-10-11T20:10:06+00:00</updated>
+
+		<published>2006-10-11T20:10:06+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2119#p2119</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2119#p2119"/>
+		<title type="html"><![CDATA[C4 Integration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2119#p2119"><![CDATA[
+I just asked about this in a PM.  Thanks for the help.   I have to think of an elegant way to handle that.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1005">FlashJackson</a> — Wed Oct 11, 2006 8:10 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-10-11T19:37:29+00:00</updated>
+
+		<published>2006-10-11T19:37:29+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2118#p2118</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2118#p2118"/>
+		<title type="html"><![CDATA[C4 Integration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2118#p2118"><![CDATA[
+You should not delete the rigidbody and collisionshape, immediately after you add them to the dynamics world.<br><br>They can only delete them after the simulation is terminated/when they are removed from the world.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Oct 11, 2006 7:37 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[FlashJackson]]></name></author>
+		<updated>2006-10-11T19:12:13+00:00</updated>
+
+		<published>2006-10-11T19:12:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2117#p2117</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2117#p2117"/>
+		<title type="html"><![CDATA[C4 Integration]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2117#p2117"><![CDATA[
+Erwin,<br><br>I decided to go ahead and post my questions in this topic.  That way other people can benefit from the questions and answers.<br><br>I have played with the code a little more.  I now have a version of C4 with Bullet integrated at a very basic level.  I am trying to modify my function to build the static collision mesh to work with Bullet.  It compiles and runs, but I am getting an exception.<br><br>Here is the code I now have for collision registrations:<br><div class="codebox"><p>Code: </p><pre><code>void PhysicsMgr::BuildCollisionMesh(World *theWorld){Node *root = theWorld-&gt;GetRootNode(); // start at the root Node *node = root; while (node) { // Step 1: Check  to make sure that this is a static geometry objectif(node-&gt;GetNodeType() == kNodeGeometry &amp;&amp; !node-&gt;GetController()) { btCollisionShape*collision=new btConvexHullShape(NULL,0,0); Geometry *geometry = static_cast&lt;Geometry *&gt;(node); const GeometryLevel *level = geometry-&gt;GetObject()-&gt;GetGeometryLevel(0); long vertexCount = level-&gt;GetVertexCount(); Point3D *vertex = level-&gt;GetArrayPoint3D(kArrayVertex); const GeometryObject *object = geometry-&gt;GetObject(); GeometrySpace space = object-&gt;GetGeometrySpace(); // Step 2: Convert vertex coordinates if necassary and // put each vertex into the btCollisionShapeif (space == kGeometrySpaceWorld) { const Transform4D&amp; transform = geometry-&gt;GetInverseWorldTransform(); const Transform4D&amp; invTransform = geometry-&gt;GetWorldTransform();for (long i = 0; i &lt; vertexCount; i++){ // transform to object spacevertex[i] = transform * vertex[i]; // add to collision shapestatic_cast&lt;btConvexHullShape*&gt;(collision)-&gt;addPoint(btVector3(vertex[i].x,vertex[i].y,vertex[i].z));// return to world spacevertex[i] = invTransform * vertex[i];}}else{for (long i = 0; i &lt; vertexCount; i++){ // no conversion necassary, just create the pointstatic_cast&lt;btConvexHullShape*&gt;(collision)-&gt;addPoint(btVector3(vertex[i].x,vertex[i].y,vertex[i].z));}}// Step 3: Calcualte the world transform and convert to btTransformconst Transform4D&amp; transformC4World = node-&gt;GetWorldTransform();const Matrix3D&amp; mat3= transformC4World.GetMatrix3D();btTransform shapeTransform;shapeTransform.setOrigin(btVector3(transformC4World.GetTranslation().x,transformC4World.GetTranslation().y,transformC4World.GetTranslation().z));shapeTransform.setBasis(btMatrix3x3(mat3.GetRow(0).x,mat3.GetRow(1).x,mat3.GetRow(2).x,mat3.GetRow(0).y,mat3.GetRow(1).y,mat3.GetRow(2).y,mat3.GetRow(0).z,mat3.GetRow(1).z,mat3.GetRow(2).z));// Step 4: use all of this to create rigid body and add to the world.btRigidBody* body = new btRigidBody(0.0f,shapeTransform,collision);m_dynamicsWorld-&gt;addRigidBody(body);delete collision;delete body;} node = root-&gt;GetNextNode(node); } }</code></pre></div>I have traced the code and the conversions I am making from C4 types to Bullet types appear to be working.  However, on about the 2nd body I try to register, I get an exception.  I tried different data sets and got the error in different places.  I tracked the assertion to here:<br><div class="codebox"><p>Code: </p><pre><code>voidbtCollisionWorld::addCollisionObject(btCollisionObject* collisionObject,short int collisionFilterGroup,short int collisionFilterMask){//check that the object isn't already addedstd::vector&lt;btCollisionObject*&gt;::iterator i =std::find(m_collisionObjects.begin(), m_collisionObjects.end(), collisionObject);assert(i == m_collisionObjects.end());</code></pre></div>  That assert is throwing the exception.  I am not smart enough to follow what is going on here, so can you tell me what could cause this exception to be thrown?  Do you see something in the above code that would cause the problem?<br><br>The dataset I am using for this test is very simple.  It is four walls, a ceiling, and a floor.  Each are planes and have 4 vertexs.<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1005">FlashJackson</a> — Wed Oct 11, 2006 7:12 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to solve the problem of the ball penetrating the cuboid</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to solve the problem of the ball penetrating the cuboid</h2>
+		<p><a href="viewtopic.php%3Ft=13003.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13003</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Mon Jun 22, 2020 10:24 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13003&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	
+	btQuaternion quaternion = btQuaternion(yaw,pich,roll);
+	quaternion.setEuler(yaw, pitch, roll);
+	groundTransform.setRotation(quaternion);
+</code></pre></div>
+
+I want to rotate the rigid body by setting the Euler angle, but there is an error. Can you help me to see how to write it?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Mon Jun 22, 2020 2:30 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The code looks ok.  What is the error?<br>
+<br>
+The angles you are using... they are in radians (not degrees) right?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Tue Jun 23, 2020 3:42 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">I want to change the Euler angle in real time through the keyboard and display it through OpenGL,I put the initialization of the model in InitObjectground();But the model doesn't move when I press the key to change yaw roll
+ <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13003&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	glPushMatrix();
+	glTranslated(float(trans.getOrigin().getX()), float(trans.getOrigin().getY()), float(trans.getOrigin().getZ()));
+	DrawBulletObject();
+	glPopMatrix();
+
+</code></pre></div>
+
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13003&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void MyWindow::initializeGL()
+{
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glEnable(GL_DEPTH_TEST);
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_AUTO_NORMAL);
+	glEnable(GL_NORMALIZE);
+	InitObject();
+	InitObjectground();
+}
+</code></pre></div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13003&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void MyWindow::paintGL()
+{
+	Display();
+}
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Tue Jun 23, 2020 1:33 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I see.  You have a logic error rather than a question about Euler angles and quaternions.  The good news is: I don't see the fault of the code you posted.  The bad news would be: your bug is somewhere else.   Maybe post your full code up on github?  Good luck.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2020 12:50 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">Thank you very much for your reply. I found that initobjectground() in my code was initialized only once, so btquaternion quaternion = btquaternion (yaw, pich, roll); it was also called only once, resulting in unable to change the Euler angle of the model. Can I ask if there is any way to control the Euler angle of the rigid body in the bullet to realize the rotation of the rigid body?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2020 6:21 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The simple way to do it is to use: <a href="../BulletFull/classbtCollisionObject.html#a64238c6823e02cfb7b09d0db21d0e021" class="postlink">btCollisionObject::setWorldTransform()</a><br>
+<br>
+So the code might look like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13003&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform t = body-&gt;getWorldTransform();
+t.setRotation(btQuaternion(roll, pitch, yaw));
+body-&gt;setWorldTransform(t);</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2020 7:28 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42955#p42955"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=42955.html#p42955" data-post-id="42955" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Wed Jun 24, 2020 6:21 am</span></cite>
+The simple way to do it is to use: <a href="../BulletFull/classbtCollisionObject.html#a64238c6823e02cfb7b09d0db21d0e021" class="postlink">btCollisionObject::setWorldTransform()</a><br>
+<br>
+So the code might look like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13003&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform t = body-&gt;getWorldTransform();
+t.setRotation(btQuaternion(roll, pitch, yaw));
+body-&gt;setWorldTransform(t);</code></pre></div>
+</div></blockquote>
+
+<br>
+Thank you very much</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

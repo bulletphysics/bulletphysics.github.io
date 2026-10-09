@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; What do you guys do for friction?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>What do you guys do for friction?</h2>
+		<p><a href="viewtopic.php%3Ft=444.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=444</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>What do you guys do for friction?</h3>
+				<div class="date">Posted: <strong>Sun Jul 30, 2006 4:47 pm</strong></div>
+				<div class="author">by <strong>jam</strong></div>
+				<div class="content">I've been going constantly forward and back between Baraff's 'Fast contact force computation' paper and Kawachi's 'Impulsive Friction' papers and have not yet found a clear description on how to incorporate the Coulomb friction model's constrains into my Dantzig-based LCP solver (or any LCP solver for that matter). My engine's using the LCP formulation for velocity level for impulse computation at simultaneuos colliding points.<br>
+<br>
+Anyway, I was wondering how you guys are approximating friction for your engines or actually incorporating the exact Coulomb friction model.<br>
+<br>
+Any suggestion or idea is welcome and I'm really desperate for implementing Coulomb friction <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad">.<br>
+<br>
+-jam</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 01, 2006 11:18 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">If you don't need an exact solution, I recommend using sequential impulses. With sequential impulses it is simple to orient the friction direction with the sliding motion. If there is no sliding, it can fall back to an anisotropic friction model.<br>
+<br>
+Bullet uses sequential impulses for friction and other constraints. Also see this tutorial: <a href="http://www.gphysics.com/files/GDC2006_ErinCatto.zip" class="postlink">http://www.gphysics.com/files/GDC2006_ErinCatto.zip</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Aug 03, 2006 2:13 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">First you choose two perpendicular vectors (or more depending on how exact you want to approximate the Coloumb friction cone) in your contact plane. Basically something like this:<br>
+<br>
+// Let n be the normal of the contact patch<br>
+<br>
+v32 t1, t2;<br>
+MATHvec3Perp( t1, n ); <br>
+MATHvec3Cross( t2, t1, n );<br>
+<br>
+Then you define the two related velocity constraints;<br>
+<br>
+dC1/dt = ( v1 + w1 x r1 - v2 - w2 x r2 ) * t1<br>
+dC2/dt = ( v1 + w1 x r1 - v2 - w2 x r2 ) * t2<br>
+<br>
+<br>
+Note that friction constraints are non-holonome since there exists no position constraint for them. Practically this means there is no stabilization term (Baumgarte).<br>
+<br>
+The tricky part now is that the friction constraints are related to the corrsponding normals through the Coloumb friction law, that means for the block LCP you get the following conditions:<br>
+<br>
+-mu * lambda_n &lt; lambda_t1 &lt; mu * lambda_n<br>
+-mu * lambda_n &lt; lambda_t2 &lt; mu * lambda_n<br>
+<br>
+I don't know how this gets incorporated into your Danzig solver, but Iassume you must make sure to solve the corresponding normal force (impulse) before the related friction constraints. Then you can clamp your friction forces. AFAIK the ODE has an direct solver based on Danzig's algorithm so you might look how they do it there. I personally don't like the way how it is done in the ODE in quickstep using "findex", but you can quickly find easier solutions.<br>
+<br>
+HTH,<br>
+<br>
+-Dirk<br>
+<br>
+PS: I suggest to look up the following papers for more information:<br>
+<br>
+Thesis of Kenny Erleben:<br>
+<a href="http://www.diku.dk/~kenny/thesis.pdf" class="postlink">http://www.diku.dk/~kenny/thesis.pdf</a><br>
+<br>
+Papers of Erin Catto:<br>
+<a href="http://www.gphysics.com/gdc-2005/" class="postlink">http://www.gphysics.com/gdc-2005/</a><br>
+<a href="http://www.gphysics.com/gdc-2006/" class="postlink">http://www.gphysics.com/gdc-2006/</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

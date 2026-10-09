@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Reset/jump constraint to the initial position</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Reset/jump constraint to the initial position</h2>
+		<p><a href="viewtopic.php%3Ft=13527.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13527</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Reset/jump constraint to the initial position</h3>
+				<div class="date">Posted: <strong>Tue Jan 31, 2023 1:31 pm</strong></div>
+				<div class="author">by <strong>maiklof</strong></div>
+				<div class="content">Hi,<br>
+I am using Generic6DofSpring2 constraints and I would like to find an easy way to reset the constraint to the initial position.<br>
+It is a quite particular case in which the parent body is static and the child (connected with the constraint) is dynamic (mass&gt;0).<br>
+I am running the constraint with a motor, in velocity mode, so I can move the child in one axis (let's say x) from 0m to 1m:<br>
+     [PARENT]<br>
+           |&lt;---------------------[CHILD]-----------------------&gt;|<br>
+          0m                                                                  1m<br>
+What I want to achieve is the child to automatically jump to initial position (0m) if velocity is positive and it arrives to the upper limit. Kind of a loop effect. Important to mention that I want this to happen between two simulation steps!<br>
+The hard way, I guess, is doing the following:<br>
+- Detect when the child is at upper limit and velocity is &gt;0.<br>
+- Then remove the constraint<br>
+- Move the child body to the initial position<br>
+- Set a new constraint and apply the velocity.<br>
+<br>
+Is there any other way?<br>
+Thanks in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Reset/jump constraint to the initial position</h3>
+				<div class="date">Posted: <strong>Thu Feb 02, 2023 4:47 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Let me repeat it back to you to make sure I understand:<br>
+<br>
+<strong class="text-strong">(1)</strong> You have two objects <strong class="text-strong">A</strong> and <strong class="text-strong">B</strong> connected by a constraint <strong class="text-strong">C</strong>.<br>
+<br>
+<strong class="text-strong">(2)</strong> You want to be able to reset the transforms of the two objects such that the constraint is satisfied (e.g. objects A and B are experiencing zero torque/force from the constraint <strong class="text-strong">C</strong>).<br>
+<br>
+If item <strong class="text-strong">(2)</strong> is NOT correct please supply a different description.<br>
+<br>
+If <strong class="text-strong">(2)</strong> is correct then <strong class="text-strong">I think</strong> the way to do the math is as follows (I did not try it, but this is what I would try first):<br>
+<br>
+<strong class="text-strong">(3)</strong> I assume you want to leave object <strong class="text-strong">A</strong> alone and move object <strong class="text-strong">B</strong>.  If this isn't correct please say so.<br>
+<br>
+The <strong class="text-strong">btGeneric6DofSpring2Constraint</strong> C has two protected data members:<br>
+<br>
+<strong class="text-strong">C.m_frameInA</strong><br>
+<strong class="text-strong">C.m_frameInB</strong><br>
+<br>
+I think the constraint is satisfied when all vectors in either of those two frames are transformed to identical world-frame vectors through the two objects <strong class="text-strong">A</strong> and <strong class="text-strong">B</strong>.  In other words, when <strong class="text-strong">world_frame_A == world_frame_B</strong> using the two relations below:<br>
+<br>
+<strong class="text-strong">world_frame_A = A.m_worldTransform. * m_frameInA</strong><br>
+<strong class="text-strong">world_frame_B = B.m_worldTransform * m_frameInB</strong><br>
+<br>
+Note, I'm using the convention that the transforms operate <strong class="text-strong">from the left</strong> on hypothetical vectors <strong class="text-strong">on the right</strong>.<br>
+<br>
+When the two frames are equal you get this equation:<br>
+<br>
+<strong class="text-strong">A.m_worldTransform * C.m_frameInA = B.m_worldTransform * C.m_frameInB</strong><br>
+<br>
+Solving for <strong class="text-strong">B.m_worldTransform</strong> we get:<br>
+<br>
+<strong class="text-strong">B.m_worldTransform = A.m_worldTransform * C.m_frameInA * inverse(C.m_frameInB)</strong></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Reset/jump constraint to the initial position</h3>
+				<div class="date">Posted: <strong>Mon Feb 20, 2023 2:10 pm</strong></div>
+				<div class="author">by <strong>maiklof</strong></div>
+				<div class="content">Thanks for your reply! I have changed my previous description to be more clear on what I want to achieve, I think I did not express myself properly the first time.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Reset/jump constraint to the initial position</h3>
+				<div class="date">Posted: <strong>Tue Feb 21, 2023 5:47 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Slamming the transform of the child object doesn't just work?
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13527&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>child_body-&gt;setWordTransform(child_initial_transform);</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

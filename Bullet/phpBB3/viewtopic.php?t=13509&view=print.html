@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btCapsuleCapsuleCollisionAlgorithm?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btCapsuleCapsuleCollisionAlgorithm?</h2>
+		<p><a href="viewtopic.php%3Ft=13509.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13509</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btCapsuleCapsuleCollisionAlgorithm?</h3>
+				<div class="date">Posted: <strong>Thu Dec 15, 2022 5:30 pm</strong></div>
+				<div class="author">by <strong>fred4d</strong></div>
+				<div class="content">Apologies in advance.  This is my first post.  I tried to read the FAQ, but it took me to some Thai web-site.<br>
+<br>
+Anyway I noticed there is no btCapsuleCapsuleCollisionAlgorithm and maybe there's a good reason of which I'm unaware in my ignorance, but over the years I've learned things from this project and I thought I'd try to give back by posting an attempt of my own.<br>
+<br>
+Things to note:  I bound all of my shapes in an oriented-bounding-box and interpret the  values of the box to describe, in this case, the capsule.  I didn't include the support functions (e.g. IntersectRayCapsule), because those are well known and published.  The CalcIntercept function is a bit overkill here -- it really just represents a 2D-circles-over-time TOI, but I just used the 3D-spheres-over-time version for my convenience (i.e. I was being lazy).  I don't calculate a normal or point of contact, but this is trivial.<br>
+<br>
+There are comments inline, which should give any reader a good start, but I'm certainly willing to expand, if this generates interest/questions.  Also because I have literally just written this, there are possible bugs and/or gaps in my logic.  Presumably once you possess a robust MovingCapsuleSegmentIntersect you can use it to implement, for example, MovingCapsuleTriangleIntersect.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13509&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+struct OBB
+{
+        Transform transform;
+        Vector3 extents;
+};
+        
+struct ContinuousCollisionData
+{
+        OBB Last;
+        Vector3 Motion;
+};
+    
+static bool MovingCapsuleSegmentIntersect(
+        ContinuousCollisionData const&amp; capsule,
+        Vector3 const&amp; d,
+        Vector3 const&amp; a,
+        Vector3 const&amp; b,
+        decimal segRadius,
+        decimal&amp; TOIout
+    )
+{
+	// Bring segment and relative motion into capsule's space.
+	auto const worldToLocal{ capsule.Last.transform.getInverse() };
+	auto const p{ worldToLocal * a };
+	auto const q{ worldToLocal * b };
+	auto const r{ worldToLocal.getOrientation() * d };
+
+        auto const R{ capsule.Last.extents.x + segRadius };
+	auto const upA{ capsule.Last.extents.y - capsule.Last.extents.x };
+
+        auto const s{ q - p };
+	auto const ss{ s.x * s.x + s.z * s.z };
+
+        // Reduce the problem to a 2D moving circle colliding with a stationary 2D segment.
+
+        // Find closest 2D point on segment to circle.
+        auto t{ -(s.x * p.x + s.z * p.z) };
+        if (t != 0) // Prevent potential divide-by-zero.
+        {
+		t /= ss;
+        }
+
+	Vector3 pq;
+	if (t &lt;= 0)
+	{
+		pq = p;
+	}
+        else if (t &gt;= 1)
+	{
+		pq = q;
+	}
+	else
+	{
+		pq = p + t * s;
+	}
+
+        auto const RR{ R * R };
+	if (pq.x * pq.x + pq.z * pq.z &lt;= RR)
+	{
+            // 2D circle and segment already overlap; consider the third dimension.
+
+            // If the closest point in 2D is outside of the
+            // capped cylinder in 3D, bring the appropriate end
+            // cap of the capsule into play.
+            if (pq.y &lt; -upA)
+            {
+		return IntersectRayCapsule(
+			Ray{ Vector3{ 0, -upA, 0 }, Vector3{ 0, -upA, 0 } + r },
+			p,
+			q,
+			R,
+			TOIout
+		);
+            }
+            else if (pq.y &gt; upA)
+            {
+		return IntersectRayCapsule(
+			Ray{ Vector3{ 0, upA, 0 }, Vector3{ 0, upA, 0 } + r },
+			p,
+			q,
+			R,
+			TOIout
+		);
+            }
+            TOIout = 0;
+            return true;
+        }
+
+        // Circle and segment are disjoint.
+
+	// Determine closest point to circle's center on the line of the segment.
+        auto cx{ p.x + t * s.x };
+	auto cz{ p.z + t * s.z };
+	auto const cc{ cx * cx + cz * cz };
+
+        if (cc &lt;= RR)
+        {
+		// The problem reduces to determining the time of intersection for
+		// the closest segment point (the tip of the spear) and the circle.
+		if (!CalcIntercept(
+                	Vector3{ pq.x, 0, pq.z },
+                	Vector3{ r.x, 0, r.z },
+                	R,
+                	0,
+                	t
+            	))
+		{
+			return false;
+		}
+        }
+        else
+        {
+		auto rxs{ r.x * s.z - r.z * s.x };
+		auto constexpr EPSILON{ 1e-06f };
+		if (decimal::abs(rxs) &lt; EPSILON)
+		{
+			// Circle motion is parallel to segment.
+			return false;
+		}
+
+		// Implicitly determine intersection point of circle's motion
+		// with stationary segment (r * t).
+		//t = (p.x * s.z - p.z * s.x) / rxs;
+		t = (p.x * s.z - p.z * s.x);
+
+		// Using similar triangles, refine t to account for
+		// circle's radius.
+		//t = t * (1 - R / decimal::sqrt(cc));
+		t = (t - t * R / decimal::sqrt(cc)) / rxs;
+
+		// We now have a time t where the circle
+		// contacts the line of the segment.  If
+		// the resulting point of contact is not
+		// on the segment, then test the relevant cap.
+		pq = r * t;
+		auto tt{ s.x * (pq.x - p.x) + s.z * (pq.z - p.z) };
+		if (tt &lt; 0)
+		{
+			if (!CalcIntercept(
+				Vector3{ p.x, 0, p.z },
+				Vector3{ r.x, 0, r.z },
+				R,
+				0,
+				t
+			))
+			{
+				return false;
+			}
+		}
+		else if (tt &gt; ss)
+		{
+			if (!CalcIntercept(
+				Vector3{ q.x, 0, q.z },
+				Vector3{ r.x, 0, r.z },
+				R,
+				0,
+				t
+			))
+			{
+				return false;
+			}
+		}
+	}
+
+        if (t &gt;= 0 &amp;&amp; t &lt;= 1)
+        {
+		// The circle touches the segment at time t.  Calculate 3D point
+		// of impact on the infinite 3D cylinder of the circle.
+
+		// Move the circle.
+		pq = r * t;
+		auto const tt{ s.x * (pq.x - p.x) + s.z * (pq.z - p.z) };
+
+		auto const cy{ p.y + tt * s.y / ss - pq.y };
+
+		// If the intersection point is outside of the
+		// capped cylinder, bring the appropriate end
+		// cap of the capsule into play.  Otherwise time
+		// t is correct.
+		if (cy &lt; -upA)
+		{
+			return IntersectRayCapsule(
+				Ray{ Vector3{ 0, -upA, 0 }, Vector3{ 0, -upA, 0 } + r },
+				p,
+				q,
+				R,
+				TOIout
+			);
+		}
+		else if (cy &gt; upA)
+		{
+			return IntersectRayCapsule(
+				Ray{ Vector3{ 0, upA, 0 }, Vector3{ 0, upA, 0 } + r },
+				p,
+				q,
+				R,
+				TOIout
+			);
+		}
+
+		TOIout = t;
+		return true;
+        }
+
+        return false;
+}
+
+bool MovingCapsuleCapsuleIntersect(
+        ContinuousCollisionData const&amp; capsuleA,
+        ContinuousCollisionData const&amp; capsuleB,
+        decimal&amp; TOIout
+)
+{
+        auto upB{ capsuleB.Last.transform.getOrientation().upVector() * (capsuleB.Last.extents.y - capsuleB.Last.extents.x) };
+        return MovingCapsuleSegmentIntersect(
+		capsuleA,
+		capsuleA.Motion - capsuleB.Motion,
+		capsuleB.Last.transform.getPosition() - upB,
+		capsuleB.Last.transform.getPosition() + upB,
+		capsuleB.Last.extents.x,
+		TOIout
+        );
+}
+    
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

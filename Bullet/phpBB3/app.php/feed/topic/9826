@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9826" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-03-13T22:44:07+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9826</id>
+
+		<entry>
+		<author><name><![CDATA[Andrew Alvarez]]></name></author>
+		<updated>2014-03-13T22:44:07+00:00</updated>
+
+		<published>2014-03-13T22:44:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33160#p33160</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33160#p33160"/>
+		<title type="html"><![CDATA[Twist Limit for Ball and Socket Constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33160#p33160"><![CDATA[
+So, I've been trying to sort out my twist limit for the ball and socket (pin, point, etc.) constraint. Swing was simple enough, but I can't seem to get the twist calculations correct. Currently, I'm orienting object b relative to object a. Then, I'm decomposing the resulting quaternion to get the angular and vector components.<br><div class="codebox"><p>Code: </p><pre><code>Quat bOrientationInA = m_b-&gt;m_actor-&gt;m_orientation * m_a-&gt;m_actor-&gt;m_orientation.Inverse();        Quat scalar = (bOrientationInA + bOrientationInA.Conjugate()) / 2; // .r is the scalar.Quat vector = (bOrientationInA - bOrientationInA.Conjugate()) / 2; // .xyz is the vector</code></pre></div>What I've been doing next has gone through a few different methods. The first thing I tried was just going backwards to grab the angle out of the quaternion, so...<br><div class="codebox"><p>Code: </p><pre><code>float angle = 2 * acos(scalar.r);</code></pre></div>Unfortunately, that doesn't work because of the bounds of acos being between 0 and pi.<br><br>The next thing I tried was to use atan2.<br><div class="codebox"><p>Code: </p><pre><code>float angle = 2 * atan2(scalar.r, vector.Length()); // Might be (v, r)?</code></pre></div>The idea behind it being that, since the quaternion is normalized, the "hypotenuse" of the quaternion is 1, making the other two sides of the triangle the vector and the scalar components. Well, something I'm still not 100% sure on is whether or not I want the angle theta or phi, it appears I have difficultly visualizing <strong class="text-strong">H</strong>-&gt;<strong class="text-strong">R</strong>^2 projections... haha. Also, I think atan might work just as well, since vector.Length() will always be positive. So, the initial return value of the atan function will always be between -pi/2 and pi/2 anyway. Which is perfectly fine because the angle returned is actually half the real angle.<br><br><img src="http://i.imgur.com/kPN29Kr.jpg" class="postimage" alt="Image"><br><br>I've realized that the problem with this atan method is that, due to the duality of quaternions, the direction of rotation around the axis can either be embedded in the scalar or the vector component. For example, (.9219, -.03, -.37, -.109) gives the same twist angle as (.9219, .03, .37, -.109) when using the previously mentioned method even though they are twisted in opposite directions. Using the number of positive/negative numbers as the indicator for the correct direction of twists seems like it might work, but I'm not sure. I'm not even 100% sure if this is the correct way to be going about it. It might be something in my implementation that isn't working, but I wanted to make sure I have the concept correct before continuing. Specifically the things about atan and the extraction of the angle and the determination of the direction of the twist.<br><br>The last thing I'm trying to get working is how to nicely fix the limits for constrained objects that have an initial "twist" as a part of the construction. So, for example, I want to have the limit as being initialTwist-pi/2 &lt; currentTwist &lt; initialTwist+pi/2 where initialTwist is equal to something like 2*pi/3. I can't think of a nice way to get this to work without having to do some ugly bounds checking. Maybe something to the effect of using atan((v - v_initial) / (s - s_initial)) to calculate the twist?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10773">Andrew Alvarez</a> — Thu Mar 13, 2014 10:44 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

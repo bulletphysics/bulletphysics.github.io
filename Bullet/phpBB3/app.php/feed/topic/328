@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/328" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-06-23T17:51:37+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/328</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-02-23T01:37:12+00:00</updated>
+
+		<published>2007-02-23T01:37:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3611#p3611</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3611#p3611"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3611#p3611"><![CDATA[
+<blockquote class="uncited"><div>On the other hand, the SAP version kept jumping from one box to the next in "random" order.</div></blockquote>No, it shouldn't be random access, the next 3 candidate axis should be predictable and hence cache friendly: the SAP should be 3 contiguous arrays, one for each axis, and you just traverse each array in a predictable manner. You can keep the current 'overlapping' status in a bit-array, which can fit in fast Local Store / L1 cache / scratchpad memory.<br><blockquote class="uncited"><div>How many of those marker objects do you typically use? Doesn't it make the SAP slower for everything else, due to the increased number of swaps? </div></blockquote>Less then a few hundred marker objects should be fine. 50k objects in the SAP sounds bad, are they all potentially moving? Can't you move them to static AABB trees? For this, multiple-broadphases would be better. Also an optimized batch-add for large number of added objects might be good.<br><br>Thanks for the AABB tree idea. So you re-calculate the quantized AABB tree for the scene, over some frames. Is it exposed to the user/API to choose how many frames to rebuild/replace?<br><br>Which part was painful? The refit, or flagging 'deleted' objects, or adding new objects?<br><br>Thanks,<br>Erwin<br><br>PS: We just added quantized nodes to Bullet PS3 stackless aabb tree traversal, which works very nice on PS3 SPU. We quantize the query object's aabb before traversal, so just check the quantized aabb's overlap. We use 16 bytes per node, but with the restriction that we only have 16-bit triangle indices (but allow multiple triangles per node). We could add 32bit triangle indices support, but I'm not we can cram that in 16 byte nodes. Hopefully I will get time soon to port this over to the public version of Bullet, it might be useful for deformable objects etc (I think the quantized OPCODE tree doesn't have refit).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri Feb 23, 2007 1:37 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Pierre]]></name></author>
+		<updated>2007-02-22T17:05:03+00:00</updated>
+
+		<published>2007-02-22T17:05:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3597#p3597</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3597#p3597"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3597#p3597"><![CDATA[
+<blockquote class="uncited"><div>It should be similar speed, the computation and memory usage are O(n) for both cases. Then it's mostly a matter of implementation details. Why would a brute force approach be faster, if both are cache-friendly implemented? I would say that cache misses are the bottleneck, not computation.</div></blockquote>Exactly. And this is why the brute-force approach "won" in those bad cases: for me all the AABBs are always stored in a linear array (never in the objects themselves), so the brute-force version was just parsing a linear array of AABBs, which is the fastest you can get. On the other hand, the SAP version kept jumping from one box to the next in "random" order. Combined with the extra DDA logic needed to know where to "jump", the SAP version just ended up slower. I'm not sure what "cache friendly" would be here, for the SAP. The order in which you need to fetch the boxes always changes with each ray, while in the brute-force version it's always the same and always the "best". I don't see how the SAP version can compete.<br><blockquote class="uncited"><div>It doesn't need to be slow, you just insert marker objects into the broadphase nicely distributed.</div></blockquote>Yeah, I know this approach, and I absolutely hate it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> Some customers are already stressing the BP with 50.000 (!) objects or similar numbers. I really don't want to pollute the SAP with even more "junk" objects...<br><br>How many of those marker objects do you typically use? Doesn't it make the SAP slower for everything else, due to the increased number of swaps?<br><blockquote class="uncited"><div>Instead of removing pairs during the SAP processing, we remove redundant (non-overlapping and duplicate) pairs during the pairarray traversal. So we keep the overlapping pairarray as array, instead of a complicated structure, because we don't need a find anymore. </div></blockquote>But... you can have a quick "find" even on a linear array, with some hashing. The "PairManager" class in our codebase (I think you still have access, right?) does exactly this. Colliding pairs are stored in a contiguous linear array, and all operations (add / remove / find ) are O(1).<br><br>(Just saying.... The other approach certainly works as well)<br><br><blockquote class="uncited"><div>This can be a benefit when many objects overlap, so you don't need to keep the memory for all overlapping pairs. </div></blockquote>Don't you need some kind of persistent per-pair structure anyway, to cache various things?<br><blockquote class="uncited"><div>Pierre, I'm interested to hear about your dynamic AABB tree. Can you give some more information about that? It is spatial partitioning or object partitioning? How do you deal with re-balancing cost when many objects move fast? </div></blockquote>It's a BV-tree, so not spatial partitioning. It's exactly the same as Opcode's AABB-tree. Rebalancing is automatic since I "simply" keep recomputing a new tree in the background, over N frames, while the previous tree is still used. After N frames I switch to the new tree and start again. The current tree is "refit" when objects move, and some leaves are marked as invalid when objects are deleted but the tree is still used. The tree never gets "too degenerated" by the refit operation, since it only lives for N frames. So the objects never go very far anyway. It's really an easy theory, but the implementation was rather tricky and painful. Well worth it in the end, it's an order of magnitude faster than our previous octree stuff, and as a bonus it's using a lot less memory.<br><br>- Pierre<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=76">Pierre</a> — Thu Feb 22, 2007 5:05 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-02-22T16:31:55+00:00</updated>
+
+		<published>2007-02-22T16:31:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3594#p3594</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3594#p3594"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3594#p3594"><![CDATA[
+I agree that different environments (static, slow moving, fast moving) might require different broadphase optimizations, but I think SAP is a great general purpose broadphase when used in combination with aabb tree for static objects.<br><blockquote class="uncited"><div><br>There are two things that I really don't like with the ray-through-SAP approach:<br><br>- if the ray happens to cross the whole world without touching anything, it *will* be slower than brute-force (simply because you're touching all objects anyway, and there's the DDA overhead). I agree it's a pathological case, and most of the time it's not an issue, but it still "feels" wrong.</div></blockquote>It should be similar speed, the computation and memory usage are O(n) for both cases. Then it's mostly a matter of implementation details. Why would a brute force approach be faster, if both are cache-friendly implemented? I would say that cache misses are the bottleneck, not computation.<br><blockquote class="uncited"><div>- if I don't already have a shape inside the SAP, from which I can start the ray, then finding this starting point is painful/slow.</div></blockquote>It doesn't need to be slow, you just insert marker objects into the broadphase nicely distributed. Then for a raycast (or other single query) first search for the closest marker object (any fast method you like), and then start from there.<br><br>- SAP should be great when many objects move slowly. If there are too many non-moving objects, I wouldn't add them into the SAP, but into a separate structure like aabb tree, and only insert one AABB into the SAP for that tree.<br><br>- Improve broadphase performance, and avoiding cost of swaps of far-away objects:<br>The broadphase can be split into multiple broadphases, and add some transition area in the beginning and end of the axis to prevent allocations when objects move from one broadphase to the other.<br><br>We found that overlapping pair management, narrowphase and meshes are causing most collision detection performance issues, so we started optimizing those for Bullet PS3. Instead of removing pairs during the SAP processing, we remove redundant (non-overlapping and duplicate) pairs during the pairarray traversal. So we keep the overlapping pairarray as array, instead of a complicated structure, because we don't need a find anymore. Parallelizations by doing as much work as possible in parallel, and managing the contact points more cache friendly can help a lot.<br><br>One nice thing about loose octrees is that you can recompute the overlapping pairarray from scratch, instead maintaining them incrementally as SAP does. This can be a benefit when many objects overlap, so you don't need to keep the memory for all overlapping pairs.<br><br>Pierre, I'm interested to hear about your dynamic AABB tree. Can you give some more information about that? It is spatial partitioning or object partitioning? How do you deal with re-balancing cost when many objects move fast?<br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Feb 22, 2007 4:31 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[dog]]></name></author>
+		<updated>2007-06-23T17:51:37+00:00</updated>
+
+		<published>2007-02-21T19:07:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3570#p3570</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3570#p3570"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3570#p3570"><![CDATA[
+&lt;removed some insanity&gt;<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=60">dog</a> — Wed Feb 21, 2007 7:07 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Pierre]]></name></author>
+		<updated>2007-02-21T17:16:22+00:00</updated>
+
+		<published>2007-02-21T17:16:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3568#p3568</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3568#p3568"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3568#p3568"><![CDATA[
+<blockquote class="uncited"><div>Did you consider using the ray through SAP implementation? Especially on Playstation 2 you can use the scratchpad which makes it faster then brute force (ray versus all AABB's) implementations (both worst case and average case). Although Pierre Terdiman has different results, I think he didn't make the algorithm cache friendly, incrementally updaing bitfields</div></blockquote>My implementation was cache-friendly, yet maybe not cache-friendly enough <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>There are two things that I really don't like with the ray-through-SAP approach:<br><br>- if the ray happens to cross the whole world without touching anything, it *will* be slower than brute-force (simply because you're touching all objects anyway, and there's the DDA overhead). I agree it's a pathological case, and most of the time it's not an issue, but it still "feels" wrong.<br><br>- if I don't already have a shape inside the SAP, from which I can start the ray, then finding this starting point is painful/slow.<br><br>On top of that, the more I use it, the more I dislike the whole SAP anyway. It just doesn't scale well. If all the objects are moving a stupid radix-based brute-force approach outperforms the SAP, no matter how you implement it. So on one hand there is the SAP, great when nothing is moving, lame when everything is moving. And on the other hand there is the radix approach, taking pretty much the same time no matter what. I think it's a well-known fact that we should optimize for the worst-case, right? (Making the best case better and the worst case worse is not a good approach, a constant 30 FPS is better than constantly dropping from 60 to 10, blah, blah). So... the more I think about it... the more I like the brute-force box pruning. If I had to start a new engine again, from scratch, I think I would go this way, with "all shapes are moving" in mind. At least then the system wouldn't collapse when they actually do.<br><br>Then for raycasts (and all the other scene queries like frustum culling, sweep tests, overlap tests for the AI, whatever) I would maintain a separate pruning structure, almost unrelated to the physics engine. And for this I would use a dynamic AABB tree for all the scene objects. I recently added that to the Novodex SDK and it gave huge speedups over the previous loose octree/quadtree stuff!<br><br>- Pierre<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=76">Pierre</a> — Wed Feb 21, 2007 5:16 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-02-08T18:29:52+00:00</updated>
+
+		<published>2007-02-08T18:29:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3450#p3450</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3450#p3450"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3450#p3450"><![CDATA[
+You can add 'marker objects' distributed over the world into the SAP broadphase. Then before inserting a (batch of) new objects (or one-shot queries), first search for the nearest marker object (not using the SAP broadphase, your own method, like binary search or hash lookup), and start with the begin/end points of this object. This can save a lot of swaps. Other optimizations include splitting the broadphase into multiple broadphase. <br><br>Another useful consideration is the overlapping pairList management: you can avoid doing removal of the overlapping pairs during the SAP swaps, and remove the pairs that are not overlapping during the pair-list traversal (needed for narrowphase). Then you can store the overlapping pairlist as a flat contiguous array. The only caveat is to remove duplicated pairs from this array, which can be easily done by sorting the array once at the end, and then pruning duplicates while traversal the array to dispatch narrowphase calculations.<br><br>I might implement those samples to the public version of the Bullet physics library at some stage, if there is interest.<br><br>Hope this helps,<br>Erwin<br><blockquote class="uncited"><div><blockquote class="uncited"><div>I'm only aware of the stabbing numbers that don't work nicely with this.<br>But as Gino and me already concluded, there are better methods then stabbing, which don't suffer from large AABB's. So apart from this single case, I would love to know a few of those 'many' optimizations that suffer from those large AABB's.</div></blockquote>What alternatives are there to stabbing numbers?</div></blockquote><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Feb 08, 2007 6:29 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[John McCutchan]]></name></author>
+		<updated>2007-02-08T04:38:52+00:00</updated>
+
+		<published>2007-02-08T04:38:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3447#p3447</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3447#p3447"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3447#p3447"><![CDATA[
+<blockquote class="uncited"><div>I'm only aware of the stabbing numbers that don't work nicely with this.<br>But as Gino and me already concluded, there are better methods then stabbing, which don't suffer from large AABB's. So apart from this single case, I would love to know a few of those 'many' optimizations that suffer from those large AABB's.</div></blockquote>What alternatives are there to stabbing numbers?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=148">John McCutchan</a> — Thu Feb 08, 2007 4:38 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-06-06T21:38:26+00:00</updated>
+
+		<published>2006-06-06T21:38:26+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1134#p1134</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1134#p1134"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1134#p1134"><![CDATA[
+<blockquote class="uncited"><div>Erwin,<br>Do you have a sense of what conditions lead to the broadphase partitioning becoming necessary? Number of bodies, world size, etc.</div></blockquote>As soon as far away objects cause noticeable performance decrease (like Pierre mentioned in this topic <a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=328" class="postlink">http://www.continuousphysics.com/Bullet ... .php?t=328</a>) you can consider splitting the broadphase. With large streaming worlds it is very likely to be beneficial.<br><blockquote class="uncited"><div>In our game, dealing with a couple hundred broadphase boxes, the broadphase performance was never an issue (except for raycasts).</div></blockquote>Did you consider using the ray through SAP implementation? Especially on Playstation 2 you can use the scratchpad which makes it faster then brute force (ray versus all AABB's) implementations (both worst case and average case). Although Pierre Terdiman has different results, I think he didn't make the algorithm cache friendly, incrementally updaing bitfields (see <a href="http://www.continuousphysics.com/Bullet/phpBB2/viewtopic.php?t=50" class="postlink">http://www.continuousphysics.com/Bullet ... c.php?t=50</a> ).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Jun 06, 2006 9:38 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2006-05-12T16:28:07+00:00</updated>
+
+		<published>2006-05-12T16:28:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1025#p1025</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1025#p1025"/>
+		<title type="html"><![CDATA[Sweep and Prune optimizations for colliding classes?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1025#p1025"><![CDATA[
+Erwin,<br><br>I like your ideas. They make sense, even though they seem like they might be a bit painful to implement.<br><br>Do you have a sense of what conditions lead to the broadphase partitioning becoming necessary? Number of bodies, world size, etc.<br><br>In our game, dealing with a couple hundred broadphase boxes, the broadphase performance was never an issue (except for raycasts).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Fri May 12, 2006 4:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-05-12T14:27:59+00:00</updated>
+
+		<published>2006-05-12T14:27:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1024#p1024</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1024#p1024"/>
+		<title type="html"><![CDATA[Just to make it more clear: no data duplication is necessary]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1024#p1024"><![CDATA[
+To make the physics simulation scalable, divide and conquer seems a natural way to go, both for collision detection and for constraint solving.<br><br>The splitting of a universe into smaller spaces, where each space has its own broadphases only requires boundary management as I mentioned before. The objects that are in the boundary area only need to be inserted in all overlapping broadphases, but that doesn't require a real copy of data: you can just increase the reference count (instancing), so no real duplication apart from the broadphase AABB entry. <br><br>So no collision shape data or rigidbody is ever duplicated, except for a tiny AABB entry. Also, the instance disappears when the object's 'simulation island' is not overlapping the boundary anymore.<br><br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Fri May 12, 2006 2:27 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

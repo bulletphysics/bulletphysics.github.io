@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; LCP w/friction</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>LCP w/friction</h2>
+		<p><a href="viewtopic.php%3Ft=1033.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1033</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>LCP w/friction</h3>
+				<div class="date">Posted: <strong>Fri Mar 09, 2007 6:51 pm</strong></div>
+				<div class="author">by <strong>edrumwri</strong></div>
+				<div class="content">Hi everyone,<br>
+<br>
+Quick introduction: I'm the author of the Physsim library (hosted on sourceforge), which I started writing b/c I needed a simulator that can give me joint-space inertia matrices (which maximal coordinate methods like that used in ODE cannot) for robotics.<br>
+<br>
+I'm trying to get the LCP method for resting contact working with Coulomb friction.  Ideally, I would like to be able to formulate the equations such that a generic LCP solver can handle them (i.e., Ax + b = w, x'w = 0).  Is this even possible (w/o resorting to a quadratic programming method) given that the matrix A is non-symmetric, non-PSD?   <br>
+<br>
+If it is not possible to solve the equations generically, how does one manage sticking and sliding friction using an iterative LCP solver (I'm using the Projected Gauss Seidel solver described in Cottle's book)?<br>
+<br>
+Thanks,<br>
+Evan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Mar 10, 2007 7:45 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I implemented Featherstone's algorithm + Sequential Impulses (similar to PGS) in my Box2D engine. You can download a demo now and I will have source code later. The basic idea is to use Featherstone for the joints and auxiliary constraints for contact and friction. Featherstone's method can be used to measure the effective mass at the contact points.<br>
+<br>
+<a href="http://www.gphysics.com/files/Box2Dj_preview.zip" class="postlink">http://www.gphysics.com/files/Box2Dj_preview.zip</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Mar 11, 2007 3:50 pm</strong></div>
+				<div class="author">by <strong>edrumwri</strong></div>
+				<div class="content">Hi Erin,<br>
+<br>
+Couldn't see you example, unfortunately.  I don't have a windows box available...<br>
+<br>
+Not really sure what "Sequential Impulses" is- couldn't find a description on the web (a link to your GDC 2006 presentation is missing).  Is this just applying impulses using Newton/Poisson/Stronge hypotheses sequentially at contact points?  For bodies in resting contact at multiple surfaces simultaneously, my experience has been less satisfactory.  Assuming we are talking about the same thing, Guendelmann et al [2004] indicates that multiple iterations may be necessary for "convergence", which is loosely defined in that work.<br>
+<br>
+Regardless, I think I have an idea of your proposal.  Are you creating the auxiliary constraints using Lagrange multipliers?  How do you deal with kinematic loops induced by the auxiliary constraints?  And, how are you determining the effective mass at the contact points - by applying test impulses and measuring the acceleration (a la Kokkevis [2004])?<br>
+<br>
+Thanks,<br>
+Evan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Mar 11, 2007 6:11 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Evan,<br>
+<br>
+You can read about SI here:<br>
+<br>
+<a href="http://www.gphysics.com/files/GDC2007_ErinCatto.zip" class="postlink">http://www.gphysics.com/files/GDC2007_ErinCatto.zip</a><br>
+<br>
+The important difference with Guendelmann is how clamping is performed and how joints are handled.<br>
+<br>
+You are right, to handle loops and auxiliary constraints, I'm computing effective masses using test impulses and solving for the Lagrange multipliers.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue May 22, 2007 9:39 pm</strong></div>
+				<div class="author">by <strong>KenB</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>Evan,<br>
+<br>
+You can read about SI here:<br>
+<br>
+<a href="http://www.gphysics.com/files/GDC2007_ErinCatto.zip" class="postlink">http://www.gphysics.com/files/GDC2007_ErinCatto.zip</a><br>
+<br>
+The important difference with Guendelmann is how clamping is performed and how joints are handled.<br>
+<br>
+You are right, to handle loops and auxiliary constraints, I'm computing effective masses using test impulses and solving for the Lagrange multipliers.</div></blockquote>
+
+Hmm, I think main difference between this method and the G&amp;F&amp;B paper is that they put null on the right hand side (i.e. they look for zero contact velocities), and manage overlaps by position projection. Position projections typically make you loose control over quantities that should be conserved, and at the end of the day this also forces you to use three iterative passes - collisions, contacts and positions, and this becomes quite slow.<br>
+The method described by Catto is actually a quite nice description of a Gauss-Seidel solver, but the paper lacks a good friction model (and solver for friction).<br>
+Another difference between Catto's model and the G&amp;F&amp;B paper is that in the G&amp;F&amp;B paper they use the old velocities to construct the friction cone. This is wrong in a sense, but it makes the mass matrix positive definite, and this gives reasonable convergence with the G-S solver, so eventually it is often better than feeding evil mass matrices to G-S.<br>
+The the effective inertia of a collision/contact in the G&amp;F&amp;B model is thus just n^T K n (with n the normal and K the collision matrix), while it should be n^T K (n - mu t) with the proper friction cone (here mu is the Coulombd friction coefficient and t is the direction of the tangential velocity). Typically the G&amp;F&amp;B model gives exaggerated friction and some artefacts, but this is often preferred in games and animation, over a more precise - but nearly unsolvable friction model...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 23, 2007 8:30 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Actually I am looking into improving the friction model in Erin GS solver. At the moment I only solve the friction in the manifold center and apply an additional twist impulse to mimic the torsional friction. Another trick (also suggested on the forum here) is to align one friction direction with the relative velocity in the contact plane.  <br>
+<br>
+So what would be a better friction model and friction solver? I see that I could solve a 3D mini LCP for the friction at the manifold center (2 tangents + 1 twist), but the question is if this improves the quality in a way that it justifies the exta computational effort.<br>
+<br>
+I implemented the G&amp;B&amp;F paper and I liked the friction and stacking results. From my personal experience Erin method works very nice when you warm-start the simulation. Ideally I would like to get rid of the warmstarting so could you explain a little bit more how friction could be improved and why the friction model has such a big impact on the GS convergence? In particular why is there a difference in feeding the old velocities rather then the new velocities?<br>
+<br>
+Finally, what do you mean by position projection? I am not aware of any position projection in the sense of a position constraints solver in this paper (e.g. Jacobsen). They suggest this at the end, but if IIRC this was only experiemental.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 24, 2007 1:22 am</strong></div>
+				<div class="author">by <strong>sbroumley</strong></div>
+				<div class="content">A simple way to improve the friction model is to make the friction force proportional to the previous frames computed contact normal force (as opposed to just a constant like the demo is if I remember correctly).<br>
+<br>
+This makes stacks look much more realistic as objects at the bottom have more friction and so are harder to push out of the stack as expected.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 24, 2007 5:24 am</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content"><blockquote><div><cite>sbroumley wrote:</cite>A simple way to improve the friction model is to make the friction force proportional to the previous frames computed contact normal force (as opposed to just a constant like the demo is if I remember correctly).<br>
+<br>
+This makes stacks look much more realistic as objects at the bottom have more friction and so are harder to push out of the stack as expected.</div></blockquote>
+
+Do you have an equation for that?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu May 24, 2007 10:48 pm</strong></div>
+				<div class="author">by <strong>sbroumley</strong></div>
+				<div class="content">I don't have my home brew code handy, but off the top of my head:<br>
+<br>
+For contact constraints you should already be warming starting the solver with the previous frames contact normal impulse. Let's call this N for each contact.<br>
+<br>
+For each friction constraint (I use 2 tangents + 1 twist for each contact manifold like Dirk), you set the constraint min and max limits proportional to the sum of the previous frames contact normal impulses for the whole manifold.<br>
+<br>
+So<br>
+<br>
+// Compute sum of previous frames contact manifold normal impulses<br>
+// (I use up to 4 contacts per manifold)<br>
+Limit = N0 + N1 + N2 + N3  etc..<br>
+<br>
+// For each friction constraint:<br>
+FMax = Limit * k;<br>
+FMin = -Limit * k;<br>
+<br>
+where k is a tuneable constant.<br>
+<br>
+This means the friction limit is a frame behind what it should really be, but it's very easy to implement and it doesn't slow down the solver iteration loop at all.<br>
+<br>
+You can also pseudo implement static and dynamic friction by changing the limit k depending on the velocity of the contact manifold.  If Vel &lt; threshold use k-static, else use k-dynamic. <br>
+<br>
+Let me know if this doesn't make sense and I could dig up the code...<br>
+-Steve.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 25, 2007 12:47 am</strong></div>
+				<div class="author">by <strong>dog</strong></div>
+				<div class="content">I'm a little confused by this - I'm not sure if what I do is the same as you, or if there is some new thing I should try out.<br>
+<br>
+Currently I set my friction impulse limit with something like:<br>
+<br>
+float maxTangentImpulse = frictionConstant * impulseAccumulator;<br>
+<br>
+where I use the accumulated impulse from the current contact calculation.  Isn't this the same thing? Or is it important to use the previous frame's value, and if so why? Or is this something specific to a central friction model?<br>
+<br>
+And what do you mean by previous frame, do you mean previous solver iteration, or really previous frame?<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 25, 2007 5:30 am</strong></div>
+				<div class="author">by <strong>sbroumley</strong></div>
+				<div class="content">Afte reading your e-mail Dog - you are right - you are already doing what I mention.<br>
+<br>
+My physics code is actually based on a hybrid of Erin's previous paper (GDC 2005) and sequential impulses - so it's a slightly different implmentation, but mathematically equivalent. <br>
+<br>
+The difference is in my code the limits of the friction constraints are not updated in the inner loop iterations of the solver (only from the previous frames results) - so it's faster, but not quite as accurate.<br>
+<br>
+Sorry for the confusion.<br>
+-Steve.<br>
+<br>
+PS. One improvement would be the addition of modifying the code to use a static and dynamic friction constant like in the G&amp;B&amp;F paper. As an example there's a good open source "JigLib" physics lib by Danny Chapman that has this implemented.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 25, 2007 8:28 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I see that this is a nice optimization since you basically decouple the friction from the normal impulse in the inner loop. On the other hand you don't have any friction at all in the first frame, right? Do you use any heuristic to get an initial first guess (e.g. Erin's first friction solution from his poster session at the GDC)?<br>
+
+<blockquote class="uncited"><div>
+PS. One improvement would be the addition of modifying the code to use a static and dynamic friction constant like in the G&amp;B&amp;F paper
+</div></blockquote>
+
+What do you mean by this? Do you suggest to differentiate between static and dynamic friction? From the top of my head I remember that the coefficients are nearly the same, so I wonder if this is worth the effort. Is there any example where this improves the quality of the simulation? <br>
+<br>
+<br>
+<br>
+Anyway, or there any other ideas to improve friction? <br>
+<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri May 25, 2007 2:35 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>
+What do you mean by this? Do you suggest to differentiate between static and dynamic friction? From the top of my head I remember that the coefficients are nearly the same, so I wonder if this is worth the effort. </div></blockquote>
+
+The difference in coefficients can be small or very large.  Take a look the tables on this page for some examples:<br>
+<br>
+<a href="http://www.roymech.co.uk/Useful_Tables/Tribology/co_of_frict.htm" class="postlink">http://www.roymech.co.uk/Useful_Tables/ ... _frict.htm</a><br>
+<br>
+Lead on mild steel, for example, has a coefficient of 0.95 for both static and dynamic friction.  Near the other end of the scale, zinc on cast iron has a static friction of 0.85 but a dynamic friction of only 0.21!  And then of course a good friction model of lubricated surfaces would require even more complexities including the actual velocity.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

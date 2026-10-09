@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Real-time voronoi fracture and shatter for Bullet Physics - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Real-time voronoi fracture and shatter for Bullet Physics</h2>
+		<p><a href="viewtopic.php%3Ft=7707.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=7707</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Sun Jan 08, 2012 1:39 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">@Flix: yes, to enable shatter of any (indeed non-convex, but closed) triangle meshes using Bullet Physics.  Currently in Blender I'm using its boolean intersections; works quite well (and preserves the uvs), but it does get slow with high poly counts.  In Blender I am using HACD along with voronoi fracture, but <em class="text-italics"><strong class="text-strong">after</strong></em> the boolean intersections: for convex decomposition of non-convex voronoi shards.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Sun Jan 08, 2012 4:12 pm</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>RBD wrote:</cite>In Blender I am using HACD along with voronoi fracture, but after the boolean intersections: for convex decomposition of non-convex voronoi shards.</div></blockquote>Thanks for the info (I was wondering how you made your videos...).<br>
+<br>
+I've made some extensions to your code to support generic polyhedral convex shapes in Bullet. In case somebody is interested:<br>
+<br>
+These are the modifications I've made to extend the algorithm to generic convex polyhedral shapes (but use them at your own risk  <img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> ).<br>
+<br>
+Well, first of all I do the whole stuff in "Local Space" (but I think it should be possible and maybe faster to do all in world space: I just needed to simplify the code a bit): so I didn't use:<br>
+const btQuaternion&amp; bbq<br>
+const btVector3&amp; bbt<br>
+as arguments.<br>
+I replaced them with a<br>
+const btTransform&amp; T<br>
+that I only use when the shard is ready: shardTransform = T * shardTransform;<br>
+<br>
+Then I replaced the arguments:<br>
+const btVector3&amp; bbmin, const btVector3&amp; bbmax<br>
+with:<br>
+const btAlignedObjectArray&lt;btVector3&gt;&amp; originalPlanes<br>
+that represent the plane equations of the original convex shape to be shattered; more on this later (*).<br>
+<br>
+Now I just needed to shorten the code a bit like this:<br>
+Replaced this code:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7707&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 icp = quatRotate(bbiq, curVoronoiPoint - bbt);	// replace this line only if you use local space for points as I did
+//=====================================================
+rbb = icp - bbmax;
+nrbb = bbmin - icp;
+planes.resize(6);
+planes[0] = bbvx; planes[0][3] = rbb.x();
+planes[1] = bbvy; planes[1][3] = rbb.y();
+planes[2] = bbvz; planes[2][3] = rbb.z();
+planes[3] = -bbvx; planes[3][3] = nrbb.x();
+planes[4] = -bbvy; planes[4][3] = nrbb.y();
+planes[5] = -bbvz; planes[5][3] = nrbb.z();
+maxDistance = rbb.length();
+distance = nrbb.length();
+if (maxDistance &lt; distance)
+	maxDistance = distance;
+//======================================================
+// Note that bbvx,bbvy,bbvz,rbb,nrbb (and bbmin,bbmax) are not used anymore</code></pre></div>With:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=7707&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// This is because I use both 'points' and 'originalPlanes' in "Local Space" (I apply a transform later)
+const btVector3&amp; icp = curVoronoiPoint;	// Untransformed
+// But probably the "transformed code"  works with 'points' in 'Global Space' and 'originalPlanes' still in "Local Space" (like in the original method AFAIK). 
+//=======================================================
+maxDistance = 0;	// Needed ???
+planes.copyFromArray(originalPlanes);
+for (int i=0;i&lt;planes.size();i++)	{
+	btVector3&amp; p(planes[i]);
+	distance = -p[3] - p.dot(icp);
+	p[3] = -distance;
+	if (maxDistance &lt; distance) maxDistance = distance;
+}
+//=======================================================</code></pre></div>(*) OK now we just need to extract the "originalPlanes" from a convex shape.<br>
+Luckily for us, in the case of btPolyhedralConvexShapes (that AFAIK include btBoxShape and btConvexHullShape, but don't include btSphereShape,btCylinderShape,etc.), Bullet can calculate these planes for us. Here's how to do it:<br>
+1) Call the method btPolyhedralConvexShape::initializePolyhedralFeatures() (although this has probably some side effect on the collision detection behavior of the shape...).<br>
+2) Retrieve the btConvexPolyhedron from the shape (see btPolyhedralConvexShape.h and btConvexPolyhedron.h and things will appear clear soon).<br>
+3) Retrieve the planes (4 btscalars) of each face and put them in the 'originalPlane' array (btVector3 can contain 4 btScalars: the 4th value can be set like this: originalPlane<em class="text-italics">[3] = value). <br>
+Now it should work (well, I've only tried it on a box shape and a pyramidal convex hull so far).<br>
+The main drawback is that many random points in the shape local aabb will be outside the convex shape, but this can't be avoided (anyway these points will be automatically excluded).	 And please remember that the points I used are in "Local Space" now.<br>
+<br>
+<strong class="text-strong">@ R&amp;D</strong>: I'm starting thinking that probably you've deliberately released only the part of the code relative to "cuboids"... if this is the case I feel terribly sorry  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> (I should have asked you before posting this...).</em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Mon Jan 09, 2012 12:53 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><blockquote><div><cite>Flix wrote:</cite>These are the modifications I've made to extend the algorithm to generic convex polyhedral shapes</div></blockquote>The algorithm was already for convex polys… no problem, have fun with it.<br>
+The demo code for cuboid / bounding box was intended to keep it simple and fast (and generic, for use with boolean ops in other software).
+<blockquote><div><cite>Flix wrote:</cite>OK now we just need to extract the "originalPlanes" from a convex shape.[...]</div></blockquote>BTW, Bullet Physics has a simple utility function to retrieve plane equations: <em class="text-italics"><strong class="text-strong">btGeometryUtil::getPlaneEquationsFromVertices(vertices, planes)</strong></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Tue Jan 10, 2012 3:44 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><strong class="text-strong">Note</strong>: Source code update on first post...<br>
+<br>
+Flix, you made me think about this, and I should indeed have included the original code for convex hull shatter (as per algorithm).  It's not at all that I didn't want people to have it  <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz">; I was just thinking the optimized (I thought much faster, but maybe not?) generic cuboid / bounding box one was preferable.  But you are right that it could be useful.  I have updated the demo source code to included a voronoiConvexHullShatter function (copied from the other so that differences would be clear) for anyone who wants it.  Thank you for pointing this out Flix, and sorry for making you work on it.<br>
+<br>
+You did also make me question the initial value of maxDistance… I haven't really thought about it that hard, but I don't think it did make sense, so I cleared it for now.  I think it should instead be that the point itself be considered whether it is too far outside? (I didn't add that yet, it may indeed not be needed).<br>
+<br>
+<span style="font-size:85%;line-height:116%"></span><blockquote><div><cite>Flix wrote:</cite><span style="font-size:85%;line-height:116%">Thanks for the info (I was wondering how you made your videos...).</span></div></blockquote><span style="font-size:85%;line-height:116%">Sorry, I missed this earlier... to clarify: I'm pretty sure HACD was not used on any of the voronoi shattered shards in those demos.  I was just mentionning that my tools in Blender do optionally call HACD on (post boolean) non-convex shards (when there are some).</span></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Tue Jan 10, 2012 4:17 pm</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content">Wow, thanks for your new update R&amp;D  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"> !<blockquote><div><cite>RBD wrote:</cite> It's not at all that I didn't want people to have it <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz">; I was just thinking the optimized (much faster) generic cuboid / bounding box one was preferable.</div></blockquote>Feelin' much better now  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"><blockquote><div><cite>RBD wrote:</cite>BTW, Bullet Physics has a simple utility function to retrieve plane equations: btGeometryUtil::getPlaneEquationsFromVertices(vertices, planes)</div></blockquote>Thanks for pointing it out, this is much faster, but I don't know if it merges coplanar planes like in initializePolyhedralFeatures(), and having a small number of planes should make the algorithm a bit faster (if the call to initializePolyhedralFeatures() is made once at init time).<br>
+<br>
+PS. about closed concave meshes, I've found some articles about using a "tetralized" version of the input mesh for extracting the clipped Voronoi diagram together with other material about it (see here in the "publication" section:<a href="https://sites.google.com/site/yandongming/" class="postlink">https://sites.google.com/site/yandongming/</a>).<br>
+Anyway I'm not sure if they can be of interest in your case (it's not a fast convex hull to non-convex triangle mesh intersection routine), but the idea of starting with tetra meshes seems interesting...<br>
+<br>
+Thanks again  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> .</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Tue Jan 10, 2012 4:27 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><blockquote><div><cite>Flix wrote:</cite>I don't know if it merges coplanar planes like in initializePolyhedralFeatures()</div></blockquote><em class="text-italics">getPlaneEquationsFromVertices()</em> does not care about the faces of a mesh, only the outside most vertices, and it will not add two planes with the same equation, so I think that is not a problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Tue Jan 10, 2012 4:38 pm</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>RBD wrote:</cite>getPlaneEquationsFromVertices() does not care about the faces of a mesh, only the outside most vertices, and it will not add two planes with the same equation, so I think that is not a problem.</div></blockquote>Ok, good to know. Thanks again.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Tue Jan 10, 2012 7:22 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">For fun tried calculating plane equations using <em class="text-italics">convexHullComputer</em> instead of <em class="text-italics">getPlaneEquationsFromVertices</em> and it is <strong class="text-strong">significantly</strong> faster for large meshes... updated source on first post again (take your pick). ...always a better/faster way.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Fri Jan 27, 2012 8:24 am</strong></div>
+				<div class="author">by <strong>ahmedismaiel</strong></div>
+				<div class="content">great demo ,i was wondering what is the best way to distribute the resistance to fracturing  (ex. the center of the object is more resistant to fracturing than the outer pieces unless you add more force to it ) .i'm not sure what the technical term to start learning how to do it.<br>
+the second question i have is how can i make the fractured structure (ex. a wall) stand still on a plane or a terrain without falling until another object hits it ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Fri Jan 27, 2012 12:19 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">@ahmedismaiel: the simplest: have a btBoxShape in your scene, upon impact (collision) by a projectile spray <em class="text-italics">voronoi points</em> from the projectile in its velocity vector direction, then generate voronoi shards and delete the original btBoxShape, all in <em class="text-italics">real-time</em>.<br>
+If you would like to pre-fracture and then break apart compounded voronoi shards based on collision impacts have a look at Bullet Physics' included <strong class="text-strong"><span style="text-decoration:underline"><em class="text-italics">FractureDemo</em></span></strong>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Wed Feb 01, 2012 5:48 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">This is very cool work, thanks for sharing!<br>
+<br>
+We have been busy working on OpenCL physics implementation (see <a href="http://www.youtube.com/watch?v=8jGZv1YYe2c" class="postlink">http://www.youtube.com/watch?v=8jGZv1YYe2c</a>), so I nearly missed this post.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Wed Feb 01, 2012 9:03 pm</strong></div>
+				<div class="author">by <strong>majestik666</strong></div>
+				<div class="content">Hey Erwin,<br>
+<br>
+What is the penalty of transferring the data back to main memory ?<br>
+15fps for 110k bodies is impressive but in our case we need the data<br>
+back in the memory..<br>
+<br>
+F</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Thu Feb 02, 2012 9:40 pm</strong></div>
+				<div class="author">by <strong>kloplop321</strong></div>
+				<div class="content">Erwin, <br>
+<br>
+I think you should post your video link in the Bullet on GPU thread which has practically had no news for several years.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Sun Feb 05, 2012 8:05 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>We have been working on OpenCL physics implementation (see <a href="http://www.youtube.com/watch?v=8jGZv1YYe2c" class="postlink">http://www.youtube.com/watch?v=8jGZv1YYe2c</a>).</div></blockquote>Amazing video <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy">   (although when I try it the stack of boxes falls through the static "floor", but I guess my video card is a bit old (Nvidia GT 120) and I haven't updated the drivers...).<br>
+<br>
+<strong class="text-strong">@RBD:</strong> I've made a (rather trivial) version of your voronoi shatter "BasicDemo.cpp" that can be compiled with the /openMP compiler flag to support multicore processors (tested on VC++2008 and Ubuntu Linux). In case somebody is intersted, here it is:<div class="inline-attachment">
+			
+		
+		
+				<dl class="file">
+			<dt><span class="imageset icon_topic_attach"></span> <a class="postlink" href="download/file.php%3Fid=889">BasicDemo.cpp</a></dt>
+						<dd>(29.71 KiB) Downloaded 1654 times</dd>
+		</dl>
+		
+			</div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Real-time voronoi fracture and shatter for Bullet Physic</h3>
+				<div class="date">Posted: <strong>Sat Feb 18, 2012 10:13 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>We have been busy working on OpenCL physics implementation (see <a href="http://www.youtube.com/watch?v=8jGZv1YYe2c" class="postlink">http://www.youtube.com/watch?v=8jGZv1YYe2c</a>)</div></blockquote>Looks very promising Erwin!  I just tried downloading the demos (both feb11 &amp; jan27) but unfortunately they don't appear to work on my system with AMD HD4890 GPUs (RV7xx), latest drivers; no collisions happening.   <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad">  ...Haven't looked into it; guessing it's my hardware.<br>
+<br>
+@Flix: thanks.  (Haven't tried it, unfortunately my "Standard Edition" VS2008 does not support OpenMP.)</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

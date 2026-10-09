@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Request for better Striding support (WORD/ConvexHullShape)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Request for better Striding support (WORD/ConvexHullShape)</h2>
+		<p><a href="viewtopic.php%3Ft=508.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=508</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 06, 2006 7:34 am</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">1) I found that WORD (PHY_SHORT) indexes are not implemented in<br>
+void	StridingMeshInterface::InternalProcessAllTriangles(InternalTriangleIndexCallback* callback,const SimdVector3&amp; aabbMin,const SimdVector3&amp; aabbMax) const<br>
+<br>
+I noticed that you love OpenGL. I do not know index format for OpenGL, but in DirectX indexes are WORDs in most cases.<br>
+<br>
+2) ConvexHullShape::ConvexHullShape(SimdPoint3* points,int numPoints)<br>
+<br>
+It would be great if ConvexHullShape additionally accepts STRIDE.<br>
+For example, I have a concave model. I want to pass model vertex buffer directly to ConvexHullShape, but I can not do it because there is no STRIDE param. Instead I need to create intermediate SimdPoint3 buffer, copy vertexes, pass it to ConvexHullShape, delete SimdPoint3 buffer.<br>
+<br>
+ <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 06, 2006 6:09 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks for the feedback! Feedback is good for improvements/development!<br>
+
+<blockquote><div><cite>Jack wrote:</cite>1) I found that WORD (PHY_SHORT) indexes are not implemented in<br>
+void	StridingMeshInterface::InternalProcessAllTriangles(InternalTriangleIndexCallback* callback,const SimdVector3&amp; aabbMin,const SimdVector3&amp; aabbMax) const<br>
+<br>
+I noticed that you love OpenGL. I do not know index format for OpenGL, but in DirectX indexes are WORDs in most cases.
+</div></blockquote>
+
+I'll check it out and add a feature request for WORD/short indices.<br>
+
+<blockquote class="uncited"><div>
+2) ConvexHullShape::ConvexHullShape(SimdPoint3* points,int numPoints)<br>
+<br>
+It would be great if ConvexHullShape additionally accepts STRIDE.<br>
+For example, I have a concave model. I want to pass model vertex buffer directly to ConvexHullShape, but I can not do it because there is no STRIDE param. Instead I need to create intermediate SimdPoint3 buffer, copy vertexes, pass it to ConvexHullShape, delete SimdPoint3 buffer.<br>
+<br>
+ <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div></blockquote>
+It is possible to use ConvexTriangleMeshShape, that takes a striding interface. For performance, a duplicate is probably better. <br>
+<br>
+Would an additional constructor in ConvexHullShape (making a copy) useful for you? I'll add a second feature request.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 07, 2006 12:45 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Thanks for the feedback! Feedback is good for improvements/development!<br>
+<br>
+It is possible to use ConvexTriangleMeshShape, that takes a striding interface. For performance, a duplicate is probably better.
+</div></blockquote>
+
+But if the model is concave? What will be if I pass cancave mesh to the ConvexTriangleMeshShape?<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+Would an additional constructor in ConvexHullShape (making a copy) useful for you? I'll add a second feature request.
+</div></blockquote>
+
+You copy it into internal buffer in any case:<br>
+<br>
+ConvexHullShape ::ConvexHullShape (SimdPoint3* points,int numPoints)<br>
+{<br>
+	m_points.resize(numPoints);<br>
+	for (int i=0;i&lt;numPoints;i++)<br>
+		m_points<em class="text-italics"> = points<em class="text-italics">;<br>
+}<br>
+<br>
+So, I think additional constructor is not necessary. Just third param with default value: Stride=sizeof(SimdPoint3).</em></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Sep 07, 2006 2:14 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">Continue with minor issues.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+In "Memeory2.h". Correct new/delete overrides must be:<br>
+void* <strong class="text-strong">__cdecl </strong>operator new(size_t sz) throw();<br>
+void* <strong class="text-strong">__cdecl </strong>operator new[](size_t sz) throw();<br>
+void <strong class="text-strong">__cdecl </strong>operator delete(void* m) throw();<br>
+void <strong class="text-strong">__cdecl </strong>operator delete[](void* m) throw();<br>
+<br>
+__cdecl is important if you compile Bullet with non-cdecl default calling convention. Otherwise there are compilation errors...</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

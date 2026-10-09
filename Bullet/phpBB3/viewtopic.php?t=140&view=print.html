@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Barycentric coordiantes and voronoi solver</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Barycentric coordiantes and voronoi solver</h2>
+		<p><a href="viewtopic.php%3Ft=140.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=140</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Thu Sep 22, 2005 3:29 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Q1) I've been studying up on barycentric coordinates of a triangle, and from what I've read it's only defined if the point P lies in the plane of the triangle. I can't seem to find where in the code you project the origin onto the plane of the triangle. <br>
+<br>
+Q2) When you have a full simplex, and you can't reduce it down to a smaller one, you just give up. Don't some uses of the gjk algorithm require you to calculate the lambda values even if you end up with a full simplex? An example that comes to mind is closest points on objects.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Sun Sep 25, 2005 2:43 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>jmc wrote:</cite> Q1) I've been studying up on barycentric coordinates of a triangle, and from what I've read it's only defined if the point P lies in the plane of the triangle. I can't seem to find where in the code you project the origin onto the plane of the triangle. 
+</div></blockquote>
+The projection of the origin into the triangle plane happens here:<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/html/VoronoiSimplexSolver_8cpp-source.html" class="postlink">http://www.continuousphysics.com/Bullet ... ource.html</a>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=140&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>00405     // P inside face region. Compute Q through its barycentric coordinates (u,v,w)
+00406     float denom = 1.0f / (va + vb + vc);
+00407     float v = vb * denom;
+00408     float w = vc * denom;
+00410         result.m_closestPointOnSimplex = a + ab * v + ac * w;
+00414         result.SetBarycentricCoordinates(1-v-w,v,w);
+</code></pre></div>
+<blockquote><div><cite>jmc wrote:</cite>
+Q2) When you have a full simplex, and you can't reduce it down to a smaller one, you just give up. Don't some uses of the gjk algorithm require you to calculate the lambda values even if you end up with a full simplex? An example that comes to mind is closest points on objects.</div></blockquote>
+
+There are two cases in which the simplex solver will terminate the Bullet GJK implementation:<br>
+<br>
+1) No reduction is done, because the origin is inside the tetrahedron. This means means the two convex objects are penetrating. The GJK outerloop will break. <br>
+<br>
+2) Degenerate simplex, 3 or more points that are co-linear. This will also terminate the GJK loop. Degeneracy can also be caused by cancellation, as Gino stated before, this can be a problem in cases with large difference in feature sizes. If this is really a problem, some improvements can be made by re-ordering calculations to remove this cancellation effect.<br>
+<br>
+In both cases either the current seperating distance is within the chosen collision-margins there will be a closest point result (penetration) reported, or a seperate user-provided penetration depth algorithm will be used.<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Mon Sep 26, 2005 3:45 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+The projection of the origin into the triangle plane happens here:<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/html/VoronoiSimplexSolver_8cpp-source.html" class="postlink">http://www.continuousphysics.com/Bullet ... ource.html</a>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=140&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>00405     // P inside face region. Compute Q through its barycentric coordinates (u,v,w)
+00406     float denom = 1.0f / (va + vb + vc);
+00407     float v = vb * denom;
+00408     float w = vc * denom;
+00410         result.m_closestPointOnSimplex = a + ab * v + ac * w;
+00414         result.SetBarycentricCoordinates(1-v-w,v,w);
+</code></pre></div>
+</div></blockquote>
+
+Sorry, I didn't phrase my question properl. I'd like to understand the geometry behind your calculations. I understand the geometry behind d1 &amp; d2 but what is the geometry behind d3,d4,d5,d6, vc, vb, and va. A reference to where you developed this formula would be appreciated.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite><blockquote><div><cite>jmc wrote:</cite>
+Q2) When you have a full simplex, and you can't reduce it down to a smaller one, you just give up. Don't some uses of the gjk algorithm require you to calculate the lambda values even if you end up with a full simplex? An example that comes to mind is closest points on objects.</div></blockquote>
+
+There are two cases in which the simplex solver will terminate the Bullet GJK implementation:<br>
+<br>
+1) No reduction is done, because the origin is inside the tetrahedron. This means means the two convex objects are penetrating. The GJK outerloop will break. <br>
+
+</div></blockquote>
+
+This is the case I was asking about, some of the gjk algorithms still attempt to compute some values even when the simplex couldn't be reduced. Examples from solid, DT_Convex.cpp::common_point, DT_Convex.cpp::closest points. I don't how accurate these values will be even if the system of equations was solved, because like you say, the origin is inside the tetrahedron, and the objects are in penetration.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Sat Oct 01, 2005 6:15 am</strong></div>
+				<div class="author">by <strong>Christer Ericson</strong></div>
+				<div class="content"><blockquote><div><cite>jmc wrote:</cite>
+Sorry, I didn't phrase my question properl. I'd like to understand the geometry behind your calculations. I understand the geometry behind d1 &amp; d2 but what is the geometry behind d3,d4,d5,d6, vc, vb, and va. A reference to where you developed this formula would be appreciated.
+</div></blockquote>
+These calculations are from my book, where I describe in detail where the terms come from (in several steps, one more optimized than another).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Tue Oct 04, 2005 3:23 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content"><blockquote><div><cite>Christer Ericson wrote:</cite>
+These calculations are from my book, where I describe in detail where the terms come from (in several steps, one more optimized than another).</div></blockquote>
+
+I currently can't afford your book, but I do plan on picking it up in the near future. Could you tell me, do you provide an explanation on how to project the origin onto a tetrahedron? Some of the gjk algorithms still require it, even in the case where the origin is inside the tetrahedron. Currently bullet's implementation doesn't handle that case.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Sat Oct 08, 2005 8:58 pm</strong></div>
+				<div class="author">by <strong>Christer Ericson</strong></div>
+				<div class="content"><blockquote><div><cite>jmc wrote:</cite>Could you tell me, do you provide an explanation on how to project the origin onto a tetrahedron? Some of the gjk algorithms still require it, even in the case where the origin is inside the tetrahedron. Currently bullet's implementation doesn't handle that case.</div></blockquote>What you're asking for is a special case of finding the point Q of a tetrahedron ABCD closest to a given query point P (where, in your question, P is the origin). Yes, I cover the general problem in Section 5.1.6 (and again in Section 9.5.2). When P lies inside ABCD, P itself is the closest point Q; this case falls out directly based on how the testing is performed so I'm a bit surprised to hear you say the Bullet implementation does not handle it.  If you can provide a test case of a query point and four tetrahedron vertices for which you consider the code broken, I'm sure Erwin can verify if the code has a problem, and if so, fix it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Sun Oct 09, 2005 2:00 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Christer Ericson wrote:</cite> When P lies inside ABCD, P itself is the closest point Q; this case falls out directly based on how the testing is performed so I'm a bit surprised to hear you say the Bullet implementation does not handle it.</div></blockquote>
+Bullet detects the case where the origin lies within the tetrahedron in VoronoiSimplexSolver.cpp here:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=140&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>00468    if (!pointOutsideABC  &amp;&amp; !pointOutsideACD &amp;&amp; !pointOutsideADB &amp;&amp; !pointOutsideBDC)
+00469          {
+00470                  return false;
+00471          }
+</code></pre></div>
+So this case is handled by Bullet by detecting it, and based on this result the GJK loop terminates. Then penetration depth calculation is performed and a penetration information is reported. So in this case, the barycentric coordinates of the origin/P are not calculated, because GJK will terminate anyway.<br>
+<br>
+Which GJK implementation requires more information from the simplex solver, and how does it use this exactly, JMC ?<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Tue Oct 11, 2005 12:21 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Which GJK implementation requires more information from the simplex solver, and how does it use this exactly, JMC ?<br>
+Erwin</div></blockquote>
+
+The whole reason I brought this up was because SOLID uses the values even in the case that the simplex is full. Look at SOLIDs common_point and closest_points in DT_Convex.cpp.<br>
+<br>
+Clarification: Both of those functions bail out of the gjk loop when there is a full simplex, but then they call gjk.compute_points which use the barycentric coordinates.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Barycentric coordiantes and voronoi solver</h3>
+				<div class="date">Posted: <strong>Tue Oct 11, 2005 9:17 am</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content"><blockquote><div><cite>jmc wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Which GJK implementation requires more information from the simplex solver, and how does it use this exactly, JMC ?<br>
+Erwin</div></blockquote>
+
+The whole reason I brought this up was because SOLID uses the values even in the case that the simplex is full. Look at SOLIDs common_point and closest_points in DT_Convex.cpp.<br>
+<br>
+Clarification: Both of those functions bail out of the gjk loop when there is a full simplex, but then they call gjk.compute_points which use the barycentric coordinates.</div></blockquote>
+
+In case of a full simplex the Johnson routine returns the barycentric coordinates of the origin (four parameters corresponding to the four vertices of a tetrahedron). You need these to compute a common point (In case of an intersection the closest points coinicde.) How to compute a common point or a pair of closest points from the barycentric coordinates is explained on page 141 of my book. In case you want to return a boolean only or want to compute the penetration depth, you do not need the barycentric coordinates of the origin for a full simplex. Hope this helps.        <br>
+<br>
+Cheers,</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/593" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-10-11T07:10:20+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/593</id>
+
+		<entry>
+		<author><name><![CDATA[daBrado]]></name></author>
+		<updated>2006-10-11T07:10:20+00:00</updated>
+
+		<published>2006-10-11T07:10:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2113#p2113</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2113#p2113"/>
+		<title type="html"><![CDATA[Re: Does scaling work OK?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2113#p2113"><![CDATA[
+<blockquote class="uncited"><div>I will remove the scaling on the worldtransform, we are only dealing with rigid transforms in Bullet (the scaling method on btTransform it is an obsolete remainder).</div></blockquote>So, is a btTransform only for rotations and translations?<br><br>If so, would it be bad form to do something like:<br><div class="codebox"><p>Code: </p><pre><code>myBtTransform . getBasis ( ) . scaled ( myBtVector ) ;</code></pre></div>Thanks,<br>  Braden<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=974">daBrado</a> — Wed Oct 11, 2006 7:10 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-10-09T15:43:27+00:00</updated>
+
+		<published>2006-10-09T15:43:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2106#p2106</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2106#p2106"/>
+		<title type="html"><![CDATA[Re: Does scaling work OK?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2106#p2106"><![CDATA[
+<blockquote class="uncited"><div>Do not you think these steps should be done automaticaly by Bullet? Do not you think that Inertia Tensor to be managed entirely By Bullet? Probably there could be method GetInertiaTensor (if user wants to know it), but such methods as calculateLocalInertia, updateInertiaTensor, setMassProps look redundant. <br>When you create the shape you pass body density. Then Volume, Mass, Inertia are managed automaticaly. User can get these values, but not set...</div></blockquote>No, I don't want to force users to use Bullet's inertial tensor calculation. You can optionally use it, but also load it from file (COLLADA physics provides the inertia tensor that it gets from the tool (Maya, Max, XSI, Blender etc)) or calculate it yourself.<br>I haven't checked it out yet, but perhaps setMassProps  already updates the cached inverse of the inertia tensor. Otherwise I will add that, to reduce the work. <br>Note however that scaling/rescaling is not a common use case in rigid body dynamics.<br><br>Thanks for the feedback,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Oct 09, 2006 3:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-09T15:34:08+00:00</updated>
+
+		<published>2006-10-09T15:34:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2105#p2105</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2105#p2105"/>
+		<title type="html"><![CDATA[Re: Does scaling work OK?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2105#p2105"><![CDATA[
+<blockquote class="uncited"><div><blockquote class="uncited"><div>That worked. But:<br>1) getOpenGLMatrix does not include scaling in the returned matrix. Do you think it is right?<br>2) As I understood I can not change scale dynamicaly. Right? Then it is going to be useless feature, I think...</div></blockquote>You have to apply the scaling yourself on the graphics object, the world transform doesn't contain the scaling.<br><br>You can dynamically scale rigid bodies, as long as you make sure to call a method to update the inertial tensor. WARNING: not all shapes might support the re-scaling yet, especially static triangle meshes that use a bounding volume hierarchy need to rebuild this hierarchy probably.<br><br>1) update the scaling on the btCollisionShape derived class<br>2) calculate new localinertia on that collision shape<br>3) call the setMassProps(mass,updatedLocalInertia) on btRigidBody<br>4) call the updateInertiaTensor on the btRigidBody<br><br>If you are rescaling a dynamic rigidbody make also sure to activate it, and don't cause too deep penetration in one timestep.<br><br>Hope this helps,<br>Erwin</div></blockquote>Do not you think these steps should be done automaticaly by Bullet? Do not you think that Inertia Tensor to be managed entirely By Bullet? Probably there could be method GetInertiaTensor (if user wants to know it), but such methods as calculateLocalInertia, updateInertiaTensor, setMassProps look redundant. <br>When you create the shape you pass body density. Then Volume, Mass, Inertia are managed automaticaly. User can get these values, but not set...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Mon Oct 09, 2006 3:34 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-10-09T14:56:32+00:00</updated>
+
+		<published>2006-10-09T14:56:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2104#p2104</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2104#p2104"/>
+		<title type="html"><![CDATA[Re: Does scaling work OK?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2104#p2104"><![CDATA[
+<blockquote class="uncited"><div>That worked. But:<br>1) getOpenGLMatrix does not include scaling in the returned matrix. Do you think it is right?<br>2) As I understood I can not change scale dynamicaly. Right? Then it is going to be useless feature, I think...</div></blockquote>You have to apply the scaling yourself on the graphics object, the world transform doesn't contain the scaling.<br><br>You can dynamically scale rigid bodies, as long as you make sure to call a method to update the inertial tensor. WARNING: not all shapes might support the re-scaling yet, especially static triangle meshes that use a bounding volume hierarchy need to rebuild this hierarchy probably.<br><br>1) update the scaling on the btCollisionShape derived class<br>2) calculate new localinertia on that collision shape<br>3) call the setMassProps(mass,updatedLocalInertia) on btRigidBody<br>4) call the updateInertiaTensor on the btRigidBody<br><br>If you are rescaling a dynamic rigidbody make also sure to activate it, and don't cause too deep penetration in one timestep.<br><br>Hope this helps,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Oct 09, 2006 2:56 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-09T14:44:59+00:00</updated>
+
+		<published>2006-10-09T14:44:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2103#p2103</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2103#p2103"/>
+		<title type="html"><![CDATA[Re: Does scaling work OK?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2103#p2103"><![CDATA[
+<blockquote class="uncited"><div><blockquote class="uncited"><div>Situation:<br><br>1) Static Box vs Dynamic Sphere -&gt; Collision OK<br>2) Scaled Static Box vs Dynamic Sphere -&gt; No collision at all. They do not sense each other.<br><div class="codebox"><p>Code: </p><pre><code>voidSetScale(D3DXVECTOR3 &amp;v){_pPhyObj-&gt;m_worldTransform.scale(*(btVector3*)&amp;v);}</code></pre></div>What can be wrong?</div></blockquote>You should set the scaling on the btCollisionShape. Please do so before you calculate the inertia tensor, and preferably before you add it to the world.<br><br>I will remove the scaling on the worldtransform, we are only dealing with rigid transforms in Bullet (the scaling method on btTransform it is an obsolete remainder).<br><br>Thanks for pointing this out,<br>Erwin</div></blockquote>That worked. But:<br>1) getOpenGLMatrix does not include scaling in the returned matrix. Do you think it is right?<br>2) As I understood I can not change scale dynamicaly. Right? Then it is going to be useless feature, I think...<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Mon Oct 09, 2006 2:44 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-10-09T13:46:43+00:00</updated>
+
+		<published>2006-10-09T13:46:43+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2102#p2102</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2102#p2102"/>
+		<title type="html"><![CDATA[Re: Does scaling work OK?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2102#p2102"><![CDATA[
+<blockquote class="uncited"><div>Situation:<br><br>1) Static Box vs Dynamic Sphere -&gt; Collision OK<br>2) Scaled Static Box vs Dynamic Sphere -&gt; No collision at all. They do not sense each other.<br><div class="codebox"><p>Code: </p><pre><code>voidSetScale(D3DXVECTOR3 &amp;v){_pPhyObj-&gt;m_worldTransform.scale(*(btVector3*)&amp;v);}</code></pre></div>What can be wrong?</div></blockquote>You should set the scaling on the btCollisionShape. Please do so before you calculate the inertia tensor, and preferably before you add it to the world.<br><br>I will remove the scaling on the worldtransform, we are only dealing with rigid transforms in Bullet (the scaling method on btTransform it is an obsolete remainder).<br><br>Thanks for pointing this out,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Oct 09, 2006 1:46 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-09T09:38:13+00:00</updated>
+
+		<published>2006-10-09T09:38:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2101#p2101</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2101#p2101"/>
+		<title type="html"><![CDATA[Does scaling work OK?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2101#p2101"><![CDATA[
+Situation:<br><br>1) Static Box vs Dynamic Sphere -&gt; Collision OK<br>2) Scaled Static Box vs Dynamic Sphere -&gt; No collision at all. They do not sense each other.<br><div class="codebox"><p>Code: </p><pre><code>voidSetScale(D3DXVECTOR3 &amp;v){_pPhyObj-&gt;m_worldTransform.scale(*(btVector3*)&amp;v);}</code></pre></div>What can be wrong?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Mon Oct 09, 2006 9:38 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

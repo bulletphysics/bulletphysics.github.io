@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Getting and setting angular velocity in body space?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Getting and setting angular velocity in body space?</h2>
+		<p><a href="viewtopic.php%3Ft=13552.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13552</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Sat Mar 18, 2023 5:37 pm</strong></div>
+				<div class="author">by <strong>GeanGean</strong></div>
+				<div class="content">I'm trying to create a motorcycle, the standard gyroscopic effect doesn't seem to be enough to keep it from tipping over.<br>
+I've been trying to find a way to basically apply a rotation around the long axis of the bike inversely proportionate to how far tilted the bike is on that axis.<br>
+I thought this would be really simple, but pretty much everything I try causes the bike to glitch out horribly eventually.<br>
+<br>
+My original plan went something like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13552&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btQuaternion quat = carBody-&gt;getWorldTransform().getRotation();
+float angX,angY,angZ;
+quat.getEulerZYX(&amp;angZ,&amp;angY,&amp;angX);
+btVector3 angVel = carBody-&gt;getAngularVelocity();
+angVel.setZ(angVel.getZ() + -angZ);
+carBody-&gt;setAngularVelocity(angVel * someScalingFactor);
+</code></pre></div>
+
+When this didn't work, I tried something really simple:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13552&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 angVel = carBody-&gt;getAngularVelocity();
+angVel.setZ(-angVel.getZ());
+carBody-&gt;setAngularVelocity(angVel);
+</code></pre></div>
+And I noticed that actually did work... so long as the car was generally facing a straight direction. As soon as you turned it, it would glitch out. Which I assume is because it's getting angular velocity according to the world's Z axis, not the car's Z axis. <br>
+<br>
+How can I get and set angular velocity according to the body's orientation, or more generally correct an object tipping over on one axis?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Mon Mar 20, 2023 2:53 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">For a rolling motorcycle the tilt of the vehicle is a balance between the torque from gravity and that of the centripetal force.  In the case where the road is flat and the motorcycle has a forward speed and some tilt angle (from the vertical) then the torque balance relation looks like:    <br>
+  <br>
+    <strong class="text-strong">(1) mass * speed^2 * cos(angle) / radius = mass * gravity * sin(angle)</strong><br>
+  <br>
+Solving for <strong class="text-strong">radius</strong> we get:<br>
+  <br>
+    <strong class="text-strong">(2) radius = speed^2 * cot(angle) / gravity</strong><br>
+  <br>
+The centripetal force provides relation between <strong class="text-strong">speed</strong>, <strong class="text-strong">radius</strong>, and <strong class="text-strong">turn_rate</strong> <br>
+<br>
+    <strong class="text-strong">(3) speed = turn_rate * radius</strong><br>
+  <br>
+Solving <strong class="text-strong">(3)</strong> for <strong class="text-strong">turn_rate</strong> and substituting with <strong class="text-strong">(2)</strong> we get:<br>
+  <br>
+    <strong class="text-strong">(4) turn_rate = cot(angle) / (gravity * speed)</strong><br>
+<br>
+The more general case, where the road could be tilted is trickier but can be done using 3D math.  Assuming the motorcycle has both wheels on the road (no wheelies) and is in a balanced turn on a slanted road...<br>
+  <br>
+First define some direction vectors:   <br>
+  <br>
+    <strong class="text-strong">up</strong> = unit vector pointing opposite of gravity<br>
+    <strong class="text-strong">normal</strong> = normal of plane of the road                                                                                          <br>
+    <strong class="text-strong">dorsal</strong> = unit vector pointing up from motorcycle top and rider's head                 <br>
+    <strong class="text-strong">forward</strong> = direction of the motorcycle's velocity (assuming no fading around turn)<br>
+    <strong class="text-strong">sideways</strong> = forward (X) normal (where (X) is the cross product operator)<br>
+<br>
+The torque balance equation becomes:<br>
+<br>
+   <strong class="text-strong"> (5) ((mass * speed^2 / radius) * |(sideways (X) dorsal) (.) forward| = (mass * gravity) * |(dorsal (X) up) (.) forward|</strong><br>
+<br>
+Where <strong class="text-strong">(X)</strong> is the cross operation and <strong class="text-strong">(.)</strong> is the dot.  Note, I've taken the absolute value of the vector operation because we don't need to sweat the sign of each side: we know by assumption the motorcycle is in balance.  I've dotted both sides with <strong class="text-strong">forward</strong> to collapse the vector equation to scalar.  Effectively, I'm projecting the vector relation onto the only axis that matters: the one that is parallel to forward velocity of the motorcycle.<br>
+<br>
+I will introduce the following shorthand:<br>
+<br>
+    <strong class="text-strong">DxU.F = |(dorsal (X) up) (.) forward|</strong><br>
+    <strong class="text-strong">SxD.F = |(sideways (X) dorsal) (.) forward|</strong><br>
+  <br>
+And solving for <strong class="text-strong">radius</strong> gives:<br>
+<br>
+   <strong class="text-strong"> (6) radius = speed^2 * SxD.f / (gravity * DxU.f)</strong><br>
+<br>
+Plug <strong class="text-strong">(6)</strong> into <strong class="text-strong">(3)</strong> and solve for <strong class="text-strong">turn_rate</strong> to get:<br>
+  <br>
+    <strong class="text-strong">(7) turn_rate = speed * SxD.f / (gravity * DxU.f)</strong><br>
+<br>
+This provides the magnitude of the <strong class="text-strong">turn_rate</strong> as a function of the motorcycle's forward <strong class="text-strong">speed</strong> and the geometry of the road.  The axis of the associated <strong class="text-strong">angular_velocity</strong> vector is the <strong class="text-strong">normal</strong> of the road.  The sign <strong class="text-strong">(+/-)</strong> has been lost, but it can be recovered by checking the dot-product of dorsal and sideways, and the pseudo-code would look something like:<br>
+<br>
+    <strong class="text-strong">if (sideways (.) dorsal) &lt; 0.0 then sign = 1.0, else sign = -1.0</strong><br>
+    <strong class="text-strong">angular_velocity = sign * turn_rate * normal</strong><br>
+<br>
+Note: these vector relations are true in all reference frames, so it is ok do the math in the world-frame (e.g. when all direction vectors have been measured in or transformed to the world-frame), since that is the one in which you need to apply the final <strong class="text-strong">angular_velocity</strong>.<br>
+<br>
+This derivation really deserves a sketch to help visualize everything but I'm too lazy to draw, snap, and upload one.  That is left as an exercise for the reader.  I've double-checked my math, but it is possible I made a typo.  Best to walk through it and if you spot any problems or have questions please let me know.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Sat Mar 25, 2023 6:35 pm</strong></div>
+				<div class="author">by <strong>GeanGean</strong></div>
+				<div class="content">Thanks for taking the time to write such an involved reply.<br>
+Unfortunately I can't quite seem to get it to work.<br>
+Here's my attempt:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13552&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+            btRigidBody *car = common.brickCars[a]-&gt;body;
+
+            btTransform worldTransform = car-&gt;getWorldTransform();
+            worldTransform.setOrigin(btVector3(0,0,0));
+
+            btVector3 up = btVector3(0,1,0);
+            btVector3 normal = btVector3(0,1,0);
+            btVector3 dorsal = worldTransform.inverse() * up;
+            btVector3 forward = car-&gt;getLinearVelocity().normalized();
+
+            btVector3 sideways = btCross(forward,normal);
+            float dxuf = fabs(btDot(btCross(dorsal,up),forward));
+            float sxdf = fabs(btDot(btCross(sideways,dorsal),forward));
+
+            if(isnanf(dxuf))
+                continue;
+            if(isnanf(sxdf))
+                continue;
+            if(dxuf == 0)
+                continue;
+            if(sxdf == 0)
+                continue;
+
+            std::cout&lt;&lt;"DXUF: "&lt;&lt;dxuf&lt;&lt;" SXDF:"&lt;&lt;sxdf&lt;&lt;" Speed: "&lt;&lt;car-&gt;getLinearVelocity().length()&lt;&lt;" Gravity: "&lt;&lt;common.physicsWorld-&gt;getGravity().y()&lt;&lt;"\n";
+            float turn_rate = (car-&gt;getLinearVelocity().length() * sxdf) / (fabs(common.physicsWorld-&gt;getGravity().y()) * dxuf);
+            std::cout&lt;&lt;turn_rate&lt;&lt;"\n";
+
+            btVector3 angVel = (btDot(sideways,dorsal) &lt; 0.0 ? 1.0 : -1.0) * turn_rate * normal;
+            std::cout&lt;&lt;angVel.x()&lt;&lt;","&lt;&lt;angVel.y()&lt;&lt;","&lt;&lt;angVel.z()&lt;&lt;"\n";
+
+            car-&gt;setAngularVelocity(angVel);
+</code></pre></div>
+
+I think the most obvious problem is that if angular velocity is just turn_rate times the normal, and the normal is 0,1,0, (i.e. a flat ground pointing up) then the ang vel will just be vec3(0,something,0) aka a rotation around the Y axis. This makes me think I misinterpreted your statement "The axis of the associated angular_velocity vector is the normal of the road."</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Sun Mar 26, 2023 6:39 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I have fixed a few bugs in your code, and added a bunch of comments:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13552&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>            btRigidBody *car = common.brickCars[a]-&gt;body;
+
+            btTransform worldTransform = car-&gt;getWorldTransform();
+            worldTransform.setOrigin(btVector3(0,0,0));
+
+            btVector3 up = btVector3(0,1,0);
+
+            // When we set 'normal' to be 'up' we are assuming the road is flat
+            // (e.g. the motorcycle is driving on a flat plane).
+            // However, if the road banks around turns and/or goes up hills then
+            // what we really want to do is "measure" the road normal
+            // using custom logic, like ray-trace probes, or analyze the collision
+            // points of the vehicle's wheels to extract the true effective normal.
+            btVector3 normal = btVector3(0,1,0);
+
+            // worldTransform moves local-frame to world-frame
+            // so there is no need to invert it.
+            btVector3 dorsal = worldTransform * up;
+
+            // 'forward' is the world-frame version of 'localForward'
+            // I assume localForward points along negative Z-axis
+            // since that is often how avatars (and maybe vehicles too?) are modeled.
+            // If this is not the case then please update with correct local direction.
+            btVector3 localForward = btVector3(0, 0, -1);
+            btVector3 forward = worldTransform * localForward; // now in world-frame
+
+            // Note: 'sideways' is not 'right direction' of the vehicle
+            // but points 'right' along the plane of the road.
+            btVector3 sideways = btCross(forward,normal);
+
+            float dxuf = fabs(btDot(btCross(dorsal,up),forward));
+            float sxdf = fabs(btDot(btCross(sideways,dorsal),forward));
+
+            if(isnanf(dxuf))
+                continue;
+            if(isnanf(sxdf))
+                continue;
+            if(dxuf == 0)
+                continue;
+            if(sxdf == 0)
+                continue;
+            std::cout&lt;&lt;"DXUF: "&lt;&lt;dxuf&lt;&lt;" SXDF:"&lt;&lt;sxdf&lt;&lt;" Speed: "&lt;&lt;car-&gt;getLinearVelocity().length()&lt;&lt;" Gravity: "&lt;&lt;common.physicsWorld-&gt;getGravity().y()&lt;&lt;"\n";
+
+            // The motorcycle might have velocity components perpendicular to 'forward'
+            // (e.g. it might be sliding sideways, or rising/falling in the vertical)
+            // so we extract just the 'forward' component of its linearVelocity
+            // by dotting it with the 'forward' unit direction.
+            btVector3 linearVelocity = car-&gt;getLinearVelocity();
+            btScalar forwardSpeed = btDot(linearVelocity, forward);
+
+            // Assuming motorcycle is in a turn-balanced lean as it drives 'forward'
+            // we apply the formula to compute the angular speed of that turn.
+            float turn_rate = (forwardSpeed * sxdf) / (fabs(common.physicsWorld-&gt;getGravity().y()) * dxuf);
+            std::cout&lt;&lt;turn_rate&lt;&lt;"\n";
+
+            // Recover the direction of the turnVelocity by checking how 'dorsal' dots with 'sideways':
+            btVector3 turnVelocity = (btDot(sideways,dorsal) &lt; 0.0 ? 1.0 : -1.0) * turn_rate * normal;
+            std::cout&lt;&lt;turnVelocity.x()&lt;&lt;","&lt;&lt;turnVelocity.y()&lt;&lt;","&lt;&lt;turnVelocity.z()&lt;&lt;"\n";
+
+            // It is NOT a good idea to completely slam the angular velocity
+            // because this will override collision effects and will also prevent
+            // the motorcycle from leaning over! (which is a prerequisite for "turn-by-leaning")
+            //car-&gt;setAngularVelocity(angVel); // BAD!
+            //
+            // Instead we will "blend" the desired angular velocity onto the vehicle over time.
+            // This blend must happen every substep, which means we probably should put this logic
+            // in an custom "Action" (e.g. use btActionInterface), rather than applying it between
+            // calls to world-&gt;stepSimulation().
+            //
+            // DANGER!: this blend technique is unstable when BLEND_TIMESCALE &lt; SUBSTEP_DURATION!
+            // For best results BLEND_TIMESCALE should be at least three SUBSTEP_DURATIONs
+            // The easy way to 'tune' it is to set BLEND_TIMESCALE to be about 1/3 of the time
+            // you want for the object to achieve 90% of its target angular velocity.
+            // Hence in this example I've set it to be about 1/3 of a second, which means after
+            // 1 second the vehicle's angular velocity will slave almost completely to the target.
+            constexpr btScalar BLEND_TIMESCALE = 0.33;  // seconds
+            constexpr btScalar BLEND_COEFFICIENT = SUBSTEP_DURATION / BLEND_TIMESCALE;
+
+            // Blend the velocity by taking a weighted average between the real velocity and the target.
+            btVector3 angularVelocity = car-&gt;getAngularVelocity();
+            btVector3 newAngularVelocity = (1.0 - BLEND_COEFFICIENT) * angularVelocity + BLEND_COEFFICIENT * turnVelocity;
+            car-&gt;setAngularVelocity(newAngularVelocity);
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Sun Mar 26, 2023 7:09 pm</strong></div>
+				<div class="author">by <strong>GeanGean</strong></div>
+				<div class="content">Wouldn't the cross of dorsal and up be very close to 0 if the vehicle is standing upright?<br>
+If it, as dxdf, is the denominator in the calculation for turn_rate wouldn't turn_rate be INF when the vehicle is standing upright? I'd think it should be near 0 then?<br>
+<br>
+Also my question from the previous post still holds. A rotation of btVector3(0,x,0) is a rotation around the up-down axis, i.e. a change in yaw, not roll. Are you sure this is correct?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Mon Mar 27, 2023 4:31 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yes, I believe I made an error in my derivation.  Let me try again from scratch...<br>
+<br>
+I tried again on paper and took a <a href="https://photos.app.goo.gl/NScwLVH1muZeNjmn7" class="postlink">photo</a>.<br>
+<br>
+<strong class="text-strong">Fig1</strong> shows the leaning motorcycle.<br>
+<br>
+<strong class="text-strong">Fig2</strong> shows the balance of forces which apply torque on the center of mass with focal point where the tire touches the road.<br>
+<br>
+<strong class="text-strong">Fig3</strong> shows the vector directions used in the equations (although I realized now I forgot to draw the <strong class="text-strong">up</strong> direction which points opposite gravity and is not necessarily the same as the road normal N, since the road might be banked or going up/downhill).<br>
+<br>
+<strong class="text-strong">Fig4</strong> shows some triangle geometry used to derive the fact that line segment <strong class="text-strong">AB</strong> equals line segment <strong class="text-strong">BC</strong>.  Think of these segments as legs of a right triangle, and their values can be obtained by multiplying the hypotenuse with the dot-product (which provides <strong class="text-strong">sin(angle)</strong>) of the correct unit vectors that point parallel to the adjacent side.<br>
+<br>
+In the end I get this equation:<br>
+<br>
+<strong class="text-strong">w = ( g / v) ( D(x)F  (.) u ) / ( D(x)F  (.)  F(x)N )</strong><br>
+<br>
+where:<br>
+<strong class="text-strong">w</strong> = angular velocity of turn<br>
+<strong class="text-strong">g</strong> = acceleration of gravity<br>
+<strong class="text-strong">v</strong> = forward speed<br>
+<strong class="text-strong">D</strong> = dorsal unit vector<br>
+<strong class="text-strong">F</strong> = forward unit vector<br>
+<strong class="text-strong">u</strong> = up unit vector (opposite gravity)<br>
+<strong class="text-strong">N</strong> = normal of road plane (not necessarily the same as u)<br>
+<br>
+After all of that I realize I made a slight mistake for the most general case where the road normal is not parallel to gravity.  The direction of the component of gravitational force that is relevant to the turn balance is not parallel to gravity, but is parallel to the road normal <strong class="text-strong">N</strong>.  In other words: in the derivation you should replace <strong class="text-strong">u</strong> with <strong class="text-strong">u'</strong> where:<br>
+<br>
+<strong class="text-strong">u' = (u (.) N) N</strong><br>
+<br>
+Note: <strong class="text-strong">u'</strong> is not a unit vector but includes a <strong class="text-strong">sin(angle)</strong> factor from the dot product: <strong class="text-strong">u(.)N</strong><br>
+<br>
+As to the direction of the angular velocity:  We're talking about a changing yaw of the motorcycle as it drives in a circle, NOT the roll of the bike which provides the angle theta, used in the force-balance equation.  In other words, the game player controls the roll (via a joystick, or button mashing) and the result is the bike yaws about a circle.<br>
+<br>
+Edited: supplied correct link to google shared photo.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Mon Mar 27, 2023 5:10 am</strong></div>
+				<div class="author">by <strong>GeanGean</strong></div>
+				<div class="content">Before I take an in-depth look, it appears your link 404's for me. Maybe you tried to link to a private google drive?<br>
+
+<blockquote class="uncited"><div>
+As to the direction of the angular velocity: We're talking about a changing yaw of the motorcycle as it drives in a circle, NOT the roll of the bike which provides the angle theta, used in the force-balance equation. In other words, the game player controls the roll (via a joystick, or button mashing) and the result is the bike yaws about a circle.
+</div></blockquote>
+I hadn't realized that was what you were trying to do until now.<br>
+Bear in mind, this is a raycast vehicle, so the steering is done through that interface. It's just that I don't want the bike to tip over.<br>
+<br>
+Other than that I'll take a look at your picture when the link is fixed.<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Getting and setting angular velocity in body space?</h3>
+				<div class="date">Posted: <strong>Mon Mar 27, 2023 8:11 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Sorry about that.  I updated the link to what I hope is a publicly shared google photo.<br>
+<br>
+Yes, I guess I misunderstood your problem.  I still might not understand it but I'll take another swing (let me know if this is in the right direction).<br>
+<br>
+If the vehicle is being steered directly... and you're trying to tilt it so that it remains balanced... I guess you want to do the inverse problem where you measure the yaw component of angular velocity (e.g. the angular speed of the turn) and then roll the vehicle such that it's dorsal direction makes an angle 'theta" relative to "up".<br>
+<br>
+Drawing a sketch and using similar right triangles the scalar balance equation becomes:<br>
+<br>
+<strong class="text-strong">(1) (m * V^2 / R) * cos(theta) = m * g * sin(theta)</strong><br>
+<br>
+where:<br>
+<strong class="text-strong">m</strong> = mass<br>
+<strong class="text-strong">g</strong> = magnitude of gravity<br>
+<strong class="text-strong">V</strong> = forward speed<br>
+<strong class="text-strong">R</strong> = radius of turn<br>
+<br>
+Solving for <strong class="text-strong">theta</strong> gives:<br>
+<br>
+<strong class="text-strong">(2) theta = atan( V^2 / (R * g) )</strong><br>
+<br>
+Meanwhile the forward velocity (<strong class="text-strong">V</strong>)  is related to the radius of turn (<strong class="text-strong">R</strong>) and the angular velocity of the turn (<strong class="text-strong">w</strong>):<br>
+<br>
+<strong class="text-strong">(3) V = w * R</strong><br>
+<br>
+Solving for <strong class="text-strong">R</strong> and substituting into <strong class="text-strong">(2)</strong> we get:<br>
+<strong class="text-strong">(4) theta = atan( V * w / g)</strong><br>
+<br>
+Knowing the correct tilt angle is only half the battle.  The rest of the work is figuring out how to ease the vehicle into that orientation.  My preferred method is to measure a <strong class="text-strong">delta_theta</strong> between the current tilt and the target.  Then blend the current angular velocity toward a value that would exponentially reduce the delta.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

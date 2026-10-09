@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Serialization</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Serialization</h2>
+		<p><a href="viewtopic.php%3Ft=6077.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6077</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Serialization</h3>
+				<div class="date">Posted: <strong>Sun Dec 05, 2010 10:05 pm</strong></div>
+				<div class="author">by <strong>WÃ¼mpftlbrÃ¼mpftl</strong></div>
+				<div class="content">Hi guys,<br>
+<br>
+I'm currently trying to save and read collisionshape data in/from a file. To do this I tried to serialize the data like Erwin describes <a href="viewtopic.php%3Ft=4780.html" class="postlink">here</a>.<br>
+The saving process seems to work well, but when I want to recreate the saved collisionshape with btBulletWorldImporter, it tells me that there aren't any collisionshapes. I stepped into the loading methods with the debugger - it seems that there is no parsing. Then I tried first to create a btBulletFile with my data from the file but this time I got an assertion.<br>
+<br>
+My saving code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6077&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// ...
+int maxSerializeBufferSize = 1024*1024*5;
+btDefaultSerializer Serializer(maxSerializeBufferSize);
+Serializer.startSerialization();
+if(m_pCollisionShape)
+     m_pCollisionShape-&gt;serializeSingleShape(&amp;Serializer);
+else
+{
+     btBoxShape BoxShape(btVector3(2,2,2));
+     BoxShape.serializeSingleShape(&amp;Serializer);
+}
+Serializer.finishSerialization();
+
+FileOut.CollisionShapeDataSize = Serializer.getCurrentBufferSize();
+
+std::ofstream Stream(GetFilename());
+Stream.write((char*)&amp;FileOut, sizeof(File));
+Stream.write((char*)Serializer.getBufferPointer(), FileOut.CollisionShapeDataSize);</code></pre></div>
+
+The code for the loading
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6077&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// ...
+char* pCollisionShapeData = new char[FileIn.CollisionShapeDataSize];
+Stream.read(pCollisionShapeData, FileIn.CollisionShapeDataSize);
+
+btBulletWorldImporter Importer(0);
+if(Importer.loadFileFromMemory(pCollisionShapeData, FileIn.CollisionShapeDataSize) &amp;&amp; Importer.getNumCollisionShapes())
+{
+    btCollisionShape* pShape = Importer.getCollisionShapeByIndex(0);
+    if(pShape-&gt;getShapeType() == BOX_SHAPE_PROXYTYPE)
+        m_pCollisionShape = new btBoxShape(*static_cast&lt;btBoxShape*&gt;(pShape));
+    else if(pShape-&gt;getShapeType() == TRIANGLE_MESH_SHAPE_PROXYTYPE)
+        m_pCollisionShape = new btBvhTriangleMeshShape(*static_cast&lt;btBvhTriangleMeshShape*&gt;(pShape));
+}
+else
+{
+    // ...
+}
+delete[] pCollisionShapeData;</code></pre></div>
+
+Has anyone an idea what I am doing wrong or could try next?<br>
+Thanks for your answers <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serialization</h3>
+				<div class="date">Posted: <strong>Mon Dec 06, 2010 9:33 am</strong></div>
+				<div class="author">by <strong>PeterMacGonagan</strong></div>
+				<div class="content">May be this tutorial will help you: <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Bullet_binary_serialization" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... ialization</a><br>
+<br>
+Post the answer if you find it, please.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serialization</h3>
+				<div class="date">Posted: <strong>Mon Dec 06, 2010 1:29 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The btBulletWorldImporter can only be used in combination with world::serialize.<br>
+<br>
+If you use manual single object/shape serialization, you will need to write your own custom importer.<br>
+<br>
+We cannot support all custom work, so please use the world serialize method if you get stuck.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serialization</h3>
+				<div class="date">Posted: <strong>Mon Dec 06, 2010 9:26 pm</strong></div>
+				<div class="author">by <strong>WÃ¼mpftlbrÃ¼mpftl</strong></div>
+				<div class="content">Too bad... my world is splitted into several pages, so this could become quite tricky<br>
+But thank you for the quick answer <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serialization</h3>
+				<div class="date">Posted: <strong>Mon Dec 06, 2010 9:37 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Wümpftlbrümpftl wrote:</cite>Too bad... my world is splitted into several pages, so this could become quite tricky<br>
+But thank you for the quick answer <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div></blockquote>
+
+It shouldn't be hard to import just some collision shapes. The code is already in the btBulletWorldImporter.<br>
+On Windows, you can inspect the contents of a .bullet file using the <a href="http://code.google.com/p/gamekit/downloads/detail?name=FileInspector-Win32-749.zip&amp;can=2&amp;q=" class="postlink">File Inspector</a>. Use File/inspect file.<br>
+<br>
+Can you attach a (zipped) .bullet file, so we can see if there are actual collision shapes in there?<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serialization</h3>
+				<div class="date">Posted: <strong>Tue Dec 07, 2010 9:54 am</strong></div>
+				<div class="author">by <strong>WÃ¼mpftlbrÃ¼mpftl</strong></div>
+				<div class="content">I split the collisionshape data from the rest of my file (by droping the last but one line of my saving code) and tried to load this as bullet file with the FileInspector which returned a "Failed to allocate memory!" error.<br>
+Here is the file as you suggested <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serialization</h3>
+				<div class="date">Posted: <strong>Fri Dec 10, 2010 12:40 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There is an error in the serialization DNA.<br>
+<br>
+All 0a seems to be preceded by 0d, did you apply some dos/unix line-feed conversion to that binary file btSerializer.cpp or the .bullet file?<br>
+Please revert to an unmodified btSerializer.cpp<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serialization</h3>
+				<div class="date">Posted: <strong>Thu Dec 30, 2010 1:11 pm</strong></div>
+				<div class="author">by <strong>Ripgiblet</strong></div>
+				<div class="content">Some questions:<br>
+1)Does serializeSingleShape work for btHeightfieldTerrainShape?<br>
+2)How to convert from btHeightfieldTerrainShape to btBvhTriangleMeshShape?<br>
+<br>
+NOTES:<br>
+I am having trouble getting btHeightfieldTerrainShape to serialize, I have successfully serialized many other shapes including btBvhTriangleMeshShape. So if I could convert from btHeightfieldTerrainShape to btBvhTriangleMeshShape, or some other object that I can convert to , serialize out, load, then convert back.<br>
+ <img class="smilies" src="images/smilies/icon_mrgreen.gif" width="15" height="15" alt=":mrgreen:" title="Mr. Green"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

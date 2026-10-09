@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; why do btRigidBody objects land on ground on thin edge?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>why do btRigidBody objects land on ground on thin edge?</h2>
+		<p><a href="viewtopic.php%3Ft=13483.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13483</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>why do btRigidBody objects land on ground on thin edge?</h3>
+				<div class="date">Posted: <strong>Mon Oct 03, 2022 6:22 pm</strong></div>
+				<div class="author">by <strong>ed_welch</strong></div>
+				<div class="content">When I drop objects on the ground I always get objects landing on the thin edge of the object, when it should topple over onto the flat edge. About 30% of the time this happens. Does anyone know a solution to this problem?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: why do btRigidBody objects land on ground on thin edge?</h3>
+				<div class="date">Posted: <strong>Mon Oct 10, 2022 2:22 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">In Bullet dynamic objects will be deactivated if their linear and angular speeds are below some thresholds for at least 2 seconds.  When the sleeping thresholds are too high, or when there is too much damping or energy loss (low restitution), it is possible for objects to balance long enough to be deactivated while near an unstable equilibrium.<br>
+<br>
+The default speeds are: linear = 0.8 m/sec and angular = 1.0 rad/sec.  These numbers might be too small for your simulation, especially if you're using weak gravity.<br>
+<br>
+You can change the sleeping speed thresholds via <strong class="text-strong">btRigidBody::setSleepingThresholds(linear_speed, angular_speed)</strong>.<br>
+<br>
+Here are some strategies that might help solve the problem of early deactivation:<br>
+<br>
+<strong class="text-strong">(1)</strong> Decrease the sleeping thresholds<br>
+<strong class="text-strong">(2)</strong> When you create new objects give them a slight non-zero random angular velocity<br>
+<strong class="text-strong">(3)</strong> Increase restitution (bounciness) of the objects involved in collision<br>
+<strong class="text-strong">(4)</strong> Reduce damping and/or friction  <br>
+<br>
+Note: for some content... if you tune some of those numbers too far you can end up with some objects that <strong class="text-strong">never</strong> deactivate.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: why do btRigidBody objects land on ground on thin edge?</h3>
+				<div class="date">Posted: <strong>Tue Oct 18, 2022 10:14 am</strong></div>
+				<div class="author">by <strong>ed_welch</strong></div>
+				<div class="content">Thanks for you answer  drleviathan.<br>
+I am using normal value for gravity.<br>
+I tried messing around with the different parameters, but it does not seem to make any difference. <br>
+I tried modifying m_friction, m_spinningFriction, m_restitution, m_rollingFriction to various values<br>
+I set setAngularVelocity to value above 2 always<br>
+I made setSleepingThresholds very low, <br>
+then tried fooling around with setDamping and setDeactivationTime<br>
+but I still have the problem.<br>
+there are so many different values it's nearly impossible to try all the possible permutations</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: why do btRigidBody objects land on ground on thin edge?</h3>
+				<div class="date">Posted: <strong>Wed Feb 08, 2023 12:54 am</strong></div>
+				<div class="author">by <strong>ed_welch</strong></div>
+				<div class="content">I think I have solved the problem for most cases. <br>
+Actually, I think changing the default values was what actually caused the problem. Mucking around with m_rollingFriction, m_spinningFriction, SleepingThresholds, Damping and DeactivationTime made everything worse. You should leave these at defaults.<br>
+I am animating a door that is blown to pieces. (<a href="https://vimeo.com/manage/videos/757654546" class="postlink">https://vimeo.com/manage/videos/757654546</a>)<br>
+I had many problems because the pieces start out close together and get embebbed in each other. I solved this problem by explicitly calling stepSimulation(0.0001f) right after the explosion. That's an extra step apart from the one in the game loop and it helps stuff not get embedded in other stuff because the time interval is so small.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

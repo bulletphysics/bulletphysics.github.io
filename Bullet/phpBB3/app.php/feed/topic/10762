@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10762" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2015-08-20T19:05:16+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/10762</id>
+
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2015-08-20T19:05:16+00:00</updated>
+
+		<published>2015-08-20T19:05:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36103#p36103</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36103#p36103"/>
+		<title type="html"><![CDATA[Re: PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36103#p36103"><![CDATA[
+I apologize for not having grasped what was happening in your slide, as it relates to the code I am looking at. It does indeed now make sense.<br><br>What advantages does sequential impulse have over PGS?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Thu Aug 20, 2015 7:05 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2015-08-20T18:56:27+00:00</updated>
+
+		<published>2015-08-20T18:56:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36102#p36102</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36102#p36102"/>
+		<title type="html"><![CDATA[Re: PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36102#p36102"><![CDATA[
+<blockquote class="uncited"><div>What I am concerned about is that the LaGrange multipliers are accumulated and applied to the body after the iterations are run, and nothing is updated other than the accumulated impulses.</div></blockquote>This is exactly what happens in PGS, as you can see in the right part of my previous slide. You only need to update the Lagrange multiplier (x<em class="text-italics"> in that code). It is perfectly fine to update the velocity of the object after you are done solving. What is unclear about this?</em><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Aug 20, 2015 6:56 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2015-08-20T18:34:32+00:00</updated>
+
+		<published>2015-08-20T18:34:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36101#p36101</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36101#p36101"/>
+		<title type="html"><![CDATA[Re: PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36101#p36101"><![CDATA[
+Erwin,<br><br>Thanks for the reply.<br><br>I suspect that there is a language issue in my code then because it does solve for the LaGrange multipliers but the maths are different to your example. Certainly there is a projection of each body's accumulated linear and angular impulses onto each row's jocobian. What I am concerned about is that the LaGrange multipliers are accumulated and applied to the body after the iterations are run, and nothing is updated other than the accumulated impulses. The iterations run until the maximum change in lambda across all the rows is below a threshold, or the number of iterations is has reached a maximum value.<br><br>It all seems a bit odd, but perhaps it is how things were done some time ago before we had more horsepower to update these values each iteration.<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Thu Aug 20, 2015 6:34 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2015-08-20T16:13:20+00:00</updated>
+
+		<published>2015-08-20T16:13:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36100#p36100</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36100#p36100"/>
+		<title type="html"><![CDATA[Re: PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36100#p36100"><![CDATA[
+Sequential Impulse is mathematically equivalent to Projected Gauss Seidel, it is just an implementation detail where to store the accumulated impulse (also known as delta velocity, acceleration or Lagrange multiplier).<br><br>Here is a screenshot of a slide of my recent presentation at SIGGRAPH that could help you clarifying it.<br>Either you re-compute the delta based on the body velocity (projected onto the normal/Jacobian) or you use the x vector.<br>When storing the applied impulse in the rigid body using apply impulse, you basically convert the impulse into world space. THen you have to project the velocity back in constraint space using the dot project. When using plain PGS, this conversion is not needed. <br><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1348" class="postimage" alt="SI_vs_PGS.png" onclick="viewableArea(this);" /></dt></dl></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Aug 20, 2015 4:13 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2015-08-20T16:12:53+00:00</updated>
+
+		<published>2015-08-20T16:12:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36099#p36099</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36099#p36099"/>
+		<title type="html"><![CDATA[Re: PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36099#p36099"><![CDATA[
+Well, it probably needs to accumulate the impulse for other purposes (limits, warmstarting, constraint breakage, debugging, etc.). But I personally don't know how a PGS solver could work without updated velocities each iteration.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Thu Aug 20, 2015 4:12 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2015-08-20T15:56:37+00:00</updated>
+
+		<published>2015-08-20T15:56:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36098#p36098</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36098#p36098"/>
+		<title type="html"><![CDATA[Re: PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36098#p36098"><![CDATA[
+Bone,<br><br>It is accumulating something each step, but it appears it is accumulating linear and angular impulse components, not velocities, unless I am reading the code and the comments wrong - I wish I could share more code but I can't. What confuses me is that none of he solver rows are recalculated after each iteration - for example, in box2d, after each step the constraint is re-evaluated. In our system once the solver rows are created from the constraints they are unchanged during the iterations. They appear as generic rows with linear and angular components for A &amp; B bodies, min and max clamping, current lambda, and some other terms with no tie back to the original constraints.<br><br>I'll sit down and compare the maths with some papers again and see if it is just a difference in terminology.<br><br>Thanks<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Thu Aug 20, 2015 3:56 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2015-08-20T14:01:50+00:00</updated>
+
+		<published>2015-08-20T14:01:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36097#p36097</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36097#p36097"/>
+		<title type="html"><![CDATA[Re: PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36097#p36097"><![CDATA[
+For the subsequent iterations to actually do something useful, I think the velocity has to be updated and stored <em class="text-italics">somewhere</em>. But it's possible that it is not being stored in the rigid body object itself. Are you sure that the velocity isn't being copied somewhere before the first iteration (for example, to a solution matrix), and used from that auxiliary location?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Thu Aug 20, 2015 2:01 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2015-08-19T18:12:28+00:00</updated>
+
+		<published>2015-08-19T18:12:28+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36094#p36094</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36094#p36094"/>
+		<title type="html"><![CDATA[PGS accumulating impulses vs applying each step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=36094#p36094"><![CDATA[
+In the solver I inherited we use PGS to determine the appropriate impulse to apply to each body based on the constraint rows. What I'm confused about is that our solver runs a series of iterations, and once complete calculates the total forces for a rigid body (F = Impulse * deltaT + Fext), and applies them, integrating the velocity ( V = F * DeltaT ), and the position ( P1 = P0 + V * DeltT ) of the object. This is <strong class="text-strong">not done </strong>in the iteration loop, but once the loop is complete.<br><br>When I look at Erin Catto's presentations, and other simulations, it appears as if the object's velocity is updated within the iteration of the solver and the position updated at the end.<br><br>I'm not clear what the distinction between the two solvers is - or why the distinction was made - the original author of our system isn't available for comment - but I wonder which is more stable and performant?<br><br>Any input would help.<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Wed Aug 19, 2015 6:12 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

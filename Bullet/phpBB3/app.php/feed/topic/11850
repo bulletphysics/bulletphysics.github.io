@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11850" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2017-09-09T21:49:12+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11850</id>
+
+		<entry>
+		<author><name><![CDATA[RandyGaul]]></name></author>
+		<updated>2017-09-09T21:49:12+00:00</updated>
+
+		<published>2017-09-09T21:49:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39926#p39926</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39926#p39926"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39926#p39926"><![CDATA[
+You can find your planes by performing plane slicing. Start with a simple convex shape, like an AABB, and slice it with many planes. Something like this:<br><div class="codebox"><p>Code: </p><pre><code>AABB bounds = WrapAllPoints(points, extra_radius);std::vector&lt;ConvexHull&gt; hulls;for (int i = 0; i &lt; points.size(); ++i){Point a = points[i];ConvexHull hull;hull.Init(bounds);for (int j = 0; j &lt; points.size(); ++j){Point b = points[j];Plane p;p.normal = Normalize(b - a);p.distance = Dot(p.normal, a);Slice(hull, p, i, j);}hulls.push_back(hull);}</code></pre></div>The Slice function can be tricky to write, but with some hard work you can implement it yourself. The trick is to store indices of points along with each slice, so the final hull can store all bounding planes and the indices of each point involved.<br><br>Once all hulls are gathered up they are already connected in a graph data structure. Each hull contains a list of planes. Each plane contains two indices to another hull. Hulls are identified by the index of the associated point (index i in the above code). The graph can be traversed from hull, to plane, to adjacent hull.<br><br>This algorithm should be able to construct the Voronoi diagram.<br><br>Note: I've never implemented the Voronoi diagram function itself, but have implemented plane slicing like I described here, so it should all work.<br><br>Of course, this algorithm does not find the radius of a given point. For example, the exterior sites in your diagrams are surrounded by a spherical surface; you would need another algorithm to find these surfaces somehow. You would also need to prune leftover planes from the initial AABB (which can be represented in the final hull with -1 indices in the above algorithm), and replace them with the spherical surface somehow.<br><br>This is an O(N*N) algorithm.<br><br>Edit:<br>You could also try using a library to find the Voronoi Diagram. For example qhull library can be used to achieve this in O(N*log(N)) time.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10235">RandyGaul</a> — Sat Sep 09, 2017 9:49 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[EtK]]></name></author>
+		<updated>2017-09-08T08:19:51+00:00</updated>
+
+		<published>2017-09-08T08:19:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39923#p39923</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39923#p39923"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39923#p39923"><![CDATA[
+<blockquote class="uncited"><div>I would point out the interior of the bubbles form a 3D Voronoi diagram.</div></blockquote>Yes, that's it. <br><br>I already knew, but thanks for bringing it up, it is a interesting reference.<br><br>It has lead me to check the Voronoi diagram algorithm. The method most used is 'Edge Flip Algorithm for Delaunay Triangulation', and for DL I found this lecture:<br><br><a href="http://www.cs.uu.nl/docs/vakken/ga/slides9alt.pdf" class="postlink">http://www.cs.uu.nl/docs/vakken/ga/slides9alt.pdf</a> (1.2 Mb)<br><br><img src="http://800million.org/bullet1/Voronoi.jpg" class="postimage" alt="Image"><br><br>An other cool reference is this paper on 'Quasi-static Simulation of Foam in the Vertex Model' that uses a dual mesh based on centroids:<br><br><a href="https://youtu.be/DN23diqRAGY" class="postlink">https://youtu.be/DN23diqRAGY</a> (clip)<br><br><a href="http://image.diku.dk/kenny/download/vedel_larsen.10.pdf" class="postlink">http://image.diku.dk/kenny/download/vedel_larsen.10.pdf</a> (7.2 Mb)<br><br><img src="http://800million.org/bullet1/dual_mesh.jpg" class="postimage" alt="Image"><br><br><img src="http://800million.org/bullet1/Centroids.png" class="postimage" alt="Image"><br><br>--<br><br>Anyway, this is far above my head, if a mathematician among you can think of how to connect the dots, and come up with a (partial) solution for the network, than don't hesitate to contact me.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10260">EtK</a> — Fri Sep 08, 2017 8:19 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[RandyGaul]]></name></author>
+		<updated>2017-09-07T22:46:08+00:00</updated>
+
+		<published>2017-09-07T22:46:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39920#p39920</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39920#p39920"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39920#p39920"><![CDATA[
+I would point out the interior of the bubbles form a 3D Voronoi diagram.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10235">RandyGaul</a> — Thu Sep 07, 2017 10:46 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[EtK]]></name></author>
+		<updated>2017-09-07T21:42:08+00:00</updated>
+
+		<published>2017-09-07T21:42:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39919#p39919</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39919#p39919"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39919#p39919"><![CDATA[
+<blockquote class="uncited"><div>Looks like a fascinating project!</div></blockquote>Thanks!<br><blockquote class="uncited"><div>We brushed on this earlier, but how does the transition from 2-D to 3-D affect those intersections (the red and black dots from the original post)? I can't immediately picture if there would still be only two classifications of intersections.</div></blockquote>Indeed when you go into 3D and you look at a foam, then the edges (ribs) can be between 3 or 4 spheres and so the centroids also depend on more 'dots', it becomes more complicated but the concept stays the same. But for now 2D is good enough to experiment.<br><blockquote class="uncited"><div>Anyway, wish I could help more but I'm solidly committed to other projects.</div></blockquote>Drop your other projects, this is a once in a lifetime opportunity! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_mrgreen.gif" width="15" height="15" alt=":mrgreen:" title="Mr. Green"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10260">EtK</a> — Thu Sep 07, 2017 9:42 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2017-09-07T14:28:26+00:00</updated>
+
+		<published>2017-09-07T14:28:26+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39915#p39915</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39915#p39915"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39915#p39915"><![CDATA[
+Looks like a fascinating project!<br><br>We brushed on this earlier, but how does the transition from 2-D to 3-D affect those intersections (the red and black dots from the original post)? I can't immediately picture if there would still be only two classifications of intersections.<br><br>Anyway, wish I could help more but I'm solidly committed to other projects.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Thu Sep 07, 2017 2:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[EtK]]></name></author>
+		<updated>2017-09-02T08:26:35+00:00</updated>
+
+		<published>2017-09-02T08:26:35+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39891#p39891</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39891#p39891"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39891#p39891"><![CDATA[
+Hello,<br><br>I have been on the creative-side of developing this <strong class="text-strong">Dynamic Foam</strong> project with 'AstroCoder', and here is some extra information for why those centroids need to be connected and form a network.<br><br><strong class="text-strong">I. Dynamic Medium<br>II. Fields and Boids<br>III. From Boids to a PBD Network<br>IV. Curling Motion<br>V. PBD<br>VI. Conclusion</strong><br><br>--<br><br><span style="text-decoration:underline"><strong class="text-strong">I. Dynamic Medium</strong></span><br><br>The goal of this project is to create a kind on a Zero-player game, a bit like Conway's Game of Life, where cells fluctuate based on surrounding cells, and where the goal to generate Knots within a Dynamic Medium.<br><br>To get a sense of such a dynamic network think of a foam with bubbles (volumes) where a micro-fluid runs through the edges (currents). These currents move from high to low pressure, forming circuits. The intensity of the fluid passing the bubbles can make the bubbles shrink or expand. Some currents will be able to line up and form closed circuits. <br> <br>In 2D these structures are simple loops, in 3D these loops can form strings, and in a next step these strings form again closed-circuits -&gt; knots.<br><br><img src="http://www.800million.org/bullet1/foam_network_knots.jpg" class="postimage" alt="Image"><br><br>--<br><br><strong class="text-strong"><span style="text-decoration:underline">II. Fields and Boids</span></strong><br><br>One way to get a model of bubbles and currents going was by using Boid-particles and Fields, which was tried in <a href="http://processing.org" class="postlink">Processing</a>. Here are short clips to show the interaction:<br><br>• <a href="http://imgur.com/a/Mp0SG" class="postlink">http://imgur.com/a/Mp0SG</a> <br>• <a href="https://vimeo.com/user37290268" class="postlink">https://vimeo.com/user37290268</a><br><br>A. In the first clip the Fields (red circles) keep their size while the small particles flow in between and form a circuit.<br><br><img src="http://www.800million.org/bullet1/Stable.png" class="postimage" alt="Image"><br><br>B. In the second version the size of the Fields is influenced by the number of particles within. This gives rise to a dynamic foam with Fields fluctuating. Expand &lt;-&gt; Shrink<br><br><img src="http://www.800million.org/bullet1/chaos.png" class="postimage" alt="Image"><br><br>--<br><br><strong class="text-strong"><span style="text-decoration:underline">III. From Boids to a PBD Network</span></strong><br><br>The problem with using Boids is that they have their limitations whereby the quick expansion of Fields causes the particles to be splattered around, interrupting the steady current. (stable flow vs. splashed around)<br><br><img src="http://www.800million.org/bullet1/SteadyWild.png" class="postimage" alt="Image"><br><br>Keeping the Boid-particles flowing is important, because a flow-circuit gives rise to organisational rules such as flows going against each other block each other, others can go along and strengthen each other, similar to an electronic circuit:<br><br><img src="http://www.800million.org/bullet1/circuit_1.jpg" class="postimage" alt="Image"><br><br>So to fix these problems a move to PBD was made and hoping to create a network model (nodes/edges) that replaces the small particles.<br><br>The flow replaced by edges:<br><br><img src="http://www.800million.org/bullet1/Flow_2.png" class="postimage" alt="Image"><br><br>Fields expanding and shrinking depending on the amount of flow through the edges:<br><br><img src="http://www.800million.org/bullet1/Flow_1.png" class="postimage" alt="Image"><br><br>• Having two Fields A.B. and in between from point a. to b. an edge.<br>• This edges (a.b.) can replace all the boids moving in between (A.B.)<br>• Edge (a.b.) can represents 1 or 1 million small particles or more, simplification.<br>• Between Field A. and B. a measurement of tension •-VVVVV-•  (A/B)<br>• The more tension between (A.B.) the less flow there can be in (a.b.)<br>• Inverse the more flow there is in (a.b.) the less tension between (A.B.)<br>• The edge (a.b.) runs through the Fields A. and B, cooling or heating up Fields A. and B.<br>• Through edge (a.b.) runs a current the larger this current the bigger the Fields A. and B. become, expansion vs. shrinking, hot vs. cold, condense vs. vaporise.<br><br><img src="http://www.800million.org/bullet1/Shrink2.jpg" class="postimage" alt="Image"><br><br>The inspiration for the move to 'Position Based Dynamics' came from a talk by Jos Stam where he explained a method explicit on position and using springs:<br><br><a href="http://www.birs.ca/events/2014/5-day-workshops/14w5147/videos/watch/201402191414-Stam.html" class="postlink">http://www.birs.ca/events/2014/5-day-wo ... -Stam.html</a><br><a href="http://www.birs.ca//workshops//2014/14w5147/files/Stam-BIRS-2014.pdf" class="postlink">http://www.birs.ca//workshops//2014/14w ... S-2014.pdf</a><br><br><img src="http://www.800million.org/bullet1/JosStam_Nucleus_PBD.jpg" class="postimage" alt="Image"><br><br>--<br><br><strong class="text-strong"><span style="text-decoration:underline">IV. Curling Motion to Strings</span></strong><br><br>At the basis of this Dynamic Foam is the idea to get the bubbles moving through the medium based on self regulated currents between the bubbles:<br><br><img src="http://www.800million.org/bullet1/bubble.jpeg" class="postimage" alt="Image"><br><br>The mechanics are like a sliding-puzzle where the parts can move to where there is space (created):<br><br><img src="http://www.800million.org/bullet1/SlidingPuzzle.jpg" class="postimage" alt="Image"><br><br>Space can be created by letting the bubbles shrink on one side and expand on the other, so they can move into that created space, and as a result we get fluctuations and a rolling-curling-motion:<br><br><img src="http://www.800million.org/bullet1/Roll_Flow_bubbles.gif" class="postimage" alt="Image"><br><br>Here is a fun animation that is similar to the idea: <br><a href="https://imgur.com/gallery/xIUGOd9" class="postlink">https://imgur.com/gallery/xIUGOd9</a><br><br><img src="http://www.800million.org/bullet1/Roll.jpg" class="postimage" alt="Image"><br><br>But for those lemons the input-force is gravity, in my model it are the micro-fluid-currents that effect the size. If the fluid is colder than the bubble than it will condensate and the field will expand; when it is warmer the field will vaporise and shrink. The dynamic curing motion from above, could also turn around and close-loop into knots:<br><br><img src="http://www.800million.org/bullet1/Curling1.jpg" class="postimage" alt="Image"><br><br>In 3D the wind up curls would be like these folk dansers waving strings:<br><a href="http://www.youtube.com/watch?v=uvE5yt83WPU" class="postlink">http://www.youtube.com/watch?v=uvE5yt83WPU</a> (at 1:44)<br><br><img src="http://www.800million.org/bullet1/strings.jpg" class="postimage" alt="Image"><br><br>These strings can turn into knots etc. etc.<br><br>--<br><br><strong class="text-strong"><span style="text-decoration:underline">V. PBD</span></strong><br><br>For a look at the current situation you can check this short clip, where a small network is in place based on centroids, and where the volumes can fluctuate:<br><br><a href="http://imgur.com/QSG71hW" class="postlink">http://imgur.com/QSG71hW</a><br><br><img src="http://www.800million.org/bullet1/Dynamics.jpg" class="postimage" alt="Image"><br><br>Here is are the project files on GitHub if you would like to have a closer look:<br>• <a href="https://github.com/VirtualOrganics/PBD_DynamicFoam_Files" class="postlink">https://github.com/VirtualOrganics/PBD_ ... Foam_Files</a><br>• <a href="https://github.com/InteractiveComputerGraphics/PositionBasedDynamics" class="postlink">https://github.com/InteractiveComputerG ... edDynamics</a> (The PDB library that's used)<br><br>--<br><br><strong class="text-strong"><span style="text-decoration:underline">VI. Conclusion</span></strong><br><br>As you have noticed in the OP we are stuck expanding the network and creating the Dynamic Foam. So I'm now looking for a developer who can expand the current program and take it to the next level. It doesn't necessarily need to be in PBD an some Physics Engine might work; where on top of the physics-interactions a network-formula can balance out the weights and regulate the system.<br><br>All suggestions and questions are more than welcome!<br><br>Best,<br>m.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10260">EtK</a> — Sat Sep 02, 2017 8:26 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2017-08-31T14:43:23+00:00</updated>
+
+		<published>2017-08-31T14:43:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39877#p39877</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39877#p39877"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39877#p39877"><![CDATA[
+Ahh, I misunderstood one sentence in your first post. The previous algorithm could be expanded a bit:<div class="codebox"><p>Code: </p><pre><code>for every red dot  for every red dot    if they share exactly two circles (if they're actually the same red dot, they'll "share" three circles)      connect them  for every black dot    if they share two circles      connect them</code></pre></div>Efficiency could be improved if the circles had a list of the dots that were on them. It might look simple, but the algorithm might end up more complex once you get into the implementation, though. Something like:<div class="codebox"><p>Code: </p><pre><code>for every circle  for every dot on that circle    for every dot on that circle      if they share exactly two circles        connect them</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Thu Aug 31, 2017 2:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[AstroCoder]]></name></author>
+		<updated>2017-08-30T12:16:13+00:00</updated>
+
+		<published>2017-08-30T12:16:13+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39872#p39872</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39872#p39872"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39872#p39872"><![CDATA[
+Thank you, bone, for the response.  It doesn't look like your suggested algorithm would be able to connect red dots to other red dots.<br><br>What other information do you need to improve the efficiency of this algorithm?<br><br>Cheers,<br>AstroCoder<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12340">AstroCoder</a> — Wed Aug 30, 2017 12:16 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2017-08-28T18:46:53+00:00</updated>
+
+		<published>2017-08-28T18:46:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39869#p39869</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39869#p39869"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39869#p39869"><![CDATA[
+Well, in a simple brute force algorithm form, it's just going to be:<div class="codebox"><p>Code: </p><pre><code>for every red dot  for every black dot    if they share two circles      connect them</code></pre></div>The caveats are:<br>1) That's inefficient, but that's part of why I mentioned what information you have, because it can be made far more efficient, and<br>2) You mentioned moving to 3D in your first post, in which case there are more possible cases because the intersections are no longer single points.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Mon Aug 28, 2017 6:46 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[AstroCoder]]></name></author>
+		<updated>2017-08-28T16:57:50+00:00</updated>
+
+		<published>2017-08-28T16:57:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39868#p39868</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39868#p39868"/>
+		<title type="html"><![CDATA[Re: Algorithm help  / Connecting Centroids]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39868#p39868"><![CDATA[
+Yes, the black dots are the "outer" intersections between two circles, and the red dots are the centroids of three connected circles.<br><br>At each timestep of the simulation, the connections between the centroids and the intersections must be determined.  Note that every centroid (red dot) is always connected to three other points which will be either an adjacent centroid or an intersection.  Black dots are always only connected to red dots.<br><br>I'm sure I have all the info I need, it's just a matter of coming up with the correct algorithm to connect all these points properly.<br><br>Cheers,<br>AstroCoder<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12340">AstroCoder</a> — Mon Aug 28, 2017 4:57 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

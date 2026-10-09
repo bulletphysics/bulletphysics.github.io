@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Penetration depth for STL files</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Penetration depth for STL files</h2>
+		<p><a href="viewtopic.php%3Ft=11060.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11060</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Penetration depth for STL files</h3>
+				<div class="date">Posted: <strong>Tue Mar 01, 2016 11:27 am</strong></div>
+				<div class="author">by <strong>blabla</strong></div>
+				<div class="content">Hi!<br>
+<br>
+I have been developing a simple simulation software, where I want to load few STL files, and determine the penetration depth if collision occurs.<br>
+I managed to load STL file into btTriangleIndexVertexArray format, so converted to btGImpactMeshShape format, which was easy to handle as a btCollisionObject. I can now easily detect collisions, but if I want to determine the minimum translation vector that brings the objects into contact, the calculated solution I get is wrong. In short, I first perform a discrete collision detection, iterate on the manifolds/contact points, and display the contact points (getPositionWorldOnA() / getPositionWorldOnB()) with the deepest penetration depth found.<br>
+<br>
+The interesting thing is, if I insert a sphere instead of an STL model, the calculated penetration depth/vector is correct. As you can see in the attached image (green one is the STL model, red points are the contact points correspond to the deepest penetration, white one is the sphere), if I translate the STL model along the penetration vector (vector which connects the two red points), we can imagine the two objects exactly come into contact. <br>
+The point is, with two complex 3D model, this penetration calculation method does not work (it provides two very very close contact points instead), but changing one of them to a sphere "solves" the problem (so it calculates correct/deepest contact points).<br>
+So my question would be, is it possible to calculate accurately the penetration depth for two complex btGImpactMeshShape with Bullet library?<br>
+I'm quite new to Bullet Library, so sorry if I'm asking something obvious.<br>
+<br>
+Thanks,<br>
+Blabla<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1383" class="postimage" alt="stlVSstl.JPG" onclick="viewableArea(this);" /></dt>
+						<dd>stlVSstl.JPG (21.14 KiB) Viewed 25219 times</dd>
+		</dl>
+		
+		
+			</div><div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1382" class="postimage" alt="sphereVSstl.JPG" onclick="viewableArea(this);" /></dt>
+						<dd>sphereVSstl.JPG (17.08 KiB) Viewed 25219 times</dd>
+		</dl>
+		
+		
+			</div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Penetration depth for STL files</h3>
+				<div class="date">Posted: <strong>Thu May 12, 2016 8:31 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Global penetration depth for general concave triangle meshes (that you get from an STL file) is a very (NP) hard problem.<br>
+<br>
+Bullet only implements local penetration depth (between for two triangles) between two btGimpactShapes, <br>
+and this has issues when the penetration is larger than the features involved (triangles).<br>
+<br>
+You can avoid this, by using convex decomposiion, and making sure the penetration depth is less than the size of the convex parts.<br>
+You can get a pretty good approximate convex decomposition using HACD:<br>
+<a href="https://github.com/kmammou/v-hacd" class="postlink">https://github.com/kmammou/v-hacd</a><br>
+There is an older pull request updating to HACD that I haven't processed (yet) here:<br>
+<a href="https://github.com/bulletphysics/bullet3/pull/477" class="postlink">https://github.com/bulletphysics/bullet3/pull/477</a><br>
+<br>
+Another promising method is using signed distance fields (SDF). This is not implemented in Bullet yet. Some users integrated SDF into Bullet, but didn't contribute the code back.<br>
+It is useful for robotics, so I likely implement it for Bullet at some stage.<br>
+<br>
+One other solution would be to avoid penetration at all cost, using continuous collision detection (CCD). <br>
+Getting CCD for triangles meshes needs some work in Bullet, and you may run into performance issues.<br>
+<br>
+So either use btCompoundShape and convex decomposition (HACD) or be look for another solution, be prepare to do more work and/or open a can of worms...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Penetration depth for STL files</h3>
+				<div class="date">Posted: <strong>Fri May 13, 2016 11:21 am</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Erwin I think probably this is the paper you are talking about. It does detail a bit about how they integrated sdf in bullet<br>
+<br>
+<a href="http://elib.dlr.de/102551/1/Sagardia_VPS_Bullet_Paper_EuroVR_2014.pdf" class="postlink">http://elib.dlr.de/102551/1/Sagardia_VP ... R_2014.pdf</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

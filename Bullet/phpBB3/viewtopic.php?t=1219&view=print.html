@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rotational penetration depth</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rotational penetration depth</h2>
+		<p><a href="viewtopic.php%3Ft=1219.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1219</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rotational penetration depth</h3>
+				<div class="date">Posted: <strong>Mon Jun 11, 2007 5:59 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Interesting concept, calculating rotational penetration depth, rather then just translational:<br>
+<br>
+<a href="http://www.cs.unc.edu/~geom/PDG/pdg.pdf" class="postlink">http://www.cs.unc.edu/~geom/PDG/pdg.pdf</a><br>
+<br>
+Unfortunately this paper, and other UNC papers make some dubious claim about EPA:
+<blockquote class="uncited"><div>Bergen proposes a quick lower bound estimation to PDt between two convex polytopes by iteratively expanding a polyhedral approximation of the Minkowski sum [van den Bergen 2001].
+</div></blockquote>
+
+Bergen's expanding polytope algorithms is exact, not just an approximation. Bullet also implements and uses this EPA algorithm by default, and it seems to be a very fast and a reliable penetration depth method for general convex objects (not just polyhedra). The penetration depth calculated by EPA is exact, within a user-defined epsilon.<br>
+<br>
+I'm anxious to learn about the details about this claim that EPA is just a 'quick approximation', rather then a 'very good penetration depth calculation'. When I asked Gino van den Bergen recently, he confirmed that EPA is an exact method.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>EPA and PD^g</h3>
+				<div class="date">Posted: <strong>Mon Jun 11, 2007 11:56 pm</strong></div>
+				<div class="author">by <strong>youngjkim</strong></div>
+				<div class="content">We claimed that the EPA is not exact in the following sense (neither do ours, DEEP):<br>
+<br>
+1) It is not an analytical solution so that it cannot provide all PD solutions; e.g. imagine a sphere overlapped with itself; it has an infinite # of solutions to report, which the EPA cannot.<br>
+<br>
+2) The result of EPA is a lower bound to PD; it approximates the "internal" Minkowski sums. In case of DEEP, it provides an upper bound to PD.<br>
+<br>
+One quick question for those who read this post <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Would it be "quite" useful to have a rotational (generalized) PD, PD^g, for physics simulation? If so, how can PD^g help or how the simulation can be improved if you have PD^g?<br>
+<br>
+BTW, recently, we have published another paper on PD^g, which is soon to be available online:<br>
+<br>
+Liangjun Zhang, Young J. Kim, Dinesh Manocha, A fast and practical algorithm for generalized penetration depth, Robotics: Science and Systems, 2007</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: EPA and PD^g</h3>
+				<div class="date">Posted: <strong>Tue Jun 12, 2007 1:00 pm</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content"><blockquote><div><cite>youngjkim wrote:</cite>We claimed that the EPA is not exact in the following sense (neither do ours, DEEP):<br>
+<br>
+1) It is not an analytical solution so that it cannot provide all PD solutions; e.g. imagine a sphere overlapped with itself; it has an infinite # of solutions to report, which the EPA cannot.<br>
+<br>
+2) The result of EPA is a lower bound to PD; it approximates the "internal" Minkowski sums. In case of DEEP, it provides an upper bound to PD.<br>
+
+</div></blockquote>
+Having a multiple or even an infinte number of solutions does not have an impact on the accuracy. The result of EPA is indeed a lower bound, but one that can be computed arbitrarily close to the actual penetration depth. So, is EPA exact? In theory, yes. In practice, no. Nor is any other algorithm that uses finite-precision arithmetic. Is EPA's accuracy worse than other existing methods for doing penetration depth computations? No. Since you control the tolerance of the relative error in the computed penetration depth, you can set it to any epsilon you require no matter how small. The epsilon is needed since EPA allows arbitrary convex objects as input. When applied to polyhedra, other termination conditions can be used that give "exact" results, since for these cases the expanding polytope will eventually touch the penetration depth in a finite number of steps. Needless to say you need to use a numerical format that has sufficient precision for your epsilon, but this is true for any geometric algorithm. EPA is by no means a quick approximation. Could it be that you are confusing EPA with Cameron's minimal translational distance approximation?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Jun 12, 2007 11:11 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">EPA should find a global minimal penetration depth.<br>
+A correction on the first EPA publication keeps the expanding polytope convex, to avoid getting into a local minimum.<br>
+<br>
+Could that have lead to the confusion?<br>
+Thanks,<br>
+Erwin<br>
+<br>
+By the way, I think the generalized (including rotational) penetration depth can be useful in physics simulations. I'm curious how to select between the translational (without rotation) and generalized penetration depth recovery. Perhaps it can be chosen by the user on a per-object basis (like a quality/level of detail option)?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotational penetration depth</h3>
+				<div class="date">Posted: <strong>Sat Jun 16, 2007 6:12 am</strong></div>
+				<div class="author">by <strong>Christer Ericson</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Interesting concept, calculating rotational penetration depth, rather then just translational[...]</div></blockquote>
+Here's another on the same topic: <a href="http://www.geometrie.tuwien.ac.at/nawratil/gpdcbokg.pdf" class="postlink">http://www.geometrie.tuwien.ac.at/nawratil/gpdcbokg.pdf</a><br>
+<br>
+This one is outstanding in the sense that it manages to make the presentation just about unreadable by overloading the paper with technical jargon. A great example of how <em class="text-italics">not</em> to write a paper.<br>
+<br>
+Researchers, it doesn't matter if you have the best idea in the world if no one can read and understand your paper!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Jun 16, 2007 11:40 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Sometimes or maybe often overloading the paper with technical jargon and making the paper unreadable is a sign that the idea is actually not that good.<br>
+<br>
+In this sense: "The first obstacle is the misunderstood word"</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

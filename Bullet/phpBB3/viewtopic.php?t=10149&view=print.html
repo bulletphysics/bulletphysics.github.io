@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Pickupable Items (weapons, medpacks, etc.)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Pickupable Items (weapons, medpacks, etc.)</h2>
+		<p><a href="viewtopic.php%3Ft=10149.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10149</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Pickupable Items (weapons, medpacks, etc.)</h3>
+				<div class="date">Posted: <strong>Wed Oct 08, 2014 10:06 pm</strong></div>
+				<div class="author">by <strong>SyncViews</strong></div>
+				<div class="content">I am trying to work out how best to implement items/entities that players (and possibly) NPC's can drop/pickup.<br>
+
+<ul>
+<li>They need to be physically simulated in respect to gravity, terrain and certain select large objects (e.g. elevators)</li>
+<li>They should not collide with each other or any objects not above (e.g. players), or maybe more correctly, not react to the collision (e.g. block the btKinematicCharacterController from moving)</li>
+<li>I want to detect whenever a player starts to collide/overlap with them (so when the player runs over them the player picks them up)</li></ul>
+
+I worked out how to get the first 2 points to work using the collision filters stuff (based on <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Collision_Filtering" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... _Filtering</a> ), but not how to efficiently then do the 3rd point (since in order to the player physically interacting with them, e.g. blocking doors, etc., there not in the collision filter...).<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10149&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btDiscreteDynamicsWorld *bulletWorld;
+//Player, uses btPairCachingGhostObject with btKinematicCharacterController
+bulletWorld-&gt;addCollisionObject(&amp;ghostObject, COL_PLAYER, COL_TERRAIN);
+//Terrain, uses a btRigidBody with a custom btConcaveShape
+bulletWorld-&gt;addRigidBody(&amp;terrainBody, COL_TERRAIN, (short)(COL_ALL ^ COL_TERRAIN));
+//ItemEntity, uses btRigidBody
+bulletWorld-&gt;addRigidBody(&amp;btObject, COL_ITEM, COL_TERRAIN);
+</code></pre></div>
+
+Collision Detection in Player entity class (based on <a href="http://bulletphysics.org/mediawiki-1.5.8/index.php/Collision_Callbacks_and_Triggers" class="postlink">http://bulletphysics.org/mediawiki-1.5. ... d_Triggers</a>)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10149&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btManifoldArray manifoldArray;
+auto bulletWorld = world-&gt;getPhysics().getBulletWorld();
+auto &amp;pairArray = ghostObject.getOverlappingPairCache()-&gt;getOverlappingPairArray();
+for (int i = 0; i &lt; pairArray.size(); ++i)
+{
+    auto &amp;pair = pairArray[i];
+    //TODO: Is it possible to look at pair directory for instances I
+    //only care that an overlapp happened between 2 objects?
+    btBroadphasePair* collisionPair = bulletWorld-&gt;getPairCache()-&gt;findPair(pair.m_pProxy0, pair.m_pProxy1);
+    if (collisionPair-&gt;m_algorithm)
+        collisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(manifoldArray);
+
+    for (int j = 0; j &lt; manifoldArray.size(); j++)
+    {
+        btPersistentManifold* manifold = manifoldArray[j];
+        auto otherObject = manifold-&gt;getBody0() != &amp;ghostObject ?
+            manifold-&gt;getBody0() : manifold-&gt;getBody1();
+        auto userData = (BulletUserData*)otherObject-&gt;getUserPointer();
+        if (userData &amp;&amp; userData-&gt;isEntity() &amp;&amp; userData-&gt;asEntity()-&gt;isAlive())
+        {
+            //TODO: Come up with a design to avoid the dynamic_cast...
+            ItemEntity *item = dynamic_cast&lt;ItemStackEntity*&gt;(userData-&gt;asEntity());
+            if (item)
+            {
+                item-&gt;addToInventory(inventory);
+            }
+        }
+    }
+}
+</code></pre></div>
+
+I think I could do it by having another ghost object mirror the item object with a filter to collide with the player, or maybe using contactPairTest explicitly, but I suspect there is a proper way to do this and I am doing it wrong.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

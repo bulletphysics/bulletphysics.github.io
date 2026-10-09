@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; RayTest fails</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>RayTest fails</h2>
+		<p><a href="viewtopic.php%3Ft=13250.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13250</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>RayTest fails</h3>
+				<div class="date">Posted: <strong>Wed Jul 28, 2021 3:45 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hello to the group,<br>
+<br>
+I am using bullet in an OpenGL application creating a 3D space shooter. At some point I want to ray cast from the middle of the screen to a rigid body on the screen. This works fine for rigid bodies with group 1 and mask 1. But I have some objects that don't collide with others set a group of 1 and mask of 0. On those objects the the ray misses. Here is the ray that I am casting : <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13250&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool BphysicsManager::rayHasHit(glm::vec3&amp; rayFromWorld, glm::vec3&amp; rayToWorld, btVector3* hitPointWorld, btRigidBody** body)
+{
+	mMutex-&gt;lock();
+	bool ret;
+	rayFrom.setX(rayFromWorld.x);
+	rayFrom.setY(rayFromWorld.y);
+	rayFrom.setZ(rayFromWorld.z);
+
+	rayTo.setX(rayToWorld.x);
+	rayTo.setY(rayToWorld.y);
+	rayTo.setZ(rayToWorld.z);
+
+	btCollisionWorld::ClosestRayResultCallback rayCallback(rayFrom, rayTo);
+	mpDynamicsWorld-&gt;rayTest(rayFrom, rayTo, rayCallback);
+
+	if (rayCallback.m_collisionObject)
+	{
+		*body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
+		*hitPointWorld = rayCallback.m_hitPointWorld;
+
+		auto colShape = (*body)-&gt;getCollisionShape();
+		if (dynamic_cast&lt;btConcaveShape*&gt;(colShape) != nullptr)
+		{
+			*body = nullptr;
+		}
+	}
+
+	ret = rayCallback.hasHit();
+	mMutex-&gt;unlock();
+
+	return ret;
+}</code></pre></div>
+
+and here is the rigid body creation : 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13250&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btRigidBody* BphysicsManager::loadBody(btVector3&amp; pLocation, float pSizeX, float pSizeY, float pSizeZ, btVector3&amp; scale , float pDensity, void* userPtr, shape_type_t type, int group, int mask)
+{
+	mMutex-&gt;lock();
+
+	btCollisionShape* shape;
+
+	switch (type) {
+	case SHAPE_BOX:
+		shape = new btBoxShape(btVector3(pSizeX, pSizeY, pSizeZ));
+		break;
+	case SHAPE_SPHERE:
+		shape = new btSphereShape(pSizeX / 2);
+		break;
+	case SHAPE_CAPSULE:
+		shape = new btCapsuleShape(pSizeY, pSizeY / 4);
+		break;
+	case SHAPE_CYLINDER:
+		shape = new btCylinderShape(btVector3(pSizeX / 2, pSizeY / 2, pSizeZ / 2));
+		break;
+	default:
+		shape = new btSphereShape(pSizeX / 2);
+		break;
+	}
+
+	shape-&gt;setMargin(0.001f);
+	shape-&gt;setLocalScaling(scale);
+	
+	btTransform startTransform = btTransform();
+	startTransform.setIdentity();
+	startTransform.setOrigin(pLocation);	//put it to x,y,z coordinates	
+
+	btAssert((!shape || shape-&gt;getShapeType() != INVALID_SHAPE_PROXYTYPE));
+
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (pDensity != 0.f);
+
+	btVector3 localInertia(0, 0, 0);
+	if (isDynamic)
+		shape-&gt;calculateLocalInertia(pDensity, localInertia);
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+#define USE_MOTIONSTATE 1
+#ifdef USE_MOTIONSTATE
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	vMotionStates.push_back(myMotionState);
+
+	btRigidBody::btRigidBodyConstructionInfo cInfo(pDensity, myMotionState, shape, localInertia);
+
+	btRigidBody* body = new btRigidBody(cInfo);
+	body-&gt;setWorldTransform(startTransform);
+
+#else
+	btRigidBody* body = new btRigidBody(mass, 0, shape, localInertia);
+	body-&gt;setWorldTransform(startTransform);
+#endif//
+
+	if (userPtr) body-&gt;setUserPointer(userPtr);
+
+	vCollisionShapes.push_back(shape);
+	vRigidBodies.push_back(body);
+
+	body-&gt;setAngularFactor(1.f);
+	body-&gt;setLinearVelocity(btVector3(0, 0, 0));
+	body-&gt;setAngularVelocity(btVector3(0, 0, 0));
+	body-&gt;setFriction(1.0);
+	body-&gt;activate(true);
+	body-&gt;setSleepingThresholds(0.f, 0.f);
+	if (userPtr) body-&gt;setUserPointer(userPtr);
+
+	mpDynamicsWorld-&gt;addRigidBody(body, group, mask);
+
+	mMutex-&gt;unlock();
+
+	return body;
+}
+</code></pre></div>
+
+Can someone identify some problem?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: RayTest fails</h3>
+				<div class="date">Posted: <strong>Wed Jul 28, 2021 8:22 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The collision groups and masks are used at the BroadPhase to submit overlap pairs to the NarrowPhase.<br>
+<br>
+AABB's overlaps in the BroadPhase are submitted to the NarrowPhase iff each object collides with the other's group.  In other words when: <strong class="text-strong">ObjectA.group &amp; ObjectB.mask &amp;&amp; ObjectB.group &amp; ObjectA.mask</strong>.<br>
+<br>
+If you don't submit a custom <strong class="text-strong">mask</strong> when adding an object to the world it receives a default value of <strong class="text-strong">btBroadphaseProxy::AllFilter</strong> whose value is <strong class="text-strong">-1</strong> in unsigned context: e.g. all bits set.<br>
+<br>
+When you use a zero <strong class="text-strong">mask</strong> then it collides with nothing, including ray traces...<br>
+<br>
+... because <strong class="text-strong">btCollisionWorld::ClosestRayResultCallback</strong> derives from <strong class="text-strong">btCollisonWorld::RayResultCallback</strong> which has <strong class="text-strong">m_collisionFilterGroup</strong> and <strong class="text-strong">m_collisionFilterMask</strong> data members which default to <strong class="text-strong">btBroadphaseProxy::AllFilter</strong> and are used when checking for overlaps in the BroadPhase data structure.<br>
+<br>
+You need to set your callback's group to some single bit and then be sure set that same bit in the mask of all objects which should be pickable by rays.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: RayTest fails</h3>
+				<div class="date">Posted: <strong>Thu Jul 29, 2021 11:25 am</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">I used also other groups but no success... I tried for example group 4 with mask 4 but again I get no raytest results. Only when I use group 1 with mask 1 it works, ah also the default works (no groups and no mask specified). <br>
+
+<blockquote class="uncited"><div>
+You need to set your callback's group to some single bit and then be sure set that same bit in the mask of all objects which should be pickable by rays.</div></blockquote>
+
+How can I set my callback's group to something different?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: RayTest fails</h3>
+				<div class="date">Posted: <strong>Thu Jul 29, 2021 4:55 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Check out the ctor implementation of <strong class="text-strong">RayResultCallback</strong>, from which <strong class="text-strong">ClosestRayHitCallback</strong> derives:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13250&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>                RayResultCallback()
+                        : m_closestHitFraction(btScalar(1.)),
+                          m_collisionObject(0),
+                          m_collisionFilterGroup(btBroadphaseProxy::DefaultFilter),
+                          m_collisionFilterMask(btBroadphaseProxy::AllFilter),
+                          //@BP Mod
+                          m_flags(0)
+                {         
+                }
+</code></pre></div>
+You can see the default <strong class="text-strong">group</strong> and <strong class="text-strong">mask</strong> being set.  If you track down where <strong class="text-strong">btBroadphaseProxy::DefaultFilter</strong> and <strong class="text-strong">btBroadphaseProxy::AllFilter</strong> are defined you'll learn their values are <strong class="text-strong">1</strong> and <strong class="text-strong">-1</strong> respectively (of course, interpreted as unsigned).  You can set those data members to whatever you want after instantiation: they are <strong class="text-strong">public</strong> because <strong class="text-strong">RayResultCallback</strong> is a C++ <strong class="text-strong">struct</strong>, which is just a <strong class="text-strong">class</strong> but with all methods and members defaulting to <strong class="text-strong">public</strong>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: RayTest fails</h3>
+				<div class="date">Posted: <strong>Thu Jul 29, 2021 5:52 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Thank you very much for your support. I was able to solve my problem this way :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13250&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btCollisionWorld::ClosestRayResultCallback rayCallback(rayFrom, rayTo);
+rayCallback.m_collisionFilterGroup = 0b1111111;
+rayCallback.m_collisionFilterMask = 0b1111111;
+mpDynamicsWorld-&gt;rayTest(rayFrom, rayTo, rayCallback);
+</code></pre></div>
+
+In case it helps someone...</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

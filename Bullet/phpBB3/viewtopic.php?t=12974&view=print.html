@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Applying torque control makes object fly away from the secene</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Applying torque control makes object fly away from the secene</h2>
+		<p><a href="viewtopic.php%3Ft=12974.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12974</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Applying torque control makes object fly away from the secene</h3>
+				<div class="date">Posted: <strong>Sat May 23, 2020 1:21 am</strong></div>
+				<div class="author">by <strong>m_kramar</strong></div>
+				<div class="content">So I grabbed latest code from <a href="https://github.com/bulletphysics/pybullet_robots" class="postlink">https://github.com/bulletphysics/pybullet_robots</a><br>
+I modified laikago.py example to the following, I'm only controlling one joint using torque<br>
+Strangely enough poor robot flies away from the scene!<br>
+There are two ways to fix it: either decrease simulation time step (line 10) or change torque value to 60 (line 33).<br>
+Any ideas what am I doing wrong?<br>
+<br>
+<img src="https://user-images.githubusercontent.com/54096564/82638552-756fde00-9c4a-11ea-82cf-f2b636038ab8.gif" class="postimage" alt="Image"><br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12974&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import os
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+p.connect(p.GUI)
+plane = p.loadURDF("data/plane.urdf")
+p.setGravity(0,0,-9.8)
+timeStep = 1./300 # HERE!!! changing it to 1./400 fixes the problem
+p.setTimeStep(timeStep)
+urdfFlags = p.URDF_USE_SELF_COLLISION
+quadruped = p.loadURDF("laikago/laikago_toes.urdf",[0,0,.5],[0,0.5,0.5,0], flags = urdfFlags,useFixedBase=False)
+
+#enable collision between lower legs (2,5,8 and 11)
+lower_legs = [2,5,8,11]
+for l0 in lower_legs:
+	for l1 in lower_legs:
+		if (l1&gt;l0):
+			p.setCollisionFilterPair(quadruped, quadruped, l0, l1, 1)
+
+#set damping
+
+for j in range (p.getNumJoints(quadruped)):
+		p.changeDynamics(quadruped, j, linearDamping=0, angularDamping=100)
+		p.setJointMotorControl2(quadruped, j, p.VELOCITY_CONTROL, force=0)
+		
+#run the simulation
+
+p.setRealTimeSimulation(0)
+
+for i in range (1000):	
+	p.setJointMotorControl2(quadruped, 13, p.TORQUE_CONTROL, force=62) # HERE!!! changing it to force=60 fixes the problem
+	p.stepSimulation()
+	time.sleep(timeStep)
+
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Applying torque control makes object fly away from the secene</h3>
+				<div class="date">Posted: <strong>Tue May 31, 2022 2:13 am</strong></div>
+				<div class="author">by <strong>orange_juice</strong></div>
+				<div class="content">Hi, I met the same problem. But changing time steps didn't help. Did you solved this problem?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

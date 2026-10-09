@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Serializing to and from platform-specific binary files</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Serializing to and from platform-specific binary files</h2>
+		<p><a href="viewtopic.php%3Ft=3748.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=3748</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Serializing to and from platform-specific binary files</h3>
+				<div class="date">Posted: <strong>Tue Jun 23, 2009 7:20 pm</strong></div>
+				<div class="author">by <strong>RulonR</strong></div>
+				<div class="content">Has anyone tried to serialize Bullet objects directly to a platform specific binary data file (through reflection or otherwise)?  This avoids COLLADA, etc. but allows for the de-serialization process to be extremely fast as there are little or no allocations required, and needs only a handful of pointer fix-ups to prepare the data for runtime use.  It's a pretty daunting task to code up support for all the possible objects so I'd be very interested to hear if anyone else has tried this or if there are some tips regarding something I might have missed in the current source.  Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serializing to and from platform-specific binary files</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2009 7:50 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I've been playing with the idea of binary serialization, and was thinking of using the chunk-based binary IFF format for this (in Bullet/Extras/iff is a first starting point for binary read/write based on IFF, with some info).<br>
+<br>
+If you have another solution, that you can share with others, please let us know. We could add it in the Bullet/Extras folder.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serializing Bullet Physics</h3>
+				<div class="date">Posted: <strong>Tue Nov 10, 2009 12:12 pm</strong></div>
+				<div class="author">by <strong>Chris Simson</strong></div>
+				<div class="content">Hi Everyone,<br>
+<br>
+RE: BULLET SERIALIZATION <br>
+<br>
+I have seen that there is a Collada converter which allows the persistent storage of the Bullet system, but there are a couple of drawbacks:<br>
+- not all Bullet shapes are (yet) supported, eg the btCapsuleShape as used in the Ragdoll Bullet demo is not supported.<br>
+- there does not appear to be any way to link the serialized Bullet objects to other code (via a unique identifier system?), eg if you have another external class instance associated with a btRigidBody, how to you re-associate once the Bullet system has been read in from the .dae file?<br>
+- slow<br>
+<br>
+An alternative, which I feel would be highly expandable (as the Bullet system evolves) would be to use the Boost serialization library.  This would overcome the problems mentioned above.  This would require that a serialize() function be written for each Bullet class, but once done, this is a very versatile system; the serialized objects could be sent to any 'media', whether that be file, clipboard, an aligned memory region or whereever.<br>
+<br>
+I must say I have tried to undertake the serialization via this method of the btBoxShape (and its base class hierarchy) but have stumbled - it seems that if you try something like: BOOST_CLASS_EXPORT_GUID(btBoxShape, "btBoxShape") (in order to make this Bullet class 'visible' to the serilaization system) you get compile time errors.  These errors are due to the placement new operators defined within BT_DECLARE_ALIGNED_ALLOCATOR. Instead of declaring placement new operators within this macro, an alternative could be to use the new overload declared in &lt;new&gt;, eg<br>
+#ifdef BT_USE_PLACEMENT_NEW<br>
+   <span style="color:#40FF00">//new (&amp;dest<em class="text-italics">) T(m_data<em class="text-italics">);</em></em></span><em class="text-italics"><em class="text-italics"><br>
+   ::new (&amp;dest<em class="text-italics">) T(m_data<em class="text-italics">);//this calls the new placement operator declared in &lt;new&gt;, line 58.<br>
+...<br>
+<br>
+I believe this would then allow the Bullet system to be serialized via the well respected Boost library.<br>
+<br>
+What do you think?<br>
+<br>
+Regards,<br>
+Chris Simson</em></em></em></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Serializing to and from platform-specific binary files</h3>
+				<div class="date">Posted: <strong>Thu Nov 12, 2009 3:58 am</strong></div>
+				<div class="author">by <strong>Chris Simson</strong></div>
+				<div class="content">After further investigation, it seems that (some of the) Bullet classes do not support RTTI (eg try and do a typeid(v), or dynamic_cast&lt;...&gt;(v) where v is of type btCollisionObject&amp;).  Hence the Boost serialization library groans; you get __non_rtti_object exceptions thrown.  It seems that serialization via Boost is a no go.  Rethink required.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

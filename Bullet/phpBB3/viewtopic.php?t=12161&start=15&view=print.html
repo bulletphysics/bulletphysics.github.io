@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Squirrely dynamic bodies resting on flat static surface (video) - Page 2</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Squirrely dynamic bodies resting on flat static surface (video)</h2>
+		<p><a href="viewtopic.php%3Ft=12161.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12161</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>2</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Re: Squirrely dynamic bodies resting on flat static surface (video)</h3>
+				<div class="date">Posted: <strong>Sat Jul 21, 2018 4:04 am</strong></div>
+				<div class="author">by <strong>Mwni</strong></div>
+				<div class="content">Just found out this could have something to do with the collision margins.<br>
+<br>
+Quote from lazenby:
+<blockquote class="uncited"><div>There are some default collision margins in the Bullet simulation and if the dimensions of the important details of your model are near those margins then you'll get unexpected results and easier tunneling. If you haven't heard about these margins yet you could watch this video. The default margin is around 0.04m (as I recall, dunno if Blender messes with that), which means your smallest important "flange" must be several multiples of that dimension before the simulation will start to look "correct".</div></blockquote>
+
+Had the same weird behavour on a very thin cylinder...setting the margin to 0 fixed it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squirrely dynamic bodies resting on flat static surface (video)</h3>
+				<div class="date">Posted: <strong>Sat Jul 21, 2018 5:03 am</strong></div>
+				<div class="author">by <strong>goosesensor</strong></div>
+				<div class="content">I just tried the margin at 0 again but without luck. :\<br>
+<br>
+I also did two other things:<br>
+<br>
+1. Dropped a fresh source clone from the bullet repo into my extern/ directory and re-build the project (can't believe it built without CMake mods!).  No change in behavior.<br>
+<br>
+2. Instead of relying on a bunch of abstraction layers with bullet code buried under my framework's API, I exposed the Bullet headers to a test application and re-created the simulation manually. Here is a stripped-down version:<br>
+<br>
+<br>
+----- HEADER -----<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12161&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+	class Test {
+	
+	public:
+		
+		int run(const std::vector&lt;std::string&gt;&amp; args);
+		void updateCallback(RenderContext&amp; renderContext, float time); // called every frame
+		
+	private:
+		btBroadphaseInterface* m_broadphase;
+		btCollisionConfiguration* m_collisionConfiguration;
+		btCollisionDispatcher* m_dispatcher;
+		btConstraintSolver* m_solver;
+		btDynamicsWorld* m_world;
+		
+		std::vector&lt;btDefaultMotionState*&gt;	m_motionStates;
+		std::vector&lt;std::shared_ptr&lt;Node&gt;&gt;	m_boxNodes;
+
+	};
+
+</code></pre></div>
+
+----- IMPLEMENTATION -----<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12161&amp;start=15&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+int Test::run(const vector&lt;string&gt;&amp; args) {
+
+	// &lt;make a window, make a scene, set callbacks&gt;
+
+
+	// init bullet
+
+	m_collisionConfiguration = new btDefaultCollisionConfiguration();
+	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
+	m_broadphase = new btDbvtBroadphase();
+	m_solver = new btSequentialImpulseConstraintSolver();
+	m_world = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
+
+	
+	// create falling boxes
+	{
+		constexpr unsigned OBJECT_ARRAY_SIZE_X = 2;
+		constexpr unsigned OBJECT_ARRAY_SIZE_Y = 4;
+		constexpr unsigned OBJECT_ARRAY_SIZE_Z = 2;
+		constexpr unsigned SPACING = 1.0;
+		constexpr unsigned DROP_HEIGHT = 40.0;
+		
+		for (int k=0; k&lt;OBJECT_ARRAY_SIZE_Y; ++k) {
+			for (int i=0;i &lt;OBJECT_ARRAY_SIZE_X; ++i) {
+				for(int j = 0; j&lt;OBJECT_ARRAY_SIZE_Z; ++j) {
+					
+					vec3 position = {
+						SPACING * i - (OBJECT_ARRAY_SIZE_X / 2.0),
+						DROP_HEIGHT + SPACING * k - (OBJECT_ARRAY_SIZE_Y / 2.0),
+						SPACING * j  - (OBJECT_ARRAY_SIZE_Z / 2.0) };
+					
+					// create bullet model
+					{
+						btBoxShape* boxShape = new btBoxShape(btVector3(1.0f/2.0, 1.0f/2.0, 1.0f/2.0));
+						
+						// (makes no difference)
+						//boxShape-&gt;setMargin(0);
+						
+						btTransform transform;
+						transform.setIdentity();
+						transform.setOrigin(btVector3(position.x, position.y, position.z));
+						btDefaultMotionState* motionState = new btDefaultMotionState(transform);
+						
+						m_motionStates.push_back(motionState);
+						
+						float mass = 2.0;
+						btVector3 localInertia = {0, 0, 0};
+						boxShape-&gt;calculateLocalInertia(mass, localInertia);
+						btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, boxShape, localInertia);
+						
+						rbInfo.m_friction = 0.25;
+						rbInfo.m_rollingFriction = 0.25;
+						rbInfo.m_restitution = 0.25;
+						
+						btRigidBody* rigidBody = new btRigidBody(rbInfo);
+						m_world-&gt;addRigidBody(rigidBody);
+					}
+					
+					// create visual model
+					{
+						auto node = Node::GeometryNode(make_shared&lt;Box&gt;(1.0, 1.0, 1.0));
+						node-&gt;position(position);
+						
+						m_boxNodes.push_back(node);
+						
+						scene-&gt;rootNode()-&gt;addChild(node);
+					}
+				}
+			}
+		}
+	}
+
+	
+	
+	// create ground box
+	{
+		constexpr float GROUND_DIM = 50.0;
+		
+		// create bullet model
+		{
+			btBoxShape* groundShape = new btBoxShape(btVector3(GROUND_DIM/2.0, 0.25/2.0, GROUND_DIM/2.0));
+
+			// (makes no difference)
+			//groundShape-&gt;setMargin(0);
+			
+			btTransform transform;
+			transform.setIdentity();
+			transform.setOrigin(btVector3(0, 0, 0));
+
+			btDefaultMotionState* motionState = new btDefaultMotionState(transform);
+			
+			btVector3 localInertia = {0, 0, 0};
+			groundShape-&gt;calculateLocalInertia(0, localInertia);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(0, motionState, groundShape, localInertia);
+			
+			rbInfo.m_mass = 0;
+			rbInfo.m_friction = 1.0;
+			rbInfo.m_rollingFriction = 1.0;
+			rbInfo.m_restitution = 0.1;
+			
+			btRigidBody* rigidBody = new btRigidBody(rbInfo);
+			m_world-&gt;addRigidBody(rigidBody);
+		}
+		
+		// create visual model
+		{
+			auto groundNode = make_shared&lt;Node&gt;("Box");
+			groundNode-&gt;geometry(make_shared&lt;Box&gt;(GROUND_DIM, 0.25, GROUND_DIM));
+			auto gridImage = TestImageNamed("grid10");
+			auto planeDiffuseProperty = make_shared&lt;MaterialProperty&gt;(gridImage);
+			planeDiffuseProperty-&gt;wrapS(WRAP_MODE::REPEAT);
+			planeDiffuseProperty-&gt;wrapT(WRAP_MODE::REPEAT);
+			planeDiffuseProperty-&gt;maxAnisotropy(16);
+			planeDiffuseProperty-&gt;minificationFilter(FILTER_MODE::LINEAR_MIPMAP_LINEAR);
+			planeDiffuseProperty-&gt;magnificationFilter(FILTER_MODE::LINEAR);
+			auto planeMaterial = make_shared&lt;Material&gt;(nullptr, planeDiffuseProperty, nullptr);
+			planeMaterial-&gt;uvScale(GROUND_DIM/10.0);
+			planeMaterial-&gt;doubleSided(true);
+			groundNode-&gt;geometry()-&gt;addMaterial(planeMaterial);
+			groundNode-&gt;position({0, 0, 0});
+			scene-&gt;rootNode()-&gt;addChild(groundNode);
+		}
+	}
+	
+	
+// &lt;set background, lights, etc&gt;
+	
+	m_window-&gt;display(); // blocks until closed by the callback below
+	
+	return 0;
+}
+
+
+void Test::updateCallback(RenderContext&amp; renderContext, float time) { // called every frame
+
+	static float previousSeconds = time;
+	float deltaSeconds = time - previousSeconds;
+	previousSeconds = time;
+
+	
+	// step the simulation
+	{
+		m_world-&gt;stepSimulation(deltaSeconds, 10, 1.0/120.0);
+	}
+	
+	
+	// update visual model
+	{
+		for (unsigned i=0; i&lt;m_motionStates.size(); ++i) {
+			auto motionState = m_motionStates[i];
+			auto boxNode = m_boxNodes[i];
+			
+			btTransform btWorldTransform;
+			btWorldTransform.setIdentity();
+			motionState-&gt;getWorldTransform(btWorldTransform);
+			
+			mat4 worldMat;
+			btWorldTransform.getOpenGLMatrix(value_ptr(worldMat));
+			
+			boxNode-&gt;transform(worldMat);
+		}
+	}
+	
+	}
+	
+	</code></pre></div>
+
+<br>
+Here's what happens.. same thing!  <img class="smilies" src="images/smilies/icon_neutral.gif" width="15" height="15" alt=":|" title="Neutral"> <br>
+<br>
+<img src="http://goosesensor.net/bt_10.gif" class="postimage" alt="Image"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squirrely dynamic bodies resting on flat static surface (video)</h3>
+				<div class="date">Posted: <strong>Sun Jul 22, 2018 2:17 am</strong></div>
+				<div class="author">by <strong>goosesensor</strong></div>
+				<div class="content">GOT IT. rollingFriction needs to be 0.<br>
+<br>
+Apparently this parameter is there to allow things to not roll indefinitely.... (like pool balls):<br>
+<br>
+"the m_rollingFriction prevents rounded shapes, such as spheres, cylinders and capsules from rolling forever."<br>
+<br>
+I had (incorrectly) assumed it was kinetic/sliding friction, and that the "friction" parameter was static friction.  That will teach me to read the docs and stop asking stupid questions!  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br>
+<br>
+Does bullet differentiate between static and kinetic friction?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squirrely dynamic bodies resting on flat static surface (video)</h3>
+				<div class="date">Posted: <strong>Tue Jul 24, 2018 5:06 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">When I look at the behavior of some of your objects one idea does occur to me.  I've seen similar behavior for small objects whose inertia tensors were too large for their mass.<br>
+<br>
+Suppose you make an object and give it a low mass (like it was made of styrofoam or lighter material) but then give it a very large inertia tensor (like it was a giant granite bolder).  What would be the behavior of such an object?  It turns out the torques its linear mass applies under gravity on contact points are not strong enough to significantly affect the objects rotational motion, so it continues to slowly roll around instead of settling down.<br>
+<br>
+So my questions would be:  How are you computing/assigning mass and inertia?  Are you sure your inertia tensors are correct?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>2</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

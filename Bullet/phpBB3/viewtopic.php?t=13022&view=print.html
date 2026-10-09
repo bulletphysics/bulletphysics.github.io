@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Why the box will shake when it drop onto the surface with btConvexHullShape?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Why the box will shake when it drop onto the surface with btConvexHullShape?</h2>
+		<p><a href="viewtopic.php%3Ft=13022.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13022</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Why the box will shake when it drop onto the surface with btConvexHullShape?</h3>
+				<div class="date">Posted: <strong>Tue Jun 30, 2020 1:05 pm</strong></div>
+				<div class="author">by <strong>Winson</strong></div>
+				<div class="content">Hello everyone,<br>
+<br>
+I'm trying to create a curve conveyor which is used for convey the box.<br>
+I adopt btConvexHullShape class to make the collision shape of conveyor suface.<br>
+but it has one problem: <strong class="text-strong">the Box will shake when it drop onto the suface.</strong><br>
+<br>
+It needs to be emphasized that the bottom of the box and the surface of the conveyor are parallel to the horizontal plane.<br>
+<br>
+I think there are something wrong with <strong class="text-strong">btBoxShape</strong> collide with <strong class="text-strong">btConvexHullShape</strong>.<br>
+So, I make a example to show these wrong. <br>
+The result like the following GIF: <br>
+<br>
+<img src="https://i.loli.net/2020/06/30/hw5UtmBd7I1He2D.gif" class="postimage" alt="Image"><br>
+<br>
+The following is my code to create a triangular prism with btConvexHullShape class: 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13022&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btConvexHullShape* hull = new btConvexHullShape();
+const btVector3 v1 = btVector3(0, 0, 2);
+hull-&gt;addPoint(v1);
+const btVector3 v2 = btVector3(0, 0.1, 2);
+hull-&gt;addPoint(v2);
+const btVector3 v3 = btVector3(0, 0, -2);
+hull-&gt;addPoint(v3);
+const btVector3 v4 = btVector3(0, 0.1, -2);
+hull-&gt;addPoint(v4);
+const btVector3 v5 = btVector3(-5, 0.1f, 0);
+hull-&gt;addPoint(v5);
+const btVector3 v6 = btVector3(-5, 0, 0);
+hull-&gt;addPoint(v6);
+hull-&gt;optimizeConvexHull();
+hull-&gt;setMargin(0);
+btTransform t;
+t.setIdentity();
+btRigidBody* hullBody = createRigidBody(0, t, hull);
+</code></pre></div>
+
+I wonder how to solve this problem. <br>
+Is there any other way without this error to make the custom collision shape, such as sector surface and hollow cylinder?<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why the box will shake when it drop onto the surface with btConvexHullShape?</h3>
+				<div class="date">Posted: <strong>Tue Jun 30, 2020 3:11 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Don't set the margin of the convex hull to 0.0.  Leave it at the default (which is 0.04m I think) and see if that makes your problem go away.  My hypothesis is: you are allowing the box to actually penetrate the convex hull and the penetration resolution logic is kicking in.  The penetration resolution algorithm is usually stable (doesn't pump too much energy into the system) but is ultimately non-physical and can introduce "unexpected artifacts" such as this.<br>
+<br>
+If that doesn't solve your problem: make sure your substep is small.  It should be at least 1/60 sec but try smaller steps to see if that helps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Why the box will shake when it drop onto the surface with btConvexHullShape?</h3>
+				<div class="date">Posted: <strong>Tue Jul 07, 2020 7:28 am</strong></div>
+				<div class="author">by <strong>Winson</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42994#p42994"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=42994.html#p42994" data-post-id="42994" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Tue Jun 30, 2020 3:11 pm</span></cite>
+Don't set the margin of the convex hull to 0.0.  Leave it at the default (which is 0.04m I think) and see if that makes your problem go away.  My hypothesis is: you are allowing the box to actually penetrate the convex hull and the penetration resolution logic is kicking in.  The penetration resolution algorithm is usually stable (doesn't pump too much energy into the system) but is ultimately non-physical and can introduce "unexpected artifacts" such as this.<br>
+<br>
+If that doesn't solve your problem: make sure your substep is small.  It should be at least 1/60 sec but try smaller steps to see if that helps.
+</div></blockquote>
+
+Thanks, drleviathan!<br>
+I had tried to <strong class="text-strong">set margin greater than 0.0</strong> or <strong class="text-strong">set smaller steps</strong>, but also can not solve this problem. <br>
+<br>
+I checked the source code and knew the process of collision detection. I found that <strong class="text-strong">btBoxShape collides with btConvexHullShape</strong> calls <em class="text-italics"><strong class="text-strong">btConvexConvexAlgorithm</strong></em> class to get the closest points between two convex shapes. This is different from the case that <strong class="text-strong">btBoxShape collides with btBoxShape</strong> calls <em class="text-italics"><strong class="text-strong">btBoxBoxAlgorithm</strong></em> class which without this problem.<br>
+<br>
+I think the problem may be due to <em class="text-italics"><strong class="text-strong">btConvexConvexAlgorithm</strong></em> class, but I couldn't undestand.<br>
+<br>
+In addition, I used Demo3D, a physics simulation software which is based on PhysX or Bullet or ODE to test ConvexHullShape collides with BoxShape. When based on PhysX, it seems to be all right. When based on Bullet, this problem will occur but the extent is less than testing in Bullet.<br>
+<br>
+I don't know what to do anymore!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/5844" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2010-11-02T01:39:14+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/5844</id>
+
+		<entry>
+		<author><name><![CDATA[paul.dubois]]></name></author>
+		<updated>2010-11-02T01:39:14+00:00</updated>
+
+		<published>2010-11-02T01:39:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20739#p20739</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20739#p20739"/>
+		<title type="html"><![CDATA[Re: btQuaternion clamping values and slerp question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20739#p20739"><![CDATA[
+btQuat::angle actually measures the angle between the two 4d quaternions, not the angle you'd get if you converted the quat to an axis-angle format. An odd feature of quaternions is that every orientation is specified by two distinct quaternions: (x,y,z,w) and (-x,-y,-z,-w). These two quaternions are "180 degrees" apart (in the sense that acos(q1 dot q2) is 180 degrees).<br><br>A straightforward consequence of this is that the "angle between quaternions" is half the "angle between orientations". I believe there is a bug in the tracker about btQuat::angle() confusion; it returns the former where some thought it should have returned the latter.<br><br>Anyway, if you try to slerp 180 degrees between q and -q (and your slerp is robust enough not to blow up in that case) then your object will spin <strong class="text-strong">360 degrees</strong> about some arbitrary axis.<br><br>So it turns out that what Kanttori says is almost correct if the "poles" are actually the 4d poles of the quaternion hypersphere. But typically you don't care about that. The easiest thing to do is to make sure your inputs to quat::slerp() are in the same hemisphere -- if the dot product is negative, invert one of them. This makes the slerp always take the short route between your two orientations, instead of the long way around -- think of the difference between rotating 1 degree clockwise and 359 degrees counterclockwise.<br><br>btQuat::slerp should probably also be fixed to be robust when slerping between q and -q, but typically that case doesn't come up because very few people would want to interpolate between two identical orientations by spinning 360 degrees in place. A bigger issue with the slerp as written is that it looks unstable when q1 ~= q2<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6691">paul.dubois</a> — Tue Nov 02, 2010 1:39 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[androiders]]></name></author>
+		<updated>2010-10-30T09:29:19+00:00</updated>
+
+		<published>2010-10-30T09:29:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20712#p20712</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20712#p20712"/>
+		<title type="html"><![CDATA[Re: btQuaternion clamping values and slerp question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20712#p20712"><![CDATA[
+thanks for your reply.<br><br>I found something odd actually. The slerp function checks if the angle between the quaternions, theta, is zero. But then it divides by btSin( theta ) which is zero at every multiple of Pi. A bug?<br>This leads to strange values of the w variable of the calculated quaternion. <br><br>And this is what is going on <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>--Anders<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7262">androiders</a> — Sat Oct 30, 2010 9:29 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Kanttori]]></name></author>
+		<updated>2010-10-28T20:32:59+00:00</updated>
+
+		<published>2010-10-28T20:32:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20690#p20690</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20690#p20690"/>
+		<title type="html"><![CDATA[Re: btQuaternion clamping values and slerp question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20690#p20690"><![CDATA[
+If the problem happens at 180 degrees it's probably because slerp can't decide which way to rotate, there is no shortest route from pole to pole since all routes are equal. Imho:<br>- you could have an angle range where the camera follow constraint would softly increase to 100% to match the ships rotation so as not to get this situation.<br>- check for the 180 degrees and if found, use the previous working ships rotation quaternion as the target.<br>- (I'm not a mathwizz:) code a slerp which would take an extra parameter to hold the last sane (length above 0) "cross-product" between quaternions because it would give you the axis/direction to do the slerp.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6870">Kanttori</a> — Thu Oct 28, 2010 8:32 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[androiders]]></name></author>
+		<updated>2010-10-27T19:38:03+00:00</updated>
+
+		<published>2010-10-27T19:38:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20663#p20663</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20663#p20663"/>
+		<title type="html"><![CDATA[btQuaternion clamping values and slerp question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=20663#p20663"><![CDATA[
+Hi!<br><br>Okay, this is my first post here. Must say the forum, what i have read and seen so far, is great <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> The library itself is of course also great. Even if i am yet beginner.<br><br>Anyways, i have a question about the quaternions and if they clamp, or recalculates, the angle value if it reaches &gt; 180 degrees? I looked at the code but found nothing obvious...<br><br>What i am doing is that i have a camera that follows behind a space ship. The ship can move pretty freely around in space. The camera aligns itself with the ships orientation using slerp between the cameras orientation and the ships in order to get a nice delay effect. The cameras orientation lags so to speak. When the spaceship has rotated a full circle the camera jumps or jerks a bit and then all is normal for another full circle and so on.<br>This led me to believe that the values are clamped and the space ships orientation is clamped before the camera has rotated a full circle and this makes slerp " go the other way".<br><br>now, is there something i can make bullet do about it or do i have to work around it in some way?<br><br>Thanks in advance<br>--Anders<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7262">androiders</a> — Wed Oct 27, 2010 7:38 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Proper way to force positions and rotations?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Proper way to force positions and rotations?</h2>
+		<p><a href="viewtopic.php%3Ft=688.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=688</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Proper way to force positions and rotations?</h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 4:06 am</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I was curious, what is the proper way to force the position and/or rotation of a rigid body?<br>
+<br>
+For example, let's imagine a game of 3d pong.  So, let's say I have a computer controlled paddle that tracks and strikes a ball.  But, I don't want the paddle to start rotating once it strikes the ball.  I want to keep the paddle always at the same rotation.  Should I be manually setting its worldTransform to the proper rotation?  Or should I use a constraint, and lock the paddle's rotation degrees of freedom?  Or is there another option?<br>
+<br>
+Also, let's say the ball should be reset to a home position if it misses the paddle and goes out of bounds.  Should I reset its position via btRigidBody-&gt;setWorldTransform()?  Or though its btMotionState-&gt;setWorldTransform()?  Or something else?  In other words, what is the best way to "teleport" an object to another location, without bullet trying to interpolate the path or assign a velocity to the body, etc?<br>
+<br>
+Thanks for any help,<br>
+  Braden</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Proper way to force positions and rotations? (kinematic)</h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 4:50 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">A paddle is a kinematic/animated object. <br>
+<br>
+Bullet has support for that by creating a static object, and setting its collisionflags as kinematic, and disable deactivation(sleep):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=688&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body-&gt;setCollisionFlags( body-&gt;getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+body-&gt;setActivationState(DISABLE_DEACTIVATION);
+</code></pre></div>
+See CcdPhysicsDemo for an example: enable USE_KINEMATIC_GROUND and see the ground move, while the stack of cylinders gets moved by it.<br>
+<br>
+Recommended is to use a btMotionState derived class, then Bullet will get the kinematic transform from the motionstate each frame and derive linear/angular velocity for the kinematic animated object, so it interacts properly (one-way) with dynamic rigidbodies.<br>
+<br>
+<br>
+
+<blockquote><div><cite>daBrado wrote:</cite>Hi,<br>
+<br>
+I was curious, what is the proper way to force the position and/or rotation of a rigid body?<br>
+<br>
+For example, let's imagine a game of 3d pong.  So, let's say I have a computer controlled paddle that tracks and strikes a ball.  But, I don't want the paddle to start rotating once it strikes the ball.  I want to keep the paddle always at the same rotation.  Should I be manually setting its worldTransform to the proper rotation?  Or should I use a constraint, and lock the paddle's rotation degrees of freedom?  Or is there another option?<br>
+<br>
+Also, let's say the ball should be reset to a home position if it misses the paddle and goes out of bounds.  Should I reset its position via btRigidBody-&gt;setWorldTransform()?  Or though its btMotionState-&gt;setWorldTransform()?  Or something else?  In other words, what is the best way to "teleport" an object to another location, without bullet trying to interpolate the path or assign a velocity to the body, etc?<br>
+<br>
+Thanks for any help,<br>
+  Braden</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Proper way to force positions and rotations? (kinematic)</h3>
+				<div class="date">Posted: <strong>Sun Nov 12, 2006 10:12 am</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>A paddle is a kinematic/animated object. <br>
+<br>
+Bullet has support for that by creating a static object, and setting its collisionflags as kinematic, and disable deactivation</div></blockquote>
+
+Ideally, I'd like to move the paddle around by changing its velocity to move towards a target position.  However, I can't set the velocity of a static object, even if kinematic.<br>
+<br>
+Must I manually calculate the transforms along the desired path of the paddle, i.e. do velocity transformations manually....?  If so, why?<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Recommended is to use a btMotionState derived class, then Bullet will get the kinematic transform from the motionstate each frame and derive linear/angular velocity for the kinematic animated object, so it interacts properly (one-way) with dynamic rigidbodies.</div></blockquote>
+
+I'm afraid I don't understand what you mean by this.  Are you talking about a btMotionState on the paddle...?  A static kinematic object can set its linear/angular velocity implicitly via the motion state, but I cannot set them explicitly via setLinearVelocity() and setAngularVelocity() ?<br>
+<br>
+Thanks for any help,<br>
+  Braden</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

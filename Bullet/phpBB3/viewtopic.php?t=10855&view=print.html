@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; [Solved]Ghost object is allways in collision</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>[Solved]Ghost object is allways in collision</h2>
+		<p><a href="viewtopic.php%3Ft=10855.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10855</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>[Solved]Ghost object is allways in collision</h3>
+				<div class="date">Posted: <strong>Tue Oct 06, 2015 8:37 am</strong></div>
+				<div class="author">by <strong>andrew_the_red</strong></div>
+				<div class="content">Hello everybody!<br>
+Ok, so i've implemented bullet for rigid body simulation, and it works perfectly. The problem is, that when i add a ghost object to the dynamic world, it shows me that it's always intersecting with something, even when I move it way outside of other objects aabb's.<br>
+<br>
+For start, I do this initialisation:<br>
+<span style="color:#40BF40">broadphase = new btDbvtBroadphase();<br>
+	broadphase-&gt;getOverlappingPairCache()-&gt;setInternalGhostPairCallback(new btGhostPairCallback());<br>
+	collision_config = new btDefaultCollisionConfiguration();<br>
+	collision_dispatcher = new btCollisionDispatcher(collision_config);<br>
+	dispatcher_info= new   btDispatcherInfo();<br>
+	constraint_solver = new btSequentialImpulseConstraintSolver;<br>
+	dynamics_world = new btDiscreteDynamicsWorld(collision_dispatcher,broadphase,constraint_solver,collision_config);</span><br>
+<br>
+the ghost object is created as follows:<br>
+<br>
+<span style="color:#00BF40">ghost_object[0] = new btPairCachingGhostObject();<br>
+	collision_shape= new btBoxShape(half_extents);<br>
+	ghost_object[0]-&gt;setCollisionShape(collision_shape);<br>
+<br>
+	btTransform bullet_matrix;<br>
+	bullet_matrix.setOrigin(btVector3(5,5,0));<br>
+	ghost_object[0]-&gt;setWorldTransform(bullet_matrix);<br>
+	ghost_object[0]-&gt;setCollisionFlags(ghost_object[0]-&gt;getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE );<br>
+	ghost_object[0]-&gt;setUserIndex(33);   dynamics_world-&gt;addCollisionObject(ghost_object[0],btBroadphaseProxy::SensorTrigger,btBroadphaseProxy::StaticFilter);</span><br>
+<br>
+It doesn't matter if the collision shape is bigger or smaller, it always detects that it is in collision with all the objects of the given filter (static objects in this case).<br>
+I tried implementing the static objects, as boxes, static planes, and triangle meshes, i get the same result. <br>
+ What I found strange, is that if I look at the proxy of the ghost object, it's aabbMin and aabbMax are very, very large negative and positive values respectively.<br>
+Also, I tried:<br>
+<span style="color:#40BF40">dynamics_world-&gt;updateAabbs();<br>
+dynamics_world-&gt;getBroadphase()-&gt;calculateOverlappingPairs(dynamics_world-&gt;getDispatcher());</span><br>
+but sadly, with the same result.<br>
+<br>
+What I need is a ghost object that I can move with the character so that it will detect when a wall is in front of him, but for starters, I need to know how to set up the ghost object so that it only detects what is colliding with it's aabb.<br>
+Also, if I use only a collision object (no ghost) i get the exact same results.<br>
+<br>
+if I move the collision object with the character, it detects collision propperly the first time, only that after that is says that it's colliding continously, until I exit the aabb of the static object.<br>
+The character is a dynamic rigid body which I control with forces and impulses. After each physics tic, I update the collision object's transform acordingly<br>
+<br>
+The tick callback:<br>
+<span style="color:#40BF40"><br>
+btManifoldArray manifoldArray;<br>
+	btBroadphasePairArray&amp; pairArray =<br>
+    ghost_object-&gt;getOverlappingPairCache()-&gt;getOverlappingPairArray();<br>
+int numPairs = pairArray.size();<br>
+<br>
+for (int i = 0; i &lt; numPairs; ++i)<br>
+{<br>
+    manifoldArray.clear();<br>
+<br>
+    const btBroadphasePair&amp; pair = pairArray<em class="text-italics">;<br>
+<br>
+    btBroadphasePair* collisionPair =<br>
+        dynamics_world-&gt;getPairCache()-&gt;findPair(<br>
+            pair.m_pProxy0,pair.m_pProxy1);<br>
+<br>
+    if (!collisionPair) continue;<br>
+<br>
+    if (collisionPair-&gt;m_algorithm)<br>
+        collisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(manifoldArray);<br>
+<br>
+    for (int j=0;j&lt;manifoldArray.size();j++)<br>
+    {<br>
+        btPersistentManifold* manifold = manifoldArray[j];<br>
+<br>
+        bool isFirstBody = manifold-&gt;getBody0() == ghost_object;<br>
+		 bool isSecondBody = manifold-&gt;getBody1() == ghost_object;<br>
+<br>
+			 if (isFirstBody || isSecondBody)<br>
+			manifold_nr = manifold-&gt;getNumContacts(); <br>
+    }<br>
+}<br>
+<br>
+nr = ghost_object-&gt;getNumOverlappingObjects(); // this allways returns something different from 0<br>
+</em></span><em class="text-italics"><br>
+<br>
+I thank you for your time!</em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Ghost object is allways in collision</h3>
+				<div class="date">Posted: <strong>Tue Oct 06, 2015 10:18 pm</strong></div>
+				<div class="author">by <strong>LHLaurini</strong></div>
+				<div class="content">Hi!<br>
+<br>
+Before I start I want to give you a tip: always use code tags for code.<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10855&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>Like this: [code]Code here</code></pre></div>[/code]<br>
+<br>
+<strong class="text-strong">My guess:</strong> Delete this line:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10855&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>nr = ghost_object-&gt;getNumOverlappingObjects(); // this allways returns something different from 0</code></pre></div>Instead, check this:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10855&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>manifold_nr = manifold-&gt;getNumContacts();</code></pre></div>
+
+<strong class="text-strong">If it still doesn't work:</strong> I don't know what it could be, but enabling debug drawing would be a good idea. It may take a day or two to implement, but it will be much easier to debug your physics. You can read a little more about it on the page 11 of the Bullet User Manual. I recommend you to take a look at the Bullet examples - they're pretty good. If you misplace a object it will be a piece of cake to find it.<br>
+<br>
+Also, take a look at my function (I took some unnecessary things out):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10855&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool Physics::CheckGhost(btPairCachingGhostObject* Ghost)
+{
+	btManifoldArray ManifoldArray;
+	btBroadphasePairArray&amp; PairArray = Ghost-&gt;getOverlappingPairCache()-&gt;getOverlappingPairArray();
+
+	for (int i = 0; i &lt; PairArray.size(); i++)
+	{
+		ManifoldArray.clear();
+
+		btBroadphasePair* CollisionPair =
+			PhysicsManager.DynamicsWorld.getPairCache()-&gt;findPair(PairArray[i].m_pProxy0, PairArray[i].m_pProxy1);
+
+		if (!CollisionPair)
+		{
+			continue;
+		}
+
+		if (CollisionPair-&gt;m_algorithm)
+		{
+			CollisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(ManifoldArray);
+		}
+
+		for (int j = 0; j &lt; ManifoldArray.size(); j++)
+		{
+			for (int p = 0; p &lt; ManifoldArray[j]-&gt;getNumContacts(); p++)
+			{
+				const btManifoldPoint&amp; Point = ManifoldArray[j]-&gt;getContactPoint(p);
+
+				if (Point.getDistance() &lt; 0.0f)
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	return Collided;
+}</code></pre></div>
+It returns true if colliding or false otherwise. Notice the "if (Point.getDistance() &lt; 0.0f)" line. It is very important because this line will differentiate a AABB collision (distance would be greater than zero) from a actual ColisionObject collision (distance would be less than zero).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Ghost object is allways in collision</h3>
+				<div class="date">Posted: <strong>Wed Oct 07, 2015 2:39 pm</strong></div>
+				<div class="author">by <strong>andrew_the_red</strong></div>
+				<div class="content">Thank you for the information!<br>
+I have managed to solve my problem. When using the function you posted, I stil got the same results. Using the manifold, I could find if the object's true shape was in collision, but that didn't save me from iterating through all the pairs that the ghost object had. For example, if I had 30 static objects, even very far, my puny ghost object would be very enthusiastic and create pairs for each of them.<br>
+<br>
+In the end, my problem was in the initialisation of the ghost object's transform:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10855&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform bullet_matrix;
+bullet_matrix.setOrigin(btVector3(5,5,0));</code></pre></div>
+In this way, the "m_basis" parameter of the transform remains uninitialised and this leads to a  huge aabb (from -6000000 to +6000000 on each axis) which intersects, oviously, with everything.<br>
+<br>
+The solution was to initialise the transform as this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=10855&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform bullet_matrix(btQuaternion(0,0,0,1),btVector3(5,5,0));</code></pre></div>
+
+Also, it works perfectly if I attach the ghost to a moving rigid body, by updating it's transform accordingly.<br>
+<br>
+Ah, the classy pitfalls of spare time self learning...<br>
+<br>
+Anyway, the  "if (Point.getDistance() &lt; 0.0f)" is surely something that I think would come in handy very soon. Once again, my thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Ghost object is allways in collision</h3>
+				<div class="date">Posted: <strong>Wed Oct 07, 2015 3:32 pm</strong></div>
+				<div class="author">by <strong>LHLaurini</strong></div>
+				<div class="content">Glad to hear you've got it to work. As I've already said, if you had implemented debug drawing you would've spent much less time trying to fix your problem. But anyways, good luck!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

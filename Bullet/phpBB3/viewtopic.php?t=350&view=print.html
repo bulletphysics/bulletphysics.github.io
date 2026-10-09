@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; CCD mode issue</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>CCD mode issue</h2>
+		<p><a href="viewtopic.php%3Ft=350.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=350</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 24, 2006 9:04 am</strong></div>
+				<div class="author">by <strong>~MyXa~</strong></div>
+				<div class="content"><blockquote><div><cite>Etherton wrote:</cite>Very good maybe now you can document that Bullet does not have the limitation that Havok and Ageia has in its GJK.<br>
+I think that Bullet is a very good library and before it, there were only three legs on physics: Havok, Agia and ODE, now with Bullet quatrenium is completed. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"><br>
+<br>
+PS:<br>
+On the bright side from this criticism the result was positive: an improvement of what was already excellent and know is brilliant</div></blockquote>
+
+Now I am playing with 1.5d. appCcdPhysicsDemo sometimes hangs in GjkPairDetector::GetClosestPoints. Steps to reproduce:<br>
+1) set shooting speed to 120 (at speed 40 hangs too, but needs more patience)<br>
+2) set CCD mode<br>
+3) fire, wait until box hits the wall, reset scene<br>
+4) go to 3 if not hangs yet<br>
+<br>
+I've tried this both in debug (with numObjects set to 120) and release.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed May 24, 2006 6:38 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>~MyXa~ wrote:</cite><blockquote><div><cite>Etherton wrote:</cite>Very good maybe now you can document that Bullet does not have the limitation that Havok and Ageia has in its GJK.<br>
+I think that Bullet is a very good library and before it, there were only three legs on physics: Havok, Agia and ODE, now with Bullet quatrenium is completed. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"><br>
+<br>
+PS:<br>
+On the bright side from this criticism the result was positive: an improvement of what was already excellent and know is brilliant</div></blockquote>
+
+Now I am playing with 1.5d. appCcdPhysicsDemo sometimes hangs in GjkPairDetector::GetClosestPoints. Steps to reproduce:<br>
+1) set shooting speed to 120 (at speed 40 hangs too, but needs more patience)<br>
+2) set CCD mode<br>
+3) fire, wait until box hits the wall, reset scene<br>
+4) go to 3 if not hangs yet<br>
+<br>
+I've tried this both in debug (with numObjects set to 120) and release.</div></blockquote>
+
+Thanks a lot for the feedback. There was an issue in Time Of Impact calculations (implementation from this paper: <a href="http://www.dtecta.com/papers/jgt04raycast.pdf" class="postlink">http://www.dtecta.com/papers/jgt04raycast.pdf</a> ). The GjkConvexCast implements the first 'brute force' version, SubsimplexConvexCast is the faster version (merged loops). GjkConvexCast was causing the problem. See line 125 of file:<br>
+<a href="http://www.continuousphysics.com/Bullet/BulletFull/GjkConvexCast_8cpp-source.html" class="postlink">http://www.continuousphysics.com/Bullet ... ource.html</a><br>
+<br>
+To fix it, replace 0.0 by -SIMD_EPSILON:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=350&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>     if (nDotr &gt;= -(SIMD_EPSILON*SIMD_EPSILON)) 
+</code></pre></div>
+
+For nDotr values very close to 0, lambda became undefined (#INF), and things went wrong from there. <br>
+<br>
+Can you let us know if this fixes your issue?<br>
+<br>
+Thanks again, such feedback improves the software!<br>
+Version 1.5e is uploaded:<br>
+<a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/source/&amp;file=bullet-1.5e-source.zip" class="postlink">http://www.continuousphysics.com/ftp/pu ... source.zip</a><br>
+<br>
+Erwin<br>
+<br>
+PS: There are some TODO's in using the ConvexCast: If objects start off in penetration and/or move away from eachother, this should be detected before entering the TOI calculation, because that is not handled within the calculation.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11058" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2016-09-16T17:52:07+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11058</id>
+
+		<entry>
+		<author><name><![CDATA[JoeLubertazzi]]></name></author>
+		<updated>2016-09-16T17:52:07+00:00</updated>
+
+		<published>2016-09-16T17:52:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38202#p38202</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38202#p38202"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38202#p38202"><![CDATA[
+Answering my own question here, as I've managed to come to a better understanding of the mathematics involved:<br><br>Quaternion multiplication can be represented in matrix form, such that<br><br>q * p = Q( q ) * p<br><br>Furthermore, quaternion multiplication with a pure quaternion (e.g. omega in this case) can be written as<br><br>q * (0, w) = P( q ) * w<br><br>where w is a standard 3-vector. Definitions of these matrices are located <a href="http://umu.diva-portal.org/smash/get/diva2:140361/FULLTEXT01.pdf" class="postlink">here</a> under chapter 14 and in the notation appendix, in <a href="https://www.amazon.com/Game-Physics-Pearls-Gino-Bergen/dp/1568814747" class="postlink">Game Physics Pearls</a> under chapter 9 (which is an excellent, book I might add), or one can simply derive them by hand by expanding the standard quaternion multiplication, i.e.<br><br>q * p = ( qs * ps - qv • pv, qs * pv + ps * qv + qv x pv )<br><br>where '•' is the standard dot-product and 'x' is the standard cross-product. Note that because quaternion multiplication is non-commutative, the above matrices will have left- and right-product forms corresponding to the multiplication order.<br><br>Therefore, the equation<br><br>qdot = 0.5 rAconj (qAconj qB (0, wB) - (0, wA) qAconj qB) rB<br><br>can be written in matrix form as<br><br>qdot = 0.5 * Qr( rAconj * qAconj * qb ) * Pl( rB ) * wB - 0.5 * Qr( rAconj ) * Pl( qAconj * qB * rB ) * wA<br><br>where the 'r' and 'l' subscripts on Q and P denote right- and left-products, respectively. In this form, wA and wB are now isolated and we can easily identify our jacobian by inspection. Hope this helps someone!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11703">JoeLubertazzi</a> — Fri Sep 16, 2016 5:52 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[JoeLubertazzi]]></name></author>
+		<updated>2016-08-26T02:19:27+00:00</updated>
+
+		<published>2016-08-26T02:19:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38078#p38078</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38078#p38078"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38078#p38078"><![CDATA[
+<blockquote class="uncited"><div><em class="text-italics">qdot = 0.5 rAconj (qAconj qB (0, wB) - (0, wA) qAconj qB) rB</em><br>and the velocity constraints:<br><em class="text-italics">qdot.x = 0,<br>qdot.y = 0.</em><br>Velocities are "decoupled" so to get Jacobian is a matter of simple quaternion multiplication.</div></blockquote>Would you mind explaining how you isolated wA and wB so as to identify the Jacobian by inspection? I've tried re-arranging qdot but I don't quite understand how construct the Jacobian such that qdot = Jv. <br><br>Thanks!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11703">JoeLubertazzi</a> — Fri Aug 26, 2016 2:19 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vanger]]></name></author>
+		<updated>2016-03-25T16:09:09+00:00</updated>
+
+		<published>2016-03-25T16:09:09+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37222#p37222</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37222#p37222"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37222#p37222"><![CDATA[
+Thanks! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>No. That would require some history of a mutual movement, not just body states. So it would be not so natural. Though, it's definitely doable, but there would the same issues both in quaternion based approach and local frames based one.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11632">vanger</a> — Fri Mar 25, 2016 4:09 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2016-03-25T14:38:20+00:00</updated>
+
+		<published>2016-03-25T14:38:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37221#p37221</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37221#p37221"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37221#p37221"><![CDATA[
+Congrats! And yes, I have also encountered some of my own fundamental math code with a mistake. Usually it was either never used before, or just had a marginal impact on the end result.<br><br>Anyway, your hinge constraint sounds robust. Can it even handle rotations more than 180 degrees (like it is being wound up like a spring?)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Fri Mar 25, 2016 2:38 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vanger]]></name></author>
+		<updated>2016-03-26T13:30:23+00:00</updated>
+
+		<published>2016-03-25T11:15:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37218#p37218</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37218#p37218"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37218#p37218"><![CDATA[
+I figured out what the problem was. It was... an error in the basic matrix class from which everything linear algebra stuff like vectors inherited. The error was in access to a matrix element function. But it did not show because almost always I worked with whether vectors (matrices with 1 width) or with linear operators (square matrices). It's a miracle how such trivial error in such important place didn't appear for quite a long time. Related to the topic I suspected an error in quaternion gymnastics, sudden divergence of numerical method and so on. But not THIS. I'm in a superposition of  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_eek.gif" width="15" height="15" alt=":shock:" title="Shocked">  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> <br><br>So finally I have a working hinge constraint. A different versions of it, actually: quaternion based described upwards and the one based directly on vectors orthogonality (similar to mentioned upwards too). I'm too lazy to compare their convergence speed experimentally (especially, if the result seems obvious), but I verified that the former manages angles violation more that 90 degrees fine, unlike the latter, as expected. Also, it's much more convenient to manage limit rotation about a common axis in the quaternion based approach. And that's what I want to talk about <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> It seems the question deserves its own topic: <a href="http://www.bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=4&amp;t=11095" class="postlink">http://www.bulletphysics.org/Bullet/php ... =4&amp;t=11095</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11632">vanger</a> — Fri Mar 25, 2016 11:15 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2016-03-09T14:25:50+00:00</updated>
+
+		<published>2016-03-09T14:25:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37133#p37133</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37133#p37133"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37133#p37133"><![CDATA[
+Ahh, now I see where you're coming from. Well I'm afraid my math isn't good enough to help you. Good luck!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Wed Mar 09, 2016 2:25 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vanger]]></name></author>
+		<updated>2016-03-11T17:05:04+00:00</updated>
+
+		<published>2016-03-08T20:21:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37129#p37129</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37129#p37129"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37129#p37129"><![CDATA[
+<blockquote class="uncited"><div>I have a fully working constraint model and that's what I have for the Jacobian for a hinge.</div></blockquote>That's because you use another constraints. Of course it's possible to use kind of (for the first body)<br>a * e3A = 0,<br>b * e3A = 0,<br>where e3A is the unit vector rigidly connected with body A. In a body A frame it can rotate only so<br>d/dt e3A = wA x e3A,<br>where x is a cross product. So the velocity constraints are<br>a * (wA x e3A) = wA * (e3A x a) = 0,<br>b * (wA x e3A) = wA * (e3A x b) = 0.<br>So we have the Jacobian, etc. Lagrange multipliers would talk us how e3A must be changed (rotated), from which we'd derive how angular velocities and quaternions (in NGS) must be changed. This should work. I used the velocity constraint based on the similar idea in the second post, to make myself sure that code for computing jacobians and correcting velocities is OK. I tested it now for a two dynamic bodied joined by a hinge constraint (velocity constraint only) -- seems OK. But my sence of beauty objects againt such sollution <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> It's unnatural to mess with implicit representation of orientation quaternions (e3A or something like it) against explicit: quaternions itself. Plus, as Dirk mentions in that thread, that constraints are bistable. Which is bad by itself, plus, by continuity, it should have worse convergence (because the more constraint violated, the closer it to the "saddle point" (90 degree angle) where, by symmetry and the fact that a continuous function with different signs on the sides of a segment has zero, seems to have zero restoring force (Cdot)).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11632">vanger</a> — Tue Mar 08, 2016 8:21 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2016-03-08T19:50:27+00:00</updated>
+
+		<published>2016-03-08T19:50:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37128#p37128</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37128#p37128"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37128#p37128"><![CDATA[
+I have a fully working constraint model and that's what I have for the Jacobian for a hinge. I don't know if quaternions would make any of my calculations easier, but I don't use any. It just seems they need to be converted to a matrix so often that they are more trouble than they're worth.<br><br>Anyway, maybe you'll have better luck with the following thread. See the post by Dirk Gregorius in particular - he computes the Jacobians as the cross product of the other two vectors, but the result is essentially the same (it will be slightly different if there is already an error in the hinge constraint, but I couldn't tell you off-hand if his method is better or worse than mine ... I just know that mine works stably).<br><br><a href="http://www.bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=4&amp;t=8686" class="postlink">http://www.bulletphysics.org/Bullet/php ... f=4&amp;t=8686</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Tue Mar 08, 2016 7:50 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[vanger]]></name></author>
+		<updated>2016-03-08T18:31:59+00:00</updated>
+
+		<published>2016-03-08T18:31:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37126#p37126</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37126#p37126"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37126#p37126"><![CDATA[
+Nope. Jacobians are coordinate expressions of differentials of maps from "coordinate space" to "constraint space". In simple words, if we have n constraints C_i and m coordinates x_j, ij-th matrix element J_{ij} is dC_i/dt |_{v_j = 1}, where v_j = dx_j/dt. It's written in the previous post. For example, J_{12} = 0.5 * a * (q * (0, 0, 1, 0)).im, where first * is just scalars multiplication, second -- dot product, third -- quaternions multiplication. (For convenience while experimenting I just write short functions getC, getCdot by which Jacobian is calculated.) Is there some possibility that in the general case (a and b not coordinate system orts) semi-implicit Euler method does not converge? I didn't have time to analyse it on paper, but, if I didn't do some stupid mistake in the code, it doesn't (sounds oddly).<br><br>It seems that I found the correct constraints (fixed version from the first post). Let us concentrate just on unlimited hinge rotation of two rigid bodies about some common axis. So we need to get rid of two degrees of freedom. Let<br><em class="text-italics">q = rAconj qAconj qB rB,</em><br>where qA and qB are usual orientation quaternions (s.t. if a vector V has a coordinates column V' in a frame of a body B (lets name this frame B') then (qB*(0, V')*qBconj).im is its coordinates column in a world frame (lets call this frame W)), rB is a quaternion which carry out rotation from frame where the axis, bodies rotate about, direction vector has coordinates (0, 0, 1) (lets call this frame B'') to frame B', rA defined by analogy. So we have a map<div class="codebox"><p>Code: </p><pre><code>     q            rB      qB   qAconj  rAconjB'' --&gt; A'': B'' ---&gt; B' ---&gt; W ---&gt; A' ---&gt; A''</code></pre></div>The hinge constraint would not be violated iff vectorial part of q is collinear with Z axis. I.e. the (coordinate) constraints are just<br><em class="text-italics">q.x = 0,<br>q.y = 0.</em><br>Then differentiating this equations, minding Leibniz rule, unitarity of quaternions and dq/dt = 0.5 q (0, w) identity we get<br><em class="text-italics">qdot = 0.5 rAconj (qAconj qB (0, wB) - (0, wA) qAconj qB) rB</em><br>and the velocity constraints:<br><em class="text-italics">qdot.x = 0,<br>qdot.y = 0.</em><br>Velocities are "decoupled" so to get Jacobian is a matter of simple quaternion multiplication. This one converges (hooray!), but there's still an issue (oh...). Everything works fine if one of the bodies has an infinite inertia (kinematic body) or (if both bodies are dynamic) if angular velocities are orthogonal or collinear to rotation axis. If angular velocities are in general case simulation blows up. And this is an up-to-date WTF. This is not because of quadratic term (Coriolis', gyroscopic, ...) in the Euler equations -- I ignore this term for now for the sake of stability.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11632">vanger</a> — Tue Mar 08, 2016 6:31 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[bone]]></name></author>
+		<updated>2016-03-07T18:27:21+00:00</updated>
+
+		<published>2016-03-07T18:27:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37124#p37124</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37124#p37124"/>
+		<title type="html"><![CDATA[Re: Implementing hinge constraint]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=37124#p37124"><![CDATA[
+The Jacobians are simply a and b for the first body (and, of course, -a, and -b for the second body). Is this the result you are getting?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1626">bone</a> — Mon Mar 07, 2016 6:27 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

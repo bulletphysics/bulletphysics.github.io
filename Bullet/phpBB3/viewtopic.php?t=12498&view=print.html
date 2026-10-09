@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Question about PBD stabilization</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Question about PBD stabilization</h2>
+		<p><a href="viewtopic.php%3Ft=12498.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12498</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Question about PBD stabilization</h3>
+				<div class="date">Posted: <strong>Sun Nov 18, 2018 10:25 am</strong></div>
+				<div class="author">by <strong>ivanisavich</strong></div>
+				<div class="content">I have a question related to PBD in the context of a grain/sand simulation. <br>
+<br>
+I understand some solvers implement a stabilization step prior to the main constraint solver loop, where solid-surface interpenetrations are resolved, and the position deltas are added to both the current position and the projected position so they do not contribute to the overall velocity deltas calculated at the end of the solver loop (otherwise, the smaller the time step...the greater the explosive force of those solid surface collision constraints).<br>
+<br>
+However, it seems the same explosiveness can occur even with particle-particle collisions, but it doesn't really make sense to include them in the stabilization step. So how can such explosiveness be mitigated?<br>
+<br>
+To illustrate: <br>
+<br>
+Imagine a simulation with a time step of 1. On the first step of the simulation, 2 particles (each with a radius of 1) occupy the same location. During the constraint solver loop, they are each moved a distance of 1.0 units away from each other in opposite directions to satisfy their collision constraint. At the end of the solver loop, when velocities are calculated from current/projected particle positions, and each particle ends up with a velocity magnitude of 1 using the formula: vDelta = (projectedPos - currentPos) / timeDelta;<br>
+<br>
+Now we change the time step to 1/32 (0.03125). The same scenario unfolds with the coincident particles being moved 1 unit away from each other. However, at the end of the time step when we are calculating their velocity, they end up with a velocity that is much more explosive since we're dividing the positionDelta by .03125, which effectively multiplies it by 32. So now their velocity magnitude...despite only having moved a single unit in space, is 32 instead of 1. And consequently, they explode apart as the simulation continues.<br>
+<br>
+With big piles of particles forming regularly and particle-particle collisions happening often in a grain simulation, these explosions can happen all the time and result in a very unstable simulation. Especially if new particles are injected into the system over time in such a way that doesn't guarantee they will be collision-free at birth. So how can these explosive artifacts be fixed?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Question about PBD stabilization</h3>
+				<div class="date">Posted: <strong>Sat Dec 29, 2018 4:24 pm</strong></div>
+				<div class="author">by <strong>mpm</strong></div>
+				<div class="content">I get a feeling that you are referring to Nvidia's unified particle physics paper, but I'll link to it anyways:<br>
+<br>
+<a href="http://mmacklin.com/uppfrta_preprint.pdf" class="postlink">http://mmacklin.com/uppfrta_preprint.pdf</a><br>
+<br>
+Section 4.4 discusses the issue in PBD you bring up using a small number of pre-stabilization iterations, specifically how this problem becomes worse with smaller timestep, which usually improves stability and convergence, by<br>
+
+<blockquote class="uncited"><div>Any deltas applied to the original positions are also applied to the predicted positions before the main constraint solving loop begins. (...) If convergence is not fully reached during this pre-stabilization pass then some energy may still be added to the system, however 1-2 iterations is usually sufficient to resolve most visual artifacts.</div></blockquote>
+
+This more or less reiterates your statement, but in their experience this is sufficient.<br>
+<br>
+Another slightly related issue with PBD and impacts and step size, is when using TOI with CCD, where if you integrate a body back in time at which it just touches a surface, there isn't much for the PBD solver to influence the motion of the body. I kind of gave up on my PBD solver for rigid bodies (not particles) and went ahead with a PGS/SI scheme, although I'll return to it one day.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

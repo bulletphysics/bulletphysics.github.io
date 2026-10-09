@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/287" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-04-05T23:53:37+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/287</id>
+
+		<entry>
+		<author><name><![CDATA[ngbinh]]></name></author>
+		<updated>2006-04-05T23:53:37+00:00</updated>
+
+		<published>2006-04-05T23:53:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=873#p873</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=873#p873"/>
+		<title type="html"><![CDATA[Re: LCP solvers and nonpenetration CCD]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=873#p873"><![CDATA[
+<blockquote class="uncited"><div>I've implemented continuous collision detection that allows no interpenetration (based on Redon's method). .</div></blockquote>Could you accomplish that?<br>Right now the only way to 95% avoid intepenetration is backing up and step ahead with smaller time step. But as Erin said, for complex scene, you will get so small step that your system cannot advance in time.<br>The Stewart-Trinkle time stepper prevent says 80% of interpenetrations with polygonal objects and guarantee that the system always advance.<br>We'll see how good is it compare to usual Anitescu-Potra time stepper.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=225">ngbinh</a> — Wed Apr 05, 2006 11:53 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erin Catto]]></name></author>
+		<updated>2006-04-02T23:14:17+00:00</updated>
+
+		<published>2006-04-02T23:14:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=846#p846</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=846#p846"/>
+		<title type="html"><![CDATA[LCP solvers and nonpenetration CCD]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=846#p846"><![CDATA[
+I'm now recommending a sequential impulse algorithm over the PGS algorithm. While these two algorithms give similar results, it is conceptually simpler to implement sequential impulses.<br><br>Download slides and code here:<br><a href="http://www.gphysics.com/gdc-2006/" class="postlink">http://www.gphysics.com/gdc-2006/</a><br><br>Within the slides, I show how to include weight feeling friction. Also, deltaT is not needed for the impulse calculations.<br><br>Caveat: If you don't plan to allow penetration, you must at least have a slop region. Otherwise you will end up cutting your time-step extremely small. My opinion is that CCD should be used to prevent tunneling, but should not be used for objects that are already touching.<br><br>You can achieve restitution by simply augmenting the bias velocity (mentioned in the slides) with a restitution term.<br><br>Now if you really want an accurate simulation you will have to implement an O(n^3)+ LCP solver (see Mihai Anitescu's work). If you can use the normal force from the previous step for friction, you might consider using a conjugate gradient algorithm like GPCG, which is O(n)+.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12">Erin Catto</a> — Sun Apr 02, 2006 11:14 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[michael]]></name></author>
+		<updated>2006-04-02T22:30:42+00:00</updated>
+
+		<published>2006-04-02T22:30:42+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=845#p845</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=845#p845"/>
+		<title type="html"><![CDATA[LCP solvers and nonpenetration CCD]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=845#p845"><![CDATA[
+Hello all,<br><br>I've implemented continuous collision detection that allows no interpenetration (based on Redon's method). Currenly I'm using an impulse based approach to handle simultaneous collisions (resting contacts are handled as microcollisions). I'd like to move to some analytical form of LCP solver.<br><br>I tried understanding how to use PGS, from Erin Catto's paper ("Iterative Dynamics with Temporal Coherence") but ran into trouble:<br><br>1. I don't see any mentioning of the coefficient of restitution. Instead, I see "The velocity constraint is augmented with a feedback term proportional to the penetration depth". What should I do when there is never any interpenetration? I know I could use the separation distance, but isn't there a way to do it without taking any distance into account?<br><br>2. In Erin's paper, the big matrix equation which is solved using PGS has the term "delta t" in it. If I understand correctly, this means the solver solves through time. In my simulator I don't know "delta t" when I need to resolve the simultaneous collisions. Can I use PGS to compute the impulses that need to be applied at a specific instant in time? (not over some time interval)<br><br>3. Is there a way to implement friction with real "weight feeling" with PGS? In a box stack I'd like lower boxes to have stronger friction compared to higher boxes. (I've read about this in another thread but couldn't find an answer there)<br><br>4. Is there another LCP solver method which is more suitable for my configuration? I assumed any LCP solver could be used, but I'm very inexperienced as you know and may be terribly confused. Any hints will be highly appreciated.<br>Redon says he uses the method from Baraff 94 - should I conclude that this method is preferable for me? (applied to impulses and velocities instead of forces and accelerations)<br>In any case, I'd be grateful if you could point me to some paper explaining PGS or other solver methods, if you know of any.<br><br>5. Baraff mentions the need for an incremental matrix factorization routine, in order to solve some A11x = -v1 equation in his paper. I wonder what routines are most common nowadays (LU decomposition or something else?).<br><br><br>Thanks and sorry again for the long posts.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=406">michael</a> — Sun Apr 02, 2006 10:30 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

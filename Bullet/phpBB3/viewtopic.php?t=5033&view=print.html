@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Bullet vs ODE for simulating robotic systems</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Bullet vs ODE for simulating robotic systems</h2>
+		<p><a href="viewtopic.php%3Ft=5033.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5033</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Thu Apr 29, 2010 4:41 pm</strong></div>
+				<div class="author">by <strong>yvanix</strong></div>
+				<div class="content">Hi,<br>
+<br>
+We have developed for many years a commercial robot simulator using ODE. Recently we decided to evaluate the option of switching our application from ODE to Bullet. We thought that from Bullet we would benefit from more reliable and complete collision detection, soft bodies and many other features that ODE does not have.<br>
+<br>
+However after a substantial amount of work in porting our software to Bullet we came across some of Bullet's limitations. In a robot simulator we need to work with physically plausible values, because our simulations are used in experiments where people want to measure accurate forces or torques through simulated force/pressure sensors, etc. Our simulator is also used to validate mechanical prototypes before the real robots are built, hence we need accurate physical values. This is different from video games where the physics engine must only yield visually plausible results.<br>
+<br>
+The problem we have noticed is that Bullet's btHingeConstraint seems to be much less capable to cope with large mass ratios compared to ODE's hinges. Bullet hinges move off the axis and become unstable and relaxed with smaller mass ratio than ODE. Similarly Bullet has a hard time to cope with large ratios of moment of inertia, e.g. a chain of btRigidBodys linked with btHingeConstraints where the btRigidBodys use small and large btShapes alternatively.<br>
+<br>
+Of course Bullet's User Manual recommend to avoid large mass ratios, but we need to simulate something physically plausible. For example we need to simulate wheeled robots, in which the wheels typically weight 30 times less than the robot's bodys, or robotic hands, where the fingers weight much less than the arm.<br>
+<br>
+We noticed that the weakness about the btHingeConstraint can be counter-balanced by:<br>
+<br>
+1. decreasing the time step (stepSimulation())<br>
+2. increasing a lot (up to 100) the number of iterations of the solver<br>
+3. decreasing the gravity<br>
+<br>
+Although 1. and 2. improves things, unfortunately this also decreases the performance to a level that is finally slower than ODE.<br>
+And 3. must again be ruled out because this unfortunately makes the values unrealistic.<br>
+<br>
+We have also tried the btGeneric6DofConstraint with similar results.<br>
+So we are currently stuck in our transition to Bullet and would appreciate some advice:<br>
+<br>
+Is Bullet suitable to simulate mechanical systems with several actuated joints such as humanoid/quadruped robots, articulated arms/hands, wheeled robots, etc. ?<br>
+Has anyone been able to program a realistic humanoid robot model using an unmodified version of Bullet ?<br>
+Have anyone encountered the sames problems as me ?<br>
+How could you solve the problem ?<br>
+<br>
+I look forward for any info, good or bad.<br>
+Best regards,<br>
+<br>
+Yvan<br>
+<br>
+--------------------------<br>
+Yvan Bourquin<br>
+Software Engineer<br>
+Cyberbotics Ltd.<br>
+<a href="http://www.cyberbotics.com" class="postlink">http://www.cyberbotics.com</a><br>
+--------------------------</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Thu Apr 29, 2010 5:01 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Are you using dWorldStep in ODE, or dQuickStep?<br>
+<br>
+It seems you require a direct (pivoting) constraint solver, such as Dantzig. If you are using dQuickStep you should get similar results to Bullet constraint solver. dWorldStep has a different solving method. If there is interest, we can port this Dantzig solver over to Bullet, there is already an issue for that: <a href="http://code.google.com/p/bullet/issues/detail?id=152" class="postlink">http://code.google.com/p/bullet/issues/detail?id=152</a><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Thu Apr 29, 2010 5:31 pm</strong></div>
+				<div class="author">by <strong>yvanix</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Are you using dWorldStep in ODE, or dQuickStep?<br>
+<br>
+It seems you require a direct (pivoting) constraint solver, such as Dantzig. If you are using dQuickStep you should get similar results to Bullet constraint solver. dWorldStep has a different solving method. If there is interest, we can port this Dantzig solver over to Bullet, there is already an issue for that.<br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+Hello Erwin,<br>
+<br>
+Many thanks for the quick reply. Our software uses ODE's dWorldStep().<br>
+Isn't there a way to workaround these issues with the current Bullet 2.76 ?<br>
+Unfortunately we have paused our transition to Bullet just because of that.<br>
+Thanks in advance,<br>
+<br>
+Yvan<br>
+<br>
+--------------------------<br>
+Yvan Bourquin<br>
+Software Engineer<br>
+Cyberbotics Ltd.<br>
+<a href="http://www.cyberbotics.com" class="postlink">http://www.cyberbotics.com</a><br>
+--------------------------</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Fri Apr 30, 2010 9:34 am</strong></div>
+				<div class="author">by <strong>yvanix</strong></div>
+				<div class="content">Hi Erwin,<br>
+<br>
+There is definitely interest on our side for porting the Danzig solver to Bullet. I believe that other people using Bullet for simulating robotic or mechanical systems will also be interested. On our side we could provide our support by testing this solver against our existing collection of robots and vehicles.<br>
+<br>
+However the decision to transfer our code to Bullet is not completely made yet. We are unsure if we will find all the features we need in Bullet to implement the simulated devices that we need and which are currently implemented with ODE. In particular we are wondering if these things will be possible:<br>
+<br>
+1. Find out how much force is applied on a specific body and what is the direction (vector) of that force, in order to implement "force" or "pressure" sensors. Something equivalent to ODE's dJointFeedback struct.<br>
+<br>
+2. Find out the position and normal vectors of contact points/edges of collision detection. This is necessary to provide visual feedback about the collision to our users. Something equivalent to ODE's dContactGeom.<br>
+<br>
+3. Find out how much torque/force is currently used by a hinge/slider motor while moving or maintaining the current position (motor force feedback).<br>
+<br>
+I would greatly appreciate your opinion on this.<br>
+Best regards,<br>
+<br>
+Yvan<br>
+<br>
+--------------------------<br>
+Yvan Bourquin<br>
+Software Engineer<br>
+Cyberbotics Ltd.<br>
+<a href="http://www.cyberbotics.com" class="postlink">http://www.cyberbotics.com</a><br>
+--------------------------</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Mon May 10, 2010 1:47 pm</strong></div>
+				<div class="author">by <strong>YAN3</strong></div>
+				<div class="content">Hello Yvan and Erwin,<br>
+<br>
+I am a masters students at a robotics lab and I have recently started using (learning about) Bullet because I need some efficient way of collision checking for a 7-joint robotic arm. The checking would be used during a path planning process where the algorithm would try to find a way for the arm to move to a goal point without colliding with anything along the way. Someone here at the lab suggested Bullet and we spent some time installing it so that it can be used by our simulator at the lab.<br>
+<br>
+I was searching around for anyone who has done something like this using Bullet, and I found this thread. So does this mean that Bullet is not suited for such a task? The problem is that I don't know anything about ODE, so I'd really appreciate any feedback or advice before I delve into modeling the arm in Bullet. Thanks a lot.<br>
+<br>
+Regards,<br>
+Nick</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Mon May 17, 2010 7:39 am</strong></div>
+				<div class="author">by <strong>yvanix</strong></div>
+				<div class="content">Hi Nick,<br>
+<br>
+According to my experience with both ODE and Bullet, my feeling is that currently ODE is more suited for simulating mechanical system such as robots. In the other hand Bullet has a more active community and is much more feature-rich, e.g. soft bodies, continuous collision detection, etc. However the problem with hinge (or rotational 6 dof) joints that I explained in the initial post makes it less suited, in my opinion, to simulate mechanical systems. In short I would recommend ODE for robotics and Bullet for game engines. Of course this may change by the addition of a new solver in Bullet as Erwin suggested.<br>
+Best regards,<br>
+<br>
+Yvan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Mon May 17, 2010 5:51 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Currently Bullet uses an iterative LCP constraint solver, based on the projected Gauss Seidel algorithm (PGS). For robotics, a direct constraint solver such as Dantzig LCP or Featherstone will give better results.<br>
+<br>
+We will look into this in the future, currently we are busy preparing for Bullet 3.x.<br>
+<br>
+See also those issues/topics:<br>
+<a href="http://code.google.com/p/bullet/issues/detail?id=152" class="postlink">http://code.google.com/p/bullet/issues/detail?id=152</a> (Dantzig)<br>
+<a href="http://code.google.com/p/bullet/issues/detail?id=33" class="postlink">http://code.google.com/p/bullet/issues/detail?id=33</a> (Featherstone)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Sat Jun 05, 2010 7:18 pm</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content">Featherstone will surely help articulated bodies.<br>
+<br>
+But Dantzig is unnecessary. It has been proved that with Bullet's friction model, the underlying problem is a convex QP. And convex QP solvers are much more mature than LCP ones. Also, if carefully implemented, the problem can be solved in linear time ( convex QP solver = decomposition( usually n^3)  + forward/backward solves (linear), but incremental low rank matrix update can be used on previous time step decomposition).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Wed Jun 09, 2010 2:45 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>ngbinh wrote:</cite>Featherstone will surely help articulated bodies.<br>
+<br>
+But Dantzig is unnecessary. It has been proved that with Bullet's friction model, the underlying problem is a convex QP. And convex QP solvers are much more mature than LCP ones. Also, if carefully implemented, the problem can be solved in linear time ( convex QP solver = decomposition( usually n^3)  + forward/backward solves (linear), but incremental low rank matrix update can be used on previous time step decomposition).</div></blockquote>
+
+The nice thing about Dantzig is that there is no need for a previous time step, therefore adding/removing constraints on the fly is not an issue.  Not to mention there's a free, working, optimized implementation in ODE.  It is still O(n^3), though, but I don't think it has the numerical issues of CG and the like.<br>
+<br>
+Featherstone doesn't help much if you need elasticity or loops (although the latter can be done in a painful way).<br>
+<br>
+I know little about convex QP solvers other than what I can quickly find on Wikipedia.  Is there a (well-written) paper which describes how to do these incremental matrix updates?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Mon Jun 21, 2010 5:41 am</strong></div>
+				<div class="author">by <strong>copjia</strong></div>
+				<div class="content">hi yvanix :<br>
+You have writen that<br>
+" Find out how much torque/force is currently used by a hinge/slider motor while moving or maintaining the current position (motor force feedback). "<br>
+I think you mean when the robot motor joint (anglemotorjoint) cause the link arms to move an angle,the ODE engine could calculats the force/torque used by motor joint.It looks like a inverse dynamic problems. Isn't it ?<br>
+<br>
+thanks,<br>
+<br>
+copjia</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Mon Jun 21, 2010 8:01 am</strong></div>
+				<div class="author">by <strong>yvanix</strong></div>
+				<div class="content">Hi copjia,<br>
+<br>
+No I was not referring to "inverse kinematics", but to the ability of ODE to compute and give as feedback the force applied by joints onto bodies.<br>
+But this is off topic anyway...<br>
+Best regards,<br>
+<br>
+Yvanix</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Tue Jun 22, 2010 3:35 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>bone wrote:</cite>The nice thing about Dantzig is that there is no need for a previous time step, therefore adding/removing constraints on the fly is not an issue.  Not to mention there's a free, working, optimized implementation in ODE.  It is still O(n^3), though, but I don't think it has the numerical issues of CG and the like.
+</div></blockquote>
+
+The idea is to take the ODE Dantzig implementation, optimize it further, and use a PGS fallback in case the solver terminates without a solution (sometimes the Dantzig implementation doesn't find a solution).<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Wed Jun 30, 2010 2:37 pm</strong></div>
+				<div class="author">by <strong>tompalmer</strong></div>
+				<div class="content">Putting in another vote for improvements for robotics. Another student in my research lab has discussed these same issues about mass ratios and such. My own issues are with working at small scale, so I use units as cm instead of meters, but I keep gravity relatively weak since it seems the constraint forces can't keep up with the fully scaled gravity.<br>
+<br>
+Anyway, if the Dantzig will solve at least some problems, I vote for putting this when at the soonest opportunity.<br>
+<br>
+Meanwhile, thanks much for the hard work on Bullet.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Tue Aug 05, 2014 11:11 pm</strong></div>
+				<div class="author">by <strong>edualbu</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I'd like to know if the Dantzig Solver is already implemented. I'm also working with robotic simulation and I'm trying to choose between ODE and Bullet.<br>
+<br>
+Best regards,<br>
+<br>
+Eduardo Albuquerque</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet vs ODE for simulating robotic systems</h3>
+				<div class="date">Posted: <strong>Wed Aug 06, 2014 1:30 am</strong></div>
+				<div class="author">by <strong>Basroil</strong></div>
+				<div class="content"><blockquote><div><cite>edualbu wrote:</cite>
+I'd like to know if the Dantzig Solver is already implemented. I'm also working if robotic simulation and I'm trying to choose between ODE and Bullet.
+</div></blockquote>
+
+It has been for a while, and for low DoF systems (&lt;20 joints or so) it works faster than PGS with the high iterations need for powered joints. ODE is no longer the go-to choice for robots.  I've personally modeled robots using AX-12 motors (including motor load characteristics) using just Bullet hinges and Dantzig. The only issue right now seems to be that (according to the comments) friction doesn't work the same way as in PGS. You can also check to see if featherstone works for you, though it's a bit harder to set up real motors using it.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

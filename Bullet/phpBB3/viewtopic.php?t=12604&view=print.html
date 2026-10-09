@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Remove Collision from an entire MultiBody</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Remove Collision from an entire MultiBody</h2>
+		<p><a href="viewtopic.php%3Ft=12604.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12604</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Remove Collision from an entire MultiBody</h3>
+				<div class="date">Posted: <strong>Thu Feb 07, 2019 10:18 pm</strong></div>
+				<div class="author">by <strong>Lewho</strong></div>
+				<div class="content">Hi,<br>
+<br>
+i have a certain number of random generated MultiBody with multiple links BUT i dont want them to collide beteen them and i also want them to keep colliding with my main plane floor.<br>
+<br>
+I find a solution but it works only on the body of the multy body not on the links. Part of the problem is :  i dont know what is the LinkIndex parameter in the setCollisionFilterGroupMask function.<br>
+<br>
+My code at the moment : 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12604&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>p.createCollisionShape(p.GEOM_PLANE)
+basePlan = p.createMultiBody(0, 0)
+
+nbobj = 5
+
+body = p.createCollisionShape(p.GEOM_SPHERE, radius=1)
+body2 = p.createCollisionShape(p.GEOM_SPHERE, radius=0.5)
+
+aShape = s.Shape(body, pos1)
+aShape2 = s.Shape(body2, pos1)
+
+# intitialize multibody matrix for "nbobj" new link
+aShape.createRandom(nbobj)
+aShape2.createRandom(nbobj)
+
+# do the createMultiBody and return the UniqueBodyid
+shape = aShape.createBody()
+shape2 = aShape2.createBody()
+
+
+# Do shape to not collide
+p.setCollisionFilterGroupMask(shape, -1, 0, 0)
+p.setCollisionFilterGroupMask(shape2, -1, 0, 0)
+
+
+# But enable the floor Collision
+p.setCollisionFilterPair(basePlane, shape, -1, -1, 1)
+p.setCollisionFilterPair(basePlane, shape2, -1, -1, 1)
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Remove Collision from an entire MultiBody</h3>
+				<div class="date">Posted: <strong>Tue Feb 12, 2019 2:10 pm</strong></div>
+				<div class="author">by <strong>Lewho</strong></div>
+				<div class="content">No one respond .. nice. The issue is in fact still open on github (<a href="https://github.com/bulletphysics/bullet3/issues/2020" class="postlink">https://github.com/bulletphysics/bullet3/issues/2020</a>) and erwin coumans ignore the <span style="text-decoration:underline"><strong class="text-strong">BUG</strong></span> still 1 month after. The only way i found is complexity O(n^4) which it's very very bad conpare to the real who is O(n^2)<br>
+<br>
+Solution for intrested person who need to have a proof of concept : <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12604&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for i in range(-1, nbobj):
+        for j in range(-1, nbobj):
+            for elem1 in range(0, nbPop):
+                for elem2 in range(elem1+1, nbPop):  
+                    p.setCollisionFilterPair(pop[elem1].getId(), pop[elem2].getId(), i, j, 0)
+        print((i+2)/(nbobj+1))
+</code></pre></div> <br>
+<br>
+We need to remove the collision pair by pair so if you have 100 objects it's a 100*100 calculation. the fun doesn't end here.... if you have 10 piece in your multibody you need still to remove the collision pair by pair AGAIN. So it's actualy 100*100*10*10 calculation...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Remove Collision from an entire MultiBody</h3>
+				<div class="date">Posted: <strong>Tue Feb 19, 2019 12:18 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">PyBullet. setCollisionFilterGroupMask  should be fixed in latest repository. Thanks for the report.<br>
+<br>
+Note that link index -1 refers to the base, and link index &gt;=0 refers to child links.<br>
+<a href="https://github.com/bulletphysics/bullet3/pull/2116" class="postlink">https://github.com/bulletphysics/bullet3/pull/2116</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Remove Collision from an entire MultiBody</h3>
+				<div class="date">Posted: <strong>Tue Feb 19, 2019 11:34 am</strong></div>
+				<div class="author">by <strong>Lewho</strong></div>
+				<div class="content">Thanks a lot it works !!! and with the complexity of O(n²)<br>
+<br>
+Here the final code for peoples who want it<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12604&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code># pop =&gt; Array of multibody personal class where is stored the unique ID and number of links and all the links matrices
+def removeAllColisions(pop):
+    for elem in pop:
+        # Get the numbre of sub-object/links in the multibody
+        for i in range(-1, elem.nbobj):
+            p.setCollisionFilterGroupMask(elem.getId(), i, 0, 0)
+            p.setCollisionFilterPair(0, elem.getId(), -1, i, 1)
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Remove Collision from an entire MultiBody</h3>
+				<div class="date">Posted: <strong>Tue Feb 26, 2019 12:52 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Good to hear it is fixed!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Can you SerializeSingleShape with btHeightfieldTerrainShape?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Can you SerializeSingleShape with btHeightfieldTerrainShape?</h2>
+		<p><a href="viewtopic.php%3Ft=6178.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6178</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Can you SerializeSingleShape with btHeightfieldTerrainShape?</h3>
+				<div class="date">Posted: <strong>Sat Jan 01, 2011 8:18 am</strong></div>
+				<div class="author">by <strong>Ripgiblet</strong></div>
+				<div class="content">btHeightfieldTerrainShape does not seem to serialize, after loading back in, seems to be null values.<br>
+<br>
+Some questions:<br>
+1)Does serializeSingleShape work for btHeightfieldTerrainShape?<br>
+2)How to convert from btHeightfieldTerrainShape to btBvhTriangleMeshShape?<br>
+<br>
+NOTES:<br>
+I am having trouble getting btHeightfieldTerrainShape to serialize, I have successfully serialized many other shapes including btBvhTriangleMeshShape. So if I could convert from btHeightfieldTerrainShape to btBvhTriangleMeshShape, or some other object that I can convert to , serialize out, load, then convert back.<br>
+<br>
+regards,<br>
+Mark.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Can you SerializeSingleShape with btHeightfieldTerrainSh</h3>
+				<div class="date">Posted: <strong>Sat Jan 01, 2011 4:49 pm</strong></div>
+				<div class="author">by <strong>Ripgiblet</strong></div>
+				<div class="content">Ok I have been working the problem...<br>
+<br>
+Using the code from ConcavePhysicsDemo.cpp, I am back using btBvhTriangleMeshShape but still encountering problems...<br>
+<br>
+Here is the Code I use to create the Shape, it shows correctly if I make it now:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6178&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTriangleMesh *trimesh = new btTriangleMesh();
+	int vCount=0;
+	btVector3 vertex0(0,0,0);
+	btVector3 vertex1(0,0,0);
+	btVector3 vertex2(0,0,0);
+	for(std::map&lt;unsigned short, Ogre::Vector3&gt;::iterator i = vOgrePointList.begin(); i != vOgrePointList.end(); i++)
+	{
+		if((*i).second.y&gt;vMax.y) vMax.y=(*i).second.y;
+		if((*i).second.y&lt;vMin.y) vMin.y=(*i).second.y;
+		if(vCount==0)
+		{
+			vertex0 = btVector3((*i).second.x,(*i).second.y,(*i).second.z);
+		}else if(vCount==1)
+		{
+			vertex1 = btVector3((*i).second.x,(*i).second.y,(*i).second.z);
+		}else if(vCount==2)
+		{
+			vertex2 = btVector3((*i).second.x,(*i).second.y,(*i).second.z);
+			trimesh-&gt;addTriangle(vertex0, vertex1, vertex2);
+			vCount=-1;
+		}
+		vCount++;
+	}
+
+	btVector3 vPMin(vMin.x,vMin.y,vMin.z);
+	btVector3 vPMax(vMax.x,vMax.y,vMax.z);
+	const bool useQuantizedAABB = true;
+	btBvhTriangleMeshShape *vShape = new btBvhTriangleMeshShape(trimesh, useQuantizedAABB,vPMin,vPMax);
+	vShape-&gt;buildOptimizedBvh();
+	vShape-&gt;recalcLocalAabb();</code></pre></div>
+
+I then serialize it as so:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6178&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btDefaultSerializer*	vSerializer;
+	vSerializer = new btDefaultSerializer(maxSerializeBufferSize);
+	vSerializer-&gt;startSerialization();
+	vSerializer-&gt;registerNameForPointer(vShape,getData().mName);
+	vShape-&gt;serializeSingleShape(vSerializer);
+//	vShape-&gt;serializeSingleBvh(vSerializer);
+//	vShape-&gt;serializeSingleTriangleInfoMap(vSerializer);
+	vSerializer-&gt;finishSerialization();
+	Ogre::String vName = "ROS-Landscape"+Ogre::StringConverter().toString(getData().mID)+".bullet";
+	std::cout &lt;&lt; "LandscapeP:Saving Shape(" &lt;&lt;  getData().mName &lt;&lt; ")Size(" &lt;&lt; maxSerializeBufferSize &lt;&lt;  ")."&lt;&lt; std::endl;
+	FILE* file = fopen(vName.c_str(),"wb");
+	fwrite(vSerializer-&gt;getBufferPointer(),vSerializer-&gt;getCurrentBufferSize(),1, file);
+	fclose(file);</code></pre></div>
+
+And then try to load it back in like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6178&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btBulletWorldImporter	vFileLoader(0);//mWorld);
+	Ogre::String vName = "ROS-Landscape"+Ogre::StringConverter().toString(getData().mID)+".bullet";
+	if(vFileLoader.loadFile(vName.c_str()))
+	{
+		//***TERRAIN SURFACE - Ok now lets load up the surface for the map
+		//Lets load the ground shape.
+		int numShapes = vFileLoader.getNumCollisionShapes();
+        if (numShapes)
+        {
+			mLandscapeShape = (btBvhTriangleMeshShape*)vFileLoader.getCollisionShapeByName(getData().mName);
+        }
+
+		mLandscapeState = new btDefaultMotionState();
+		//Create the Body.
+		mLandscapeBody = new btRigidBody(0, mLandscapeState, mLandscapeShape);
+
+		mLandscapeBody-&gt;getWorldTransform().setOrigin(mPosition);
+		mLandscapeBody-&gt;getWorldTransform().setRotation(btQuaternion(Ogre::Quaternion::IDENTITY.x,Ogre::Quaternion::IDENTITY.y,Ogre::Quaternion::IDENTITY.z, Ogre::Quaternion::IDENTITY.w));
+		mLandscapeBody-&gt;setCollisionFlags(mLandscapeBody-&gt;getCollisionFlags() | btCollisionObject::CF_STATIC_OBJECT);
+
+		mWorld-&gt;addRigidBody(mLandscapeBody);</code></pre></div>
+
+But it crashes:[ :<br>
+<br>
+<br>
+&gt;	TerrainTest.exe!`btBvhTriangleMeshShape::processAllTriangles'::`2'::MyNodeOverlapCallback::processNode(int nodeSubPart=0, int nodeTriangleIndex=576)  Line 299 + 0xb bytes	C++<br>
+ 	TerrainTest.exe!btQuantizedBvh::walkStacklessQuantizedTree(btNodeOverlapCallback * nodeCallback=0x001dee20, unsigned short * quantizedQueryAabbMin=0x001dede0, unsigned short * quantizedQueryAabbMax=0x001dedd0, int startNodeIndex=0, int endNodeIndex=3843)  Line 712 + 0x21 bytes	C++<br>
+ 	TerrainTest.exe!btQuantizedBvh::reportAabbOverlappingNodex(btNodeOverlapCallback * nodeCallback=0x001dee20, const btVector3 &amp; aabbMin={...}, const btVector3 &amp; aabbMax={...})  Line 329	C++<br>
+ 	TerrainTest.exe!btBvhTriangleMeshShape::processAllTriangles(btTriangleCallback * callback=0x07952010, const btVector3 &amp; aabbMin={...}, const btVector3 &amp; aabbMax={...})  Line 329	C++<br>
+ 	TerrainTest.exe!btConvexConcaveCollisionAlgorithm::processCollision(btCollisionObject * body0=0x07c1bb00, btCollisionObject * body1=0x197664b0, const btDispatcherInfo &amp; dispatchInfo={...}, btManifoldResult * resultOut=0x001deef0)  Line 197 + 0x2e bytes	C++<br>
+ 	TerrainTest.exe!btCollisionDispatcher::defaultNearCallback(btBroadphasePair &amp; collisionPair={...}, btCollisionDispatcher &amp; dispatcher={...}, const btDispatcherInfo &amp; dispatchInfo={...})  Line 268 + 0x28 bytes	C++<br>
+ 	TerrainTest.exe!btCollisionPairCallback::processOverlap(btBroadphasePair &amp; pair={...})  Line 224 + 0x21 bytes	C++<br>
+ 	TerrainTest.exe!btHashedOverlappingPairCache::processAllOverlappingPairs(btOverlapCallback * callback=0x001df01c, btDispatcher * dispatcher=0x05ea88e8)  Line 387 + 0x13 bytes	C++<br>
+ 	TerrainTest.exe!btCollisionDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache * pairCache=0x07908db0, const btDispatcherInfo &amp; dispatchInfo={...}, btDispatcher * dispatcher=0x05ea88e8)  Line 238 + 0x17 bytes	C++<br>
+ 	TerrainTest.exe!btCollisionWorld::performDiscreteCollisionDetection()  Line 214 + 0x37 bytes	C++<br>
+ 	TerrainTest.exe!btDiscreteDynamicsWorld::internalSingleStepSimulation(float timeStep=0.016666668)  Line 318 + 0xf bytes	C++<br>
+ 	TerrainTest.exe!btDiscreteDynamicsWorld::stepSimulation(float timeStep=3.9730000, int maxSubSteps=10, float fixedTimeStep=0.016666668)  Line 281 + 0x19 bytes	C++<br>
+<br>
+at this line
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6178&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float* graphicsbase = (float*)(vertexbase+graphicsindex*stride);
+					
+					m_triangle[j] = btVector3(
+																		graphicsbase[0]*meshScaling.getX(),
+																		graphicsbase[1]*meshScaling.getY(),
+																		graphicsbase[2]*meshScaling.getZ());</code></pre></div>
+
+graphicsbase is null, so I am assuming that it is missing some vertex data etc... but why does it not crash if I run it before serializing, but crashes after serializing?<br>
+<br>
+I am assuming that I have missed something? Any Ideas anybody?<br>
+<br>
+regards,<br>
+Rip. <img class="smilies" src="images/smilies/icon_mrgreen.gif" width="15" height="15" alt=":mrgreen:" title="Mr. Green"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

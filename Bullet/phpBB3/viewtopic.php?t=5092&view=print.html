@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Pose matching with direct angular velocity control</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Pose matching with direct angular velocity control</h2>
+		<p><a href="viewtopic.php%3Ft=5092.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5092</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Pose matching with direct angular velocity control</h3>
+				<div class="date">Posted: <strong>Sun May 16, 2010 6:26 pm</strong></div>
+				<div class="author">by <strong>David20321</strong></div>
+				<div class="content">I am working on animation for my new game, more specifically I am working on partial ragdolls. For example, in a walking animation I can set the character's arms to be only partially kinematic so that they swing a little when changing direction. Currently I am using btHingeConstraint and Generic6DofConstraint, and their corresponding rotational motors.<br>
+<br>
+However, I am having trouble getting the parameters right to make it look natural, largely because the motor parameters (target angular velocity and maximum motor force) are secondary values for what I really need. <br>
+<br>
+Let's consider a simple hinge joint like the elbow, which is currently bent at 90 degrees, and the target angle is 70 degrees. Right now I then set the motor to a target angular velocity of -20 degrees per timestep, and the maximum force to a high amount. This successfully achieves 100% pose matching. Similarly, I can set the maximum force to 0 to get 0% pose matching, and leave the arm completely limp.<br>
+<br>
+The hard part is when I want something like 50% pose matching. I would like this to work like an angular spring that adds 50% of the angular difference to the angular velocity every timestep. However, I don't know how to set this up using the exposed motor parameters (target velocity and maximum motor force).<br>
+<br>
+I suppose I could do it by setting the target velocity to + or - infinity and setting the max motor force based on torque = inertia tensor * angular acceleration, and then modulate it by the amount of pose matching I want. Surely there is a more direct way to do this though?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Pose matching with direct angular velocity control</h3>
+				<div class="date">Posted: <strong>Tue May 18, 2010 7:07 pm</strong></div>
+				<div class="author">by <strong>rponomarev</strong></div>
+				<div class="content">Hello,<br>
+<br>
+You may try to use <span style="color:#0000BF">btGeneric6DofSpringConstraint</span> or derive your own hinge constraint<br>
+from btHingeConstraint and use code like <span style="color:#0000BF">btGeneric6DofSpringConstraint::internalUpdateSprings() </span><br>
+to update motor parameters on each step depending on pose matching that you need<br>
+Basically <span style="color:#0000BF">targetVelocity</span> adds some value to the right-hand side of constraint equation and<br>
+<span style="color:#0000BF">maxMotorForce</span> defines limits for the sequential-impulse solver<br>
+So if you need spring-like behavior you will need to update these parameters on each simulation step.<br>
+<span style="color:#0000BF">btGeneric6DofSpringConstraint</span> does this by calling <span style="color:#0000BF">btGeneric6DofSpringConstraint::internalUpdateSprings() </span><br>
+from <span style="color:#0000BF">btGeneric6DofSpringConstraint::getInfo2(), </span>which is automatically called by Bullet library  on each simulation step<br>
+before constraint solving.<br>
+<br>
+<br>
+<br>
+Hope this will help,<br>
+Roman</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Pose matching with direct angular velocity control</h3>
+				<div class="date">Posted: <strong>Tue May 18, 2010 9:09 pm</strong></div>
+				<div class="author">by <strong>David20321</strong></div>
+				<div class="content">Thanks! I can successfully create spring-like behavior, but I am having trouble figuring out exactly what parameters will result in the pose being 100% matched, 50% matched, and so on, so that I can control it in a precise way. That is, I'm trying to act on the angle velocity directly in this manner:<br>
+<br>
+angle_vel *= (1.0 - damping);<br>
+angle_vel += (target_angle - angle) * pose_strength;<br>
+<br>
+This way if pose_strength = 1.0 and damping = 1.0, it behaves in a purely kinematic way, and if pose_strength = 0.0 and damping = 0.0, it behaves in a purely dynamic way. Then I can mix the parameters in between to get different kinds of partial pose matching.<br>
+<br>
+I'm not sure how to get this kind of result using the motor force and target velocity directly because the force and velocity interact in complicated ways, and I am having trouble figuring out how to precisely compensate for that.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Pose matching with direct angular velocity control</h3>
+				<div class="date">Posted: <strong>Wed Jun 02, 2010 12:29 am</strong></div>
+				<div class="author">by <strong>paul.dubois</strong></div>
+				<div class="content"><blockquote><div><cite>David20321 wrote:</cite>Thanks! I can successfully create spring-like behavior, but I am having trouble figuring out exactly what parameters will result in the pose being 100% matched, 50% matched, and so on, so that I can control it in a precise way.</div></blockquote>
+
+If you want the object to move N% of the way to the goal during a fixed timestep dt, that is essentially exponential decay towards a goal. You are asking how to get that exponential decay through application of forces and torques.<br>
+<br>
+Fortunately for you, a critically-damped spring system acts like exponential decay. Google "critical damping" and you'll easily find closed-form equations that give you the relationship between a spring constant, critical damping, and the resulting curve. The derivation is also not so difficult. Just be warned that equations assume a perfect integrator; the stiffer your system the more the results will diverge from ideal.<br>
+<br>
+Also, I am pretty sure this will NOT work for the general case of a non-trivial inertia tensor being forced/damped towards a goal orientation. But if rotation is always about a fixed axis, or if you can otherwise make the magnitude of the moment of inertia constant, it should all work out identically to the translational case.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

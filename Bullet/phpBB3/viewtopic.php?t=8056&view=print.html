@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btRaycastVehicle Wheel rotation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btRaycastVehicle Wheel rotation</h2>
+		<p><a href="viewtopic.php%3Ft=8056.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8056</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btRaycastVehicle Wheel rotation</h3>
+				<div class="date">Posted: <strong>Mon Apr 16, 2012 8:36 am</strong></div>
+				<div class="author">by <strong>686insomnia686</strong></div>
+				<div class="content">Hi,<br>
+As you can see, when I put a steering, my wheels turn but without steering, they don't.<br>
+This is my fonction where I modify the position and the rotation of each wheels :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8056&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>BOOLEAN PhysicsWorldBullet::DoProcessRayCastVehicle (RayCastVehicle* _rayCastVehicle)
+{	
+	if (!GetSingleDelegate(_rayCastVehicle) || !_rayCastVehicle-&gt;m_vehicle ||  !_rayCastVehicle-&gt;m_vehicleRayCaster) return false;
+
+	//Engine Force, Breaking Force and Vehicule Steering Definition
+	float	gEngineForce =  _rayCastVehicle-&gt;m_engineForce.GetValue();
+	float	gBreakingForce = _rayCastVehicle-&gt;m_brake.GetValue();
+	float	gVehicleSteering = -_rayCastVehicle-&gt;m_steering.GetValue();
+
+	//Motor Wheels Definition
+	int wheelIndex = 0;
+	if(gBreakingForce&gt;0)
+	{
+		((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;setBrake(gBreakingForce,wheelIndex);
+		((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;applyEngineForce(0,wheelIndex);
+	}
+	else
+		((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;applyEngineForce(gEngineForce,wheelIndex);
+	wheelIndex = 1;
+	if(gBreakingForce&gt;0)
+	{
+		((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;setBrake(gBreakingForce,wheelIndex);
+		((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;applyEngineForce(0,wheelIndex);
+	}
+	else
+		((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;applyEngineForce(gEngineForce,wheelIndex);
+	//Steering Front Wheels
+	wheelIndex = 0;
+	((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;setSteeringValue(gVehicleSteering,wheelIndex);
+	wheelIndex = 1;
+	((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;setSteeringValue(gVehicleSteering,wheelIndex);
+	
+	((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;getRigidBody()-&gt;activate();
+	int i=0;
+	float ajustementZ = 0.05;//put the 3D wheels upside the floor
+	for ( IteratorEx(it, _rayCastVehicle, Geometry3D); i&lt;((btRaycastVehicle*)_rayCastVehicle-&gt;m_vehicle)-&gt;getNumWheels(); it++)
+	{
+		it-&gt;Process(this);
+		//Position
+		((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;updateWheelTransform(i,true);
+		btTransform newTransform = ((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;getWheelInfo(i).m_worldTransform;
+		MATRIX Local = BtUtils3D::GetTransform(newTransform);//Get the Local matrix of the wheel
+		it-&gt;SetWorldPosition(Local._41, Local._42, Local._43+ajustementZ);
+				//Orientation
+				float rotation = (float)((btRaycastVehicle*) _rayCastVehicle-&gt;m_vehicle)-&gt;getWheelInfo(i).m_rotation;
+				//for the front wheels
+		if (i&lt;2)
+		{
+			if (gVehicleSteering&lt;0)
+				it-&gt;SetOrientation(NULL, -rotation, 0, gVehicleSteering + PI_2);
+			else
+				it-&gt;SetOrientation(NULL, rotation, 0, gVehicleSteering + PI_2);
+		}
+				//for the back wheels
+		else
+		{
+			if (gVehicleSteering&lt;0)
+			{
+				if (gEngineForce&lt;0)
+					it-&gt;SetOrientation(NULL, -rotation, 0, PI_2);
+				else
+					it-&gt;SetOrientation(NULL, rotation, 0, PI_2);
+			}
+			else
+			{
+				if (gEngineForce&lt;0)
+					it-&gt;SetOrientation(NULL, rotation, 0, PI_2);
+				else
+					it-&gt;SetOrientation(NULL, -rotation, 0, PI_2);
+			}
+		}
+		i++;
+	}
+return true;
+}
+</code></pre></div>
+For the parameter, I have tried a lot of solution and I never find a real good result:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8056&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>        m_engineForce.SetRange(-1000.0, 2000.0, 0.0);//(Min, Max, Init)
+	m_brake.SetRange(0.0, 100.0, 0.0);//(Min, Max, Init)
+	m_steering.SetRange(-0.3, 0.3, 0.0);//(Min, Max, Init)
+
+	m_wheelDirectionCS.SetValues(0, 0, -1);
+	m_wheelAxleCS.SetValues(0, -1, 0);
+
+	m_wheelRadius = 0.31265;//Defaut : 0.5f, Subaru : 0.31265
+	m_wheelWidth = 0.215f;//Defaut : 0.4f, Subaru : 0.215f
+	m_wheelFriction = 10.5;//1000.0;//2.0;
+
+	m_maxSuspensionTravelCm = 20.0f;//500.0;
+	m_suspensionStiffness = 40.0f;//5.8f;//Defaut : 20.0, Subaru : 15.0
+	m_suspensionDamping = 2.3f;//0.88;//2.3;
+	m_suspensionCompression = 2.4;//0.83;//4.4;
+	m_rollInfluence = 0.2f;
+	m_suspensionRestLength = 0.1;
+	m_connectionHeight = -0.4;//1.2;
+
+	m_chassisLenght = 4.8;//Defaut : 2, Subaru : 4.8
+	m_chassisWidth = 2; //Defaut : 1, Subaru : 2
+	m_chassisHeight = 1.3;//Defaut : 0.5 , Subaru : 1.5
+
+	m_SpeedKmH = 0;
+</code></pre></div>
+The value of SpeedKmH changes it sign everytime, it's really boring, I have to put a condition like that :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8056&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>it-&gt;m_SpeedKmH = ((btRaycastVehicle*)it-&gt;m_vehicle)-&gt;getCurrentSpeedKmHour();
+if(it-&gt;m_SpeedKmH.GetValue() &lt; 0) 
+{
+        it-&gt;m_SpeedKmH*=-1;
+}
+</code></pre></div>
+
+The value m_skidInfo stay always to "1.0", that is good! =)<br>
+In the video, we see that the color of the raycast change in blue when they are in contact with the ground.<br>
+The value m_rotation is increase by m_deltaRotation everytime (in btRaycastVehicle::updateVehicle( btScalar step )), but when there is no steering, m_deltaRotation is really small like "0.0000004" (in radian).<br>
+<br>
+I hope you can help me because I'm totaly blocked for now.<br>
+Thank for your help,<br>
+Cordialy,<br>
+InSomNia.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btRaycastVehicle Wheel rotation</h3>
+				<div class="date">Posted: <strong>Fri Apr 27, 2012 7:58 am</strong></div>
+				<div class="author">by <strong>686insomnia686</strong></div>
+				<div class="content">I have found my error, this is a problem in btRaycastVehicle::updateWheelTransform().<br>
+<br>
+The basis is caculate with the Bullet Coordinate, so you have to change for your own coordinate.<br>
+My Coordinate System is : <br>
++ Forward : X<br>
++ Right : -y<br>
++Up : Z<br>
+<br>
+So my basis is :<br>
+btMatrix3x3 basis2(<br>
+		fwd[0],-right[0],up[0],<br>
+		fwd[1],-right[1],up[1],<br>
+		fwd[2],-right[2],up[2]);<br>
+<br>
+"If you have well define the setCoordinateSystem(), the m_wheelDirectionCS() and the m_wheelAxleCS().<br>
+It will be work fine..."<br>
+<br>
+I'm little busy for now, but I gonna made a global correction for everyone, stay tune...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btRaycastVehicle Wheel rotation</h3>
+				<div class="date">Posted: <strong>Wed May 02, 2012 8:29 am</strong></div>
+				<div class="author">by <strong>686insomnia686</strong></div>
+				<div class="content">I have a new problem and I think you can help me.<br>
+YOU, the one of the 127 viewers who hasn't answer yet to my first post... <img class="smilies" src="images/smilies/icon_twisted.gif" width="15" height="15" alt=":twisted:" title="Twisted Evil"> <br>
+<br>
+When my wheel rotate too fast, there are a logical effect, the wheel look like rotate in the opposite direction...<br>
+I would like had any advise for counter this effect and keep a the good rotation direction.<br>
+<br>
+I have try to decrease the rotation when it is too fast, but it's not a success "that's why I repost here...".<br>
+<br>
+Thanx for your help and your particitation, don't be shy!  <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btRaycastVehicle Wheel rotation</h3>
+				<div class="date">Posted: <strong>Thu May 03, 2012 3:39 pm</strong></div>
+				<div class="author">by <strong>686insomnia686</strong></div>
+				<div class="content">I have a new resquest for you, guys.<br>
+The rotation is now fine, but I think, the setup of my car is wrong :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=8056&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>m_engineForce.SetRange(-1000.0, 2000.0, 0.0);
+   m_brake.SetRange(0.0, 100.0, 0.0);
+   m_steering.SetRange(-0.3, 0.3, 0.0);
+
+   m_wheelRadius = 0.31265;
+   m_wheelWidth = 0.215f;
+   m_wheelFriction = 500;
+
+   m_maxSuspensionTravelCm = 20.0f;
+   m_suspensionStiffness = 40.0f;
+   m_suspensionDamping = 2.3f;
+   m_suspensionCompression = 2.4;
+   m_rollInfluence = 0.2f;
+   m_suspensionRestLength = 0.1;
+   m_connectionHeight = -0.4;
+
+   m_chassisLenght = 4.8;
+   m_chassisWidth = 2;
+   m_chassisHeight = 1.3;
+   m_chassisShape-&gt;SetMass(800);//Defaut : 800, Subaru : 1498
+</code></pre></div>
+
+What do you think?<br>
+I don't know if my friction is enough or too much.<br>
+I don't know if my suspension is well tuned...<br>
+Thanx for your help.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

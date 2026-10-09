@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to solve the problem of the ball penetrating the cuboid</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to solve the problem of the ball penetrating the cuboid</h2>
+		<p><a href="viewtopic.php%3Ft=12996.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12996</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Thu Jun 18, 2020 1:49 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">I created a cuboid and a ball. I want to put the ball in the center of the cuboid to fall under the influence of gravity, and keep bumping into the cuboid, but the ball penetrates the cuboid. What should I do, please?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Thu Jun 18, 2020 2:51 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">More info please:<br>
+<br>
+What btShape are you using for the "cuboid"?  Since the ball is inside the cuboid then you must be using a concave shape... or a btCompoundShape with convex parts.  Which is it?<br>
+<br>
+What exactly do you mean by "penetrate"?  Do you mean to say the ball overlaps with the cuboid by some margin and stops penetrating any further?  Does it hit the cuboid but tunnel all the way through?  Or does it pass right though the cuboid without any indication of collision events?<br>
+<br>
+How big is your cuboid?  How big is the ball?<br>
+<br>
+The ball... it is dynamic or kinematic?  The cuboid... it is static or kinematic?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Thu Jun 18, 2020 3:22 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">Thank you very much for your reply. The ball and cuboid were created with btconveyhullshape. The cuboid is much bigger than the ball, enough to hold the ball. The ball starts to fall from the center of the cuboid. After contacting the cuboid ground once and having a collision, it does not rebound but directly continues to fall, passing through the cuboid ground. The sphere is dynamic, the gravity is set, and the box is static.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Thu Jun 18, 2020 5:22 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">If the cuboid is using btConvexHullShape then the ball will NOT be constrained by the cuboid's inside surface.  btConvexHullShape is convex... which means things only collide against the outer surface.  Overlaps with the inside are considered penetrations and will be popped apart.<br>
+<br>
+That said, something funny is going on because if you put a convex hull inside a convex hull... then the penetration resolution code should pop them apart really fast.  The fact that isn't happening suggests... the collisions are not being detected at all, which is supported by your description of how they interact and just pass through.<br>
+<br>
+Why that would be is a mystery.  Assuming you aren't messing with collision groups then dynamic should collide against static by default.  So my only ideas are:<br>
+<br>
+(1) Are you sure your objects are where you're drawing them?  Dunno if you are using a modified BulletDemo or your own code but... if you aren't actually drawing the shapes where they are supposed to be then they maybe the shapes might not overlap even when the rendered GameObjects appear to do so.<br>
+<br>
+(2) A bad bounding box in the broadphase could cause the objects to never fall into the narrowphase.  So, if you were to somehow move the static body without updating its box in the broadphase... but to do that you'd have to manually opt out of the automatic AABB updates of static objects every simulation step (which some people do as an optimization).<br>
+<br>
+(3) I don't have any more ideas.  If the first two don't apply you'll have to supply relevant code here for inspection, or start sanity checking.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Thu Jun 18, 2020 5:49 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">Thank you for your reminding. If I want the dynamic ball to move in the static box, what btshape should I use to create them?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Thu Jun 18, 2020 2:33 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The btBvhTriangleMeshShape is effectively a triangle-soup with BVH tree around it.  It can collide as concave mesh.  The triangle faces collide on both sides so you can make dynamic things bounce around on the inner surface... as long as they aren't too small and moving too fast and/or you have continuous collision detection (CCD) enabled because it is easy to tunnel through triangle faces.  btBvhTriangleMeshShape cannot be dynamic.  It can be static, and might work ok for kinematic if it moves slow, but it can't collide with other triangle meshes at all -- the mesh-mesh collision algorithm is not implemented in Bullet.<br>
+<br>
+Alternatively you can use a btCompoundShape where the six sides of the cuboid box are represented by thin btBoxShapes or btConvexHull subshapes, each with the appropriate local transform in the parent shape's frame.  If you use all btConvexHull shapes then one simple way to do it is to use the points in the parent's local-frame and leave all sub-shape transforms the identity matrix.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Mon Jun 22, 2020 3:18 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content">Thank you very much for your help. I used the btCompoundShape and successfully implemented it. Thank you again for your help</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to solve the problem of the ball penetrating the cuboid</h3>
+				<div class="date">Posted: <strong>Mon Jun 22, 2020 3:18 am</strong></div>
+				<div class="author">by <strong>water</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42932#p42932"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=42932.html#p42932" data-post-id="42932" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Thu Jun 18, 2020 2:33 pm</span></cite>
+The btBvhTriangleMeshShape is effectively a triangle-soup with BVH tree around it.  It can collide as concave mesh.  The triangle faces collide on both sides so you can make dynamic things bounce around on the inner surface... as long as they aren't too small and moving too fast and/or you have continuous collision detection (CCD) enabled because it is easy to tunnel through triangle faces.  btBvhTriangleMeshShape cannot be dynamic.  It can be static, and might work ok for kinematic if it moves slow, but it can't collide with other triangle meshes at all -- the mesh-mesh collision algorithm is not implemented in Bullet.<br>
+<br>
+Alternatively you can use a btCompoundShape where the six sides of the cuboid box are represented by thin btBoxShapes or btConvexHull subshapes, each with the appropriate local transform in the parent shape's frame.  If you use all btConvexHull shapes then one simple way to do it is to use the points in the parent's local-frame and leave all sub-shape transforms the identity matrix.
+</div></blockquote></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

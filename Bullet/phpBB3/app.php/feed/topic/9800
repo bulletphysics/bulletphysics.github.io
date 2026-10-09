@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9800" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-03-07T04:48:24+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9800</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-03-07T04:48:24+00:00</updated>
+
+		<published>2014-03-07T04:48:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33107#p33107</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33107#p33107"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33107#p33107"><![CDATA[
+Good question! Currently I create a contact when the fat AABBs begin to overlap. I never have compared this, though I definitely should. I have other caching schemes (as described earlier) in place which kind of do this though.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Fri Mar 07, 2014 4:48 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-03-07T03:25:17+00:00</updated>
+
+		<published>2014-03-07T03:25:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33106#p33106</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33106#p33106"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33106#p33106"><![CDATA[
+Dirk,<br><br>Do you save the pre-inflated bounds for each object and perform an overlap test with that prior to narrow phase? Obviously the inflated bounds are used to manage the overlapping pairs, but I wonder if smaller objects would benefit from performing a tight-fighting bounds overlap test prior to entering narrow phase.<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Fri Mar 07, 2014 3:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-03-06T18:17:31+00:00</updated>
+
+		<published>2014-03-06T18:17:31+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33102#p33102</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33102#p33102"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33102#p33102"><![CDATA[
+<blockquote class="uncited"><div>Are you inflating in the direction of the linear movement of the body or do you use a fixed amount of to inflate? I use a combination of both. <br><br>Here is my code for reference. I moved the inflation part into the broadphase and the dynamic tree doesn't know about this. What kind of inflation strategy (if any) you use depends on the use-case so I decoupled it.</div></blockquote>Dirk,<br><br>I did exactly the same thing - I plan on using the dynamic tree for a number of subsystems so I simply made it ignorant of the inflation and did the work in the broadphase.<br><br>For bodies with dynamics I inflate in the direction of linear velocity and I inflate it by some amount. For animation-driven bodies (bones) I currently inflate it by a consistent amount around the entire body as I don't currently infer linear velocity from the bone positions - it isn't required in my use case and I can't afford any extra maths.<br><br>I may actually put an additional fudge factor into the bodies themselves so that the client code has control over this for certain cases such as rotation-only animated objects (powerups) and fast moving narrow animated objects (projectiles).<br><br>Seems we are on the same page here - thanks.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Thu Mar 06, 2014 6:17 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-03-06T17:43:14+00:00</updated>
+
+		<published>2014-03-06T17:43:14+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33101#p33101</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33101#p33101"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33101#p33101"><![CDATA[
+Are you inflating in the direction of the linear movement of the body or do you use a fixed amount of to inflate? I use a combination of both. <br><br>Here is my code for reference. I moved the inflation part into the broadphase and the dynamic tree doesn't know about this. What kind of inflation strategy (if any) you use depends on the use-case so I decoupled it.<br><div class="codebox"><p>Code: </p><pre><code>// Bounds are the tight bounds of the parent shape. Displacememnt = LinearVelocity * ElapsedTimebool rnBroadphase::MoveProxy( int Proxy, const rnBounds3&amp; Bounds, const rnVector3&amp; Displacement ){if ( mTree.GetBounds( Proxy ).Contains( Bounds ) ){                // No update requiredreturn false;}// Update tree with inflated and motion anticipating boundsrnVector3 Extension = rnVector3( RN_BOUNDS_EXTENSION, RN_BOUNDS_EXTENSION, RN_BOUNDS_EXTENSION );rnBounds3 ExtendedBounds;ExtendedBounds.Min = Bounds.Min - Extension;ExtendedBounds.Max = Bounds.Max + Extension;if ( Displacement.X &lt; 0.0f ){ExtendedBounds.Min.X += RN_BOUNDS_MULTIPLIER * Displacement.X;}else{ExtendedBounds.Max.X += RN_BOUNDS_MULTIPLIER * Displacement.X;}if ( Displacement.Y &lt; 0.0f ){ExtendedBounds.Min.Y += RN_BOUNDS_MULTIPLIER * Displacement.Y;}else{ExtendedBounds.Max.Y += RN_BOUNDS_MULTIPLIER * Displacement.Y;}if ( Displacement.Z &lt; 0.0f ){ExtendedBounds.Min.Z += RN_BOUNDS_MULTIPLIER * Displacement.Z;}else{ExtendedBounds.Max.Z += RN_BOUNDS_MULTIPLIER * Displacement.Z;}mTree.MoveProxy( Proxy, ExtendedBounds );BufferMove( Proxy );        // Update required        return true;}</code></pre></div> <br><br>HTH,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Thu Mar 06, 2014 5:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-03-05T23:26:57+00:00</updated>
+
+		<published>2014-03-05T23:26:57+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33090#p33090</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33090#p33090"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33090#p33090"><![CDATA[
+So I took another look at my implementation and discovered that I was incorrectly inflating the AABBs for the bone objects. Once I took that into account, things got a lot better. I had to use quite a large inflation value (2 meters) but it does effectively remove all but the first broadphase overlap tests when the characters are pushing up against one another.<br><br>In my test case it is 1/10th the cost of SAP in a similar situation with the added bonus of ray queries being faster.<br><br>Thanks for your feedback and help Dirk - looks like a win here.<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Wed Mar 05, 2014 11:26 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-03-04T17:48:02+00:00</updated>
+
+		<published>2014-03-04T17:48:02+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33079#p33079</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33079#p33079"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33079#p33079"><![CDATA[
+I thought about the shape transform and I think it just comes from Maya where shapes nearly always have a parent transform.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Tue Mar 04, 2014 5:48 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-03-04T00:12:51+00:00</updated>
+
+		<published>2014-03-04T00:12:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33074#p33074</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33074#p33074"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33074#p33074"><![CDATA[
+So after implementing a dynamic AABB tree following the example by Erin, and hooking it up to the broadphase, I did a comparison between the Sweep and Prune and the Dynamic Tree specifically looking at character bones and their costs in the broadphase. I can't really print any numbers out because they don't have any significance to anyone but me, but the results were interesting.<br><br>My setup involves many characters with 12 bone rigs running against each other. The bones in one system cannot collide with themselves, only with bones of opposing players.<br><br>Having all bones in the world is much slower in SAP than Dynamic Tree (although I needed a large AABB expansion buffer on the tree nodes of approximately 1 meter to make this worthwhile).<br><br>Having all the bones in the world in the Dynamic Tree is still slower than having all the bones in a List Shape ( List shape takes 12 bones out of broadphase and replaces with 1 object). Additional cost is incurred because of some bounding box combining, and no mid-phase detection in the list shape versus list shape collider.<br><br>Having all the bones in a List Shape in Sweep and Prune is comparable to the Dynamic Tree. I think this is now due to the low number of entities in the broadphase.<br><br>I don't think my Dynamic Tree broadphase wrapper is nearly as efficient as the SAP was, given that my class hierarchy (overlapping pair management, dispatcher, etc) is based on SAP's explicit Add/Remove callback. Dynamic Tree leaves it up to the client broadphase to perform AABB test on the existing overlapped pairs to check for removal every frame, which can cause the AABB overlap test to be duplicated in some cases. Plus the plumbing for some of that logic just isn't there right now.<br><br>When bones move enough to trigger a leaf re-insert, the cost of combining AABBs to get the SAH costs show up in the profiler on my device, so I need to minimize this happening.<br><br>I believe that the Dynamic Tree would be faster than the SAP in all cases (and is easier to debug) plus the benefits of Ray Casting against it are well documented. I am sad that the BVT was not enough to allow me to keep the bones in the broadphase directly, without the list shape collider.<br><br>Thanks for your help.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Tue Mar 04, 2014 12:12 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-03-03T17:36:01+00:00</updated>
+
+		<published>2014-03-03T17:36:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33073#p33073</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33073#p33073"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33073#p33073"><![CDATA[
+For hulls I use SAT. You can find my GDC presentation and some implementation here:<br><a href="https://box2d.googlecode.com/files/DGregorius_GDC2013.zip" class="postlink">https://box2d.googlecode.com/files/DGre ... DC2013.zip</a><br><br>It is pretty much what I use these days though there is some room for SIMD optimizations to get rid of some branches. The major idea to make the narrow phase (and also the broadphase) fast is to use temporal coherence. So once you have a separating axis you test it in the next frame first. Once you have two touching features you try to rebuild the contact manifold from the last two touching features based on some heuristic (e.g. whether the relative orientation has changed). The SAT is still O(n^2) as I presented it. You should see the pattern here for both broadphase and narrow phase. As long as you hit your caches you do nothing and you should only update a small part of your proxies and manifolds each frame. If everything is settled (before going to sleep) nothing should be updated at all!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Mar 03, 2014 5:36 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[sphet]]></name></author>
+		<updated>2014-03-03T06:34:49+00:00</updated>
+
+		<published>2014-03-03T06:34:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33063#p33063</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33063#p33063"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33063#p33063"><![CDATA[
+<blockquote class="uncited"><div>I don't use any shape transforms. The shapes are defined as:<br><br>1) Sphere: Center and Radius <br>3) Capsule: 2 Centers and Radius (This is nice since you don't need to deal with any up-directions)<br>3) Hulls: Vertices, Faces and Edge<br>4) Meshes: Vertices and Triangles<br>&lt;snip&gt;</div></blockquote>Interesting - I pass down the transform in all cases as well - shapes are always defined in the local space of the parent - but sphere's are simply a radius, and capsules oriented along z(up). Perhaps the need for listshapes also comes from this kind of implementation because there is no way to offset a sphere in the local space of a rigid body without another shape in the hierarchy. So essentially you can create many spheres shapes with local space offsets and radii and then attach them all to the body - there is a lot of potential savings here compare to listshapes with a child-offset matrix which requires full concatenation. <br><br>Regarding sharing, the size of a sphere or capsule shape will be very small so duplicating that isn't the end of the world. This is the same as my system. <br><br>I will have to look over my implementations as I suspect that all of the collision agents easily handle non-centered points.<br><br>For hulls are you still using SAT or GJK? You've written a lot about SAT. I need to tackle that soon as of right now I only support sphere, capsule, finite/infinite plane and mesh. I need to add box soon.<br><br>Sorry for dragging this topic so way off course but it's good to talk out these issues and ideas.<br><br>S<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10211">sphet</a> — Mon Mar 03, 2014 6:34 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2014-03-03T00:12:00+00:00</updated>
+
+		<published>2014-03-03T00:12:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33061#p33061</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33061#p33061"/>
+		<title type="html"><![CDATA[Re: Sweep and Prune or dBVT for this use case]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33061#p33061"><![CDATA[
+I don't use any shape transforms. The shapes are defined as:<br><br>1) Sphere: Center and Radius <br>3) Capsule: 2 Centers and Radius (This is nice since you don't need to deal with any up-directions)<br>3) Hulls: Vertices, Faces and Edge<br>4) Meshes: Vertices and Triangles<br><br>Is is basically all vertices defined under some parent transform. You could cache a world transform, I guess. Erin uses a fixture to attach a shape to a body which does the caching iirc, but I don't even do this. In all function calls I usually pass down the a parent transform and the associated shape. So far this really works out pretty clean and concise.<br><br>You usually want to keep tree updates low anyway. That is why the dynamic tree works with inflated (fat) AABBs. So far the tree updates haven't been any issue. Even in pathological test scenes where each shape is spawned at the same time and invalidate their fat broadphase AABB all in the same frame. I think your point is valid, but before it is not a practical problem I would not address it. It is probably as you said and it goes back to the inefficiencies of SAP handling insertions and removals. <br><br>Good luck! Let me know how it works out <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br><br>Edit:<br>I can share hulls and meshes. rnHullShape and rnMeshShape reference rnHull and rnMesh which is owned by the user. For meshes this might make sense, but for hulls I don't even bother. They are so memory efficient the way I store them they never showed up. Surprisingly hulls are very expensive in PhysX though. Havok usually cares for memory more. My shapes are really cheap and have hardly any overhead since they don't cache any transforms.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Mar 03, 2014 12:12 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

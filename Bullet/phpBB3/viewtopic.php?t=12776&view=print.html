@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Force to distance traveled inaccurate?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Force to distance traveled inaccurate?</h2>
+		<p><a href="viewtopic.php%3Ft=12776.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12776</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Force to distance traveled inaccurate?</h3>
+				<div class="date">Posted: <strong>Fri Sep 27, 2019 1:39 pm</strong></div>
+				<div class="author">by <strong>zipkicker</strong></div>
+				<div class="content">I'm using a rigid body (box) with a mass of 1.0 as defined here:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12776&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btBoxShape* colShape = new btBoxShape(btVector3(1, 1, 1));
+btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+btRigidBody* bulletRigidBody = new btRigidBody(1.0, myMotionState, colShape);
+DynamicWorld-&gt;addRigidBody(bulletRigidBody);</code></pre></div>
+
+I'm using a gravity of (0.0,-10.0,0.0) in btDiscreteDynamicWorld:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12776&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+DynamicWorld = new btDiscreteDynamicsWorld(new btCollisionDispatcher(collisionConfiguration),
+                                           new btDbvtBroadphase(),
+                                           new btSequentialImpulseConstraintSolver(),
+                                           collisionConfiguration);
+DynamicWorld-&gt;setGravity(btVector3(0.0,-10.0,0.0));</code></pre></div>
+
+I've set up test cases to check that the simulation is running as expected for a single call to stepSimulation(). The first test case applies a central force of (0.0,10.0,0.0) equally opposing the gravity and, as expected, the body doesn't move.<br>
+<br>
+The second test case increases the upward force by 5.0 to (0.0,15.0,0.0). In order to check velocity and distance travelled I'm using t(time) = (number of steps returned from stepSimulation)*(fixed substep time). My delta time is 0.02 and my fixed substep time is 0.004(1/250). So t = 0.02. <br>
+<br>
+a(acceleration) = F(Force)/m(mass) but since m = 1.0 then a = F. So a = 5.0. <br>
+<br>
+Since the initial velocity is 0, vf(final velocity) = F*t. So vf = 0.1 which is the same as the simulation. <br>
+<br>
+Next d = 0.5*F*t^2. So d = 0.5*(5.0)*(0.02)^2 = 0.001. But when I check the center of mass position of the body after the run it is 0.0012 higher than the starting position. This suggests d = 0.5*(5.0*0.02)*0.024 = 0.5*0.1*0.024 = 0.0012. So the distance is being calculated with the correct velocity (0.1) for the actual current time but the time (0.024) is one substep ahead. I've made numerous additional calls to stepSimulation and this continues to hold true.<br>
+<br>
+Is this a bug or am I missing something?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

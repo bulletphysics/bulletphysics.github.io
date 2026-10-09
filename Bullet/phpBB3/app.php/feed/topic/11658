@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11658" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2017-04-20T01:31:41+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11658</id>
+
+		<entry>
+		<author><name><![CDATA[Adrian Lopez]]></name></author>
+		<updated>2017-04-20T01:31:41+00:00</updated>
+
+		<published>2017-04-20T01:31:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39211#p39211</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39211#p39211"/>
+		<title type="html"><![CDATA[Re: GJK: reappearing support points and termination conditio]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39211#p39211"><![CDATA[
+I'm not checking for progress toward the origin right now, but I'm doing everything suggested by Gino in his "numerical GJK" example. Also, I'm doing this in 2D so I exit as soon as the reduced simplex becomes a triangle.<br><br>Here's what my GJK function looks like right now, including all termination conditions provided in Gino's pseudocode:<div class="codebox"><p>Code: </p><pre><code>float GJK::Distance(Vector2D &amp;closest_point_a, Vector2D &amp;closest_point_b, CollisionShape &amp;a, const Vector2D &amp;a_position, CollisionShape &amp;b, const Vector2D &amp;b_position){const float error_tolerance = std::numeric_limits&lt;float&gt;::epsilon() * 100.0;const float relative_error = std::numeric_limits&lt;float&gt;::epsilon() * 100.0;Simplex simplex;Simplex expanded_simplex;Vector2D v = a.arbitraryPoint(a_position) - b.arbitraryPoint(b_position);do {Vector2D sa = a.supportPoint(-v, a_position);Vector2D sb = b.supportPoint(v, b_position);Vector2D support = sa - sb;if (expanded_simplex.includesVertex(support) || v.magnitudeSquared() - v.dotProduct(support) &lt;= relative_error * v.magnitudeSquared())return v.magnitude();expanded_simplex = simplex.Union(SimplexVertex(support, sa, sb));simplex = expanded_simplex.reducedSet(v, closest_point_a, closest_point_b, 0);if (simplex.length() == 0)return v.magnitude();} while (simplex.length() != 3 &amp;&amp; v.magnitudeSquared() &gt; error_tolerance * simplex.maximumVectorMagnitudeSquared());return 0;}</code></pre></div>When I started testing my code I was using only polytopes, so I've been operating under the assumption that the support function will always return a vertex from a fixed set (namely, the set of vertex differences between the two polytopes). This is true when both objects are polytopes, but in my latest test case I've been dealing with sphere vs polytope collisions, at which point the assumption no longer holds. I've only just realized this.<br><br>So, as it turns out, for objects like spheres and other continuous shapes there's really no choice but to add an epsilon when checking for repeated vertices in the simplex.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6226">Adrian Lopez</a> — Thu Apr 20, 2017 1:31 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2017-04-19T22:26:48+00:00</updated>
+
+		<published>2017-04-19T22:26:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39210#p39210</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39210#p39210"/>
+		<title type="html"><![CDATA[Re: GJK: reappearing support points and termination conditio]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39210#p39210"><![CDATA[
+<blockquote class="uncited"><div>What should a non-theoretical implementation of GJK do to address such behavior?</div></blockquote>If you cycle vertices, it looks like you didn't make any progress. You should check if you get any closer to the origin at each iteration, or abort.<br>There are plenty of other issues with GJK, not the least a degenerate (near-zero volume) 4-vertex simplex (tetrahedron).<br><br>Each new termination condition you add will likely cause other issues (fail to find a solution while there is one, false positives) etc.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Apr 19, 2017 10:26 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Adrian Lopez]]></name></author>
+		<updated>2017-04-19T17:23:19+00:00</updated>
+
+		<published>2017-04-19T17:23:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39208#p39208</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39208#p39208"/>
+		<title type="html"><![CDATA[GJK: reappearing support points and termination condition]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39208#p39208"><![CDATA[
+I'm having a problem in my GJK implementation where support points reappear periodically in an endless loop, a situation described in pages 143 - 145 of Gino's book, <em class="text-italics">Collision Detection in Interactive 3D Environments</em>. I have added the check for duplicate vertices described in page 145 of the book, but the code isn't catching all instances of such periodic behavior. The call looks like this:<div class="codebox"><p>Code: </p><pre><code>if (Y.includesVertex(support_point) || ...)    return v.magnitude();</code></pre></div>As it currently stands, the call only checks for existing vertices with values exactly identical to the given support point. This is causing me problems, as I'm seeing periodic behavior involving close but not exactly equal support points. The values shown here are the vertices for the simplex <em class="text-italics">Y = union(W, support_point)</em> through several iterations of the GJK loop:<div class="codebox"><p>Code: </p><pre><code>[0] {x = -245.196655, y = -4.026371}[1] {x = 675.000366, y = -4.02598572}[2] {x = 675, y = -4.02598572}...[0] {x = -245.196655, y = -4.026371}[1] {x = 675, y = -4.02598572}[2] {x = 675.000183, y = -4.02598572}...[0] {x = -245.196655, y = -4.026371}[1] {x = 675.000183, y = -4.02598572}[2] {x = 675.000366, y = -4.02598572}...[0] {x = -245.196655, y = -4.026371}[1] {x = 675.000366, y = -4.02598572}[2] {x = 675, y = -4.02598572}... etc</code></pre></div>It looks like this could be solved by checking for close values instead of identical values, but I don't know if that's the correct approach or whether I'm trying to compensate for a source of imprecision I'm not supposed to have. Is checking for close values a necessary part of a floating-point precision implementation of GJK, or is there something in my code I should be looking at as a source of precision issues?<br><br>What should a non-theoretical implementation of GJK do to address such behavior?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6226">Adrian Lopez</a> — Wed Apr 19, 2017 5:23 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

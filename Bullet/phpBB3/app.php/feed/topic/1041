@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1041" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2007-05-01T22:58:48+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/1041</id>
+
+		<entry>
+		<author><name><![CDATA[pTymN]]></name></author>
+		<updated>2007-05-01T22:58:48+00:00</updated>
+
+		<published>2007-05-01T22:58:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4116#p4116</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4116#p4116"/>
+		<title type="html"><![CDATA[Calculating time of impact between point + line (2D)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=4116#p4116"><![CDATA[
+Here's some code that works in the case that you have a dynamic circle and a dynamic line, the line rotating or changing in some arbitrary way, and the circle's radius increasing or decreasing during a time interval.<br><br><br><br><div class="codebox"><p>Code: </p><pre><code>#include &lt;complex&gt;#include "vector2d.h"#define HALF_EPSILON 0.25extern bool solveQuadratic(double &amp;a, double &amp;b, double &amp;c, double &amp;root);bool solveQuartic(double &amp;a, double &amp;b, double &amp;c, double &amp;d, double &amp;e, double &amp;root){if(a == 0.0){if(b == 0.0)return solveQuadratic(c, d, e, root);else{//return solveCubic(b, c, d, e, root);int errorCubicNotImplemented = 0; // $$$ breakpoint here}}// Uses Ferrari's Methoddouble aa = a*a, aaa=aa*a, bb=b*b, bbb=bb*b;double alpha = -3.0*bb/(8.0*aa)   + c/a, alpha2 = alpha * alpha;double beta  =    bbb/(8.0*aaa) + b*c/(-2.0*aa) + d/a;double gamma = -3.0*bbb*b/(256.0*aaa*a) + c*bb/(16.0*aaa) + b*d/(-4.0*aa) + e/a;if(beta == 0.0){root = b/(-4.0*a) + sqrt(0.5 * (-alpha + sqrt(alpha2 + 4.0*gamma)));return true;}else{std::complex&lt;double&gt; P = -alpha2/12.0 - gamma;std::complex&lt;double&gt; Q = -alpha2*alpha/108.0 + alpha*gamma/3.0 - beta*beta/8.0;std::complex&lt;double&gt; R = Q*0.5 + sqrt(Q*Q*0.25 + P*P*P/27.0);std::complex&lt;double&gt; U = pow(R, 1.0/3.0);std::complex&lt;double&gt; y = -5.0*alpha/6.0 - U;if(U != 0.0) y += P/(3.0*U);std::complex&lt;double&gt; W = sqrt(alpha + y + y);std::complex&lt;double&gt; aRoot;bool foundRealRoot = false;double firstPart = b/(-4.0*a);std::complex&lt;double&gt; secondPart = -3.0*alpha - 2.0*y;std::complex&lt;double&gt; thirdPart = 2.0*beta/W;// aRoot = b/(-4.0*a) + 0.5 * (-W - sqrt(-3.0*alpha - 2.0*y + 2.0*beta/W));aRoot = firstPart + 0.5 * (-W - sqrt(secondPart + thirdPart));if(abs(aRoot.imag()) &lt; 1.0e-10 &amp;&amp; aRoot.real() &gt;= 0.0) {root = aRoot.real();foundRealRoot = true;}// aRoot = b/(-4.0*a) + 0.5 * (-W + sqrt(-3.0*alpha - 2.0*y + 2.0*beta/W));aRoot = firstPart + 0.5 * (-W + sqrt(secondPart + thirdPart));if(abs(aRoot.imag()) &lt; 1.0e-10 &amp;&amp; !foundRealRoot || (aRoot.real() &lt; root &amp;&amp; aRoot.real() &gt;= 0.0)) {root = aRoot.real();foundRealRoot = true;}//aRoot = b/(-4.0*a) + 0.5 * ( W - sqrt(-3.0*alpha - 2.0*y - 2.0*beta/W));aRoot = firstPart + 0.5 * (W - sqrt(secondPart - thirdPart));if(abs(aRoot.imag()) &lt; 1.0e-10 &amp;&amp; !foundRealRoot || (aRoot.real() &lt; root &amp;&amp; aRoot.real() &gt;= 0.0)){root = aRoot.real();foundRealRoot = true;}//aRoot = b/(-4.0*a) + 0.5 * ( W + sqrt(-3.0*alpha - 2.0*y - 2.0*beta/W));aRoot = firstPart + 0.5 * (W + sqrt(secondPart - thirdPart));if(abs(aRoot.imag()) &lt; 1.0e-10 &amp;&amp; !foundRealRoot || (aRoot.real() &lt; root &amp;&amp; aRoot.real() &gt;= 0.0)){root = aRoot.real();foundRealRoot = true;}return foundRealRoot;}}// This collision test returns true if a collision is found, and changes time// to reflect the time when the line segment touches the circle.// Note that this routine does not perform endpoint checks. The endpoints are// handled in the circle-circle collision test and performing the same check// again would be redundant.bool whenDoesMovingLineHitExpandingCircle(vec2 p1s, vec2 p2s, vec2 p1e, vec2 p2e, double r1, double r2, double &amp;time){// Calculate line endpoint deltasvec2 p1d = p1e - p1s, p2d = p2e - p2s;// Precalculate coefficients for T^0, T^1, T^2double x11 = p1s.x*p1s.x, x11T = 2.0*p1s.x*p1d.x, x11TT = p1d.x*p1d.x;double x22 = p2s.x*p2s.x, x22T = 2.0*p2s.x*p2d.x, x22TT = p2d.x*p2d.x;double y11 = p1s.y*p1s.y, y11T = 2.0*p1s.y*p1d.y, y11TT = p1d.y*p1d.y;double y22 = p2s.y*p2s.y, y22T = 2.0*p2s.y*p2d.y, y22TT = p2d.y*p2d.y;double x12 = p1s.x*p2s.x, x12T = p1s.x*p2d.x+p1d.x*p2s.x, x12TT = p1d.x*p2d.x;double y12 = p1s.y*p2s.y, y12T = p1s.y*p2d.y+p1d.y*p2s.y, y12TT = p1d.y*p2d.y ;// Precalculate coefficients for T^0, T^1, T^2 involving radiusdouble rd = r2 - r1, rr = r1 * r1, rrT =  2.0 *  r1 * rd, rrTT = rd * rd;// Calculate pieces of coefficients A-E of quartic equation that describes// the line segment motion and circle radius change. The pieces are // separated based on a later multiplication with coefficients involving // the circle's radius. If a collision is detected, we will need to // add HALF_EPSILON to the circle's start and end radii and try again.// That way, we can know the exact time when the line is HALF_EPSILON away // from the circle. That distance means that the objects are touching, but// not interpenetrating.double ANonR = x11TT * y22TT + x22TT * y11TT + -2 * x12TT * y12TT;double ArrTT = x12TT + x12TT + y12TT + y12TT - x11TT - x22TT - y11TT - y22TT;double BNonR = x11T * y22TT + x11TT * y22T + x22T * y11TT + x22TT * y11T +-2 * (x12T * y12TT + x12TT * y12T);double BrrTT = x12T + x12T + y12T + y12T - x11T - x22T - y11T - y22T;double BrrT = x12TT + x12TT + y12TT + y12TT - x11TT - x22TT - y11TT - y22TT;double CNonR = x11T * y22T + x11 * y22TT + x11TT * y22 +  x22T * y11T + x22 * y11TT + x22TT * y11 +    -2 * (x12T * y12T + x12 * y12TT + x12TT * y12);double CrrT = x12T + x12T + y12T + y12T - x11T - x22T - y11T - y22T;double CrrTT = x12 + x12 + y12 + y12 - x11 - x22 - y11 - y22;double Crr = x12TT + x12TT + y12TT + y12TT - x11TT - x22TT - y11TT - y22TT;double DNonR = x11 * y22T + x11T * y22 + x22 * y11T + x22T * y11 + -2 * (x12 * y12T + x12T * y12);double DrrT = x12 + x12 + y12 + y12 - x11 - x22 - y11 - y22;double Drr = x12T + x12T + y12T + y12T - x11T - x22T - y11T - y22T;double ENonR = x11 * y22 + x22 * y11 + -2 * x12 * y12;double Err = x12 + x12 + y12 + y12 - x11 - x22 - y11 - y22;// Assemble quartic coefficientsdouble A = ANonR + ArrTT * rrTT;double B = BNonR + BrrTT * rrTT + BrrT * rrT;double C = CNonR + CrrTT * rrTT + CrrT * rrT + Crr * rr;double D = DNonR + DrrT  * rrT  + Drr  * rr;double E = ENonR + Err   * rr;// Get smallest positive real root, or else any real root. If one is found, // that is the time when the moving line is first tangent to the circledouble collisionTime;bool foundRoot = solveQuartic(A, B, C, D, E, collisionTime);if(foundRoot &amp;&amp; collisionTime &gt;= 0.0 &amp;&amp; collisionTime &lt;= 1.0){// $$$ paranoid double checking of the correctness of the real rootdouble t = collisionTime;double value = A*t*t*t*t + B*t*t*t+ C*t*t + D*t + E;// Get snapshot of the line, its normal, and circle radius at the time of collisionvec2 p1 = p1s + p1d * collisionTime;vec2 p2 = p2s + p2d * collisionTime;vec2 edge = p2 - p1;vec2 normal = edge.left();normal /= normal.size();double radius = r1 + rd * collisionTime;// If origin-p1 dot normal is below zero, then this is the time when the// line is tangent to the circle, but not the first time.// Also check whether the segment actually crossed the circle, since// we performed the test using an infinite line.if(-p1 * normal &gt;= 0.0 &amp;&amp; (edge * p1)&gt;0.0 != (edge * p2)&gt;0.0){// Adjust circle's start and end radii r1 += HALF_EPSILON;r2  += HALF_EPSILON;// Recalculate radius related coefficientsrd  = r2 - r1;rr   = r1 * r1; rrT = 2.0 *  r1 * rd;   rrTT = rd * rd;// Reassemble quartic coefficientsA = ANonR + ArrTT * rrTT;B = BNonR + BrrTT * rrTT + BrrT * rrT;C = CNonR + CrrTT * rrTT + CrrT * rrT + Crr * rr;D = DNonR + DrrT  * rrT  + Drr  * rr;E = ENonR + Err   * rr;// Get time when line is HALF_EPSILON from the circle, and considered// to be "touching" the circle, but not interpenetrating it.double touchingTime;foundRoot = solveQuartic(A, B, C, D, E, touchingTime);if(foundRoot &amp;&amp; touchingTime &lt; collisionTime &amp;&amp; touchingTime &gt;= 0.0){// We found a legitimate collisiontime = touchingTime;return true;}else if(!foundRoot){// we should have found at least a negative root, wtf???int noRootError = 0; // breakpoint here}else{// This happens when the line starts out closer to the circle than// HALF_EPSILON. In this case, we just return a collision time of 0.// This could indicate an error somewhere else, since // isInvalidMovement should be checking for these kinds of things.// However, it is better to be on the safe side.time = 0.0;return true;}}}return false;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=1723">pTymN</a> — Tue May 01, 2007 10:58 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[raigan2]]></name></author>
+		<updated>2007-03-13T23:22:02+00:00</updated>
+
+		<published>2007-03-13T23:22:02+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3885#p3885</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3885#p3885"/>
+		<title type="html"><![CDATA[Calculating time of impact between point + line (2D)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3885#p3885"><![CDATA[
+I don't know what to call this sort of simulation -- "mathematically perfect rope" as opposed to "sampled rope" (a bunch of particles).. not knowing the correct term(s), I haven't been able to find anything about it via google.<br><br>It's definitely been around for a while: Umihara Kawase for SNES and the recent "Zen Bondage" game both use limited versions of the idea.<br><br>I'd really like to know how to extend this to support circle-vs-lineseg.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=748">raigan2</a> — Tue Mar 13, 2007 11:22 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[coderchris]]></name></author>
+		<updated>2007-03-13T19:55:45+00:00</updated>
+
+		<published>2007-03-13T19:55:45+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3879#p3879</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3879#p3879"/>
+		<title type="html"><![CDATA[Calculating time of impact between point + line (2D)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3879#p3879"><![CDATA[
+Thanks a bunch for the info; That helps alot  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br><br>I am in fact trying to simulate a rope type material (that isnt always "rigid"), with lots of particles coming at it at high speeds. Discreet collision detection between the rope and particles obviously doesnt work well at all, so Ill try the method(s) you have outlined. Sounds like they will work just fine for me<br><br>The iterative approach does seem like it would be faster in 3d...I jus thtink that in 2d, the analytical approach would be faster and more accurate<br><br>Ill take a look at that paper aswell and see if I can figure out anything from it<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=743">coderchris</a> — Tue Mar 13, 2007 7:55 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2007-03-13T19:54:20+00:00</updated>
+
+		<published>2007-03-13T19:54:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3878#p3878</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3878#p3878"/>
+		<title type="html"><![CDATA[Calculating time of impact between point + line (2D)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3878#p3878"><![CDATA[
+Stephane Redon has some algebraic time of impact paper that can give you some insight in the algebraic rootfinding. I implemented it for Bullet (several years ago), and you can find the source code in Bullet/Extras\AlgebraicCCD, but i found conservative advancement faster and more reliable in 3d.<br><br><a href="http://i3d.inrialpes.fr/~redon/papers/icra2000.pdf" class="postlink">http://i3d.inrialpes.fr/~redon/papers/icra2000.pdf</a><br><br>This paper discusses the 2d and 3d cases, but with special in-between motion (screwing motion). Another option is using interval arithmetic, but this is also iterative.<br><br>It would be interesting to optimize the algebraic version for the 2d case with constant linear/angular motion.<br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Mar 13, 2007 7:54 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[raigan2]]></name></author>
+		<updated>2007-03-13T16:37:12+00:00</updated>
+
+		<published>2007-03-13T16:37:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3869#p3869</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3869#p3869"/>
+		<title type="html"><![CDATA[Re: Calculating time of impact between point + line (2D)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3869#p3869"><![CDATA[
+I've used a quadratic-root-finding method to find the time of intersection and parametric point of intersection between a stationary point and a lineseg whose endpoints are moving -- you can use the same code for a moving point, you just need to shift the velocities so that your calculations are done relative to the point (i.e subtract the point's velocity from the endpoints' velocities). <br><br>Given point C, lineseg endpoints A and B, relative endpoint velocities vA,vB, you have two options:<br><br>(1) solve the quadratic: Cross(C - (A + t*vA), (B + t*vV) - (A + t*vA)) = 0<br>this will give you the parametric time t at which the line containing the lineseg intersects C; if t is in [0,1], you then need to calculate the parametric position q of C on the line passing through (A + t*vA) with direction ((B + t*vB) - (A + t*vA)). If q is in [0,1], you've found a valid time and position of intersection.<br><br>(2) this is the compliment of the first approach, suggested by robert dibley on gdalgorithms.<br>solve the quadratic: Cross(C - (A + q(B-A)), Av + q(vB-vA)) = 0<br>this will give you the parametric position q on the line containing the lineseg that intersects with C; if q is in [0,1], you then need to calculate the parametric time of intersection t, which is simply the parametric position of C on the line passing through (A + q(B-A)) with direction (Av + q(vB-vA)). If t is in [0,1], you've found a valid position and time of intersection.<br><br><br>In 2D, Cross() is just perpdot, if you expand the above equations you'll get quadratics in t or q; also, since there can be 2 roots to the quadratics, you'll need to handle both of those (reject roots whose parametric position/time are outside of [0,1], and then use the first/earliest time).<br><br>Initially I was using (1), but then switched to (2).. I'm not sure why! It's possible that the parametric position was a better "rejector" and let me identify invalid intersections earlier.. sadly I failed to add a comment explaining why I chose (2).<br><br>I would post the code, but frankly it's embarassing -- email me if you'd like it.<br><br>Note that this doesn't treat the lineseg as rigid; your description (center-of-mass and rotation) suggests that the lineseg _is_ rigid in your case.. the above code will approximate the lineseg's movement by considering the movement of the endpoints to be lines instead of curves. If you want more accuracy, you could subdivide the frame so that the lineseg endpoints sweep along a piecewise-linear approximation of the curve they're actually moving along. For my application (recursively colliding/subdividing a moving "rope/wire") I actually wanted non-rigid linesegs..<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=748">raigan2</a> — Tue Mar 13, 2007 4:37 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[dog]]></name></author>
+		<updated>2007-03-13T02:16:22+00:00</updated>
+
+		<published>2007-03-13T02:16:22+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3863#p3863</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3863#p3863"/>
+		<title type="html"><![CDATA[Calculating time of impact between point + line (2D)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3863#p3863"><![CDATA[
+Your assumption that using conservative advancement will be slow due to iterations is not correct in my experience. So don't worry about that. As Dominic Mai <a href="http://cg.informatik.uni-freiburg.de/course_notes/WS06/ca_12_mai_coldet.pdf" class="postlink">points out</a> - it is usually just 4 iterations.<br><br>Both Gino and Erwin have written very clear papers on how to implement such a scheme. I recommend starting with them. You may also find useful information by searching on the term "conservative advancement".<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=60">dog</a> — Tue Mar 13, 2007 2:16 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[coderchris]]></name></author>
+		<updated>2007-03-12T21:06:32+00:00</updated>
+
+		<published>2007-03-12T21:06:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3856#p3856</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3856#p3856"/>
+		<title type="html"><![CDATA[Calculating time of impact between point + line (2D)]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=3856#p3856"><![CDATA[
+I have a moving point, and also a moving line that could be moving and rotating at an arbitrary speed with an arbitrary center of mass; <br><br>Is there any way to determine the exact time of impact between this point and line quickly and efficiently? <br>(I am aware of the approaches present in Bullet, but they seem to be too slow since it contains iterations; Im looking for an analytical approach if it exists)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=743">coderchris</a> — Mon Mar 12, 2007 9:06 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

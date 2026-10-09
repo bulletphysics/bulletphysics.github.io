@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/568" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-10-03T14:39:23+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/568</id>
+
+		<entry>
+		<author><name><![CDATA[SteveBaker]]></name></author>
+		<updated>2006-10-03T14:39:23+00:00</updated>
+
+		<published>2006-10-03T14:39:23+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2030#p2030</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2030#p2030"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2030#p2030"><![CDATA[
+<blockquote class="uncited"><div>1) You Draw N polygons. Each polygon consists of N pixels. Right?</div></blockquote>Yes.<blockquote class="uncited"><div>2) Your render target texture contains only N pixels. Or N*N?</div></blockquote>only N.<blockquote class="uncited"><div>3) If N*N then I do not understand why you need second pass...</div></blockquote>It's not N*N.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=726">SteveBaker</a> — Tue Oct 03, 2006 2:39 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-03T07:10:01+00:00</updated>
+
+		<published>2006-10-03T07:10:01+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2028#p2028</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2028#p2028"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2028#p2028"><![CDATA[
+1) You Draw N polygons. Each polygon consists of N pixels. Right?<br>2) Your render target texture contains only N pixels. Or N*N?<br>3) If N*N then I do not understand why you need second pass...<br><br>For example, in my approach I draw only ONE triangle. Triangle cathetus are N-1 pixels. Area: (N^2-N)/2. This triangle contains all collisions. And I do not use vertex shader at all.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Tue Oct 03, 2006 7:10 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[SteveBaker]]></name></author>
+		<updated>2006-10-02T19:19:11+00:00</updated>
+
+		<published>2006-10-02T19:19:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2025#p2025</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2025#p2025"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2025#p2025"><![CDATA[
+<blockquote class="uncited"><div>1) I see now. You execute it N times. Each execution may be repeated several times (bet it is 1 in most cases). So you make N GPU calls.</div></blockquote>I don't know what you mean by "GPU call".  For 1024 objects, colliding against 1024 objects, each frame I do ONE call to glMultiDrawArrays which draws 1024 polygons (which are stored off on the graphics card as VBO's).  At the end, I read back the number of collision pairs it generated (using the occlusion query).  If there were collisions, I have to run that glMultiDrawArrays again.<br>[/quote]<br> It is not good. You lose on this! But until Shader Model 4.0 you can do nothing, I think.<blockquote class="uncited"><div>The problem is that with only one output FBO, I can't write out all of the collision pairs in one pass because each 'target' object might be hit multiple times.  Hence the multiple calls to glMultiDrawArrays...but there won't usually be more than a couple of those per frame for non-pathalogical cases.  Shader Model 4 permits me to write to more FBO's - but still there may be pathalogical cases where I can't store *ALL* of the collision pairs.  So the multipass approach is still needed - it's just going to consume fewer passes in the future.  (There are still some complicated issues associated with even that - but let's not go there now).<br><blockquote class="uncited"><div>2) Why N^2. You have (N^2-N)/2 pairs. You need something like:<br>for(i=0; i&lt;TOTAL; i++)<br>   for(j=i+1; j&lt;TOTAL; j++)<br>   {<br>   }<br>This hepls you to get rid of redundant "IFs" in the fragment shader.</div></blockquote>For subsequent processing, it'll be easier if I have A-collided-with-B as well as B-collided-with-A...so what I'm doing is still OK.  We gotta see the big picture here - it's not just about collision detection!<br><blockquote class="uncited"><div>3) "N polygons each of N pixels" probably is not good. Vertex shaders can not fully load fragment shaders in this case. </div></blockquote>Eh?  The vertex shader is just about idle.  Unless N is less than about 64, the vertex shader can keep up.<blockquote class="uncited"><div>4) You "polygons" are pionts (D3DPT_POINTLIST). Right?</div></blockquote>I'm using OpenGL - but no, the primitive is GL_QUADS....oh - that's why you think I'm doing it all wrong.  Sheesh!  Give me more credit than that!<blockquote class="uncited"><div>5) Do not use texture fetch in Vertex Shader. Try to embed all the data you needed in Vertex Declaration. </div></blockquote>I don't understand what you are saying here...but don't sweat it - I have this right.<blockquote class="uncited"><div>I think there is no acceptable solution Shader Model 4.0. We need ability to generete variable length output streams (It will be allowed in Geometry Shader). Then collision detection can be done in ONE DrawPrimitive call.</div></blockquote></div></blockquote>Well, it's better - but you still need to do more than one pass in pathalogical cases where too many objects can collide with one object.  It's also possible that this multipass approach might be faster because I don't think we can selectively kill() writes to individual buffers in Shader Model 4.  (I could be wrong about that - but it's an ikky problem).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=726">SteveBaker</a> — Mon Oct 02, 2006 7:19 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-02T16:57:08+00:00</updated>
+
+		<published>2006-10-02T16:57:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2024#p2024</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2024#p2024"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2024#p2024"><![CDATA[
+<blockquote class="uncited"><div><blockquote class="uncited"><div>I took a look at your code. I am not sure, but I suspect that you send collision pairs to GPU one by one.<br><div class="codebox"><p>Code: </p><pre><code>glBeginQueryARB ( GL_SAMPLES_PASSED_ARB, query ) ;glMultiDrawArraysEXT ( GL_QUADS, (GLint*)&amp; collstart, (GLint*)&amp; colllength,  1 ) ;numPasses++ ;glEndQueryARB   ( GL_SAMPLES_PASSED_ARB ) ;</code></pre></div>How many times above code is executed per frame?</div></blockquote>Typically once or twice only per frame - irrespective of the number of objects.<br><br>The deal is that drawing one polygon compares one object against ALL of the other objects using the frag shader - so there is a lot of parallelism.  The glMultiDrawArrays call sends one polygon for every object (in a VBO for speed) - so in this formulation (which is just for the demo) it's an N^2 calculation - but performed as N polygons each of N pixels. The amount of parallelism you have is determined by the number of fragment shaders in your GPU.<br><br>The snag is that there is potentially insufficient storage space in the shader's output buffer to store ALL of the collision pairs that one 'target' object might undergo - so I count the number of pixels actually drawn (which equates to the number of collision pairs generated) and loop around generating different ones each pass until no more are drawn.  The number of iterations of that loop depends on the worst case number of collisions that one object might undergo divided by the number of collisions you can store in one pass (which is 1 right now - but can be more in future).<br><br>This isn't great - but it's a reasonable 'proof of concept' - which is about where we are with this little experiment right now.<br><br>I tried measuring the number of collisions produced by each object in turn - in order that second and subsequent passes would require me only to re-send those objects that actually collided with something on the previous iteration - but the overhead of counting the pixel hits for each polygon drawn using the 'query' mechanism actually took longer than just drawing all of the polygons each time and testing whether any of them generated a collision...so simple is better as is so often the case with GPU work.<br><br>Probably the best solution of all will be to batch them into groups of a few hundred polygons - but we have a pretty good idea of what this can do now and that level of final polish will only be needed if/when we ever make a GPU-based Bullet that uses GPU collision detection.<br><br>Right now, we are really just seeing what can be done and where the big speedups are.</div></blockquote>1) I see now. You execute it N times. Each execution may be repeated several times (bet it is 1 in most cases). So you make N GPU calls. It is not good. You lose on this! But until Shader Model 4.0 you can do nothing, I think.<br>2) Why N^2. You have (N^2-N)/2 pairs. You need something like:<br>for(i=0; i&lt;TOTAL; i++)<br>   for(j=i+1; j&lt;TOTAL; j++)<br>   {<br>   }<br>This hepls you to get rid of redundant "IFs" in the fragment shader.<br>3) "N polygons each of N pixels" probably is not good. Vertex shaders can not fully load fragment shaders in this case. <br>4) You "polygons" are pionts (D3DPT_POINTLIST). Right?<br>5) Do not use texture fetch in Vertex Shader. Try to embed all the data you needed in Vertex Declaration. <br><br>I think there is no acceptable solution Shader Model 4.0. We need ability to generete variable length output streams (It will be allowed in Geometry Shader). Then collision detection can be done in ONE DrawPrimitive call.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Mon Oct 02, 2006 4:57 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[SteveBaker]]></name></author>
+		<updated>2006-10-02T16:11:49+00:00</updated>
+
+		<published>2006-10-02T16:11:49+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2023#p2023</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2023#p2023"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2023#p2023"><![CDATA[
+<blockquote class="uncited"><div>I took a look at your code. I am not sure, but I suspect that you send collision pairs to GPU one by one.<br><div class="codebox"><p>Code: </p><pre><code>glBeginQueryARB ( GL_SAMPLES_PASSED_ARB, query ) ;glMultiDrawArraysEXT ( GL_QUADS, (GLint*)&amp; collstart, (GLint*)&amp; colllength,  1 ) ;numPasses++ ;glEndQueryARB   ( GL_SAMPLES_PASSED_ARB ) ;</code></pre></div>How many times above code is executed per frame?</div></blockquote>Typically once or twice only per frame - irrespective of the number of objects.<br><br>The deal is that drawing one polygon compares one object against ALL of the other objects using the frag shader - so there is a lot of parallelism.  The glMultiDrawArrays call sends one polygon for every object (in a VBO for speed) - so in this formulation (which is just for the demo) it's an N^2 calculation - but performed as N polygons each of N pixels. The amount of parallelism you have is determined by the number of fragment shaders in your GPU.<br><br>The snag is that there is potentially insufficient storage space in the shader's output buffer to store ALL of the collision pairs that one 'target' object might undergo - so I count the number of pixels actually drawn (which equates to the number of collision pairs generated) and loop around generating different ones each pass until no more are drawn.  The number of iterations of that loop depends on the worst case number of collisions that one object might undergo divided by the number of collisions you can store in one pass (which is 1 right now - but can be more in future).<br><br>This isn't great - but it's a reasonable 'proof of concept' - which is about where we are with this little experiment right now.<br><br>I tried measuring the number of collisions produced by each object in turn - in order that second and subsequent passes would require me only to re-send those objects that actually collided with something on the previous iteration - but the overhead of counting the pixel hits for each polygon drawn using the 'query' mechanism actually took longer than just drawing all of the polygons each time and testing whether any of them generated a collision...so simple is better as is so often the case with GPU work.<br><br>Probably the best solution of all will be to batch them into groups of a few hundred polygons - but we have a pretty good idea of what this can do now and that level of final polish will only be needed if/when we ever make a GPU-based Bullet that uses GPU collision detection.<br><br>Right now, we are really just seeing what can be done and where the big speedups are.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=726">SteveBaker</a> — Mon Oct 02, 2006 4:11 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-02T10:42:34+00:00</updated>
+
+		<published>2006-10-02T10:42:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2020#p2020</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2020#p2020"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2020#p2020"><![CDATA[
+I took a look at your code. I am not sure, but I suspect that you send collision pairs to GPU one by one.<br><div class="codebox"><p>Code: </p><pre><code>glBeginQueryARB ( GL_SAMPLES_PASSED_ARB, query ) ;glMultiDrawArraysEXT ( GL_QUADS, (GLint*)&amp; collstart, (GLint*)&amp; colllength,  1 ) ;numPasses++ ;glEndQueryARB   ( GL_SAMPLES_PASSED_ARB ) ;</code></pre></div>How many times above code is executed per frame?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Mon Oct 02, 2006 10:42 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-10-01T20:02:17+00:00</updated>
+
+		<published>2006-10-01T20:02:17+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2016#p2016</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2016#p2016"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2016#p2016"><![CDATA[
+<blockquote class="uncited"><div><blockquote class="uncited"><div>It all depends on the setup.<br><br>Usually the broadphase takes out most of the pairs, so 1024 sphere will never be a n^2 problem.<br></div></blockquote>But broadphase is n^2 (exact (n^2 - n)/2). No?<br>And it is not faster then sphere-sphere. Right?<br>So, it is only a broadphase will eat 16 ms for 1024 objects....</div></blockquote>No,<br><br>The CPU sweep and prune broadphase that Bullet uses is much cheaper. With typical motion (framecoherence) the cost roughly depends on the number of moving objects. For n objects, the cost is around O(n), but with small amount of moving objects it can be cheaper like O(m).<br><br>So it makes sense to run the broadphase on the CPU, and then upload a CollisionMap texture to GPU.<br><br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sun Oct 01, 2006 8:02 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-01T19:57:36+00:00</updated>
+
+		<published>2006-10-01T19:57:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2015#p2015</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2015#p2015"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2015#p2015"><![CDATA[
+<blockquote class="uncited"><div>It all depends on the setup.<br><br>Usually the broadphase takes out most of the pairs, so 1024 sphere will never be a n^2 problem.<br></div></blockquote>But broadphase is n^2 (exact (n^2 - n)/2). No?<br>And it is not faster then sphere-sphere. Right?<br>So, it is only a broadphase will eat 16 ms for 1024 objects....<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Sun Oct 01, 2006 7:57 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-10-01T19:23:59+00:00</updated>
+
+		<published>2006-10-01T19:23:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2013#p2013</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2013#p2013"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2013#p2013"><![CDATA[
+It all depends on the setup.<br><br>Usually the broadphase takes out most of the pairs, so 1024 sphere will never be a n^2 problem.<br><br>You can modify the Bullet CcdPhysicsDemo, to increase the stack of objects to 1024, change this line (release mode)<br>const int gNumObjects = 120;<br>, and change the shape in btSphereShape, and enable profiling.<br>Profiling can be enabled by editing Bullet/src/LinearMath/btQuickprof.h,<br>uncomment the line at the top //#define USE_QUICKPROF 1<br>Then recompile the sources and press 'p'. It will show profiling on-screen, and ouput the data to a comma separated file. Perhaps I should enable profiling by default, it doesn't take much cpu cycles probably (and its output still needs to be enabled by the user anyway).<br><br>By default, that CcdPhysicsDemo (only that demo) registers a very basic SphereSphere collision algorithm (see REGISTER_CUSTOM_COLLISION_ALGORITHM):<br><a href="http://svn.sourceforge.net/viewvc/bullet/trunk/src/BulletCollision/CollisionDispatch/btSphereSphereCollisionAlgorithm.cpp?revision=330&amp;view=markup" class="postlink">http://svn.sourceforge.net/viewvc/bulle ... iew=markup</a><br><br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Sun Oct 01, 2006 7:23 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jack]]></name></author>
+		<updated>2006-10-01T19:17:37+00:00</updated>
+
+		<published>2006-10-01T19:17:37+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2012#p2012</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2012#p2012"/>
+		<title type="html"><![CDATA[My exotic approach to GPU collision detection]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=2012#p2012"><![CDATA[
+Did you try it on CPU? I wonder how many "ms" you will get for 1024 spheres against 1024 spheres on CPU? Do you have such statistics?<br><br>17 nanoseconds it is 34 clock cycles on 2GHz CPU. Not too much, but not too small. Probably SIMD optimized CPU program could beat your GPU result..... <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes"> What if we take Dual-Core CPU?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=772">Jack</a> — Sun Oct 01, 2006 7:17 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

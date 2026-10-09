@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13177" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-03-23T15:30:58+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13177</id>
+
+		<entry>
+		<author><name><![CDATA[acu192]]></name></author>
+		<updated>2021-03-23T15:30:58+00:00</updated>
+
+		<published>2021-03-23T15:30:58+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43362#p43362</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43362#p43362"/>
+		<title type="html"><![CDATA[Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43362#p43362"><![CDATA[
+Yes, that's actually how I ran into this myself (except we're loading GLTF instead of FBX but whatever, conceptually the same).<br><br>Actually I went ahead and am just using <strong class="text-strong">btTriangleMesh</strong> (implements <strong class="text-strong">btStridingMeshInterface</strong>) and I'm just adding all triangles to one "part" (because that's a limitation of <strong class="text-strong">btTriangleMesh</strong>). It seems to be working totally fine on all my models so far. But my original question was essentially: Is the underlying computation of <strong class="text-strong">btBvhTriangleMeshShape</strong> **different** if you add all triangles to one "part" vs. if you honor your GLTF and add triangles to several "parts"? I have a feeling that the answer is "no, it's all just a triangle soup no matter what" -- but I haven't been able to verify that. I tried studying the code deeper but I'm not seeing the answer.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13895">acu192</a> — Tue Mar 23, 2021 3:30 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-03-22T15:39:51+00:00</updated>
+
+		<published>2021-03-22T15:39:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43361#p43361</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43361#p43361"/>
+		<title type="html"><![CDATA[Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43361#p43361"><![CDATA[
+Ah I see... looking closer at the code I rediscover: the <strong class="text-strong">btBvhTriangleMeshShape</strong> uses an instance of something that implements the <strong class="text-strong">btStridingMeshInterface</strong> and that interface supports having the mesh split into sub-parts.  Yes, I recall taking advantage of that multiple parts API.  At one time we were loading FBX files into memory and the triangle mesh info would be divided into multiple parts, depending on how the FBX mesh was created.  We wrote a FbxMeshInterface class to give the btBvhTriangleMeshShape access to the raw data, which was also used for rendering.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Mon Mar 22, 2021 3:39 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[acu192]]></name></author>
+		<updated>2021-03-19T23:30:59+00:00</updated>
+
+		<published>2021-03-19T23:30:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43358#p43358</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43358#p43358"/>
+		<title type="html"><![CDATA[Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43358#p43358"><![CDATA[
+Here's the manual I was referring to: <a href="https://github.com/bulletphysics/bullet3/blob/395e17c7bf2fd1b906f41aa651bb145dcedeb873/docs/Bullet_User_Manual.pdf" class="postlink">https://github.com/bulletphysics/bullet ... Manual.pdf</a> (middle-ish of page 14) Says, "The btBvhTriangleMeshShape can store multiple mesh parts. It keeps a triangle index and part index in a 32bit structure, reserving 10 bits for the part Id and the remaining 22 bits for triangle index."<br><br>Your interpretation seems reasonable. There's another sentence in the manual (page 35) that says "Many small btBvhTriangleMeshShape pollute the broadphase. Better combine them." So... your interpretation is consistent with that idea as well.<br><br>Another interesting bit: None of the examples in the bullet source code uses multiple "parts" in a single btBvhTriangleMeshShape. So I'm hesitant to go down that road since it's apparently not common enough to make it into an example.<br><br>I'm assuming, @drleviathan, that you've never used multiple "parts" in a single btBvhTriangleMeshShape then?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13895">acu192</a> — Fri Mar 19, 2021 11:30 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-03-19T22:23:48+00:00</updated>
+
+		<published>2021-03-19T22:23:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43357#p43357</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43357#p43357"/>
+		<title type="html"><![CDATA[Re: &quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43357#p43357"><![CDATA[
+My interpretation of the manual (although I wasn't able to find a copy with the section you describe) is: if you have multiple distinct mesh "parts"... then you could store them in single btBvhTriangleMeshShape instance in one RigidBody... and the collision behavior would be identical to what you'd get if you stored each part in its own btBvhTriangleMeshShape instance on a distinct RigidBody.<br><br>Of course... you would NOT want to store multiple "parts" in a single shape when you need to add/remove parts dynamically at runtime.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Mar 19, 2021 10:23 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[acu192]]></name></author>
+		<updated>2021-03-19T18:17:04+00:00</updated>
+
+		<published>2021-03-19T18:17:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43356#p43356</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43356#p43356"/>
+		<title type="html"><![CDATA[&quot;multiple mesh parts&quot; with btBvhTriangleMeshShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43356#p43356"><![CDATA[
+The User's Manual says that a <strong class="text-strong">btBvhTriangleMeshShape</strong> can store "multiple mesh parts" (page 14).<br><br>I studied the source of <strong class="text-strong">btTriangleMesh</strong> and it only uses one (1) "part" (i.e. only one entry goes into the `m_indexedMeshes` array).<br><br>So, my question (I've tried studying the code deeper, and also searching the forum, but I can't find the answer myself) is ...<br><br><strong class="text-strong">Is there ever a reason to use "multiple mesh parts" in my btBvhTriangleMeshShape? If so, when should I use multiple "parts"?</strong><br><br>My general idea is that if my mesh has more than one "connected components" (to use a <em class="text-italics">graph theory</em> term), then each "connected components" (again, <em class="text-italics">graph theory</em> term) should become a "part" in the btBvhTriangleMeshShape?<br><br>In other places on this forum, @drleviathan has called the btBvhTriangleMeshShape a "triangle soup". If that's really the case, then having multiple "parts" wouldn't change any of the underlying computation?<br><br>Thank you!<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13895">acu192</a> — Fri Mar 19, 2021 6:17 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/6231" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2011-06-14T15:44:52+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/6231</id>
+
+		<entry>
+		<author><name><![CDATA[snielsen]]></name></author>
+		<updated>2011-06-14T15:44:52+00:00</updated>
+
+		<published>2011-06-14T15:44:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=23851#p23851</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=23851#p23851"/>
+		<title type="html"><![CDATA[Re: Serialization breaks determinism?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=23851#p23851"><![CDATA[
+Just to follow up, I have found great success in restarting the simulation during those quiet and settled moments when nothing is moving. Because I always reboot the simulation whether serialization is actually wanted or not, this has allowed me to maintain determinism across serialization. It is a somewhat expensive operation but in my scenario it is not too bad and definitely worth the trade-off.<br><br>Looking forward to the serialization advancements in Bullet 3.X  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br><br>Spencer<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7650">snielsen</a> — Tue Jun 14, 2011 3:44 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2011-06-09T07:14:08+00:00</updated>
+
+		<published>2011-06-09T07:14:08+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=23774#p23774</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=23774#p23774"/>
+		<title type="html"><![CDATA[Re: Serialization breaks determinism?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=23774#p23774"><![CDATA[
+I'm currently busy doing research and preparations for Bullet 3.x, so I won't be visiting the forums as regular as usual.<br><br>Re-starting after serialization will produce different results due to various issue. This is a feature that I want to include for Bullet 3.x, but if we can make it work in Bullet 2.x that would be great too.<br><br>1) The order of overlapping pairs is important, and needs to be the same. This is a broadphase / paircache issue<br>2) The cached contact points need to be stored in the same order. This is a narrowphase issue.<br>3) The "warm starting" or cached "applied impulse" needs to be the same. This info is store in the overlapping pairs, but used by the constraint solver<br><br>There are likely other areas, but in a nutshell, all this data needs to be serialized as well. I create an issue in the tracked so we can track the progress: <a href="http://code.google.com/p/bullet/issues/detail?id=519" class="postlink">http://code.google.com/p/bullet/issues/detail?id=519</a><br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Thu Jun 09, 2011 7:14 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Gemini]]></name></author>
+		<updated>2011-03-07T08:22:24+00:00</updated>
+
+		<published>2011-03-07T08:22:24+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22401#p22401</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22401#p22401"/>
+		<title type="html"><![CDATA[Re: Serialization breaks determinism?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22401#p22401"><![CDATA[
+I am not familiar with the internal workings of bullet but from working with other physics engines it sounds to me like the problem you are getting is due to the order in which collisions/constraints are created.<br><br>Typically when two objects overlap (objectA, objectB) some form of encounter is created. The order of the two objects (objectA,objectB) OR (objectB,objectA) often determines the order of contraint setup/creation. Because contraints are solved sequentially you will produce different results depending on the order of your two objects. This will begin to diverge the simulation.<br>I have not checked the bullet code but I am guessing that the serialise/deserialise code will save the state of individual objects and not the internal structure of the world. <br><br>By removing all your objects and recreating your world you are removing the information about "how the objects got where they were". By doing this when you recreate your world on the other computer the deserialise will put the two worlds back into the same state. If you can afford this operation then it may be your only option (Although for large worlds this will be a costly operation).<br><br>Take note that by recreating your world on computer A before serialising you will have changed how the simulation "Would" have run on computer A for future simulations.<br><br>Again... I am guessing on how bullet is working here from my own previous experience. If I get chance I will have a look through the bullet code and see if this is actually the case. No doubt one of the bullet authours will be able to give the thumbs up/down to my response <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_surprised.gif" width="15" height="15" alt=":o" title="Surprised">)<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2482">Gemini</a> — Mon Mar 07, 2011 8:22 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Kanttori]]></name></author>
+		<updated>2011-02-07T19:51:21+00:00</updated>
+
+		<published>2011-02-07T19:51:21+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22035#p22035</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22035#p22035"/>
+		<title type="html"><![CDATA[Re: Serialization breaks determinism?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=22035#p22035"><![CDATA[
+Sorry to plug my own code, but in btBulletFileSpawn.cpp (not official code though the naming convention is the same <a href="http://www.bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=12&amp;t=5652" class="postlink">http://www.bulletphysics.org/Bullet/php ... =12&amp;t=5652</a>) I added the code below because I couldn't find them being de-serialized at the time. You can compare 1:1 btRigidBody.h -&gt; btRigidBodyFloatData with this stuff, what's still missing are the "dynamic" parts like m_linearvelocity etc.<br><div class="codebox"><p>Code: </p><pre><code>template&lt;typename T&gt; btRigidBody::btRigidBodyConstructionInforigidBodyPrep(btScalar mass, const T* data, btCollisionShape* shape,const btVector3&amp; localInertia){btRigidBody::btRigidBodyConstructionInforbci(mass, 0, shape, localInertia);rbci.m_linearDamping =data-&gt;m_linearDamping;rbci.m_angularDamping =data-&gt;m_angularDamping;rbci.m_additionalDampingFactor =data-&gt;m_additionalDampingFactor;rbci.m_additionalLinearDampingThresholdSqr =data-&gt;m_additionalLinearDampingThresholdSqr;rbci.m_additionalAngularDampingThresholdSqr =data-&gt;m_additionalAngularDampingThresholdSqr;rbci.m_additionalAngularDampingFactor =data-&gt;m_additionalAngularDampingFactor;rbci.m_linearSleepingThreshold =data-&gt;m_linearSleepingThreshold;rbci.m_angularSleepingThreshold =data-&gt;m_angularSleepingThreshold;rbci.m_additionalDamping =data-&gt;m_additionalDamping;return rbci;}void colObjInit(btCollisionObject* colObj,const btCollisionObjectDoubleData&amp; colObjData){btVector3 temp;temp.deSerializeDouble(colObjData.m_anisotropicFriction);colObj-&gt;setAnisotropicFriction(temp);colObj-&gt;setContactProcessingThreshold(colObjData.m_contactProcessingThreshold);colObj-&gt;setFriction(colObjData.m_friction);colObj-&gt;setRestitution(colObjData.m_restitution);colObj-&gt;setCollisionFlags(colObjData.m_collisionFlags);colObj-&gt;setHitFraction(colObjData.m_hitFraction);}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=6870">Kanttori</a> — Mon Feb 07, 2011 7:51 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[snielsen]]></name></author>
+		<updated>2011-01-24T02:09:04+00:00</updated>
+
+		<published>2011-01-24T02:09:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21866#p21866</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21866#p21866"/>
+		<title type="html"><![CDATA[Re: Serialization breaks determinism?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21866#p21866"><![CDATA[
+I am getting more familiar with the internals of bullet as I work with it but I do not yet know about physics integrators (still just starting out).  Thanks for the tip though, I will check those out.  From what I understand and have observed however, bullet can actually be configured to run deterministically (<a href="http://code.google.com/p/bullet/issues/detail?id=188&amp;can=1&amp;start=100" class="postlink">http://code.google.com/p/bullet/issues/ ... &amp;start=100</a>) so that a simulation will produce the exact same result every time given the same floating point implementation and bullet version.<br><br>For the benefit of anyone who is interested or also encountering this issue, I have done some more experimentation and found a solution that works within the particular parameters of my game.  After writing a variety of test harnesses and verifiers within within my game I have identified that there is indeed some state that the dynamicsWorld serializer/de-serializer is not preserving (I don't yet know enough about the internals of bullet to understand what it is though).  This is causing the simulation to diverge when compared to the same simulation run without introducing a serialization/de-serialization point.  One requirement that I enforce in the game is that I only allow serialization to take place when the entire world is completely settled (all bodies have an activation state of deactivated).  My game is turn-based and I have enforced a requirement that the world must be completely settled before people are allowed to pass their turn.  That means that these "world settled" conditions occur fairly regularly during gameplay.  What I have found is that I can introduce a physics reset by tearing down the dynamicsWorld, bringing it back up again and adding all the bodies back to the new dynamicsWorld every time the world settles.  Whatever internal state is not being preserved by serialization is now being reset at identical known points in the simulation on all the networked devices regardless if serialization is actually needed on the device.  This has ensured that I can stop and serialize the same simulation at different (settled) points on different networked devices and after replaying the remaining events in the simulations that were stopped at earlier points, the state of all the simulations will be identical.  This has turned out to be a solution that works pretty well for my specific situation because the extra performance overhead of destroying the dynamicsWorld, re-creating it and then re-adding all the bodies is somewhat hidden from the user from a perceptibility standpoint because it only happens when nothing is moving.  <br><br>I have filled a bug (<a href="http://code.google.com/p/bullet/issues/detail?id=476" class="postlink">http://code.google.com/p/bullet/issues/detail?id=476</a>) so that at a minimum the base issue can be tracked.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7650">snielsen</a> — Mon Jan 24, 2011 2:09 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[VicariousEnt]]></name></author>
+		<updated>2011-01-25T00:17:50+00:00</updated>
+
+		<published>2011-01-21T20:10:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21833#p21833</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21833#p21833"/>
+		<title type="html"><![CDATA[Re: Serialization breaks determinism?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21833#p21833"><![CDATA[
+<blockquote class="uncited"><div> At this point player B now has 100B and so he de-serializes 100A that he downloaded from the server and compares the two states. I would have expected 100A and 100B to be identical but they are ever so slightly divergent.</div></blockquote>I'm not sure I entirely understand your main problem, but in regards to the quote above there you need to keep in mind that no physics intergrators are 100% accurate. I havn't looked into which one Bullet uses yet (read up on Newton Euler 2, Verslet, Runga kata etc if you're not familar with intergrators or what they do), but none of them will produce 100% exactly the same simulation every time, there will always be a little bit of varience, even if done on the same machine.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7272">VicariousEnt</a> — Fri Jan 21, 2011 8:10 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[snielsen]]></name></author>
+		<updated>2011-01-15T19:40:55+00:00</updated>
+
+		<published>2011-01-15T19:40:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21768#p21768</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21768#p21768"/>
+		<title type="html"><![CDATA[Serialization breaks determinism?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=21768#p21768"><![CDATA[
+I have an interesting problem and I am wondering if it is known issue or if there is something I am missing (I am still pretty new to bullet).  I am using bullet in a turn-based multiplayer game I am developing and so determinism is of the upmost importance.  I have set things up so that the simulation runs deterministically on every network player's machine and I am not having any problem with that.  What I am running into is that from what I can tell the act of serializing and then de-serializing the world (using the standard dynamicsWorld-&gt;serialize(serializer)/btBulletWorldImporter(dynamicsWorld) paradigm) is breaking the determinism of the simulation between players.  <br><br>For example, player A and player B are connected over the network and running the exact same simulation (same processor, same software versions, everything matched up).  Player actions that occur are sync'd correctly between them so that they occur in the exact same way at the exact same frame in both simulations (I have verified that this is working correctly).  Even though player actions are sync'd to the same frame between them, the player who's turn it is can actually be ahead in the simulation than the other player.  So at this point lets suppose it is player A's turn and he is at simulation frame 100 and that player B is at say simulation frame 80 (lets call them 100A and 80B).  Now lets cut the network so that the players cannot progress.  I have player A serialize 100A and player B serialize 80B and upload them to my server.  Subsequently player B downloads from the server serialized state 100A.  Player B then de-serializes into memory 80B which it had stored locally.  What player B does next is to continue the simulation 80B for 20 more frames (let us suppose that no player actions occurred on player A between frames 80 and 100 and so all that happened was that the simulation just ran for 20 more frames).  At this point player B now has 100B and so he de-serializes 100A that he downloaded from the server and compares the two states.  I would have expected 100A and 100B to be identical but they are ever so slightly divergent.  My metric for determining state equivalence is to compare each body's centerOfMassTransform, linearVelocity, angularVelocity, totalForce and activationState and print out any differences so that I can examine them.  I have verified that when I let both simulations run to 100A and 100B and then serialize/de-serialize both that they are functionally identical (as I would have expected).<br><br>I have tried a couple of things like making sure that the state of the world is such that every body is !isActive() at the time of serialization but divergence still occurs (although it is much smaller than if serialization occurred during movement).  Before using the bullet serializers I had authored my own very simple and non-comprehensive serializer/de-serializer that just covered centerOfMassTransform, linearVelocity, angularVelocity, totalForce and activationState.  This was simple enough to just have a save format for structures and was good for setting up the simulation in an initial state that I could kick things off from.  Of course my serializer broke the determinism in the above scenario but interestingly the only time when I saw the determinism actually hold in the above scenario was when I was using my own serializers and serialized an "80B" situation in which all moving bodies were not colliding with with any other body (essentially it was a scenario with non-touching blocks falling mid-air after an initial collision) and a "100A" scenario in which the world had settled and all bodies were not activated.  <br><br>My hope is that there is something that I am doing wrong and that <strong class="text-strong">it is expected that a dynamicsWorld after being serialized and then de-serialized back into memory (with the bullet serializers) should be functionally identical to the original version in memory</strong>.  In the current version of bullet (I am using r2265) <strong class="text-strong">do we have this expectation?</strong>  One thing I noticed is that after de-serialization that body's activationState does not appear to have been preserved.  I have run the above scenario with just the bullet serializer (which was extremely divergent when de-serialized because every body started off with an active state) and also with the bullet serializer + my own separate serialization/de-serialization of just activationState (which gets the result pretty close but is still divergent).  <br><br>One thing that gives me hope that it is me doing something wrong is that when I de-serialize the world state I get "unknown chunk" spit out a fair number of times to the console.  I don't know exactly what that means or if it is an indication of failure.  I observe that even with "unknown chunk" that the simulation loads to a state that is very similar (but not exact) to the state before serialization (ie there are no obvious failures like missing bodies etc).  I hoping that "unknown chunk" indicates an error that would cause the de-serialized state to be divergent from the original.  (.bullet file attached for an example state of an "80B")<br><br>I have some ideas for workarounds but they are not ideal.  I am really hoping that I can preserve determinism across serialization.  Any help or insight is much appreciated!<p>[The extension <strong>bullet</strong> has been deactivated and can no longer be displayed.]</p><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=7650">snielsen</a> — Sat Jan 15, 2011 7:40 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

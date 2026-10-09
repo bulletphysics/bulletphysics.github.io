@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Impulse-based vs force-based constraint solvers</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Impulse-based vs force-based constraint solvers</h2>
+		<p><a href="viewtopic.php%3Ft=11664.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11664</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Sun Apr 23, 2017 12:51 pm</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Hi,<br>
+I've noticed that earlier papers such as those by David Baraff discuss contact solvers that solve for contact forces, but later papers seem to deprecate this idea in favour of solving for contact impulses (such as the sequential impulse solver used by Box2D).<br>
+I remember reading that the reason for moving to impulse-based solvers was something to do with difficulties calculating friction forces with the contact force solvers, and that it also allows collision and contact to be handled in the same way. However I'm just wondering what the actual consequence of this simplification is - that is, are there any disadvantages or tradeoffs involved when using an impulse-based solver as opposed to a force-based one? And (naive question) if using impulses is better than using forces, why isn't using positions better than impulses?<br>
+<br>
+Thanks,<br>
+<br>
+Nick.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Mon Apr 24, 2017 9:42 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You are correct, solving multi-body dynamics on the acceleration level can lead to infinite friction forces. This can be easily shown when inspecting the problem of a falling rod. I am not sure how much of a practical problem this is though. Implementation and stabilization is much easier on the velocity level from my experience which I would count as more practical reasons.<br>
+<br>
+I would say impulse solvers are physically less correct as you essentially solve a first order world (F = m*v). Practically that means that impulses and forces and linearly related P = F * dt. It is your engineering judgement that needs to decide if this is a problem or not. I think for games this is not a problem. I said this before and I know not everybody agrees here, but for games and similarly movie FX we don't need more realistic physics, but <strong class="text-strong">heroic </strong>and <strong class="text-strong">artist-directable</strong> simulations. For engineering problems this is obviously not true. So what you choose depends highly on what problem you like to solve.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Tue Apr 25, 2017 1:40 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>Himura78 wrote:</cite>And (naive question) if using impulses is better than using forces, why isn't using positions better than impulses?</div></blockquote>
+
+If you look at the literature on the relatively new Position Based Dynamics (PBD) technology, you'll find that it indeed does have some advantages (like stability). But it's usually even less accurate than impulses.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Tue Apr 25, 2017 1:54 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">In my limited experience, some types of behaviour are awkward to model with position-based constraints -- for example, friction. <br>
+<br>
+I vaguely recall that motors were also a problem, but it's been so long I can't really remember the details! I definitely remember thinking "behaviours that are naturally defined in terms of velocities are going to be annoying" but I don't remember what exactly made me think this :/</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Tue Apr 25, 2017 5:54 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Classical position based dynamics using otrthogonal projection is an energy sink. While this can be appreciable for rigid body dynamics in games (e.g. you want objects go to sleep quickly) it is not so much in cloth simulation. Good cloth simulation is about stiffness and energy preservation in my opinion. Alternative projection methods exist though. E.g Hairer's symmetric projection <a href="http://www.unige.ch/~hairer/preprints/symproj.pdf" class="postlink">http://www.unige.ch/~hairer/preprints/symproj.pdf</a>. R. Goldenthal used it in his cloth simulator successfully. E.g. <a href="http://www.cs.columbia.edu/cg/pdfs/131-ESIC.pdf" class="postlink">http://www.cs.columbia.edu/cg/pdfs/131-ESIC.pdf</a><br>
+<br>
+Claude Larcousiere wrote about some of that stuff in his PhD as well.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Thu Apr 27, 2017 3:38 am</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Thanks guys. I had a feeling that solving on the velocity level would be less accurate but I'm still hazy on how exactly. From what I understand, we accumulate forces the same way, but instead of correcting these with constraint forces, we disregard the acceleration constraints and defer our correction until we've integrated the forces into a change in velocity, where we then calculate and apply our corrective impulses. But how would this practically affect the results?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Thu Apr 27, 2017 5:35 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Pooh, I haven't looked into this for a long time. When you solve on the acceleration level you can compute the constraint forces and use an integrator of your choice. Obviously forces are not constant over a timestep (both direction and length can vary). E.g. see how the constraint force changes direction constantly for a simple pendulum. So in a impulse solver you might not capture some details. If you are solving engineering problems where you need exact forces this can be a problem I guess. For games and FX we are more concerned with the motion of the system. If an artist/game generates the desired motion we are fine.<br>
+<br>
+If this is an important question for you I would solve a simple pendulum and double pendulum with different solver approaches (e.g. also with reduced coordinates) and the compare. Ideally compare your results against problems that have an analytical solution. Render the motion of the systems and plot the forces to get a feeling for what is going on.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Impulse-based vs force-based constraint solvers</h3>
+				<div class="date">Posted: <strong>Sat Apr 29, 2017 11:26 am</strong></div>
+				<div class="author">by <strong>Himura78</strong></div>
+				<div class="content">Thanks Dirk. I was only interested in this question because I've never seen it addressed anywhere before - constraint forces were used initially, then at some point there was a shift to impulses. Reasons were given as to why impulses make things easier, but no real analysis of the compromises or downsides that the change in approach would mean. I was just curious <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

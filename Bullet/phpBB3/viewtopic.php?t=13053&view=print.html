@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; The thin &quot;btBoxShape&quot; box cannot to be laid flat on the &quot;btConvexHullShape&quot; plane.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>The thin &quot;btBoxShape&quot; box cannot to be laid flat on the &quot;btConvexHullShape&quot; plane.</h2>
+		<p><a href="viewtopic.php%3Ft=13053.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13053</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>The thin &quot;btBoxShape&quot; box cannot to be laid flat on the &quot;btConvexHullShape&quot; plane.</h3>
+				<div class="date">Posted: <strong>Wed Aug 19, 2020 8:25 am</strong></div>
+				<div class="author">by <strong>Winson</strong></div>
+				<div class="content">Hello everyone, <br>
+I have a strange problem: Why the thin "btBoxShapeBox" box cannot to be laid flat on the "btConvexHullShape" plane? <br>
+<br>
+<strong class="text-strong">The "btConvexHullShape" plane: </strong>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13053&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btConvexHullShape* hull = new btConvexHullShape();
+const btVector3 v1 = btVector3(0, 0.1, -2);
+hull-&gt;addPoint(v1);
+const btVector3 v2 = btVector3(0, 0.2, -2);
+hull-&gt;addPoint(v2);
+const btVector3 v3 = btVector3(0, 0.1, 2);
+hull-&gt;addPoint(v3);
+const btVector3 v4 = btVector3(0, 0.2, 2);
+hull-&gt;addPoint(v4);
+const btVector3 v5 = btVector3(-5, 0.2, 0);
+hull-&gt;addPoint(v5);
+const btVector3 v6 = btVector3(-5, 0.1, 0);
+hull-&gt;addPoint(v6);
+hull-&gt;setMargin(0.02f);</code></pre></div>
+
+<strong class="text-strong">The thin "btBoxShape" box: </strong><br>
+<strong class="text-strong"><em class="text-italics">(1) Case 1: </em></strong>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13053&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btBoxShape* boxShape = createBoxShape(btVector3(0.125, 0.018, 0.125));
+boxShape-&gt;setMargin(0.0);</code></pre></div>
+<img src="https://i.loli.net/2020/08/19/1pNP9CZDSBMoilw.png" class="postimage" alt="Image"><br>
+<br>
+<strong class="text-strong"><em class="text-italics">(2) Case 2: </em></strong>
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13053&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btBoxShape* boxShape = createBoxShape(btVector3(0.125, 0.018, 0.125));
+boxShape-&gt;setMargin(0.04);</code></pre></div>
+<img src="https://i.loli.net/2020/08/19/UgukHwoxZOe4trW.png" class="postimage" alt="Image"><br>
+<br>
+This is contradictory! Physical engine suggests to use a positive margin (zero margin might introduce problems), but in this case, positive margin  introduced problems.<br>
+In fact, I have to create BoxShape with positive margin, so <strong class="text-strong">I wonder how to solve this problem when using the positive margin to create BoxShape.</strong><br>
+<br>
+btBoxShape collides with btConvexHullShape calls btConvexConvexAlgorithm class to get the closest points between two convex shapes. I think <strong class="text-strong">btConvexConvexAlgorithm</strong> class is the cause of this issue.<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: The thin &quot;btBoxShape&quot; box cannot to be laid flat on the &quot;btConvexHullShape&quot; plane.</h3>
+				<div class="date">Posted: <strong>Wed Aug 19, 2020 2:31 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Bullet will deactivate moving bodies when both velocities are below some thresholds for &gt; 2 seconds.  The default thresholds are hard coded magic numbers:<br>
+<br>
+linearSleepingThreshold = 0.8 m/sec<br>
+angularSleepingThreshold = 1.0 rad/sec<br>
+<br>
+With those defaults it is possible for slowly tumbling objects, or even ballistic objects in weak gravity, to be deactivated early, resulting in strange resting rotations or stopping in mid-air.  Try setting lower thresholds and watching carefully how the thin boxes settle.  Sometimes very small objects can rattle around for a long time before they are deactivated.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13053&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void btRigidBody::setSleepingThresholds(btScalar linear, btScalar angular);</code></pre></div>
+If the boxes rattle or roll too much then you could also try decreasing restitution (bounciness) of the boxes and/or their floor to help them settle faster.<br>
+<br>
+As to the "zero margin might introduce problems" thing:  Supposedly the GJK algorithm is really fast at finding the closest approach between two convex objects... when they don't actually overlap.  When they do overlap (e.g. the origin is outside the Minkowski difference) then the algorithm tends to take longer to figure it out.  Also, when they overlap the penetration resolution code must kick in, and while it is good at NOT pumping energy into the system it IS non-physical in nature.  Finally, sometimes the penetration resolution code could decide to tunnel out the other side.  So the benefits of larger margins are (I think): better performance and less penetration/tunneling.<br>
+<br>
+If performance isn't a problem (e.g. you aren't simulating a huge number of collisions), and you aren't worried about tunneling (e.g. low speeds), and you don't mind other penetration resolution artifacts (which really are small, especially when you don't have deep piles) ... then go with small or zero margin.<br>
+<br>
+Alternatively, if your only objects in the world are small boxes and thin convex hulls, then you could just put all the margin on the convex hulls and give the boxes zero margin.  Because the BoxBox algorithm actually treats the boxes with sharp edges and what is a marginized convex hull if not a slightly smoother hull?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

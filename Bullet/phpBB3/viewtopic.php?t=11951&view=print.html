@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Built-in box visual object has incorrect normals, when created via loading a urdf</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Built-in box visual object has incorrect normals, when created via loading a urdf</h2>
+		<p><a href="viewtopic.php%3Ft=11951.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11951</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Built-in box visual object has incorrect normals, when created via loading a urdf</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2017 5:24 pm</strong></div>
+				<div class="author">by <strong>elkmug</strong></div>
+				<div class="content">If you create a urdf that uses the built-in visual representation for a box, it works, but the box does not have proper normals. block.urdf in the bullet data folder can be used to demonstrate the problem but you'll probably have to make the size of the block larger or you won't be able to notice the issue, unless you zoom waaay in.<br>
+<br>
+Interestingly, if you create the multibody with createMultiBody, rather a urdf, and set the baseVisualShapeIndex option to -1 to get the built in visual shape, the normals are correct. createMultiBodyLinks.py in examples\pybullet\examples is, well, a good example of this  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I haven't had a chance to test the built-in spheres or cylinders, so don't know if they have the same issue or not.  Also In the attached image the smaller cuboid on camera left, with correct normals, uses the mesh visual object and is loading a .obj.<br>
+<br>
+-Jeff</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Built-in box visual object has incorrect normals, when created via loading a urdf</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2017 7:18 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It is not clear what the problem is. Can you share a simple pybullet Pythons script that shows the problem?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Built-in box visual object has incorrect normals, when created via loading a urdf</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2017 8:09 pm</strong></div>
+				<div class="author">by <strong>elkmug</strong></div>
+				<div class="content">Attached is a zip of a simple script and it's urdfs.<br>
+ <br>
+I included the plane.urdf, plane obj, &amp; plane.mtl <br>
+from the bullet data folder so things would run from <br>
+wherever you extract this</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Built-in box visual object has incorrect normals, when created via loading a urdf</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2017 8:19 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">What is 'incorrect' about the normals? I get a similar image than you. What kind of normals would you expect?<br>
+The built-in cube likely uses interpolated vertex normals, instead of face normals.<br>
+<br>
+If you want unique normals that point in the face direction,why don't you use Bullet/data/cube.obj?<br>
+<br>
+by the way,<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11951&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>tStep = 1.0/1000
+subStep = 200
+
+print("tStep:"), tStep
+
+p.setPhysicsEngineParameter(fixedTimeStep=tStep, numSubSteps=subStep)
+</code></pre></div>
+Do you really want to use an internal physics simulation step of 1 / 200.000? substeps divide the provided timestep.<br>
+<br>
+You likely want to use use a substep of 1, when using a simulation step of 1./1000.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Built-in box visual object has incorrect normals, when created via loading a urdf</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2017 9:15 pm</strong></div>
+				<div class="author">by <strong>elkmug</strong></div>
+				<div class="content"><em class="text-italics">&gt;What is 'incorrect' about the normals?</em><br>
+The normals are smoothing edges that on a cube shouldn't be smoothed. <br>
+I don't think anyone would look at the above image and say 'That cube looks correct' <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+<em class="text-italics">&gt;If you want unique normals that point in the face direction,why don't you use Bullet/data/cube.obj?</em><br>
+Well, I certainly could and have been using the cube.obj, but figured that the built-in version might be more efficient. With a multibody more complex than a single cube you might load that same obj quite a few times. Does pybullet automatically realize it's the same file and create instances rather than a bunch of unique objects? (If so, very cool.)<br>
+<br>
+Also pybullet.createMultiBody does handle the normals of it's built-in box 'correctly', it's seems inconsistent that loading a urdf does not.<br>
+<br>
+The timestep/substeps are indeed wacky, they were from a different experiment where I was pushing around settings to see what would happen and I forgot to change them back. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_sad.gif" width="15" height="15" alt=":(" title="Sad"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

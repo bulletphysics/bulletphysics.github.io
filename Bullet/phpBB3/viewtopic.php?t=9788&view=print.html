@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; issue: Serialisation, child shapes are doubled!</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>issue: Serialisation, child shapes are doubled!</h2>
+		<p><a href="viewtopic.php%3Ft=9788.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9788</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>issue: Serialisation, child shapes are doubled!</h3>
+				<div class="date">Posted: <strong>Sat Feb 22, 2014 9:12 pm</strong></div>
+				<div class="author">by <strong>rraallvv</strong></div>
+				<div class="content">I'm trying a simple searilization/deserialization of a tree like object like this:<br>
+<br>
+btRigidBody contains btCompoundShape<br>
+btCompountShape contains btBoxShape and btSphereShape<br>
+<br>
+The problem is that when I print the number of collision shapes deserialized, it differs from the number of collision shapes actually in use  y all the collision objects.<br>
+<br>
+It seems that either one or the other, btDefaultSeralizer or btBulletWorldImporter, are saving or restoring twice the number of child shapes.<br>
+<br>
+To reproduce the issue just download bullet v 2.82 and add this code to the App_SerializeDemo application in the SerializeDemo.cpp file:<br>
+<br>
+Before the serialisation take place<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9788&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>		// create a simple tree like object
+		{
+			btCompoundShape *comp = new btCompoundShape;
+			btBoxShape *box = new btBoxShape(btVector3(2,2,2));
+			btSphereShape *sphere = new btSphereShape(2);
+			btTransform tbox, tsphere;
+			tbox.setIdentity();
+			tsphere.setIdentity();
+			tbox.setOrigin(btVector3(-2,0,0));
+			tsphere.setOrigin(btVector3(2,0,0));
+			comp-&gt;addChildShape(tbox, box);
+			comp-&gt;addChildShape(tsphere, sphere);
+			
+			btTransform tbody;
+			tbody.setIdentity();
+			tbody.setOrigin(btVector3(0,10,-10));
+			
+			btScalar mass(1);
+			
+			bool isDynamic = (mass != 0.f);
+
+			btVector3 localInertia(0,0,0);
+			if (isDynamic)
+				groundShape-&gt;calculateLocalInertia(mass,localInertia);
+			
+			btRigidBody *body = new btRigidBody(
+										mass,
+										new btDefaultMotionState(tbody),
+										comp,
+										localInertia);
+			
+			m_dynamicsWorld-&gt;addRigidBody(body);
+		}
+		
+		// count the number of collision shapes actually in use
+		int count = 0;
+		btHashMap&lt;btHashPtr, btCollisionShape*&gt; shapes;
+		for (int i=0; i&lt;m_dynamicsWorld-&gt;getNumCollisionObjects(); i++) {
+			btCollisionShape *shape = m_dynamicsWorld-&gt;getCollisionObjectArray()[i]-&gt;getCollisionShape();
+			if (!shapes.find(shape)) {
+				count++;
+				shapes.insert(shape, shape);
+			}
+			if (shape-&gt;isCompound()) {
+				btCompoundShape *comp = (btCompoundShape*) shape;
+				for (int j=0; j&lt;comp-&gt;getNumChildShapes(); j++) {
+					btCollisionShape *child = comp-&gt;getChildShape(j);
+					if (!shapes.find(child)) {
+						count++;
+						shapes.insert(child, child);
+					}
+				}
+			}
+		}
+		
+		// logging information: print the the number of objects that should be serialised 
+		printf("serialization\n");
+		printf("# constraints: %d\n", m_dynamicsWorld-&gt;getNumConstraints());
+		printf("# collision objects: %d\n", m_dynamicsWorld-&gt;getNumCollisionObjects());
+		printf("# collision shapes: %d\n", count);</code></pre></div>
+else sentence in case that m_fileLoader actually do the deserialisation
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9788&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	if (!m_fileLoader-&gt;loadFile("testFile.bullet"))
+	{
+	//....
+	}
+	else
+	{
+		// count the collision shapes that are actually in use 
+		int count = 0;
+		btHashMap&lt;btHashPtr, btCollisionShape*&gt; shapes;
+		for (int i=0; i&lt;m_fileLoader-&gt;getNumRigidBodies(); i++) {
+			btCollisionShape *shape = m_fileLoader-&gt;getRigidBodyByIndex(i)-&gt;getCollisionShape();
+			if (!shapes.find(shape)) {
+				count++;
+				shapes.insert(shape, shape);
+			}
+			if (shape-&gt;isCompound()) {
+				btCompoundShape *comp = (btCompoundShape*) shape;
+				for (int j=0; j&lt;comp-&gt;getNumChildShapes(); j++) {
+					btCollisionShape *child = comp-&gt;getChildShape(j);
+					if (!shapes.find(child)) {
+						count++;
+						shapes.insert(child, child);
+					}
+				}
+			}
+		}
+
+		// logging information: print the the number of objects that where deserialised 
+		printf("deserialization\n");
+		printf("# constraints: %d\n", m_fileLoader-&gt;getNumConstraints());
+		printf("# collision objects: %d\n", m_fileLoader-&gt;getNumRigidBodies());
+		printf("# collision shapes: %d actually in use, %d loaded\n", count, m_fileLoader-&gt;getNumCollisionShapes()); //&lt;------discrepancy here!!!!!!
+	}</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Torque contorl doesn't work for hand loaded from MPL/MPL.xml?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Torque contorl doesn't work for hand loaded from MPL/MPL.xml?</h2>
+		<p><a href="viewtopic.php%3Ft=13066.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13066</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Torque contorl doesn't work for hand loaded from MPL/MPL.xml?</h3>
+				<div class="date">Posted: <strong>Tue Sep 08, 2020 2:32 am</strong></div>
+				<div class="author">by <strong>r9dyt</strong></div>
+				<div class="content">I'm trying to change joint states by using torque control, but it gives me really wired behavior. However position control is totally fine. I am not sure if this is because MPL/MPL.xml is not URDF format. It will be really appreciated if somebody can provide me some info.<br>
+<br>
+The following is a toy example, joint 17 is a joint from index finger based on the kinematic hand. So I simply applied a torque on joint 17 for a different hand mesh, but it seems like the torque is applied to somewhere entirely different.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13066&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import numpy as np
+import pybullet as p
+import time
+import pybullet_data
+
+import math
+
+physicsClient = p.connect(p.GUI)#or p.DIRECT for non-graphical version
+p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+
+timeStep = 1./240.
+p.setPhysicsEngineParameter(fixedTimeStep=timeStep)
+
+planeId = p.loadURDF("plane.urdf")
+
+target_objects = p.loadMJCF("MPL/MPL.xml")
+target_hand = target_objects[0]
+pd_objects = p.loadMJCF("MPL/MPL.xml")
+pd_hand = pd_objects[0]
+
+p.resetBasePositionAndOrientation(target_hand, [2.7, -2.2, 2.4], [0, 0, 0, 1])
+p.resetBasePositionAndOrientation(pd_hand, [2.7, -2.2, 2.6], [0, 0, 0, 1])
+p.createConstraint(pd_hand, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], #[-0.05, 0, 0.02]
+                              [2.7, -2.2, 2.6], [0, 0, 0, 1])
+
+jointsCount = p.getNumJoints(pd_hand)
+indices = []
+targetPositions = []
+maxForces = []
+kps = []
+kds = []
+for i in range(jointsCount):
+  indices.append(i)
+  targetPositions.append(0.0)
+  maxForces.append(2000000000)
+  kps.append(1) #1000000000
+  kds.append(10)#500000
+
+#p.setJointMotorControl2(pd_hand, 17, p.POSITION_CONTROL, 1, 0)
+
+from pdControllerStable_customized import PDControllerStable
+#stablePD = PDControllerStable(p)
+pi = 3.141592
+while(1):
+    #p.setJointMotorControl2(hand, 11, p.POSITION_CONTROL, pi / 4.)
+    #rot = p.getQuaternionFromEuler([math.sin(time.time()*3), 0, 0])
+    rot1 = math.sin(time.time() * 3)
+    rot2 = math.cos(time.time() * 3)
+    #kinematic
+    p.resetJointState(target_hand, 17, rot1)
+    p.resetJointState(target_hand, 19, rot2)
+    p.resetJointState(target_hand, 21, rot1)
+
+    #pd
+    # p.setJointMotorControl2(pd_hand, 17, p.POSITION_CONTROL, targetPosition=rot1)
+    # p.setJointMotorControl2(pd_hand, 19, p.POSITION_CONTROL, targetPosition=rot2)
+    # p.setJointMotorControl2(pd_hand, 21, p.POSITION_CONTROL, targetPosition=rot1)
+    targetPositions[17] = rot1
+    targetPositions[19] = rot2
+    targetPositions[21] = rot1
+
+    #PD control
+    jointStates = p.getJointStates(pd_hand, indices)
+
+    q1 = []
+    qdot1 = []
+    for i in range(jointsCount):
+        q1.append(jointStates[i][0])
+        qdot1.append(jointStates[i][1])
+
+    q = np.array(q1)
+    qdot = np.array(qdot1)
+    qdes = np.array(targetPositions)
+    qError = qdes - q
+    Kp = np.diagflat(kps)
+    Kd = np.diagflat(kds)
+    P = Kp.dot(qError)
+    D = Kd.dot(qdot)
+    taus = P - D
+
+    p.setJointMotorControl2(
+        pd_hand,
+        17,
+        controlMode=p.TORQUE_CONTROL,
+        force=2
+    )
+
+    # for index in range(jointsCount):
+    #     p.setJointMotorControl2(
+    #         pd_hand,
+    #         index,
+    #         controlMode=p.TORQUE_CONTROL,
+    #         force=taus[index]
+    #     )
+
+    p.stepSimulation()
+    time.sleep(timeStep)
+
+p.disconnect()</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

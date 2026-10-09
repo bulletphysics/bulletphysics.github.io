@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8658" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2012-12-12T01:52:39+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8658</id>
+
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-12T01:52:39+00:00</updated>
+
+		<published>2012-12-12T01:52:39+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29474#p29474</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29474#p29474"/>
+		<title type="html"><![CDATA[Re: Tangent vector]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29474#p29474"><![CDATA[
+Thanks all. I have taken out the preStep as the normal and tangent masses are required to be calculated at every impulse iteration when using relative velocity, which changes as opposed to Erin's fixed tangent vector.<br><br>I am getting stable stacking at 10 impulse iterations, but since I have implemented contact caching, is it still required that the boxes be put to sleep at some stage? Contact caching updates an existing contact and keeps its impulse accumulation, but this contact will always be there since the objects will continue touching in the stacking case and eventually the stack will be unstable?<br><br>Thanks for all your help<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Wed Dec 12, 2012 1:52 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2012-12-11T05:25:50+00:00</updated>
+
+		<published>2012-12-11T05:25:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29470#p29470</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29470#p29470"/>
+		<title type="html"><![CDATA[Re: Tangent vector]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29470#p29470"><![CDATA[
+You could use 2 arbitrary vectors orthogonal to the normal, using btPlaneSpace1, here it is:<br><a href="https://code.google.com/p/bullet/source/search?q=btPlaneSpace&amp;origq=btPlaneSpace&amp;btnG=Search+Trunk" class="postlink">https://code.google.com/p/bullet/source ... arch+Trunk</a><br><br>By default, Bullet uses the relative velocity as primary friction direction F0 , and computes a secondary F2 friction vector  that is orthogonal F0 and N using the cross product. Only if the projection is zero, we use btPlaneSpace1.<br>See <a href="https://code.google.com/p/bullet/source/browse/trunk/src/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.cpp#833" class="postlink">https://code.google.com/p/bullet/source ... er.cpp#833</a><div class="codebox"><p>Code: </p><pre><code> cp.m_lateralFrictionDir1 = vel - cp.m_normalWorldOnB * rel_vel; btScalar lat_rel_vel = cp.m_lateralFrictionDir1.length2(); if (!(infoGlobal.m_solverMode &amp; SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION) &amp;&amp; lat_rel_vel &gt; SIMD_EPSILON) {              cp.m_lateralFrictionDir1 *= 1.f/btSqrt(lat_rel_vel);              if((infoGlobal.m_solverMode &amp; SOLVER_USE_2_FRICTION_DIRECTIONS))              {                     cp.m_lateralFrictionDir2 = cp.m_lateralFrictionDir1.cross(cp.m_normalWorldOnB);</code></pre></div>I suggest to use the relative velocity as primary friction direction to avoid artifacts: If you ignore the relative velocity and always using btPlaneSpace1 you can get an artifact that a sliding object will start aligning with one of the principal axis. This will result in a curved path instead of a straight one.<br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Tue Dec 11, 2012 5:25 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2012-12-11T04:54:25+00:00</updated>
+
+		<published>2012-12-11T04:54:25+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29469#p29469</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29469#p29469"/>
+		<title type="html"><![CDATA[Re: Tangent vector]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29469#p29469"><![CDATA[
+Say you have a vector u = ( x1, y1 ). You search for a vector v = ( x2, y2 ) such that dot( u, v ) = 0 since then they are orthogonal. Let's look into this a bit more detailed:<br><br>dot( u, v ) = x1 * x2 + y1 * y2<br><br>Let's assume we know u and look for v. Let's choose v = ( -y1, x1 ) and plug this in.<br><br>dot( u, v ) = x1 * (-y1) + y1 * x1 = -x1*y1 + x1*y1 = 0<br><br>Obviously with this choise v is orthogonal to u. Here is the rule. Given a vector and you need a vector orthogonal to it you switch the components and multiply one by -1. If you multiply the first one by -1 you essentially rotate CCW. If you multiply the second component by -1 (in our example above if we would have chosen v = ( y1, -x1 ) instead) this rotates CW.<br><br>In 3D you do the same and choose one component to zero. You have to choose the component you choose to zero wisely though since your vector might be in some plane already. This is what btPlaneSpace1() will do. It should be in the Bullet math library. Alternatively you can google for dPlaneSpace() in the ODE. I think the code comes from there originally.<br><br>HTH,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Tue Dec 11, 2012 4:54 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-10T23:44:04+00:00</updated>
+
+		<published>2012-12-10T23:44:04+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29464#p29464</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29464#p29464"/>
+		<title type="html"><![CDATA[Re: Tangent vector]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29464#p29464"><![CDATA[
+Thanks. I have looked it up in Google code but can't find the function body of btPlaneSpace1. Friction should oppose motion, so technically if the relative velocity is pointing down the y axis and the plane normal is pointing up, then the tangent vector should be zero. However this causes a large angular velocity when accumulating impulses. How would you compute the tangent vector in the preStep and accumulateImpulses functions?<br><br> Erin's code in 2D doesn't use relative velocity to compute the tangent vector, he just takes the cross product of the plane normal and a scalar of 1.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Mon Dec 10, 2012 11:44 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2012-12-10T21:54:32+00:00</updated>
+
+		<published>2012-12-10T21:54:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29461#p29461</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29461#p29461"/>
+		<title type="html"><![CDATA[Re: Tangent vector]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29461#p29461"><![CDATA[
+Look for btPlaneSpace() in the code.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Dec 10, 2012 9:54 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-10T12:37:07+00:00</updated>
+
+		<published>2012-12-10T12:37:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29456#p29456</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29456#p29456"/>
+		<title type="html"><![CDATA[Tangent vector]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29456#p29456"><![CDATA[
+Hi,<br><br>I have implemented contact caching for 3D OBB collisions as in Box2D. With the prestep in Box2D, the relative velocity is not used to calculate the tangent vector, instead a scalar is crossed with the contact normal.<br><br>How do I compute the tangent vector in 3D to put in the prestep function of Box2D in the arbiters class? Initially I start off with Cross(normal, vector(1,1,1)) but this doesnt work. In using the relative velocity, initially it is parallel to the contact normal as there is no rotation of the bodies, so this returns a zero tangent vector and zero massTangent.<br> <br>It's definitely the friction impulse causing erratic behaviour as I have disabled it and the normal impulse behaves correctly.<br><br>Here is my preStep function:<br><div class="codebox"><p>Code: </p><pre><code>void AMG3DRigidBodyCollisionResponder::preStep(float dt){const float k_allowedPenetration = 0.01f;float k_biasFactor = (m_bPositionCorrection) ? 0.2f : 0.0f;if(dt&lt;=0.0f)return;for(int i=0; i&lt;m_cdContactData.iNumContacts; ++i) {AMG3DVector4 rap = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody1-&gt;position;AMG3DVector4 rbp = m_cdContactData.contacts[i].vContactPoint - m_pRigidBody2-&gt;position;// Precompute normal mass, tangent mass and biasAMG3DVector4 normal = m_cdContactData.vContactNormal;AMG3DVector4 rapcrossn = rap.cross(normal);AMG3DVector4 rbpcrossn = rbp.cross(normal);float Kn = m_pRigidBody1-&gt;invMass + m_pRigidBody2-&gt;invMass;Kn += ( (m_pRigidBody1-&gt;invIWorld*rapcrossn).cross(rap) + (m_pRigidBody2-&gt;invIWorld*rbpcrossn).cross(rbp) ).dot(normal);m_cdContactData.contacts[i].massNormal = 1.0f/Kn;AMG3DVector4 tangent;AMG3DVector4Cross(&amp;tangent, normal, AMG3DVector4(1,1,1));AMG3DVector4 rapcrosst = rap.cross(tangent);AMG3DVector4 rbpcrosst = rbp.cross(tangent);float Kt = m_pRigidBody1-&gt;invMass + m_pRigidBody2-&gt;invMass;Kt += ( (m_pRigidBody1-&gt;invIWorld*rapcrosst).cross(rap) + (m_pRigidBody2-&gt;invIWorld*rbpcrosst).cross(rbp) ).dot(tangent);m_cdContactData.contacts[i].massTangent = 1.0f/Kt;if(m_bAccumulateImpulses) {// Apply normal + friction impulseAMG3DVector4 P = m_cdContactData.contacts[i].Pn * normal + m_cdContactData.contacts[i].Pt * tangent;m_pRigidBody1-&gt;velocity += P*m_pRigidBody1-&gt;invMass;m_pRigidBody1-&gt;angularVelocity += m_pRigidBody1-&gt;invIWorld*rap.cross(P);m_pRigidBody2-&gt;velocity -= P*m_pRigidBody2-&gt;invMass;m_pRigidBody2-&gt;angularVelocity -= m_pRigidBody2-&gt;invIWorld*rbp.cross(P);}m_cdContactData.contacts[i].bias = k_biasFactor / dt * Max(0.0f, m_cdContactData.contacts[i].fPenetrationDepth - k_allowedPenetration);}}</code></pre></div>Thanks !<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Mon Dec 10, 2012 12:37 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

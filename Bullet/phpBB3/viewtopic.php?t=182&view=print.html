@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Iterative Dynamics :: PGS solver</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Iterative Dynamics :: PGS solver</h2>
+		<p><a href="viewtopic.php%3Ft=182.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=182</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Iterative Dynamics :: PGS solver</h3>
+				<div class="date">Posted: <strong>Fri Nov 25, 2005 10:19 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content"><a href="http://rafb.net/paste/results/DXkCXl35.html" class="postlink">http://rafb.net/paste/results/DXkCXl35.html</a><br>
+here is my attempt to create PGS solver. Quite strange that joints in this case a little bit unstable ( some 'jittering' introduced during simulation of chain of spheres, connected via Ball-&amp;-Socket joints and attached to World ). Before this attempt i had slower method but joints worked stable in this way ( there was some issues in other places ).<br>
+So, the problem: at first, there is no force, applied to the bodies. ( think it goes from Lambda = 0-vector; a = B*Lambda hence it's 0-vector too ). Second problem: if i set Lambda as 0-vector and a as Fext*M^-1, gravity acts normally, but joints have jittering and very unstable ( even if i disable Collision Detection&amp;Response ).<br>
+Thanks for any comments.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 26, 2005 6:34 am</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">First of all, make sure the solver converges to the correct solution for a static chain hanging straight down. Each lambda should equal the weight that the constraint supports. Start with one link, and then increase the number of links.<br>
+<br>
+Also, make sure your Baumgarte parameter is not too large. I use 0.1.<br>
+<br>
+When I first coded my PGS solver I got instabilities for chains. The trick with PGS is to use balanced inertia tensors. Make sure that the lengths use to compute the inertia tensor are at least as large as the link lengths. I have a chain of 8 boxes that is very stable, even with collision.<br>
+<br>
+Keep in mind that inertia tensors don't need to match reality (in games at least). So they are can be artificially inflated to increase stability drastically with minimal effect on the visual quality of the motion.<br>
+<br>
+Stability for joints can be improved further by <em class="text-italics">relaxing</em> the lambdas. Before beginning the PGS iterations, set<br>
+<br>
+lambda *= relaxation, where relaxation in [0,1]<br>
+<br>
+I usually pick a relaxation value between 0.9 and 1.0. The relaxation helps to damp oscillations in the constraint forces.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 26, 2005 5:10 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">Hey! That was you who've written that paper! Cool..<br>
+Yes, hanging down chain simulates correctly ( both from visual and data standpoints )... ( 4 linked spheres )<br>
+I want to notice that i don't use Baumgarte stabilization yet ( how many stability gives this method?  )<br>
+( About balanced i.t. ) That's not too good, is there some other issues on theme? That'll be too painy to racalc tensors for each link when several connected bodies and length varying greatly...<br>
+And about relaxation: initial guess is that lambda is 0-vector, so before beginning PGS iterations multiplying lambda will not give anything... Or i have wrong understanding...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Nov 26, 2005 10:35 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Using Baumgarte or some other positional correction is necessary to keep the joints from drifting apart. However, even without Baumgarte, my simulation does not explode or jiggle.<br>
+<br>
+If the lengths vary, then you may have other problems. The chain will not be stable if the link to ground is lighter and shorter than the next links. PGS reflects exaggerated real world instabilities. Consider connecting a 1 cm, 1 gram link to ground then next a 10 meter, 100 kg link. It is likely that the small link will break. PGS shows a similar instability in such configurations. However, if the links are reversed, heavy then light, stability is obtained both in the real world and with PGS.<br>
+<br>
+You should store the joint's lambda values across steps. This will reduce the number of necessary iterations and let you increase the time step. I can simulate an 8 link chain at 30Hz and 5 iterations with no problems.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 27, 2005 8:57 am</strong></div>
+				<div class="author">by <strong>Etherton</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>You should store the joint's lambda values across steps. This will reduce the number of necessary iterations and let you increase the time step. I can simulate an 8 link chain at 30Hz and 5 iterations with no problems.</div></blockquote>
+That's amassing and extraordinary. I am using ODE and when I make a simple ragdoll (11 limbs, body part heavier than limbs), I find that to get anything stable I need to go over 100 iterations and I run the simulation at a fix step of 100 Hz. Even at that setting each when the doll collides hard with the floor it suffer dismembering.<br>
+The implementation of the Gauss-Seidel in your paper seems to be the same as the one in ODE without the SOR part. It is there anything I am missing, because at 30 Hz I cannot even manage to get a simple pendulum at 100 iterations and you say you can have it with just 5.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 27, 2005 11:36 am</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">Well, i have another kind of instabilities... Chain now works OK ( i've reduced number of PGS iterations from 10 to 1... that's quite strange :: should be the other way - decreasing number of iterations leads to more instability issues  ), BUT ragdoll with ball-&amp;-socket joints instead of hinges ( and with them also ) looks strange: it falls on the ground ( made from 20 spheres ) and after falling tries to get fixed position ( because of spheres instead of plane ) and then several joints makes capsules ( that's legs and hands ) to jitter and cause instability. I can't understand why it's happens. Especially that iterations-reducing stability... Seems like i introduced some bugs into your algo <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+Thanks for answers!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 27, 2005 10:36 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">I also simulate ragdolls just fine at 30Hz and 5 iterations. My engine benefits from contact caching (which ODE lacks). But that's not the whole story.<br>
+<br>
+Try to use capsules for the limbs, this makes the collision smoother. For the mass use capsule inertia tensors, but scale it up. I use a factor of ~8. Also, make sure your lengths match human dimensions and that gravity is correct. If you use high gravity, then you will need a small physics step.<br>
+<br>
+Our game runs at 30Hz and mostly at 5 iterations, so it can be done. However, we don't stack boxes higher than 3 or 4. Those small stacks are very stable.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 28, 2005 12:05 am</strong></div>
+				<div class="author">by <strong>Etherton</strong></div>
+				<div class="content"><blockquote><div><cite>Erin Catto wrote:</cite>I also simulate ragdolls just fine at 30Hz and 5 iterations. My engine benefits from contact caching (which ODE lacks). But that's not the whole story.<br>
+<br>
+Try to use capsules for the limbs, this makes the collision smoother. For the mass use capsule inertia tensors, but scale it up. I use a factor of ~8. Also, make sure your lengths match human dimensions and that gravity is correct. If you use high gravity, then you will need a small physics step.<br>
+<br>
+Our game runs at 30Hz and mostly at 5 iterations, so it can be done. However, we don't stack boxes higher than 3 or 4. Those small stacks are very stable.</div></blockquote>
+Well I can only say congratulation you have done something no body has been able to accomplished. I believe I have near perfect contact catching and I also use capsule with proper inertial tensor but I had never been able to have a stable simulation at 30 hz regardless of any thick I could apply.<br>
+When I set a chain of say 8 or 10 bodies, at five iteration per step the last row of the system matrix hardly get any influence from the iteration process(in my case). <br>
+<br>
+Your engine must be awesome, because in all my experience dealing with physics engine, my own and third party, I never came across a method capable of solving a large set of articulate bodies at such low frequency.  It almost defy Niquist frequency criteria.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 28, 2005 1:32 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">I'm using capsules instead of limbs. Sphere is just head ( torso's representation is capsule too ). Dimensions is look fine. If it'l be not too hard for you, tell me please some links on PGS ( maybe not in physycal meaning ), i want to dig deeper to find out error. I think that this comes from mine lack of understanding so i need to study deeper to correct my conception about PGS...<br>
+P.S.<br>
+Gravity is (0, -9.81f, 0)<br>
+and dt = 0.004f;</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 28, 2005 11:30 pm</strong></div>
+				<div class="author">by <strong>Erin Catto</strong></div>
+				<div class="content">Try simulating a single link with a small sphere at the tip and compare the result with the ideal pendulum equation:<br>
+<br>
+d^2 theta / dt^2 + (g/L) sin theta = 0<br>
+<br>
+You can write a simple program to integrate the pendulum. Check the position and velocity.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Nov 29, 2005 4:26 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">I have stable Gauss-Seidel method ( due to kenny's paper ) with Cholesky Factorization ( Alkire's paper ). But it's slow. I think that i need to optimize it ( like you've done that in your paper ). But i need to do it bymyself ( invent a bicyclke ) because i have lack of understanding what bugs i've introduced to your algo. In the same configurations slow GS works very stable in relation to PGS. So i think it's my fault and i need to do all the optims by my own hands.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Dec 01, 2005 7:36 pm</strong></div>
+				<div class="author">by <strong>XperienS</strong></div>
+				<div class="content">Hello again.<br>
+Recently i've decided to follow your (Erin) path and make optimizations ( with full algebraic transformations ) by my own hands. Quite strange, but i've received same formulas as you! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink">) And i've made SOR PGS solver due to this formulas and that works! I don't know where i've made some bugs in previous version, but this is fact - your optimizations works well and gives very big performance boost! I just want to say "Thank you" from all newbie physsim developers from all over the world!<br>
+<br>
+And now, back to theme <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"><br>
+I've wrote that your sim have quite stable simulation with 5 iterations and 60 Hz. My results: stable results only above 25 iterations and with stepsize 0.004 ( that's equal to a frequency of 250 Hz if i've right understanding ). But i still not use contact caching and lambda0 ( initial guess ) is equal to eta ( if that symbol like english n calls so ).<br>
+<br>
+Well thank you again for your help.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

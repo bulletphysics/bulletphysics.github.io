@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; 16 byte alignment issue in vector&lt; btVector3 &gt;</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>16 byte alignment issue in vector&lt; btVector3 &gt;</h2>
+		<p><a href="viewtopic.php%3Ft=3638.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=3638</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>16 byte alignment issue in vector&lt; btVector3 &gt;</h3>
+				<div class="date">Posted: <strong>Thu May 28, 2009 10:52 am</strong></div>
+				<div class="author">by <strong>loefje</strong></div>
+				<div class="content">Hi there, <br>
+<br>
+I'm having trouble creating a std::vector&lt; btVector3 &gt;, because of alignment issues,<br>
+even though my project settings ( MSVC2008, WinXP ) are set for 16 byte alignment..<br>
+Does anyone know how to get around this problem ? I'm not too familiar with structure alignment issues..<br>
+<br>
+TIA,<br>
+<br>
+Jochem van der Spek<br>
+<br>
+Ps the error from MSVC reads:<br>
+<br>
+1&gt;C:\Program Files\Microsoft Visual Studio 9.0\VC\include\vector(717) : error C2719: '_Val': formal parameter with __declspec(align('16')) won't be aligned<br>
+1&gt;        ..\..\src\Main.cpp(684) : see reference to class template instantiation 'std::vector&lt;_Ty&gt;' being compiled<br>
+1&gt;        with<br>
+1&gt;        [<br>
+1&gt;            _Ty=Types::Vector3<br>
+1&gt;        ]<br>
+<br>
+I have simply typedef'd btVector3 to my namespace Types::Vector3. which isn't the issue, <br>
+because this fails with std::vector&lt; btVector3 &gt; too..</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 16 byte alignment issue in vector&lt; btVector3 &gt;</h3>
+				<div class="date">Posted: <strong>Thu May 28, 2009 9:23 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think this was discussed in the forum already. The fastest workaround is using STLport instead of the Dinkumware STL implementation that ships with Visual Studio. It does not suffer from this problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 16 byte alignment issue in vector&lt; btVector3 &gt;</h3>
+				<div class="date">Posted: <strong>Thu May 28, 2009 9:26 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Bullet uses btAlignedObjectArray as std::vector replacement due to the buggy Microsoft STL implementation.<br>
+<br>
+But if you want a more fancy and full featured stl implementation, Dirk's suggestion, <a href="http://sourceforge.net/project/showfiles.php?group_id=146814" class="postlink">STL Port</a> could do.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 16 byte alignment issue in vector&lt; btVector3 &gt;</h3>
+				<div class="date">Posted: <strong>Mon Jun 15, 2009 8:31 am</strong></div>
+				<div class="author">by <strong>loefje</strong></div>
+				<div class="content">Hi, thanks for the answers &amp; sorry for the late reply.<br>
+<br>
+loefje</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 16 byte alignment issue in vector&lt; btVector3 &gt;</h3>
+				<div class="date">Posted: <strong>Wed Jun 24, 2009 12:27 pm</strong></div>
+				<div class="author">by <strong>sipickles</strong></div>
+				<div class="content">I am having a similar issue.<br>
+<br>
+I am using boost::python to wrap c++ classes which use Bullet. If any class contains a btVector3 member, it will not compile, or if I try to expose btVector3 as a boost::python object.<br>
+<br>
+Here's the result:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3638&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>C:\boost_1_38_0\boost/python/converter/as_to_python_function.hpp(21) : error C2719: 'unnamed-parameter': formal parameter with __declspec(align('16')) won't be aligned
+        C:\boost_1_38_0\boost/python/to_python_converter.hpp(88) : see reference to class template instantiation 'boost::python::converter::as_to_python_function&lt;T,ToPython&gt;' being compiled
+        with
+        [
+            T=btVector3,
+
+            [snip]
+</code></pre></div>
+
+I gather this is because of the btAlignmentAllocator used by btVector3. When boost::python exposes a c++ object to python it passes by value.<br>
+  <br>
+I've even tried stlport but this has no effect.<br>
+<br>
+Is there anyway I can define-out the use of btAlignmentAllocator and suffer the performance penalties? Meanwhile I will try to find out how to pass-by-ref in boost::python.<br>
+<br>
+Thanks<br>
+<br>
+Simon</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 16 byte alignment issue in vector&lt; btVector3 &gt;</h3>
+				<div class="date">Posted: <strong>Sat Sep 12, 2009 9:39 pm</strong></div>
+				<div class="author">by <strong>loefje</strong></div>
+				<div class="content">hi again,<br>
+<br>
+I'm having some trouble with the btAlignedObjectArray,<br>
+when I'm returning one from a function, after some swapping,pushing, etc.<br>
+my code crashes in aligned_free_dbg. I have no idea what's going on. <br>
+I dont have dynamic data allocation going on, so I wonder if it's a bug<br>
+in btAlignedObjectArray. (see linked image at <a href="http://www.dynamica.org/PUB/crash.jpg" class="postlink">www.dynamica.org/PUB/crash.jpg</a> )<br>
+<br>
+I hope anyone can shed some light on this issue.<br>
+<br>
+TIA,<br>
+<br>
+jochem van der Spek<br>
+<br>
+<img src="http://www.dynamica.org/PUB/crash.jpg" class="postimage" alt="Image"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 16 byte alignment issue in vector&lt; btVector3 &gt;</h3>
+				<div class="date">Posted: <strong>Sun May 02, 2010 6:32 am</strong></div>
+				<div class="author">by <strong>ngbinh</strong></div>
+				<div class="content"><blockquote><div><cite>sipickles wrote:</cite>I am having a similar issue.<br>
+<br>
+I am using boost::python to wrap c++ classes which use Bullet. If any class contains a btVector3 member, it will not compile, or if I try to expose btVector3 as a boost::python object.<br>
+<br>
+Here's the result:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=3638&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>C:\boost_1_38_0\boost/python/converter/as_to_python_function.hpp(21) : error C2719: 'unnamed-parameter': formal parameter with __declspec(align('16')) won't be aligned
+        C:\boost_1_38_0\boost/python/to_python_converter.hpp(88) : see reference to class template instantiation 'boost::python::converter::as_to_python_function&lt;T,ToPython&gt;' being compiled
+        with
+        [
+            T=btVector3,
+
+            [snip]
+</code></pre></div>
+
+I gather this is because of the btAlignmentAllocator used by btVector3. When boost::python exposes a c++ object to python it passes by value.<br>
+  <br>
+I've even tried stlport but this has no effect.<br>
+<br>
+Is there anyway I can define-out the use of btAlignmentAllocator and suffer the performance penalties? Meanwhile I will try to find out how to pass-by-ref in boost::python.<br>
+<br>
+Thanks<br>
+<br>
+Simon</div></blockquote>
+
+You can remove #define BT_USE_SSE and change <br>
+<br>
+<br>
+			//#define SIMD_FORCE_INLINE __forceinline<br>
+			//#define ATTRIBUTE_ALIGNED16(a) __declspec(align(16)) a<br>
+			//#define ATTRIBUTE_ALIGNED64(a) __declspec(align(64)) a<br>
+			//#define ATTRIBUTE_ALIGNED128(a) __declspec (align(128)) a<br>
+			#define SIMD_FORCE_INLINE inline<br>
+			#define ATTRIBUTE_ALIGNED16(a) a<br>
+			#define ATTRIBUTE_ALIGNED64(a) a<br>
+			#define ATTRIBUTE_ALIGNED128(a) a<br>
+<br>
+then you should be fine. <br>
+<br>
+Bullet is flexible enough I guess. But be warned, you will loose performance.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

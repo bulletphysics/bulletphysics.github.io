@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; API refactoring (was ugliness) - Page 3</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>API refactoring (was ugliness)</h2>
+		<p><a href="viewtopic.php%3Ft=551.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=551</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>3</strong> of <strong>4</strong></div>
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Sep 30, 2006 3:27 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Update Bullet 2.11: <br>
+* more demos have been converted to use btDynamicsWorld <br>
+* more consistent memory strategy (who creates things needs to delete them) <br>
+* removed Extras/PhysicsInterface folder <br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btDiscreteDynamicsWorld::~btDiscreteDynamicsWorld()
+{
+	//only delete it when we created it
+	if (m_ownsIslandManager)
+		delete m_islandManager;
+	if (m_ownsConstraintSolver)
+		 delete m_constraintSolver;
+}
+</code></pre></div>
+
+Thanks for the help, pointing out memory issues, more feedback is welcome!<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 4:06 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">What is now with MyMotionState (PHY_IMotionState) is there equivalent for it?<br>
+It was really handily to use.<br>
+<br>
+Do Bullet 2.12 support kinematic objects?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 4:52 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>DevO wrote:</cite>What is now with MyMotionState (PHY_IMotionState) is there equivalent for it?<br>
+It was really handily to use.<br>
+<br>
+Do Bullet 2.12 support kinematic objects?</div></blockquote>
+
+There is no replacement at the moment for *MotionState. I consider adding it in Bullet 2.13, together with some logic so it only updates 'active' objects (and not the sleeping/deactivated ones).<br>
+<br>
+There is no replacement for kinematic support yet either (it was in CcdPhysicsEnvironment). You can track the request here:<br>
+<a href="http://code.google.com/p/bullet/issues/list" class="postlink">http://code.google.com/p/bullet/issues/list</a><br>
+<br>
+Thanks for the feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 15, 2006 6:36 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">There are a bunch of global variables exported by src/BulletDynamics/Dynamics/btRigidBody.h :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  extern float gLinearAirDamping;
+  extern bool gUseEpa;
+
+  extern float gDeactivationTime;
+  extern bool gDisableDeactivation;
+  extern float gLinearSleepingTreshold;
+  extern float gAngularSleepingTreshold;
+</code></pre></div>
+
+It's not good to export globals from the API, especially since they don't conform to the 'btXXXX' naming scheme. At least one of the demo's uses them (CcdPhysicsDemo sets gDisableDeactivation) - so if they are reallyimportant, they should probably be rolled into one or other of the main Bullet classes with appropriate get/set functions.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 15, 2006 8:43 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I agree, and I am against using global variables and singletons. Those were some internal testing globals, and if they prove to be useful they will get a proper API. I will put it on the TODO.<br>
+<br>
+Thanks Steve,<br>
+Erwin<br>
+
+<blockquote><div><cite>SteveBaker wrote:</cite>There are a bunch of global variables exported by src/BulletDynamics/Dynamics/btRigidBody.h :<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>  extern float gLinearAirDamping;
+  extern bool gUseEpa;
+
+  extern float gDeactivationTime;
+  extern bool gDisableDeactivation;
+  extern float gLinearSleepingTreshold;
+  extern float gAngularSleepingTreshold;
+</code></pre></div>
+
+It's not good to export globals from the API, especially since they don't conform to the 'btXXXX' naming scheme. At least one of the demo's uses them (CcdPhysicsDemo sets gDisableDeactivation) - so if they are reallyimportant, they should probably be rolled into one or other of the main Bullet classes with appropriate get/set functions.</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Oct 15, 2006 11:12 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">In src/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.cpp and in the CcdPhysicsDemo, there are references to:<br>
+<br>
+    m_ccdSweptShereRadius<br>
+<br>
+Is that a typo?  I presume it should be 'm_ccdSweptSphereRadius'.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Oct 18, 2006 4:46 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>In src/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.cpp and in the CcdPhysicsDemo, there are references to:<br>
+<br>
+    m_ccdSweptShereRadius<br>
+<br>
+Is that a typo?  I presume it should be 'm_ccdSweptSphereRadius'.</div></blockquote>
+
+Thanks for pointing it out Steve, it has been fixed in version 2.17<br>
+<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 27, 2006 3:09 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">In the sample programs, you have a lot of application program functions that start with the string 'glut' - that's not a wise move.  The entire point of having all actual GLUT functions beginning with 'glut' is precisely to avoid the risk of some GLUT function coincidentally havintg the same name as some application function.   If you go around calling application functions 'glutXXXXX' then you are asking for problems in the future.<br>
+<br>
+(eg 'glutMotionFuncCallback')</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 28, 2006 3:42 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">From reading the demo programs, it seems that the only way to perform some operations on btRigidBody objects is to access the raw member variables of the base class (eg, the Demos/OpenGL/DemoApplication.cpp reads and writes 'm_worldTransform').  This is kinda nasty because it means you can't tell when one of these fields has been touched if you ever need to in the future.<br>
+<br>
+There should be inlined access functions for these things with all of the member variables of public classes made 'private'.<br>
+<br>
+(Also, there is a typo: m_ccdSweptMotionTreshold ...should be 'Threshold')</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 28, 2006 4:53 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>From reading the demo programs, it seems that the only way to perform some operations on btRigidBody objects is to access the raw member variables of the base class (eg, the Demos/OpenGL/DemoApplication.cpp reads and writes 'm_worldTransform').  This is kinda nasty because it means you can't tell when one of these fields has been touched if you ever need to in the future.<br>
+<br>
+There should be inlined access functions for these things with all of the member variables of public classes made 'private'.<br>
+<br>
+(Also, there is a typo: m_ccdSweptMotionTreshold ...should be 'Threshold')</div></blockquote>
+
+Thanks for pointing out the typo, I'll rename it.<br>
+<br>
+Bullet software makes distinguishment between classes and structs. The btCollisionObject is a struct at the moment, and for structs I allow direct data access. However, I agree it is not a good habbit. We can clean this up, but in general some structs are really mostly public data, which is not intended to be private.<br>
+<br>
+More important, the world transform should be read/written by btMotionState. I'll probably remove the btRigidBody constructor that passes in a worldtransform, and you just pass the btMotionState (that contains the graphics worldtransform, including potential center-of-mass shifts etc).<br>
+<br>
+Thanks for the useful feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 28, 2006 5:21 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>Bullet software makes distinguishment between classes and structs. The btCollisionObject is a struct at the moment, and for structs I allow direct data access.
+</div></blockquote>
+
+Yeah - for simple structs with no member functions, I would also leave the member variables exposed - but btRigidBody is a CLASS (admittedly derived from a STRUCT).  To all intents and purposes, it's a class with exposed internals.<br>
+
+<blockquote class="uncited"><div>More important, the world transform should be read/written by btMotionState. I'll probably remove the btRigidBody constructor that passes in a worldtransform, and you just pass the btMotionState (that contains the graphics worldtransform, including potential center-of-mass shifts etc).</div></blockquote>
+
+OK - but the problem for application writers is that the only documentation of any use is the demo programs - and they don't seem to be using btMotionState.   If the demo's don't use "best practices" then we can't expect application authors to guess what we expect them to do.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Oct 28, 2006 7:00 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>Bullet software makes distinguishment between classes and structs. The btCollisionObject is a struct at the moment, and for structs I allow direct data access.
+</div></blockquote>
+
+Yeah - for simple structs with no member functions, I would also leave the member variables exposed - but btRigidBody is a CLASS (admittedly derived from a STRUCT).  To all intents and purposes, it's a class with exposed internals.<br>
+
+<blockquote class="uncited"><div>More important, the world transform should be read/written by btMotionState. I'll probably remove the btRigidBody constructor that passes in a worldtransform, and you just pass the btMotionState (that contains the graphics worldtransform, including potential center-of-mass shifts etc).</div></blockquote>
+
+OK - but the problem for application writers is that the only documentation of any use is the demo programs - and they don't seem to be using btMotionState.   If the demo's don't use "best practices" then we can't expect application authors to guess what we expect them to do.</div></blockquote>
+
+OK. Let's put it on the todo, to modify all demos so they consistently use getCenterOfMassTransform and btMotionState. The demos are using btMotionState to synchronize the graphics for rendering, see DemoApplication::localCreateRigidBody.<br>
+<br>
+Also, I will add this to the Bullet_User_Manual.pdf. Other feedback requests for reorganizing the Wiki so it becomes more useful and adding a User Gallery so users can share their work using Bullet better.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Nov 02, 2006 3:45 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi Steve,<br>
+<br>
+This has been fixed in SVN: btCollisionObject is a class now. Its members like m_worldTransform are not public anymore, and required set/getWorldTransform(). Also, btMotionState is required now, to synchronize world transform properly.<br>
+<br>
+Thanks for the feedback. Hopefully no big refactoring changes anymore, so we can focus on improving quality and performance <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink"><br>
+Erwin<br>
+<br>
+
+<blockquote><div><cite>SteveBaker wrote:</cite><blockquote><div><cite>Erwin Coumans wrote:</cite>Bullet software makes distinguishment between classes and structs. The btCollisionObject is a struct at the moment, and for structs I allow direct data access.
+</div></blockquote>
+
+Yeah - for simple structs with no member functions, I would also leave the member variables exposed - but btRigidBody is a CLASS (admittedly derived from a STRUCT).  To all intents and purposes, it's a class with exposed internals.<br>
+
+<blockquote class="uncited"><div>More important, the world transform should be read/written by btMotionState. I'll probably remove the btRigidBody constructor that passes in a worldtransform, and you just pass the btMotionState (that contains the graphics worldtransform, including potential center-of-mass shifts etc).</div></blockquote>
+
+OK - but the problem for application writers is that the only documentation of any use is the demo programs - and they don't seem to be using btMotionState.   If the demo's don't use "best practices" then we can't expect application authors to guess what we expect them to do.</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Nov 03, 2006 2:39 am</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Many thanks!<br>
+<br>
+I'll have a bit of time over the weekend - I'm getting my game back up and working with all of this refactored goodness.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 06, 2006 8:16 am</strong></div>
+				<div class="author">by <strong>Noehrgel</strong></div>
+				<div class="content">while generating the bt stuff a minor error happened. Just do a 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=551&amp;start=30&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>grep bteral `find &lt;yourbulletdir&gt; *`</code></pre></div>
+(while doing some substitution every "Gen" got replaced by a "bt" what produced a "GNU bteral Public License")<br>
+<br>
+Noehrgel</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>3</strong> of <strong>4</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

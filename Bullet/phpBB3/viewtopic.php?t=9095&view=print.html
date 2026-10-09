@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Great Physics Engine Comparison (PEEL)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Great Physics Engine Comparison (PEEL)</h2>
+		<p><a href="viewtopic.php%3Ft=9095.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9095</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 2:18 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Pierre is talking about a bunch of optimizations he has done for PhysX over the recent years here and also compares it also to Bullet. Interesting to read, but sadly it misses Havok. I hope they will release the source, so we can add other engines as well. He seems to have a huge collection of great test cases.<br>
+<br>
+<a href="http://www.codercorner.com/blog/?p=914" class="postlink">http://www.codercorner.com/blog/?p=914</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 5:56 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Nice to see PhysX getting better all the time; nice progress report on PhysX versions, and perhaps insight into some differences with Bullet.  But it is understandably dripping wet with bias since PhysX is his baby; but at least he adds: "<em class="text-italics">admittedly I may not be a Bullet expert.</em>" (far from non-expert, but no mention of simple details like collision margins used for Bullet).  Looks like what you would expect when someone prepares propaganda for his own commercial baby using their own proprietary closed source test tool and methods.<br>
+<br>
+I do find it very interesting commercial PhysX being defensive and apparently threatened by the free, permissive, and open source Bullet.  I guess it is understandable considering the amount of resources that have been poured into Novodex / PhysX since 2001, they better damn well outperform  <img class="smilies" src="images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz"> .<br>
+<br>
+Sadly for Pierre and his colleagues, PhysX's restrictive licensing, and nVidia's territorial hardware shenanigans really hurt devs and end-users, and therefore PhysX adoption by many.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Tue May 14, 2013 8:22 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Well, I think they should release the source. Luckily Pierre is considering this. So lets hope for the best. In the end that would be the best since we can tune the tests in a way that makes sense and then make our own conclusions.<br>
+<br>
+Anyway, besides this I think Pierre has done a decent analysis and his observations are kind of the same as my own experiences. I think this is no cheap propaganda and there is a lot of value in his posts! But releasing the source for Bullet integration would help a lot in this regard!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 5:56 am</strong></div>
+				<div class="author">by <strong>Basroil</strong></div>
+				<div class="content">Sadly they have no mention of powered joints in that. Considering Nvidia is touting PhysX's pseudo-Featherstone as a plus, it would be interesting to see physical accuracy and speed comparisons. <br>
+<br>
+Should also be interesting to see what happens when Bullet 3.x finally gets released (keep hearing "soon", so I hope it's not an issue with the joints and instead just normal delays)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 6:13 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks for sharing Dirk, it is an interesting read indeed. Pierre makes some valid points and I appreciate he shares his point of view, but his most dramatic results can be easily fixed in Bullet:<br>
+
+<ul>
+<li> In the 255*255 static boxes tests, Pierre reports a staggering 34ms for Bullet simulating nothing, but with the right settings it is actually near to zero. There is no bug to be fixed there, just using Bullet properly: world-&gt;setForceUpdateAllAabbs(false); and world-&gt;addRigidBody should fix it.</li>
+
+<li> The long sweep tests are not optimized, and with some trivial culling, you can cull most of the tests, rather then reporting 300x slower performance of Bullet.</li>
+
+<li> Once Bullet gets into deeper penetration, EPA kicks in and that is 10 times slower than GJK, so choosing the right collision margin is very important.</li> 
+
+<li> The Bullet ray cast and convex sweep is far from optimal, and should be fixed with dedicated tests for most common cases.</li>
+
+<li> Bullet 2.x uses generic methods for most cases, so a dedicated algorithm for special cases will easily outperform GJK+EPA. Bullet 3.x will have some more dedicated methods. The Sony Physics Effects contribution will help towards this.</li></ul>
+
+I am working on Bullet 3.x and its OpenCL GPU performance is working very well. It can simulate 100k stacking boxes in real-time on a 7970 GPU. There are various broad phase collision improvements, better SAT collision (also thanks to Dirk for his SAT presentation), better contact management, faster solver. A lot of the GPU improvements will benefit the CPU version too, so I'll make sure to sort out some PhysX 3 versus Bullet 3 doubts.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 7:59 am</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content">Hey guys,<br>
+
+<blockquote class="uncited"><div>Looks like what you would expect when someone prepares propaganda for his own commercial baby using their own proprietary closed source test tool and methods.</div></blockquote>
+Now that's rich. It's not my baby. There are actually a lot of things I disagree with or don't like in PhysX. If you go this way, my baby is Opcode.<br>
+<br>
+As for the proprietary test tool and methods, dude, feel free to run your own benchmarks and publish your own results. The closed source thing is just a good excuse to justify people's laziness. I don't need to reveal to the world the fiercely guarded secret of how to create a box stack in Bullet, do I? <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+
+<blockquote class="uncited"><div>I do find it very interesting commercial PhysX being defensive and apparently threatened by the free, permissive, and open source Bullet.</div></blockquote>
+You are completely misreading it. We don't feel "threatened" by Bullet at all. However I do feel <em class="text-italics">pissed off</em> by people claiming that Bullet is more optimized than the CPU version of PhysX. That's the only reason why I included Bullet in these graphes, as I clearly explained. I need a link to point people to, for the next time I read some BS on some forum.<br>
+
+<blockquote class="uncited"><div>Sadly for Pierre and his colleagues, PhysX's restrictive licensing, and nVidia's territorial hardware shenanigans really hurt devs and end-users, and therefore PhysX adoption by many.</div></blockquote>
+PhysX adoption looks fine to me. I may be completely wrong but it looks like a lot of actual games are using PhysX. On the other hand I don't see a lot of games using the open source competitors...<br>
+<br>
+In any case I will try Erwin's suggestion for the last test, and update the post. For the other things though, if they're "not optimized" or "far from optimal", then I'm afraid my results are valid and I must keep them. That's exactly the reality check I needed for people still claiming that PhysX is not optimized. I think you understand this.<br>
+<br>
+Other than that, I use a default collision margin of 0.04 for all shapes. I think I got that number from a Bullet sample, not sure. I don't think changing this value changes the performance much anyway. Seriously, I did try to make Bullet as fast as I could. There's a UI in which I can tweak all these options, and I actually selected the ones giving me the best performance/behavior (friction dir caching, warm starting, no split impulse, no randomize order for constraints, DBVT). ERP is 0.2, ERP2 is 0.1, margin is 0.04.<br>
+<br>
+As for Bullet 3, I'm sure it will perform better but that's kind of irrelevant, isn't it? So will PhysX 3.4 and Havok X.Y, at which point we need to run the benchmarks again and see what we get.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 8:14 am</strong></div>
+				<div class="author">by <strong>Zogrim</strong></div>
+				<div class="content"><blockquote class="uncited"><div>really hurt devs and end-users, and therefore PhysX adoption by many</div></blockquote>
+For a Note: 415+ released commercial games are currently using PhysX SDK on consoles and PC, not counting titles for mobile platforms.<br>
+<br>
+As for Bullet, what is the number here - around 30 ?<br>
+<br>
+<em class="text-italics">Forgive my interruption <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></em></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 8:53 am</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content">So I just tried setForceUpdateAllAabbs(false) but it doesn't actually change anything.<br>
+<br>
+Here's the function creating objects, maybe you can spot something wrong:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9095&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>PintObjectHandle Bullet::CreateObject(const PINT_OBJECT_CREATE&amp; desc)
+{
+	udword NbShapes = desc.GetNbShapes();
+	if(!NbShapes)
+		return null;
+
+	ASSERT(mDynamicsWorld);
+
+	const PINT_SHAPE_CREATE* CurrentShape = desc.mShapes;
+
+	float FrictionCoeff = 0.5f;
+	float RestitutionCoeff = 0.0f;
+	btCollisionShape* colShape = null;
+	if(NbShapes&gt;1)
+	{
+		btCompoundShape* CompoundShape = new btCompoundShape();
+		colShape = CompoundShape;
+		mCollisionShapes.push_back(colShape);
+
+		while(CurrentShape)
+		{
+			if(CurrentShape-&gt;mMaterial)
+			{
+				FrictionCoeff		= CurrentShape-&gt;mMaterial-&gt;mDynamicFriction;
+				RestitutionCoeff	= CurrentShape-&gt;mMaterial-&gt;mRestitution;
+			}
+
+			const btTransform LocalPose(ToBtQuaternion(CurrentShape-&gt;mLocalRot), ToBtVector3(CurrentShape-&gt;mLocalPos));
+
+			// ### TODO: where is this deleted?
+			btCollisionShape* subShape = CreateBulletShape(*CurrentShape);
+			if(subShape)
+			{
+				CompoundShape-&gt;addChildShape(LocalPose, subShape);
+			}
+
+			CurrentShape = CurrentShape-&gt;mNext;
+		}
+	}
+	else
+	{
+		colShape = CreateBulletShape(*CurrentShape);
+
+		if(CurrentShape-&gt;mMaterial)
+		{
+			FrictionCoeff		= CurrentShape-&gt;mMaterial-&gt;mDynamicFriction;
+			RestitutionCoeff	= CurrentShape-&gt;mMaterial-&gt;mRestitution;
+		}
+	}
+
+	const bool isDynamic = (desc.mMass != 0.0f);
+
+	btVector3 localInertia(0,0,0);
+	if(isDynamic)
+		colShape-&gt;calculateLocalInertia(desc.mMass, localInertia);
+
+	const btTransform startTransform(ToBtQuaternion(desc.mRotation), ToBtVector3(desc.mPosition));
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(desc.mMass, myMotionState, colShape, localInertia);
+	{
+		rbInfo.m_friction		= FrictionCoeff;
+		rbInfo.m_restitution	= RestitutionCoeff;
+
+	//	rbInfo.m_startWorldTransform;
+		rbInfo.m_linearDamping				= gLinearDamping;
+		rbInfo.m_angularDamping				= gAngularDamping;
+		if(!gEnableSleeping)
+		{
+//			rbInfo.m_linearSleepingThreshold	= 99999999.0f;
+//			rbInfo.m_angularSleepingThreshold	= 99999999.0f;
+//			rbInfo.m_linearSleepingThreshold	= 0.0f;
+//			rbInfo.m_angularSleepingThreshold	= 0.0f;
+		}
+	//	rbInfo.m_additionalDamping;
+	//	rbInfo.m_additionalDampingFactor;
+	//	rbInfo.m_additionalLinearDampingThresholdSqr;
+	//	rbInfo.m_additionalAngularDampingThresholdSqr;
+	//	rbInfo.m_additionalAngularDampingFactor;
+	}
+	btRigidBody* body = new btRigidBody(rbInfo);
+	ASSERT(body);
+	if(!gEnableSleeping)
+		body-&gt;setActivationState(DISABLE_DEACTIVATION);
+
+	sword collisionFilterGroup, collisionFilterMask;
+
+	if(isDynamic)
+	{
+		body-&gt;setLinearVelocity(ToBtVector3(desc.mLinearVelocity));
+		body-&gt;setAngularVelocity(ToBtVector3(desc.mAngularVelocity));
+
+		collisionFilterGroup = short(btBroadphaseProxy::DefaultFilter);
+		collisionFilterMask = short(btBroadphaseProxy::AllFilter);
+
+		if(desc.mCollisionGroup)
+		{
+			const udword btGroup = RemapCollisionGroup(desc.mCollisionGroup);
+			ASSERT(btGroup&lt;32);
+			collisionFilterGroup = short(1&lt;&lt;btGroup);
+			collisionFilterMask = short(mGroupMasks[btGroup]);
+		}
+	}
+	else
+	{
+		body-&gt;setCollisionFlags(btCollisionObject::CF_STATIC_OBJECT);
+
+		collisionFilterGroup = short(btBroadphaseProxy::StaticFilter);
+		collisionFilterMask = short(btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter);
+	}
+
+	if(desc.mAddToWorld)
+//		mDynamicsWorld-&gt;addRigidBody(body);
+		mDynamicsWorld-&gt;addRigidBody(body, collisionFilterGroup, collisionFilterMask);
+
+	if(gUseCCD)
+	{
+//		body-&gt;setCcdMotionThreshold(1e-7);
+//		body-&gt;setCcdSweptSphereRadius(0.9*CUBE_HALF_EXTENTS);
+
+		body-&gt;setCcdMotionThreshold(0.0001f);
+		body-&gt;setCcdSweptSphereRadius(0.4f);
+	}
+	return body;
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 8:56 am</strong></div>
+				<div class="author">by <strong>DonTzzy</strong></div>
+				<div class="content">Try Havok vs. Physx instead....<br>
+<br>
+....instead of a comparison vs a "hobby project"...<br>
+<br>
+But, from the last 3rd party benchmarks that I've read...Havok owned Physx.  So, the "bullying" on Bullet, is understandable....</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 9:02 am</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content">In fact here's the whole PINT plug-in: <a href="http://www.codercorner.com/tmp/PINT_Bullet281.rar" class="postlink">http://www.codercorner.com/tmp/PINT_Bullet281.rar</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 9:06 am</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Try Havok vs. Physx instead....</div></blockquote>
+
+Do people actually <em class="text-italics">read</em> blog posts? I did try Havok. Five versions of it.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 3:06 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Yay for the excitement.<br>
+<br>
+I'm sorry you were insulted by my post Pierre.  To be clear I did not state that you were purposefully misleading with your results.  I was simply pointing out, that as a study or review, your blog post raised all of the red flags for bias (in a systematic review sense).  I'm certain as a person with a scientific background you can appreciate this simple fact.<br>
+
+<blockquote><div><cite>Zogrim wrote:</cite>As for Bullet, what is the number here - around 30 ?</div></blockquote>
+<img class="smilies" src="images/smilies/icon_rolleyes.gif" width="15" height="15" alt=":roll:" title="Rolling Eyes">   Neither you or Pierre can <em class="text-italics">possibly</em> know since Bullet's license (as well as several other open source physics engines with zlib license) do not even require developers to ever disclose that they are using (or parts of) Bullet (contrary to PhysX's license that actually require developers to not only plaster NVIDIA all over their packaging, but credit PhysX in the marketing, opening marquee / credits screen, about box, etc.).  What's funny is how many 3D suites now boast that they are using Bullet yet they don't have to.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 3:22 pm</strong></div>
+				<div class="author">by <strong>Zogrim</strong></div>
+				<div class="content"><strong class="text-strong">RBD</strong><br>
+<em class="text-italics">Neither you or Pierre can possibly know</em><br>
+Oh. I got it. "Believe" <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+<em class="text-italics">contrary to PhysX's license that actually require developers</em><br>
+Depends on actual licensing case, and even so, developers are not following it very often anyway.<br>
+<br>
+<em class="text-italics">Yay for the excitement</em><br>
+Conflict is the core of the drama <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 3:41 pm</strong></div>
+				<div class="author">by <strong>Pierre</strong></div>
+				<div class="content"><blockquote class="uncited"><div>To be clear I did not state that you were purposefully misleading with your results. I was simply pointing out, that as a study or review, your blog post raised all of the red flags for bias (in a systematic review sense). I'm certain as a person with a scientific background you can appreciate this simple fact.</div></blockquote>
+What I appreciate is that people should not blindly take <em class="text-italics">anything </em>they read on the internet for "the truth". This applies to my post, <em class="text-italics">regardless of who I work for</em>. And this applies to people claiming that PhysX is not optimized, or that Bullet is faster. This was precisely the point of my post.<br>
+<br>
+On the other hand you did call my prose "propaganda", so, yeah, I'm afraid you did imply I was purposefully bending the truth here. I'm certain you can appreciate that <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I can only repeat what I already said: don't take what I wrote for granted. You don't have to. Please do your own tests if you have doubts. Or even just to double-check, it's always possible that I misused Bullet. But if I did, it was certainly not on purpose.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Great Physics Engine Comparison (PEEL)</h3>
+				<div class="date">Posted: <strong>Wed May 15, 2013 4:34 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><blockquote><div><cite>Pierre wrote:</cite>On the other hand you did call my prose "propaganda", so, yeah, I'm afraid you did imply I was purposefully bending the truth here. I'm certain you can appreciate that <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div></blockquote>
+My exact words were: "Looks like what you would expect…".  What I strongly implied was that you have a vested interest in the results, created them, and are using them for promotional purposes, since you work for NVIDIA and on PhysX, thus are absolutely biased.  You defensively took my calling it "your baby" as an insult for some reason, while I was simply using the expression to mean that you worked on it.  Sorry if this is a red button for you.<br>
+<br>
+Or am I completely wrong... are you not employed by NVIDIA and working on the PhysX product?  If not, then I take back all that I said, and apologize profusely.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Not connected to physics server when trying to run environment</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Not connected to physics server when trying to run environment</h2>
+		<p><a href="viewtopic.php%3Ft=12722.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12722</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Mon Jul 22, 2019 8:52 pm</strong></div>
+				<div class="author">by <strong>jboyml</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I'm trying to use PyBullet for reinforcement learning and can't get started with a simple example. The code below fails with the following error:
+<blockquote class="uncited"><div>Traceback (most recent call last):<br>
+  File "test.py", line 10, in &lt;module&gt;<br>
+    observation, reward, done, info = env.step(action)<br>
+  File "/home/john/anaconda3/lib/python3.6/site-packages/gym/wrappers/time_limit.py", line 15, in step<br>
+    observation, reward, done, info = self.env.step(action)<br>
+  File "/home/john/anaconda3/lib/python3.6/site-packages/pybullet_envs/gym_pendulum_envs.py", line 31, in step<br>
+    self.robot.apply_action(a)<br>
+  File "/home/john/anaconda3/lib/python3.6/site-packages/pybullet_envs/robot_pendula.py", line 25, in apply_action<br>
+    self.slider.set_motor_torque(100 * float(np.clip(a[0], -1, +1)))<br>
+  File "/home/john/anaconda3/lib/python3.6/site-packages/pybullet_envs/robot_bases.py", line 381, in set_motor_torque<br>
+    self.set_torque(torque)<br>
+  File "/home/john/anaconda3/lib/python3.6/site-packages/pybullet_envs/robot_bases.py", line 387, in set_torque<br>
+    force=torque)#,  positionGain=0.1, velocityGain=0.1)<br>
+pybullet.error: Not connected to physics server.
+</div></blockquote>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12722&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import gym
+import pybullet, pybullet_envs
+
+env = gym.make('InvertedPendulumBulletEnv-v0')
+observation = env.reset()
+
+for _ in range(1000):
+    env.render()
+    action = env.action_space.sample()
+    observation, reward, done, info = env.step(action)
+
+    if done:
+        observation = env.reset()
+    env.close()</code></pre></div>
+
+I'm using Python 3.6.7 and PyBullet 2.5.2 installed using pip on Ubuntu. Any ideas?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Wed Nov 13, 2019 9:40 pm</strong></div>
+				<div class="author">by <strong>caffett</strong></div>
+				<div class="content">Similar bug.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12722&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code># -*- coding: utf-8 -*-
+import pybullet as p
+import pybullet_envs
+import gym
+
+
+def show_bug():
+	env = gym.make("AntBulletEnv-v0")
+	print(env.reset())
+	print(p.getNumBodies())
+	env.step(env.action_space.sample())
+	env.close()
+
+	env = gym.make("AntBulletEnv-v0")
+	print(env.reset())
+	print(p.getNumBodies())
+	env.step(env.action_space.sample())
+	env.close()
+	
+	env = gym.make("AntBulletEnv-v0")
+	print(p.getNumBodies())
+	print(env.reset())
+	env.step(env.action_space.sample())
+	env.close()
+
+	print("end!")
+
+if __name__ == "__main__":
+	show_bug()
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Thu Nov 14, 2019 5:24 am</strong></div>
+				<div class="author">by <strong>caffett</strong></div>
+				<div class="content"><a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/bullet/bullet_client.py#L18-#L22" class="postlink">https://github.com/bulletphysics/bullet ... y#L18-#L22</a><br>
+<br>
+Comment this code and replace them with a pass, everything will be fine. <br>
+<br>
+The python garbage collection mechanism will not delete the variable immediately. Thus,  there will be a delay to call the __del__. When the __del__ is called, it will close the current connection, however, due to the delay, the connection might not be the connection we want to close at begin.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Thu Nov 14, 2019 5:30 am</strong></div>
+				<div class="author">by <strong>caffett</strong></div>
+				<div class="content">Sorry, this just can fix my issue.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Sat Jun 06, 2020 6:35 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=42472#p42472"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=13464.html">caffett</a> wrote: <a href="viewtopic.php%3Fp=42472.html#p42472" data-post-id="42472" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Thu Nov 14, 2019 5:24 am</span></cite>
+Comment this code and replace them with a pass, everything will be fine. 
+</div></blockquote>
+
+The pybullet connection for those envs are created in the env.reset() method.<br>
+You are making a call to global pybullet.getNumBodies before calling the reset, which is wrong.<br>
+Also, it is unsafe to use global pybullet together with a bullet_client.<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12722&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>env = gym.make("AntBulletEnv-v0")
+print(p.getNumBodies())
+print(env.reset())</code></pre></div>
+
+Change the code to this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12722&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>env = gym.make("AntBulletEnv-v0")
+print(env.reset())
+print(p.getNumBodies())
+</code></pre></div>
+
+The delayed __del__ is not an issue at all, since the env.close() calls the disconnect.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Mon Mar 14, 2022 5:49 pm</strong></div>
+				<div class="author">by <strong>dogbuilder23</strong></div>
+				<div class="content">I'm getting this error when trying to run <br>
+<a href="https://github.com/OpenQuadruped/spot_mini_mini/blob/spot/spot_bullet/src/spot_ars.py" class="postlink">https://github.com/OpenQuadruped/spot_m ... pot_ars.py</a><br>
+<br>
+regardless of the flag values I choose.<br>
+<br>
+I'm running <br>
+Python 3.8.9 <br>
+pybullet build time: Dec 27 2021 18:13:03<br>
+MacOS 12.0.1, on a MacBook Pro (16-inch, 2021) M1 Max.<br>
+<br>
+I'm a PyBullet noob. Any advice would be appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Mon Mar 14, 2022 5:52 pm</strong></div>
+				<div class="author">by <strong>dogbuilder23</strong></div>
+				<div class="content">Forgot to mention, the other script from the same github repo work fine.<br>
+E.g. <br>
+spot_ars_eval.py<br>
+env_tester.py<br>
+<br>
+The problem seems to be when spot_ars.py is using multiprocessing workers for the training.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Not connected to physics server when trying to run environment</h3>
+				<div class="date">Posted: <strong>Tue Mar 15, 2022 2:44 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Please check out those examples, they show how to implement multiprocessing with PyBullet, you need to be careful:<br>
+<br>
+<a href="https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_robots/panda" class="postlink">https://github.com/bulletphysics/bullet ... bots/panda</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/151" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2005-10-21T09:46:44+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/151</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2005-10-21T09:46:44+00:00</updated>
+
+		<published>2005-10-21T09:46:44+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=401#p401</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=401#p401"/>
+		<title type="html"><![CDATA[Impulse based simulation - Jacobson, Baltman, Guendelman]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=401#p401"><![CDATA[
+Given two bodies b1 and b2. In an impulse based simulator you integrate the bodies forward in time, find the constraint error and correct it. Mathematically I believe this are differential inclusions and you project the phase state of the bodies back onto the constraint manifold. This sounds difficult, but is extreme easy to implement. For the ball-socket joint you simple do something like this:<br><br><br>b1.Step( dt );<br>b2.Step( dt );<br><br>// Let r1 and r2 be the offset vector from the CM the the joint anchor point<br>v32 v1 = b1.GetVelocityAt( r1 );<br>v32 v2 = b2.GetVelocityAt( r2 );<br><br>// The relative velocity must be zero - so this is the constraints error<br>v32 v_rel = v1 - v2;<br><br>That's not too difficult. Actually this is the Jacoby entry, but you don't have to deal with large matrices and do all the bookkeeping. Now that we have found the constraint violation, we need to correct it - that is project back onto the constraint manifold. We don't want to simply divide the error between both bodies, but also consider the mass and moment of inertia somehow. Heavier bodies should move/rotate less than lighter ones. We have to solve the following question:<br><br>"Find corrections for the current linear velocities v1 and v2 plus corrections for the current angular velocities w1 and w1, such that the relative velocity at the joint anchor becomes zero. Preferable considering the masses and moments of inertia."<br><br>In the literature (s. Papers) it is proposed to calculate the collision impulse and chose the direction of the relative velocity as collision normal and its length as relative normal velocity. E.g. in Jiggle the constraints are implemented this way.<br><br>f32 j = -(1 + e)*vn / [ (1/m1) + (1/m2) + n*(J1^-1*(r1 x n) x r1) + n*(J2^-1*(r2 x n) x r2)<br><br>Now the question:<br>I assumed that after applying the impulse the relative velocity would be zero. This is sometimes correct, but in the majority of cases it seems as if the error is only reduced a bit. Isn't this bad for the convergence of the system? For two limits I don't have convergence anymore. Are there other methods to divide the error between the two bodies? I setup the impulse equations and avoided the calculation of the collison impulse - since this would be more numerically stable. But I think I have an error in the matrix, so I can't say how this works at the moment. Any suggestions?<br><br>Regards,<br><br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Fri Oct 21, 2005 9:46 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

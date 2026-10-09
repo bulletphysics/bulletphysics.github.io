@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; SI &amp; double-pendulum: motion getting damped</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>SI &amp; double-pendulum: motion getting damped</h2>
+		<p><a href="viewtopic.php%3Ft=9266.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9266</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Thu Jul 11, 2013 12:51 pm</strong></div>
+				<div class="author">by <strong>kalesony</strong></div>
+				<div class="content">Hello.<br>
+<br>
+<strong class="text-strong">Intro</strong>:<br>
+Running a simple double-pendulum (model described below) sim on bullet one can observe motion getting continuously damped. I can provide a simple working code if need be, but I doubt that this observation is new and needs proving.<br>
+<br>
+<strong class="text-strong">Question</strong>:<br>
+Is it an inherent feature of SI to damp motion like that? Or is it maybe due to Baumgarte when used with SI? Or maybe is it due to sympletic Euler integration? Or...? <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"> [note: SI understood in general as: predict velocities from unconstrained accelerations -&gt; correct velocities pair-wise ([P]GS-equivalent) -&gt; apply the corrected velocities to system config] <br>
+<br>
+<strong class="text-strong">The model</strong>:
+<ul>
+<li>two cylinders connected by btHingeConstraints</li>
+<li>the top cylinder hinged to "the world"</li>
+<li>collisions between the hinged bodies disabled</li>
+<li>per-body damping off/zeroed</li>
+<li>Baumgarte error correction (erp 0.1)</li>
+<li>gyroscopic terms ON</li></ul>
+
+Cheers,<br>
+kalesony</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Mon Jul 15, 2013 7:53 am</strong></div>
+				<div class="author">by <strong>kalesony</strong></div>
+				<div class="content">Any chance for an answer (please)?<br>
+<br>
+Thanks,<br>
+kalesony</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Mon Jul 15, 2013 2:56 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I think you'll find even a 'single' pendulum will get damped, because the constraint solver doesn't solve this exactly over the entire timestep, it only solves it exactly at the beginning of the timestep (at least with symplectic Euler integration, but IIRC there exists no integration scheme that will solve a simple pendulum exactly). I'm sure SI isn't helping much here since it will merely converge on the answer that the solver is trying to solve! Anyway, there's going to be an error at the end of the timestep and eliminating it will likely cause a change in energy.<br>
+<br>
+There's been at least one attempt (to my knowledge) of somebody trying to solve this situation by Jan Bender which somehow figures out the error at the end of the timestep and cancels it out, possibly by re-solving but I don't remember the details. Search for Impulse Based Dynamics System.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Tue Jul 16, 2013 2:52 am</strong></div>
+				<div class="author">by <strong>kalesony</strong></div>
+				<div class="content">bone - thanks for the reply <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">.<br>
+<br>
+First, not to lose sight of the main subject: the gist of my question was not why the is simulation imperfect, but why energy is sucked away and not injected. And it's not that I love simulations blowing up, but I was quite surprised to notice that and wanted to know if it is a rule of any sort (for this specific simulator). So - is it?<br>
+<br>
+Now, I would also like to comment on some of your statements <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">: I believe that the velocity prediction-correction scheme cannot be said to solve the system at the beginning of the time-step since the predicted velocities already bear the influence of gravity and other applied forces acting along the step which in turn means that the determined correcting impulse summarizes the overall influence of the constraint forces acting over the time-step. Nevertheless, there is no guarantee that once the corrected velocities are integrated into system config the result will be error-free and, if I'm not mistaken, this is what Bender addressed in his works by trying to correct positions/config directly. What do you think?<br>
+<br>
+Thanks,<br>
+kalesony</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Tue Jul 16, 2013 3:04 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I think an answer to the second question may help with the first. Yes, the predicted velocities already handle external forces, but the main problem is that the direction of the constraint (the angle of the pendulum itself) is changing during the timestep, and that's not accounted for in most modern physics engines. It's only solved for using the direction at the beginning of the timestep, so that's the direction that your pendulum constraint force acts in, even though it's wrong a moment later.<br>
+<br>
+So you *will* have an error (which it appears that you agree with, since you already know simulations can't be perfect). I don't exactly know Bullet's implementation of Baumgarte, but my own implementation has something like spring and damping factors. Perfectly modeled perfect springs will conserve energy, but since this error came "out of nowhere", we have introduced energy into the spring. By itself, this should blow up. So the damping factor controls this, but damping removes energy, and it would be quite the feat to remove exactly the energy that was introduced. So overall, you lose energy as long as it's stable.<br>
+<br>
+Another possibility for solving the error would be adding a post-step of position correction rather than Baumgarte. This can improve behavior, but there's no way to perfectly solve the position correction (except for very simple cases, like a single simple pendulum). You can iterate, but the convergence is slow. A potentiatlly bad side effect is that if there are any normally-modeled springs in your system (say, you're modeling a car), they will artificially gain or lose energy from the position correction.<br>
+<br>
+I hope this helps a little bit.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Tue Jul 16, 2013 4:39 pm</strong></div>
+				<div class="author">by <strong>kalesony</strong></div>
+				<div class="content">Oh, now I get your logic: config at "t0" assumed/approximated to be valid along the entire step -&gt; integration -&gt; errors -&gt; Baumgarte -&gt; velocity damping term -&gt; damped motion (I like the line about error appearing "out of nowhere" and energy getting introduced as a result: very intuitive <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">).<br>
+<br>
+Now, the problem is it doesn't really seem to crack the nut since Bullet has no damping factor in its Baumgarte stabilization, only the one proportional to the config error (I guess that the damping factor is obvious if your simulation is entirely force-acceleration level [is it what you do in your simulator?] but less so when you handle constraints using impulse-velocity "delta" relation). That is why I assumed that maybe velocity prediction-correction scheme drains energy, but I am somehow more and more convinced that it is due to sympletic Euler. Will experiment with that and maybe post my final conclusions.<br>
+<br>
+Nevertheless, I still feel that the core question has not been answered, but maybe it was "ill-posed" itself.<br>
+<br>
+Thanks again,<br>
+kalesony</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Tue Jul 16, 2013 6:02 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">Good point: my implementation of Baumgarte *is* in a system using force-level acceleration, so the damping is indeed more obvious. I'm not sure it matters that much: if you're changing the velocity directly with an impulse, you're changing the energy level. And if it's "stabilizing", it's going to be towards less energy.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Tue Jul 16, 2013 8:30 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">BTW, I'm not presuming to be sure that's the *only* cause of damping. I'm just not currently aware of anything else that necessarily causes it. For example, SI may also be inadvertently causing it, simply by converging from one side of the "correct" solution.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Wed Jul 17, 2013 12:25 pm</strong></div>
+				<div class="author">by <strong>kalesony</strong></div>
+				<div class="content"><blockquote><div><cite>bone wrote:</cite>if you're changing the velocity directly with an impulse, you're changing the energy level. And if it's "stabilizing", it's going to be towards less energy.</div></blockquote>
+Reasonable enough and maybe this is what happens in practice with SI but the underlying theoretical principle (if I understand it correctly) states otherwise: joint reaction forces (and thus impulses) are supposed to be workless, so in the SI-case they are supposed to alter velocities only enough to eliminate the "velocity error" introduced by the prediction step while not influencing (by damping or boosting) velocities representing the degrees of freedom of the constrained system =&gt; the energy (in terms of these DoFs) should remain constant.<br>
+
+<blockquote><div><cite>bone wrote:</cite>
+I'm not presuming to be sure that's the *only* cause of damping. I'm just not currently aware of anything else that necessarily causes it. For example, SI may also be inadvertently causing it, simply by converging from one side of the "correct" solution.</div></blockquote>
+Naturally, we are just discussing, I no longer assume that you're trying to provide an authoritative answer to this query <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">. Maybe one of the sworn-SI-experts of this forum  will come to clear this out <img class="smilies" src="images/smilies/icon_cool.gif" width="15" height="15" alt="8)" title="Cool">. Nonetheless, your remarks were really helpful and revealed your intuitive understanding of several theoretical concepts. Thanks.<br>
+<br>
+Cheers,<br>
+kalesony</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Tue Jul 23, 2013 7:17 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content"><blockquote><div><cite>kalesony wrote:</cite><blockquote><div><cite>bone wrote:</cite>if you're changing the velocity directly with an impulse, you're changing the energy level. And if it's "stabilizing", it's going to be towards less energy.</div></blockquote>
+Reasonable enough and maybe this is what happens in practice with SI but the underlying theoretical principle (if I understand it correctly) states otherwise: joint reaction forces (and thus impulses) are supposed to be workless, so in the SI-case they are supposed to alter velocities only enough to eliminate the "velocity error" introduced by the prediction step while not influencing (by damping or boosting) velocities representing the degrees of freedom of the constrained system =&gt; the energy (in terms of these DoFs) should remain constant.</div></blockquote>
+
+Agreed, and I see your point. It's just that the "velocity error" introduced by the prediction step is also going to cause a "position error" after a time step. I believe you're right that the impulse to correct the velocity error by itself will keep it workless. But the method of correcting that position error may involve an additional impulse which won't be workless.<br>
+<br>
+Good luck! I'd like to see someone else chime in here, too.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SI &amp; double-pendulum: motion getting damped</h3>
+				<div class="date">Posted: <strong>Thu Aug 22, 2013 12:52 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It is probably best to create a simple reproduction case and post it in the Bullet section of the forum, and cross the fingers someone looks at it.<br>
+<br>
+We have done some simulation with the PGS/SI solver, in combination with 'split impulse' (instead of Baumgarte) and didn't see much damping,<br>
+so it could be specific to the constraint. Also, there was some constraint solver bug introduced recently, that is fixed in trunk now, so make sure to use latest SVN trunk.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

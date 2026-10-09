@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; StanHull convex hull generation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>StanHull convex hull generation</h2>
+		<p><a href="viewtopic.php%3Ft=255.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=255</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>StanHull convex hull generation</h3>
+				<div class="date">Posted: <strong>Mon Mar 06, 2006 5:23 pm</strong></div>
+				<div class="author">by <strong>ageia</strong></div>
+				<div class="content">from gdalgorithms:<br>
+<br>
+<br>
+About a year and half ago I posted a thread here (gdalgorithms list) about my difficulties getting a reliable convex hull generator.  I ended up posting an outrageous hack that involved putting a wrapper around the huge pile of mess that is called ?Qhull?.  The reason I am posting a message today is because I keep getting requests for that old build, called ?QhullLib?, from people searching the archives.  The thing is that implementation was really stupid and I have been using something much better for some time.<br>
+<br>
+ <br>
+<br>
+Stan Melax, who is a bit of a genius at computational geometry, developed a dramatically improved convex hull generation algorithm.  It is extremely fast (real-time fast), stable, and targeted specifically at the needs of game developers.  I have chosen to name his hull generation code ?StanHull?.  <br>
+<br>
+ <br>
+<br>
+You might wonder why I am posting some of Stan?s code.  Well, the explanation for that is a bit complicated but I will try to give the very quick version.  Again, about a year a half ago, I was working on a project I called the ?Open Dynamics Framework?, which was supposed to be an API and data model for rigid body physics that would work with any piece of physics middleware.  I even made a presentation at the GameTech conference and was working with a consortium to standardize the data model.  I started up a website and made a couple of releases, both 100% open source.<br>
+<br>
+ <br>
+<br>
+Then life happened.  I was told to work on other stuff and that project just died.  Since I work for a hardware company I was able to convince my employer that everything I do for them should be open-source.  I am quite proud of this fact and I hope to make more code available in this way.  My friend and colleague Stan Melax improved our hull generation code but we never released to the public.  <br>
+<br>
+ <br>
+<br>
+I will have to let Stan talk for himself about the algorithm he used in his implementation.  My primary contribution was packaging of the source code and doing some pre and post-processing cleanup.<br>
+<br>
+ <br>
+<br>
+First, packaging.  The hull generation code is provided as one CPP and one H.  Stan?s code was dependent on a vector library and a couple of template classes.  These are embedded in the CPP so they are hidden from the user of the library.  You can also put the whole thing in a namespace if that helps.<br>
+<br>
+ <br>
+<br>
+Here are the key features of Stan?s hull generation code:<br>
+<br>
+ <br>
+<br>
+?         Designed to be fast and robust.  Rarely if ever fails.<br>
+<br>
+?         Allows a user to specify a maximum number of vertices to consider.    Eliminates slivers and other problem area.<br>
+<br>
+?         Designed to produce hulls optimal for collision detection purposes, not necessarily for general computational geometry solutions.<br>
+<br>
+?         Supports ?skin width?.  This is a powerful feature that allows the hull to be extruded so that it has a user specified ?thickness? around the hull.  This helps with physics engines which use penalty methods for penetration.  It can be done on a per-shape basis, avoiding global settings for error tolerances.<br>
+<br>
+ <br>
+<br>
+Here are the features of my wrapper around Stan?s hull code:<br>
+<br>
+ <br>
+<br>
+?         Pre-processes the input point cloud by converting it to a unit-normal cube.  Duplicate vertices are removed based on a normalized tolerance level (i.e. 0.1 means collapse vertices within 1/10th the width/breadth/depth of any side.  This is extremely useful in eliminating slivers.  When cleaning up ?duplicates and/or nearby neighbors? it also keeps the one which is ?furthest away? from the centroid of the volume.<br>
+<br>
+?         Outputs the convex hull as triangles or faces depending on a user setting.<br>
+<br>
+?         Outputs the faces in either winding order based on a user setting.<br>
+<br>
+?         Cleans up dead vertices generated.  If you pass say 1,000 vertices into a hull generator, you might only get say 100 out.  The hull generated will provide indices to the original 1,000 vertices however.  The routine ?BringOutYourDead? will re-index the hull so that it only contains the 100 vertices which are actually used.<br>
+<br>
+ <br>
+<br>
+This new version of the library is completely open source. It comes with a small console application that loads a Wavefront .OBJ file, generates a hull, and then writes out the generated hull as another Wavefront OBJ.  The console application accepts a few command line switches to control various parameters.<br>
+<br>
+ <br>
+<br>
+The single .CPP is about 3,000 lines of code; mostly because of the embedded template classes.  The header file and implementation example are both very small.<br>
+<br>
+ <br>
+<br>
+My original ?Open Dynamics Framework? project is pretty much dead.  The project continues on under a different name, and is still open source (so long as I can keep it that way).  However, it got subsumed into my company and is being developed by other programmers than myself.<br>
+<br>
+ <br>
+<br>
+I hope you will indulge this post.  I am only doing so because the original library was posted here and I continue to get so many requests for it.<br>
+<br>
+ <br>
+<br>
+Since I have gathered a large collection of open-source material in the past couple of years, I plan to start posting it in bite-sized pieces on a website I just set up today.  My first post today contains ?StanHull?.  If you have any questions about the code, in terms of how to use it, build it, or about the pre-processing phase, then contact me.  If you have specific questions about the hull generation code and algorithm you will need to contact Stan Melax (<a href="mailto:melax@ageia.com">melax@ageia.com</a>).<br>
+<br>
+ <br>
+You can find the StanHull.zip file at my new code website: <a href="http://www.codesuppository.blogspot.com/" class="postlink">http://www.codesuppository.blogspot.com/</a><br>
+<br>
+<br>
+Thanks,<br>
+<br>
+John</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: StanHull convex hull generation</h3>
+				<div class="date">Posted: <strong>Mon Mar 31, 2008 1:15 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content"><blockquote><div><cite>ageia wrote:</cite>
+I will have to let Stan talk for himself about the algorithm he used in his implementation.  My primary contribution was packaging of the source code and doing some pre and post-processing cleanup.
+</div></blockquote>
+
+I initially wrote the code to use in a 3ds max plugin where the artist could select the number of vertices he wanted in a convex hull.  The artist would apply the "convex hull" modifier and select the number of verts interactivly using a spinner widget up and down (or just type in the number).  Initially, I wasn’t anticipating offline usage.  Some people, including John, were having some issues with another convex hull generator they were using and decided to try my code.    It turned out to be helpful for them.  <br>
+<br>
+Some recent questions that I've had:<br>
+
+<blockquote class="uncited"><div>
+did you develop this code any further since John Ratcliff released it?
+</div></blockquote>
+No, I haven’t done any updates to it.  But, Yes, There are some improvements that I would like to make.<br>
+
+ <blockquote class="uncited"><div>
+what algorithm is it using?
+</div></blockquote>
+Its basically the same iterative technique that is used in quickhull, where you find a new vertex and add it to the existing hull.  The difference is that quickhull tries to compute the hull in O(n lg(n)).  I didn’t care about that.  Instead, I wanted to find a hull up to a given number of vertices.  So at each step, I find the best vertex for expansion.  In other words, a greedy approach.  After each expansion, you have to reevaluate the remaining vertices to pick the best candidate.  So its O(n*n).  Technically if you limit yourself to k vertices, then its O(n*k).   The quickhull paper mentions that when expanding the current polyhedron to add a new vertex, you can get flipped faces.  Like them, I detect this case and correct it.  The qhull implementation lets you compute hulls for points in a space with an arbitrary number of dimensions.  I only do 3D.  In fact I don’t really do 2D.  If the code doesn't find a starting tetrahedron, then it just returns nothing.   <br>
+
+<blockquote class="uncited"><div>
+did you have any ideas about how I should extend it to merge coplanar faces?
+</div></blockquote>
+
+The implementation is triangle centric.  I figured it wouldn’t make a difference until the end anyways.  i.e. if a new vertex is above a quad, then it would also be above 2 triangles that make up such a quad.  <br>
+<br>
+Merging coplanar faces will be a bit easier for a convex hull than for general polyhedrons.  The reason is that every facet on a convex polyhedron will have to be a convex polygon.  <br>
+<br>
+ 
+<blockquote class="uncited"><div>
+is there anything I should look out for when using it?
+</div></blockquote>
+
+Coplanar input might fail right away since the code wont find a starting tetrahedron/simplex.  I’m not sure if there is a “fix” in the version John posted that will generate a small box at the “center” (avg of points) should this occur.  <br>
+<br>
+John Ratcliff added a wrapper that might be scaling the input to be in the 0 to 1 range.  If I remember correctly, this scaling might be non uniform.  <br>
+<br>
+If you change this, then be warned about the hardcoded epsilon value found within the code.  Yes, I do know that you cannot just assume epsilon is 0.00001.  The code started out in an experimental 3dsmax plugin and got moved into a more serious production environment rather quick.  <br>
+<br>
+<br>
+<br>
+Another issue:  <br>
+The algorithm uses a greedy iteration where it finds the vertex furthest out in a particular direction at each step.  One issue with this approach is that its possible to pick a vertex that, while at the limit of the convex hull, can be interpolated using neighboring vertices.  In other words, its lies along an edge (collinear), or within a face (coplanar) made up by other vertices.  An example would be a tessellated box.  You want to just pick the 8 corners and avoid picking any other the other vertices.  To avoid this, after finding a candidate vertex, the code perturbs the support direction to see if it still selects the same vertex.  If not, then it ignores this vertex.   Its not a very elegant solution.  I suspect this could cause the algorithm to be unable to find candidates on a highly tessellated sphere.  <br>
+<br>
+A cleaner and more robust approach would be to just allow such interpolating extreme vertices initially, and then after generating a hull, successively measure the contribution of each vertex to the hull and remove those that add no value.  That would require more processing, but this is usually an offline process anyways.     I haven’t had the opportunity to go back and implement this improvement.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: StanHull convex hull generation</h3>
+				<div class="date">Posted: <strong>Thu Nov 13, 2014 5:11 am</strong></div>
+				<div class="author">by <strong>melax</strong></div>
+				<div class="content">I recently had a bit of free time between employers to redo the hull implementation.  updated code can be found at:<br>
+ <a href="https://github.com/melax/sandbox" class="postlink">https://github.com/melax/sandbox</a><br>
+ <a href="https://github.com/melax/sandbox/blob/master/include/hull.h" class="postlink">https://github.com/melax/sandbox/blob/m ... ude/hull.h</a><br>
+<br>
+Algorithmic-wise its the same.  The difference is that the code is tighter and style follows c++11 conventions.  Code uses std::vector rather than yet another custom dynamic array&lt;&gt; template class.   No longer does it call new/delete on every triangle.  The frequent small memory allocation/deallocation was an issue for some developers (yeah - sorry bout that).  Dependencies are minimal.  The code does assume you have float3 and int3 structs (or classes) - too ugly to implement 3d math without these.  All the hull code is in one file so its easy to search-replace with your own naming preferences.   Like before, algorithm is only volume centric (doesn't consider surface area for example) so the results for a flat "pancake" point cloud  might not be so good.    Note, this minimal version doesn't transform to/from a normalized space nor wont be as battlefield tested as what John posted years ago.  <br>
+<br>
+Also rewrote a couple other things on there, such as bsp merging.  Admittedly, my previous open source code for the geomod demo had too many integrated systems making it difficult if anybody actually wanted to look at or try to extract that part of the algorithm.  This version comes instead with a very short sample program that just booleans a couple of shapes.  <br>
+<br>
+use, wrap, modify, learn-from, rewrite or ignore as you see fit.  comments welcome.  <br>
+<br>
+cheers</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: StanHull convex hull generation</h3>
+				<div class="date">Posted: <strong>Sat Dec 06, 2014 7:11 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Thank you for sharing Mr. Melax, appreciated.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: StanHull convex hull generation</h3>
+				<div class="date">Posted: <strong>Sun Sep 06, 2015 7:40 am</strong></div>
+				<div class="author">by <strong>ronanronan</strong></div>
+				<div class="content">well done and thanks for this great information..... you are amazing......</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

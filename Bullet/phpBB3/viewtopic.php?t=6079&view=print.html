@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?</h2>
+		<p><a href="viewtopic.php%3Ft=6079.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6079</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?</h3>
+				<div class="date">Posted: <strong>Mon Dec 06, 2010 2:39 pm</strong></div>
+				<div class="author">by <strong>Topher</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I've recently added Bullet to our in-house engine but at present for shapes I've got everything using the same .bullet file I created with the serialiser. I'm curious what a typical or expected pipeline for artists to define the collision shape of a model would be for most people, or how I could make use of dynamica to help this. Our alternative is to create shapes in code with our own defined data exported from Maya for each model, which just seems like a duplication of work if the serialisation features are there.<br>
+<br>
+- Is dynamica's bullet export suppose to be used for defining the collision shapes of models, or is it purely for loading an entire bullet world?<br>
+<br>
+- Is there a way to instance shapes from a bullet file rather than just point to the data buffer of the file? For example if we want multiple instances of the same object using the same bullet file, however with different scale values on each instance of the shape. Is the only real solution to load the file into multiple separate buffers?<br>
+<br>
+- Why does the dynamica bullet export produce a world with lots of shapes and rigidy bodies? If I serialise my own shape for testing, I can serialise just a shape. Dynamica seems to export a lot more than just my current selection.<br>
+<br>
+- If .bullet serial files and dynamica are not the way to go, what is recommended?<br>
+<br>
+Thanks in advance!<br>
+- Christopher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?</h3>
+				<div class="date">Posted: <strong>Mon Dec 06, 2010 6:42 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Topher wrote:</cite>I've recently added Bullet to our in-house engine but at present for shapes I've got everything using the same .bullet file I created with the serialiser. I'm curious what a typical or expected pipeline for artists to define the collision shape of a model would be for most people, or how I could make use of dynamica to help this.
+</div></blockquote>
+You should be able to export/serialize a single collision object with its shape into its own .bullet file.
+<blockquote><div><cite>Topher wrote:</cite>
+- Is dynamica's bullet export suppose to be used for defining the collision shapes of models, or is it purely for loading an entire bullet world?
+</div></blockquote>
+Both should be possible. It is called: export all or export selection.
+<blockquote><div><cite>Topher wrote:</cite>
+- Is there a way to instance shapes from a bullet file rather than just point to the data buffer of the file? For example if we want multiple instances of the same object using the same bullet file, however with different scale values on each instance of the shape. Is the only real solution to load the file into multiple separate buffers?
+</div></blockquote>
+When you use the btBulletWorldImporter, it will create instances for btCollisionShape. You can instance and re-use those btCollisionShape as many times as you like.
+<blockquote><div><cite>Topher wrote:</cite>
+- Why does the dynamica bullet export produce a world with lots of shapes and rigidy bodies? If I serialise my own shape for testing, I can serialise just a shape. Dynamica seems to export a lot more than just my current selection.
+</div></blockquote>
+Not sure what is happening. Which extra shapes are created? For a btConvexHullShape, Dynamica creates a btCompoundShape for a local offset. We could add an option to disable this.<br>
+It could help if you attach a zipped Maya .mb and .bullet file, so we can discuss it more in detail.<br>
+<br>
+.bullet serialization should be the way to go. If there are issues, we can sort them out.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?</h3>
+				<div class="date">Posted: <strong>Tue Dec 21, 2010 2:20 pm</strong></div>
+				<div class="author">by <strong>Topher</strong></div>
+				<div class="content">Sorry I didn't get back sooner, we had a shift in the schedule and then I was on holiday <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+I've looked into this some more after reading your comments...<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+You should be able to export/serialize a single collision object with its shape into its own .bullet file.<br>
+<br>
+Both should be possible. It is called: export all or export selection.
+</div></blockquote>
+
+I believe initially I was confused because it was exporting (serialising really) a bullet world, including rigid bodies. I ideally just wanted all the shapes, however I realise now this is just as good as my current method is to loop through all rigid bodies, take their shape and transform then add that shape to a compound shape for our object using the .bullet file.<br>
+<br>
+Essentially this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6079&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// Import shape
+btBulletWorldImporter lImporter(0);
+cScratchFile lFile( lpcCollisionFile );
+mpBulletSerialisedData = (U8*)lpPartition-&gt;Alloc( lFile.GetSize() );
+memcpy( mpBulletSerialisedData, lFile.GetBuffer(), lFile.GetSize() );
+
+lImporter.loadFileFromMemory( (char*)mpBulletSerialisedData, lFile.GetSize() );
+	
+// Get imported shape
+mpShape = new(lpPartition-&gt;Alloc( sizeof( btCompoundShape ) ) ) btCompoundShape();
+for( S32 i = 0; i &lt; lImporter.getNumRigidBodies(); ++i )
+{
+    btCollisionObject* lpRigidBody = lImporter.getRigidBodyByIndex(i);
+    ASSERT(lpRigidBody);
+
+    btCollisionShape* lpCollisionShape = lpRigidBody-&gt;getCollisionShape();
+    ASSERT(lpCollisionShape);
+
+    btTransform lLocalTransform = lpRigidBody-&gt;getWorldTransform();
+
+    ((btCompoundShape*)mpShape)-&gt;addChildShape( lLocalTransform, lpCollisionShape );
+}
+
+// Define rigidbody and add the compound shape...
+</code></pre></div>
+
+<blockquote class="uncited"><div>
+When you use the btBulletWorldImporter, it will create instances for btCollisionShape. You can instance and re-use those btCollisionShape as many times as you like.
+</div></blockquote>
+At the moment the only way I can see to do this is to de-serialise every time we use a bullet file associated with one of our entities. Ideally we'd like to only load unique files once and instance the shapes from this de-serialised data for performance. I can't think of a way to do this at the moment because I assume bullet shapes and compound shapes are all linked up via pointers and so on, not owning the data itself.<br>
+<br>
+Am I going about this the wrong way?<br>
+<br>
+Additionally this is another issue for scaling. Our designers and artists can apply scales to our entities that is then applied to any renderables contained within, we'd like this to also apply to the shapes in the bullet file without requiring them to create a new bullet file (we've got a sort of prefab system going on creating instances in an editor).<br>
+<br>
+With my current understanding the only way to solve this I can see is to have a buffer of the de-serialised data per instance, which also requires de-serialising every time it is instanced.<br>
+<br>
+Cheers!<br>
+Christopher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Artist Pipeline (from Max/Maya) - Dynamica? .Bullet?</h3>
+				<div class="date">Posted: <strong>Fri Jan 21, 2011 3:02 pm</strong></div>
+				<div class="author">by <strong>Topher</strong></div>
+				<div class="content"><blockquote><div><cite>Topher wrote:</cite>
+At the moment the only way I can see to do this is to de-serialise every time we use a bullet file associated with one of our entities. Ideally we'd like to only load unique files once and instance the shapes from this de-serialised data for performance. I can't think of a way to do this at the moment because I assume bullet shapes and compound shapes are all linked up via pointers and so on, not owning the data itself.<br>
+<br>
+Am I going about this the wrong way?</div></blockquote>
+
+Would really like to get an answer/suggestion for this. We're implementing projectiles now and this issue has become a problem for us going forward. Any ideas?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Continuous GJK</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Continuous GJK</h2>
+		<p><a href="viewtopic.php%3Ft=11591.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11591</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Continuous GJK</h3>
+				<div class="date">Posted: <strong>Wed Mar 22, 2017 4:30 pm</strong></div>
+				<div class="author">by <strong>boble</strong></div>
+				<div class="content">I have been researching how to use GJK for continuous collision detection and I feel like I must be missing something because I don't understand why no implementation simply uses a generalized GJK in 4D to include the time dimension. Instead I can only find adaptations of the 3D GJK. Can anyone shed some light on why that is?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK</h3>
+				<div class="date">Posted: <strong>Wed Mar 22, 2017 6:21 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Interesting question. Here is how I see it. Say we have two initially disjoint shapes which move through time. At each moment in time there will be two closest points cp2(t) and cp1(t). We need to track these closest points until the distance becomes zero. Hence:<br>
+<br>
+d(t) = ( cp2(t) - cp1(t) ) * n(t) = 0 (here n is the current contact normal pointing from shape1 towards shape2)<br>
+<br>
+I don't see how a 4d GJK will solve this equation. <br>
+<br>
+Regarding other references Gino wrote about raycasting against the CSO here:<br>
+<a href="http://dtecta.com/papers/jgt04raycast.pdf" class="postlink">http://dtecta.com/papers/jgt04raycast.pdf</a><br>
+<br>
+This is a nice optimization for linear conservative advancement by combining the outer CA and inner GJK loop. At Valve my colleague Jay Stelly wrote an algorithm which uses raycasts backwards to get out of the CSO to solve for the TOI. This is similar to Minkowski Portal Refinement (MPR) which Gary Snethen wrote about in Game Programming Gems.<br>
+<br>
+HTH,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK</h3>
+				<div class="date">Posted: <strong>Thu Mar 23, 2017 4:02 pm</strong></div>
+				<div class="author">by <strong>boble</strong></div>
+				<div class="content">Thanks for the answer! My intuition was that using GJK on 4d objects, built from the combined vertices of 3d objects at times t and t+1, would determine whether a collision occurs within that time interval or not. I can't think of a simple way of getting minimum distance or penetration depth though, so I guess the application of that would be limited to binary searching for finding the collision time?<br>
+<br>
+The advantage of this over simply using the 3D swept volumes is that sometimes swept volumes can intersect when there is really no collision and these false positives would be avoided. Not sure if there's any application where it's worth it, though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK</h3>
+				<div class="date">Posted: <strong>Thu Mar 23, 2017 7:07 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You can maybe think of it this way. Say you sweep two spheres. The swept volumes would be capsules. If you compute the overlap of these capsules with GJK it still wouldn't give you the TOI.<br>
+<br>
+CCD is a root finding problem. So I think your intuition for binary searching is good. For linear time of impact (no rotation) using conservative advancement is a simple choice. You can look into Gino's paper I posted earlier for an optimization. For non-linear time of impact (with rotations) you can look into conservative advancement. I would't use it in practice though as it has a couple of problems which Erin explained and solved in his excellent presentation here:<br>
+<br>
+<a href="http://box2d.org/files/GDC2013/ErinCatto_GDC2013.zip" class="postlink">http://box2d.org/files/GDC2013/ErinCatto_GDC2013.zip</a><br>
+<br>
+We use this technique in Source 2 and it works great. It is not trivial to extend to 3d due to the non-convexity of the edge-edge case though.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK</h3>
+				<div class="date">Posted: <strong>Fri Apr 07, 2017 8:01 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>We use this technique in Source 2 and it works great. It is not trivial to extend to 3d due to the non-convexity of the edge-edge case though.</div></blockquote>
+
+Would it be possible to elaborate on what the "non-convexity" of edge-edge is? After studying Box2D, it seems like an approach could be to form a plane with the normal as Cross( n0, n1 ) where n0 and n1 are the edge directions, and use that as a plane (and a vert from one of the edges) to perform a bilateral advancement.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK</h3>
+				<div class="date">Posted: <strong>Mon Apr 10, 2017 7:09 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Convexity <a href="https://en.wikipedia.org/wiki/Convex_function" class="postlink">https://en.wikipedia.org/wiki/Convex_function</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK</h3>
+				<div class="date">Posted: <strong>Tue Apr 11, 2017 1:51 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">I'm not enough of a mathematician to figure out what is meant by Dirk there, but in practice it is incredibly difficult to get accurate CCD for the 3D edge-edge case, even if you assume the 4 vertices are linearly moving through space. The normal you speak of often twists around in space between time steps.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Continuous GJK</h3>
+				<div class="date">Posted: <strong>Fri Apr 14, 2017 5:14 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Yes, the problem is the axis flips. It can flip when the axis goes from penetrating to non-penetrating, and can also flip as the two vectors rotate relative to one another: <a href="https://en.wikipedia.org/wiki/Cross_product#/media/File:Cross_product.gif" class="postlink">https://en.wikipedia.org/wiki/Cross_pro ... roduct.gif</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

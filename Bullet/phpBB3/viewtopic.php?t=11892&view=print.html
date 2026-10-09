@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Player controlled character I can set the velocity of?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Player controlled character I can set the velocity of?</h2>
+		<p><a href="viewtopic.php%3Ft=11892.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11892</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Player controlled character I can set the velocity of?</h3>
+				<div class="date">Posted: <strong>Sat Oct 07, 2017 5:50 pm</strong></div>
+				<div class="author">by <strong>DrenDran</strong></div>
+				<div class="content">So I stopped using kinematic character controller a while ago because it wasn't really what I wanted.<br>
+So now I have my own character controller that works alright. It's just a dynamic body with a cube collision shape with angular factor set to 0, high friction, and functions written to handle stepping up onto things and jumping.<br>
+That said, I'm having the character move by setting it's linear velocity. That works well, but I also want to be able to set the characters velocity on top of that. I've tried a few things already, but I was wondering if anyone else had good ideas.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Player controlled character I can set the velocity of?</h3>
+				<div class="date">Posted: <strong>Sun Oct 08, 2017 9:34 am</strong></div>
+				<div class="author">by <strong>avithohol</strong></div>
+				<div class="content"><blockquote><div><cite>DrenDran wrote:</cite>So I stopped using kinematic character controller a while ago because it wasn't really what I wanted.<br>
+So now I have my own character controller that works alright. It's just a dynamic body with a cube collision shape with angular factor set to 0, high friction, and functions written to handle stepping up onto things and jumping.<br>
+That said, I'm having the character move by setting it's linear velocity. That works well, but I also want to be able to set the characters velocity on top of that. I've tried a few things already, but I was wondering if anyone else had good ideas.</div></blockquote>
+
+I experiment with the same:<br>
+<br>
+Why not use capsule for better step-up on small bumps?<br>
+<br>
+I apply central impulse on the body in my "frame tick", then i setup a "on physics tick" callback, and limit the character velocity in there, exactly like written here in the last example:<br>
+<a href="http://www.bulletphysics.org/mediawiki-1.5.8/index.php/Code_Snippets" class="postlink">http://www.bulletphysics.org/mediawiki- ... e_Snippets</a><br>
+<br>
+This way the character will not speed up too much.<br>
+<br>
+As the example say it's a good frame independent solution, but still confusing if apply forces should happen in "pre-physics-tick" callback function, our outside in the "frame-tick" function.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Player controlled character I can set the velocity of?</h3>
+				<div class="date">Posted: <strong>Sun Oct 08, 2017 7:26 pm</strong></div>
+				<div class="author">by <strong>DrenDran</strong></div>
+				<div class="content">But capping the velocity of the character isn't what I have in mind.<br>
+I want to cap the velocity of the control-initiated velocity, sure. But velocities set via a script should be unlimited and separate.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Player controlled character I can set the velocity of?</h3>
+				<div class="date">Posted: <strong>Mon Oct 09, 2017 4:32 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I think maybe I know how to do what you want but I'm not sure I really understand your description.  It isn't clear to me which of these scenarios you want:<br>
+<br>
+(1) Set a base velocity on the character but allow an additive second velocity on top of that.  In this scenario: if both velocities were in the same direction at 1m/s then the character would move in that direction at 2m/s, and were they to oppose each other the character would move at 0m/s.<br>
+<br>
+This isn't too hard.  You would store each velocity contribution as data members of your CharacterController and sum them together in its applyAction() implementation and slam the velocity only once.<br>
+<br>
+(2) Blend two independent velocities together in an attempt to satisfy, but not exceed, both.  In this scenario: if both velocities were in the same direction at 1m/s then the character would move at 1m/s since both "intentions" are satisfied, but if they to oppose each other the character would move at 0m/s.<br>
+<br>
+This is trickier but I've done it using "weighted averages".  If you need an outline of this method let me know.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Player controlled character I can set the velocity of?</h3>
+				<div class="date">Posted: <strong>Thu Oct 12, 2017 11:31 pm</strong></div>
+				<div class="author">by <strong>DrenDran</strong></div>
+				<div class="content"><blockquote><div><cite>drleviathan wrote:</cite>I think maybe I know how to do what you want but I'm not sure I really understand your description.  It isn't clear to me which of these scenarios you want:<br>
+<br>
+(1) Set a base velocity on the character but allow an additive second velocity on top of that.  In this scenario: if both velocities were in the same direction at 1m/s then the character would move in that direction at 2m/s, and were they to oppose each other the character would move at 0m/s.<br>
+<br>
+This isn't too hard.  You would store each velocity contribution as data members of your CharacterController and sum them together in its applyAction() implementation and slam the velocity only once.<br>
+<br>
+(2) Blend two independent velocities together in an attempt to satisfy, but not exceed, both.  In this scenario: if both velocities were in the same direction at 1m/s then the character would move at 1m/s since both "intentions" are satisfied, but if they to oppose each other the character would move at 0m/s.<br>
+<br>
+This is trickier but I've done it using "weighted averages".  If you need an outline of this method let me know.</div></blockquote>
+
+That's not the issue.<br>
+The issue is that character movement is done setting the velocity *every tick*. So every single frame the velocity is set to x = sin(yaw) z = cos(yaw). As soon as the player stops pressing the WSAD keys, the x and z velocity go right back to 0 and the character stops 'walking.' This means if I set the velocity to something else it will have no effect whatsoever, as it's instantly overwritten, so to speak. Trying to make character movement "add" velocity instead of just set it results in the characters acting like they're on ice, and sliding all over. This in turn can't be fixed just by giving the characters friction or linear dampening, as that just makes them seem like they're on very slow ice.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Player controlled character I can set the velocity of?</h3>
+				<div class="date">Posted: <strong>Fri Oct 13, 2017 4:14 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">It is possible to add the character's target velocity to its current velocity without the character feeling too unresponsive or slippery on ice, however it requires some tuning and also a bit of state management.<br>
+<br>
+When it comes to blending speeds I usually do it like this (in pseudo code):
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11892&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>blend = timeStep / BLEND_TIMESCALE;
+if (blend &gt; 1.0) {
+    // this clamp for stability
+    blend = 1.0;
+}
+velocity = (1.0 - blend) * velocity + blend * targetVelocity;
+</code></pre></div>
+The trick is to pick the right BLEND_TIMESCALE.  If you want the character to be responsive then use a short timescale.  If you want the character to be slow to respond then use a longer timescale.  That said, you can't chose an arbitrarily short timescale.  The shortest timescale that makes sense would be about 2X the timeStep.  If your game is running at 30Hz then the shortest timescale you should use is 1/15th of a second.  Since this method will get very close to targetVelocity within three timescales it is pretty easy to tune, and it is probably ok for game feel if your character ramps up to speed in 3 * 1/15 = 1/5 of a second.<br>
+<br>
+The blending can be used to stop the character too.  Just set targetVelocity to zero and give it the right timescale and the math will work: your character will come to a screeching halt.  However, if you continue to blend toward zero velocity after the character has achieved rest then your character will be stuck fast and collisions will not budge it.<br>
+<br>
+What you can do is use a dynamic timescale.  Use a short timescale when character is walking and a similarly short timescale when character is braking to a stop.  Then once the character is at rest you either stop blending altogether or use a very long timescale (several seconds) --&gt; bumps and pushes will be able to move the character (modulo friction) until you bring the timescale back down at which point the character's intended movement will assert itself.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Player controlled character I can set the velocity of?</h3>
+				<div class="date">Posted: <strong>Sun Oct 15, 2017 12:42 am</strong></div>
+				<div class="author">by <strong>DrenDran</strong></div>
+				<div class="content">[quote="drleviathan"][/quote]<br>
+Honestly that seems like a pretty good idea. I've implemented it and it'll probably take a lot of tweaking to get right, but it works okay.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

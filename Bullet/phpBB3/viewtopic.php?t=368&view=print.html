@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; upper boxes sinking into the floor</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>upper boxes sinking into the floor</h2>
+		<p><a href="viewtopic.php%3Ft=368.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=368</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>upper boxes sinking into the floor</h3>
+				<div class="date">Posted: <strong>Thu Jun 15, 2006 12:11 am</strong></div>
+				<div class="author">by <strong>jam</strong></div>
+				<div class="content">Hi, I'm making a physics engine that is relying on the LCP formulation at velocity level for collision response. The paper I'm following is: <a href="http://isg.cs.tcd.ie/giangt/EGIrl2003.pdf" class="postlink">http://isg.cs.tcd.ie/giangt/EGIrl2003.pdf</a> .<br>
+The LCP solver I'm using is the one that is provided from on the accompanying CD-ROM of the book 'Game Physics.' I've set maximum number of iterations to 1000 for the LCP Solver.<br>
+I am not considering things like 'resting' contacts (solving contact forces etc.) or contact graph or shock propagation (I was wondering if they are truly vital for non-interpenetrative behavior inbetween the objects.) It's ok if I get a jittery stack, I can deal with those through other methods (kinetic energy threshold etc.)<br>
+<br>
+I'm doing fixed time stepping (time steps are so small that they guarantee no missing of collisions.) I do vertex/face and edge/edge collision checks and determine correct normals for them (if the collision points are closer than 'e' distance from contact surfaces.)<br>
+<br>
+The ground has mass -1 (meaning 1/Mass is strictly zero and Inertia_Tensor^-1 is a zero matrix.)<br>
+<br>
+The problem is that after a few scenes the upper stack of boxes lying on the ground start sinking into the ground. My hunch is that after collision detection/resolution is done for one scene, the upper boxes are still moving closer to the lower ones. But I believe this shouldn't happen (since I take into account all the contact points on the stack at the same time for the LCP solver.) And I believe that when I'm done with solving the LCP the impulse magnitudes (Z or f vector if you will) should be enough to make all objects move away from eachother. So I'm totally stuck and don't know what I'm doing wrong, or if this is related to round off errors how I can deal with it.<br>
+Some feedback/help (specially from people who have been successful in making their own commercial quality physics engines) would be MUCH appreciated since I've been stuck with this for a long time.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 15, 2006 8:13 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content"><blockquote class="uncited"><div>
+It's ok if I get a jittery stack, I can deal with those through other methods (kinetic energy threshold etc.)
+</div></blockquote>
+
+Could you describe what you here?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 15, 2006 8:38 am</strong></div>
+				<div class="author">by <strong>jam</strong></div>
+				<div class="content">Umm what I mean by that is, if let's say I have objects jittering around (because of round-off errors and such when calculating impulses), I can probably see if they're kinetic energy is high enough. If it's not, I'll set their linear and angular velocities to zero. However my main problem right now is that my boxes are sinking into eachother and interpenetrating (which I'm trying to avoid.) I was wondering if any one has had similar problems and how it must be dealt with.<br>
+I appreciate any help!<br>
+I was also wondering if shock propagation and/or contact graphs and/or contact force calculation for resting contacts are REALLY required if I just go by using the LCP formulation for calculating simultaneous impulses at contact points and take into account all sorts of contacts as 'collisions.' Here's a paper from Baraff explaining both: <a href="http://www.cs.cmu.edu/~baraff/papers/sig89.pdf" class="postlink">http://www.cs.cmu.edu/~baraff/papers/sig89.pdf</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 15, 2006 10:30 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Well, it is quite obvious that you don't compute the correct forces/impulses otherwise the boxes would not think. This can now have several reasons.<br>
+One might be that you don't setup the LCP correctly. Another reason might be that your LCP solevr doesn't return correct results. Also the jittering you describe is not because of round-off errors. It is more a sign that there are errors in the model or the solver.<br>
+
+<blockquote class="uncited"><div>
+Some feedback/help (specially from people who have been successful in making their own commercial quality physics engines)
+</div></blockquote>
+
+If you want to program a physic engine for games you should look at Bullet and the ODE and switch to a Gauss-Seidel like solver - either by solving the LCP iteratively or using sequentiel impulses. Both are the same anyway. I can think of situations where Baraff's Linear Time algorithm is useful, but by now means for stacking. I also mean to remember that Baraff solves on the acceleration level and not on the velocity level. I recommend looking at the PhD thesis of Kenny Erleben and at the papers of Erin Catto and his 2D impulse solver example. The ODE has a direct solver you maybe like to look at and IIRC another example of a direct solver can be found in the DOOM III SDK if you prefer this over an iterartive method...<br>
+<br>
+HTH,<br>
+<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Thanks!</h3>
+				<div class="date">Posted: <strong>Thu Jun 15, 2006 11:03 am</strong></div>
+				<div class="author">by <strong>jam</strong></div>
+				<div class="content">Thanks alot for the tips, I'll be reading Kenny's thesis thoroughly and see if I can get everything going smoothly according to it.<br>
+Meanwhile just wondering if contact graphs and shock propagation are vital to the engine producing good results IF I'm setting up the LCP right and everything (for producing graphically and physically plausible results.) Based one what you've told me I conclude the answer being 'no'. However, just wanted to make sure <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">.<br>
+<br>
+... and again, thanks for the help <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";)" title="Wink"> .</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Jun 15, 2006 12:17 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">The shockstep comes from the paper of Eran Guendelman. He needed this to make his simulator able to stack objects. Kenny Erleben applyed this technique in his LCP solver as well. It is true that you can do higher stacking when applying a "magic shockwave", but the simulation looks a bit stiffer as well. <br>
+<br>
+Considering the order of the stack helps. IIRC solving from top to bottom gives you one iteration for free. IMO it is usually not worth the effort to build a full contact graph. Read the Erleben thesis and then I recommend following Erin Catto's suggestions for warmstarting - either using LCP or impulses. It shouldn't make a difference in the beginning. Also try to understand/show that both methods are equvalent. When you have done this I would try maybe Baraffs linear time method to compare the results...<br>
+<br>
+<br>
+<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Much thanks!</h3>
+				<div class="date">Posted: <strong>Fri Jun 16, 2006 11:16 am</strong></div>
+				<div class="author">by <strong>jam</strong></div>
+				<div class="content">I just came back to say thank you mr. Don. <br>
+<br>
+There was a problem with setting up the Inverse Inertia matrix (M in Mz+Q) for the LCP solver. I was not properly setting it up to represent the related impulses in the stack. After looking more thoroughly (once more) through an example in my book 'Game Physics' (from David H. Eberly) and their example on setting up a simple formulation for a small stack I figured out where I was going wrong and fixed my formualtor <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">.<br>
+<br>
+However, initially you raised my suspicion towards the formulator and that is what eventually lead me to find the problem, and I thank you for that, because after months of being stuck on this I can finally breathe easier.<br>
+<br>
+btw, the stack looks kick arse. has very very little jittering but NO (and absolutely no) sign of interpenetrative behavior. The frame rate is beautiful.<br>
+<br>
+Thank you! =D</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btGeneric6DofConstraint : rotation of local transforms ?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btGeneric6DofConstraint : rotation of local transforms ?</h2>
+		<p><a href="viewtopic.php%3Ft=9582.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9582</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btGeneric6DofConstraint : rotation of local transforms ?</h3>
+				<div class="date">Posted: <strong>Wed Nov 27, 2013 11:02 am</strong></div>
+				<div class="author">by <strong>stevet</strong></div>
+				<div class="content">Hello everyone.<br>
+Let me first thank the authors for this great engine that I'm currently<br>
+discovering, and then apologize for the long post.<br>
+<br>
+I'm trying to create a chain of constrained rigid bodies, given a definition<br>
+inputed in a text file.<br>
+<br>
+For instance if my definition file looks like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9582&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>ROOT ID 0 
+OFFSET 0 1 0
+
+JOINT ID 1
+PARENT ID 0
+OFFSET -1 0 0
+MINANGLES 0 0 0
+MAXANGLES 0 0 0
+
+JOINT ID 2
+PARENT ID 1
+OFFSET 1 1 0
+MINANGLES 0 0 0
+MAXANGLES 0 0 0</code></pre></div>
+
+As a result I obtain something like this :
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1147" class="postimage" alt="good.png" onclick="viewableArea(this);" /></dt>
+						<dd>good.png (3.54 KiB) Viewed 5202 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Each joint except for the root has a parent, and an offset from this parent that defines<br>
+the length of the next rigid body to create. MINANGLES and MAXANGLES determine, as their name suggest,<br>
+the angular limits of a btGeneric6DofConstraint I want to create.<br>
+<br>
+The code that follows successfully creates the rigid bodies, but my problems appear when I create the constraints.<br>
+<br>
+I would like to set the rotations of the constraints so that the initial world position and orientation of each<br>
+rigid body matches with initial angle values equal to 0 for X, Y and Z.<br>
+<br>
+Working code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9582&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void BuildOneJoint2(const btTransform&amp; currentTransform, const btVector3&amp; origin, const joint_def_t&amp; joint, btDynamicsWorld* m_ownerWorld, btCollisionShape** m_shapes, btRigidBody** m_bodies, btTypedConstraint** m_joints, unsigned int&amp; id, int parentId)
+	{
+		const btVector3 vUp(0,1,0);
+		const btVector3 vForward(1,0,0);
+		const btVector3 vBack(0,0,1);
+
+		// retrieving joint offset from parent
+                // definitions from text files are contained in struct joint 
+		btVector3 offSetVector(btScalar(joint.offset[0]), btScalar(joint.offset[1]),  btScalar(joint.offset[2]));
+		btVector3 parentOffset;
+
+		//computing radius and length of capsule; radius is more or less equal to offset
+		btScalar radius = offSetVector.length() * btScalar(0.1); 
+		btScalar length = offSetVector.length() - 2 * radius;
+		if(parentId == 0)
+		{
+			// if current joint is root, for now juste create a small capsule representing root
+			btVector3 rootOffSet(offSetVector); rootOffSet.normalize();
+			parentOffset = rootOffSet * btScalar(0.05);
+			offSetVector += parentOffset;
+		}
+		else
+		{
+			parentOffset = btVector3(btScalar(joint.parent-&gt;offset[0]), btScalar(joint.parent-&gt;offset[1]),  btScalar(joint.parent-&gt;offset[2]));
+		}
+		// Setup the geometry
+		//The total height of a btCapsuleShape is height+2*radius
+		m_shapes[id] = new btCapsuleShapeX(radius, length - btScalar(0.1));
+		
+		// Setup the rigid body
+		btTransform offset;
+		offset.setIdentity();
+  		offset.setOrigin(origin + offSetVector / 2);
+		
+		// computing rotation necessary for capsule
+		btVector3 vToBone(offSetVector);
+		vToBone.normalize();
+		btVector3 vAxis = vToBone.cross(vForward);
+		btScalar dot = vToBone.dot(vForward);
+		btScalar angle = acos(vToBone.dot(vForward));
+		if(angle != 0)
+		{
+			offset.setRotation(btQuaternion(vBack, angle));
+		}
+
+		m_bodies[id] = localCreateRigidBody(m_ownerWorld, btScalar(1.), offset, m_shapes[id]);
+		
+		btVector3 newOrigin(origin + offSetVector);
+
+		btTransform newTransform; newTransform.setIdentity();
+		newTransform.setRotation(currentTransform.getRotation() * offset.getRotation());
+		newTransform.setOrigin(newOrigin);
+		int newParentId = id;
+		// method is recursive, call it with children
+		for(unsigned int i=0; i&lt; joint.nbChildren_; ++i)
+		{
+  			BuildOneJoint2(newTransform, newOrigin, *(joint.children[i]), m_ownerWorld, m_shapes, m_bodies, m_joints, ++id, newParentId);
+		}
+	}
+</code></pre></div>
+
+The code for <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9582&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> localCreateRigidBody </code></pre></div> is taken from the demos :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9582&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btRigidBody* localCreateRigidBody (btDynamicsWorld* m_ownerWorld, btScalar mass, const btTransform&amp; startTransform, btCollisionShape* shape)
+	{
+		btVector3 localInertia(0,0,0);
+		if (mass != 0.f) // is dynamic
+			shape-&gt;calculateLocalInertia(mass,localInertia);
+
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+		
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+		btRigidBody* body = new btRigidBody(rbInfo);
+
+		m_ownerWorld-&gt;addRigidBody(body);
+		return body;
+	}
+</code></pre></div> <br>
+<br>
+Considering the previous code, I now try to create my constraints:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9582&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btGeneric6DofConstraint* constraint;
+
+btTransform localA; localA.setIdentity();
+//localA.setRotation(???);
+localA.setOrigin(btVector3(parentOffset.length() / 2, btScalar(0.), btScalar(0.)));
+
+btTransform localB; localB.setIdentity();
+//localB.setRotation(???);
+localB.setOrigin(btVector3(-length / 2, btScalar(0.), btScalar(0.)));
+
+constraint =  new btGeneric6DofConstraint(*m_bodies[parentId], *m_bodies[id], localA, localB, false);
+m_joints[id] = constraint;
+constraint-&gt;setDbgDrawSize(0.5f);
+
+btVector3 limitsDown(btScalar(joint.minAngleValues[0] * DegreesToRadians), 
+                                btScalar(joint.minAngleValues[1] * DegreesToRadians), 
+                                btScalar(joint.minAngleValues[2] * DegreesToRadians));
+
+btVector3 limitsUp(btScalar(joint.maxAngleValues[0] * DegreesToRadians), 
+                            btScalar(joint.maxAngleValues[1] * DegreesToRadians), 
+                            btScalar(joint.maxAngleValues[2] * DegreesToRadians));
+
+constraint-&gt;setAngularLowerLimit(limitsDown);
+constraint-&gt;setAngularUpperLimit(limitsUp);
+
+m_ownerWorld-&gt;addConstraint(m_joints[id], true);
+</code></pre></div>
+
+As I said,  I would like to set the rotations of the constraints so that the initial world position and orientation of each<br>
+rigid body matches with initial angle values equal to 0 for X, Y and Z for each constraint.<br>
+<br>
+I've tried several possibilities without achieving the desired goal, and adding constraints gives me something like that in the end:<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1148" class="postimage" alt="bad.png" onclick="viewableArea(this);" /></dt>
+						<dd>bad.png (7.04 KiB) Viewed 5202 times</dd>
+		</dl>
+		
+		
+			</div>
+
+It is not really easy to write on a forum, and I hope I am clear enough.<br>
+Thank you very much for your time,<br>
+<br>
+Steve</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

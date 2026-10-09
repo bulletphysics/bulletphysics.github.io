@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9977" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2014-06-12T23:39:07+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9977</id>
+
+		<entry>
+		<author><name><![CDATA[cj3j]]></name></author>
+		<updated>2014-06-12T23:39:07+00:00</updated>
+
+		<published>2014-06-12T23:39:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33553#p33553</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33553#p33553"/>
+		<title type="html"><![CDATA[[Solved] Sphere bounce problems on triangle mesh]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=33553#p33553"><![CDATA[
+I just wanted to share my experience investigating problems I encountered with a sphere bouncing/colliding with triangle mesh geometry, for posterity.<br><br>The first problem I was having was that a sphere bouncing on flat ground would come to rest much sooner than expected. I tracked this down to this line of code:<br><div class="codebox"><p>Code: </p><pre><code>btSequentialImpulseConstraintSolver::setupContactConstraint( ... )...velocityError -= penetration / infoGlobal.m_timeStep;</code></pre></div>I'm not really sure what this code's purpose is, but it was basically reducing the restitution of the bouncing sphere. Commenting it out fixed the bouncing, however now the sphere would occasionally pop up off of the flat triangle mesh if the sphere was rolling along the mesh. I tracked this down to a problem with the contact point. You would expect the contact point between a sphere and flat ground to be directly below the center of the sphere, but sometimes it was being offset. I tracked this down to the code in:<br><div class="codebox"><p>Code: </p><pre><code>SphereTriangleDetector::collide( ... )...if (isInsideContactPlane) {    if (facecontains(sphereCenter,vertices,normal)) {        ...    } else {    // !!! The code here sets the contact point to a point on one of the edges of the triangle rather a point that is towards the sphere's center</code></pre></div>I added the following code which fixed my problem:<br><div class="codebox"><p>Code: </p><pre><code>// if the triangle is part of a triangle mesh and is perfectly flat on the ground,// then we want the contact point to be perfectly below the ball, not off to the side a bit (which causes// the ball to skip up off the ground)if ( hasContact ) {contactPoint = sphereCenter - normal*distanceFromPlane;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10568">cj3j</a> — Thu Jun 12, 2014 11:39 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

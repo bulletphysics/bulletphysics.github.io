@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; 3D convex hull SAT face clipping implementation question</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>3D convex hull SAT face clipping implementation question</h2>
+		<p><a href="viewtopic.php%3Ft=10567.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10567</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>3D convex hull SAT face clipping implementation question</h3>
+				<div class="date">Posted: <strong>Fri May 15, 2015 3:17 am</strong></div>
+				<div class="author">by <strong>BeRo</strong></div>
+				<div class="content">Hello guys,<br>
+<br>
+i'm rewriting my old 3D physics engine PAPPE in the moment, which I wrote in anno 2007, because it was buggy as hell. The rewrite is almost complete now (except continuous collision detection), but I've some open questions yet, so the first question here (the other second open "which CCD&amp;CP solution is the best for discrete-&gt;CCD&amp;CP code upgrade case" question will be a own forum topic later). <br>
+ <br>
+Is it the (or also a) correct way, that the reference face for 3D convexhull(HullA)&lt;-&gt;convexhull(HullB) SAT clipping in my implementation is always on HullA, and the clipping incident face always on HullB? At least, in this case the contact points are always directly automatically coherence and consistent/ without plane reprojection (among other things for warm starting for the nearest new-&gt;old feature-ID-key-free contact point search between last and current frame). It seems, that Bullet does also in this way. At least this way implementation works pretty well so far for me, and I saw no failure cases at my tests so far.<br>
+    <br>
+The alternative way should be that a face from HullB could also the clip reference face (rg. when face B SAT seperation &gt; face A SAT seperation), where the contact points would be projected to the HullA in-this-case-now incident face then, but will be it the more correct way? It seems, that the most other open source physics engines and collision detection libraries, which I could find (but not Bullet), does it in this way.<br>
+<br>
+Or in other words, what are the pros&amp;cons of the two possible face-face-clipping implementation ways?<br>
+<br>
+My code of my 3D convex-hull-vs-convex-hull collision detection =&gt; <a href="http://pastebin.com/J0yjHMh6" class="postlink">http://pastebin.com/J0yjHMh6</a> <br>
+<br>
+A physics engine test youtube capture video of my physics engine =&gt; test <a href="https://www.youtube.com/watch?v=QGO5Bk1JdbM" class="postlink">https://www.youtube.com/watch?v=QGO5Bk1JdbM</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 3D convex hull SAT face clipping implementation question</h3>
+				<div class="date">Posted: <strong>Wed May 20, 2015 6:20 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">In Erin Catto's code he starts out detecting collision against colliderA vs colliderB. Once the axis of minimum penetration is found he renames the collider's face it came from as the reference face. Then then most anti-normal face on the other collider is named the incident face. The incident face is clipped against the side planes of the reference face, and all resulting clipped points are culled by a plane test against the reference face (keep points that are penetrating). This gives you clip points that contribute to the manifold in an intelligent way, without generating too many unnecessary clip points.<br>
+<br>
+Since features could have come from either colliderA or colliderB, Catto uses an if statement near the end of his collision routines to make any necessary bookkeeping swaps.<br>
+<br>
+Another thing that Catto suggested (and Dirk in his recent GDC presentation on contact creation) is to bias which collider contributes to the reference face, to prevent excessive feature flip-flops (which makes the final if-statement prefer one code path over the other).<br>
+<br>
+As far as I know this kind of technique is what is used for modern SAT implementations. To me the face naming mostly seems to be a code abstraction, and not much more. As long as your clip points contribute to the manifold in an intelligent way, it probably won't matter how you obtain them (aside from memory/performance).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: 3D convex hull SAT face clipping implementation question</h3>
+				<div class="date">Posted: <strong>Thu May 28, 2015 9:34 am</strong></div>
+				<div class="author">by <strong>BeRo</strong></div>
+				<div class="content">Okay, thanks, so as I have now implemented it in my physics engine, where I'm pushing now the respective clipped vertices (of shapr A or B) to reference plane of shape A, regardless of which shape (A or B) is the reference convex hull and which (A or B) is the incident convex hull, so that feature flip-flops are prevented.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

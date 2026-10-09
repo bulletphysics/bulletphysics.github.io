@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; What is the sequence of rotations applied by &quot;getEulerFromQuaternion&quot;?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>What is the sequence of rotations applied by &quot;getEulerFromQuaternion&quot;?</h2>
+		<p><a href="viewtopic.php%3Ft=13235.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13235</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>What is the sequence of rotations applied by &quot;getEulerFromQuaternion&quot;?</h3>
+				<div class="date">Posted: <strong>Thu Jul 08, 2021 5:58 pm</strong></div>
+				<div class="author">by <strong>andytgl</strong></div>
+				<div class="content">As in the title, how are the Euler angles provided by the getEulerFromQuaternion method computed?<br>
+What is the sequence of rotations (about x, y, z, but in which order?) and they are computed in a fixed frame or in a moving frame (intrinsic or extrinsic)?<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is the sequence of rotations applied by &quot;getEulerFromQuaternion&quot;?</h3>
+				<div class="date">Posted: <strong>Thu Jul 08, 2021 7:14 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Is this a question about the Bullet C++ API or the python API?<br>
+<br>
+I ask because there is no <strong class="text-strong">getEulerFromQuaternion()</strong> in the C++ API proper, but there is an implementation in <strong class="text-strong">examples/SharedMemory/b3RobotSimulatorClientAPI_NoDirect.h</strong>.  For all I know the python API supplies a method with a similar name.<br>
+<br>
+The example implementation looks like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13235&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btVector3 b3RobotSimulatorClientAPI_NoDirect::getEulerFromQuaternion(const btQuaternion&amp; quat)
+{
+        btScalar roll, pitch, yaw;
+        quat.getEulerZYX(yaw, pitch, roll);
+        btVector3 rpy2 = btVector3(roll, pitch, yaw);
+        return rpy2;
+}</code></pre></div>
+
+So the question becomes: What does <strong class="text-strong">btQuaterion::getEulerZYX(yaw, pitch, roll)</strong> do?<br>
+<br>
+I looked at the code and discovered... it is not clear!  The comments do not say, and the reader would have to step through the math to figure it out.  However, if I were to hazard a guess I would think the yaw-pitch-roll decomposition would be about the <strong class="text-strong">local</strong> up-right-forward axes in that order.  In other words, the directions of the various axes are locked in the local-frame and each rotation in the sequence moves those axes relative to the original world-frame, while the angles are always applied in the local frame.  This is the decomposition that would make the most sense to someone with layman's grasp of how to formulate rotations: such as a pilot sitting in the local-frame of an airplane.<br>
+<br>
+All that said, I would ask: <strong class="text-strong">What do you really want to do?</strong> (In other words: Why do you think you need Euler angles?).  I have come to the conclusion over the years that Euler angles suck and should be avoided when possible.  It is better (e.g. less dangerous and fewer headaches) to store and supply rotations in quaternion format and to do rotation math to achieve what you want.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: What is the sequence of rotations applied by &quot;getEulerFromQuaternion&quot;?</h3>
+				<div class="date">Posted: <strong>Fri Jul 09, 2021 7:58 pm</strong></div>
+				<div class="author">by <strong>andytgl</strong></div>
+				<div class="content">Thank you for your reply. I was referring to the "getEulerFromQuaternion" method in the python interface. I have just noticed that the output of help() says that 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13235&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>getQuaternionFromEuler(...)
+    Convert Euler [roll, pitch, yaw] as in URDF/SDF convention, to quaternion [x,y,z,w]
+</code></pre></div>
+so is potentially using the same order of rotations as defined here: <a href="http://sdformat.org/tutorials?tut=specify_pose" class="postlink">http://sdformat.org/tutorials?tut=specify_pose</a>. Will verify and let you know if it is actually true</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

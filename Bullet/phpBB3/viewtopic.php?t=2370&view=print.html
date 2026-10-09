@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Synchronizing a simulation for multiplayer...</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Synchronizing a simulation for multiplayer...</h2>
+		<p><a href="viewtopic.php%3Ft=2370.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=2370</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Mon Jul 14, 2008 11:27 pm</strong></div>
+				<div class="author">by <strong>Zeal</strong></div>
+				<div class="content">I found a good article here...<br>
+<br>
+<a href="http://www.gaffer.org/game-physics/networked-physics" class="postlink">http://www.gaffer.org/game-physics/networked-physics</a><br>
+<br>
+One general question though, how do you syncronize TWO simulations over a network. I was always under the impression that if you manually set the position of a rigid body, the entire universe would EXPLODE! <br>
+<br>
+So a simple question - if a body on the client falls out of sync with the server, how can the client 'force' it back to its 'correct' position?<br>
+<br>
+Thanks</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Mon Jul 14, 2008 11:45 pm</strong></div>
+				<div class="author">by <strong>chunky</strong></div>
+				<div class="content"><a href="http://developer.valvesoftware.com/wiki/Lag_Compensation" class="postlink">http://developer.valvesoftware.com/wiki ... mpensation</a><br>
+<br>
+Also a good read.<br>
+<br>
+Personally what I'm doing in my game is just warping my physics objects from where my client simulation thinks they are, a certain percentage towards the position that they're predicted to be based on the position and velocity when the server sent them, compensating for lag.<br>
+<br>
+This won't work, since I stripped out a bunch of angle-related stuff and other unnecessary stuff for the example, but I hope it makes it clear:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=2370&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>bool TWSpaceShip::setPosVel(float xpos, float ypos, float xvel, float yvel, int delta) {
+// Delta is the time in milliseconds, compared to now, that the packet was sent. It's usually negative
+	if(NULL == mShipBody) return false;
+
+	btVector3 newpos(xpos, ypos, 0);
+	btQuaternion newrot(btVector3(0,0,1), theta);
+	btTransform newtrans(newrot, newpos);
+	btVector3 newvel(xvel,yvel,0);
+
+	btTransform currtrans = mShipBody-&gt;getWorldTransform();
+	btVector3 currpos = currtrans.getOrigin();
+
+	btVector3 predictpos = newpos - newvel * ((float)delta/1000.0);
+	predictpos = predictpos * SPACESHIP_CORRECTION_LINEAR + currpos * (1.0 - SPACESHIP_CORRECTION_LINEAR);
+
+	btQuaternion predictrot(btVector3(0,0,1), predicttheta);
+	btTransform predicttrans(predictrot, predictpos);
+
+	mShipBody-&gt;setWorldTransform(predicttrans);
+	mShipBody-&gt;setLinearVelocity(newvel);
+
+	return true;
+}</code></pre></div>
+
+SPACESHIP_CORRECTION_LINEAR, if set to 1.0, always warps the ship instantly to the considered correct position. at 0.0, it never warps it to a correct position, and 0.5 warps it halfway. Personally, I have it set to about 0.75 and that "feels right" for my game.<br>
+<br>
+Gary (-;</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Tue Jul 15, 2008 2:22 am</strong></div>
+				<div class="author">by <strong>Zeal</strong></div>
+				<div class="content">Wait is it safe to do that? Just manually set the transform brute force style? What happens if this new position overlaps with ANOTHER body in your simulation? Wont that cause both objects to go flying?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Tue Jul 15, 2008 2:47 am</strong></div>
+				<div class="author">by <strong>chunky</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Wait is it safe to do that? Just manually set the transform brute force style? What happens if this new position overlaps with ANOTHER body in your simulation? Wont that cause both objects to go flying?</div></blockquote>
+
+On a client, temporarily: possibly. On the server: no, since I'm not doing that moving on the server.<br>
+<br>
+Gary (-;</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Tue Jul 15, 2008 3:14 am</strong></div>
+				<div class="author">by <strong>Zeal</strong></div>
+				<div class="content"><blockquote class="uncited"><div>On a client, temporarily: possibly.</div></blockquote>
+
+So youre saying the worst thing that could happen is two objects overlap and go flying (at least on the client, the server remains the same)? But I imagine if you interpolate slowly this is unlikely eh? Hrmmm..<br>
+<br>
+Am I the onlyone who has been told NOT to manually move bodies like this though? I was always told if you want to move a body, you MUST do so by applying forces, ect...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Tue Jul 15, 2008 4:33 am</strong></div>
+				<div class="author">by <strong>chunky</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Am I the onlyone who has been told NOT to manually move bodies like this though? I was always told if you want to move a body, you MUST do so by applying forces, ect...</div></blockquote>
+
+No, that's common practice with physics engines and considered "right". Sometimes that simply isn't feasible<br>
+
+<blockquote class="uncited"><div> So youre saying the worst thing that could happen is two objects overlap and go flying (at least on the client, the server remains the same)? But I imagine if you interpolate slowly this is unlikely eh? Hrmmm..</div></blockquote>
+
+Potentially. I figure I'm gonna cross that bridge if I get to it.  It hasn't been a problem so far, through practical experimentation. If it becomes a problem, then I'll look into it...<br>
+<br>
+Gary (-;</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Tue Jul 15, 2008 11:33 am</strong></div>
+				<div class="author">by <strong>sparkprime</strong></div>
+				<div class="content">I'm not sure exactly how it works, but directly moving objects could at least cause problems with contacts and hinges and so on, right?<br>
+<br>
+It works for kinematic objects though.  One thing I don't understand is how to do rigidbodies that are mostly simulated but also slightly kinematic and controlled by the system.  Maybe not applying any impulses (even gravity and collision impulses) and setting the velocity explicitly each internal simulation step would work.<br>
+<br>
+What I really need is a top-level guide to this stuff,  Preferably some maths to make things clear.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Tue Jul 15, 2008 7:10 pm</strong></div>
+				<div class="author">by <strong>Zeal</strong></div>
+				<div class="content"><blockquote class="uncited"><div>What I really need is a top-level guide to this stuff, Preferably some maths to make things clear.</div></blockquote>
+
+I would also love to see a high level guide that explains this stuff, MINUS the math (for all us who are not CRAZY MATH NUTS <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> ).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Mon Jul 21, 2008 2:36 am</strong></div>
+				<div class="author">by <strong>Wavesonics</strong></div>
+				<div class="content">Just an idea, but lots of games use use very simple prediction code when they weren't getting updates from the server.<br>
+<br>
+You could *only* run the simulation on the server, and do very simple client side prediction in-between updates.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Synchronizing a simulation for multiplayer...</h3>
+				<div class="date">Posted: <strong>Wed Apr 22, 2009 10:11 pm</strong></div>
+				<div class="author">by <strong>jorjee</strong></div>
+				<div class="content"><blockquote class="uncited"><div>I'm not sure exactly how it works, but directly moving objects could at least cause problems with contacts and hinges and so on, right?
+</div></blockquote>
+From what I know of bullet, the only safe way to directly move objects around is by using kinematic objects. If not, the dynamics of the world (collision response for example) becomes unpredictable.<br>
+
+<blockquote class="uncited"><div>One thing I don't understand is how to do rigidbodies that are mostly simulated but also slightly kinematic and controlled by the system. Maybe not applying any impulses (even gravity and collision impulses) and setting the velocity explicitly each internal simulation step would work.</div></blockquote>
+If you do not apply any impulses, aren't you  in effect making them completely kinematic objects? They are not affected by the world dynamics anymore are they?<br>
+Don't know if this is feasible; how about making a compound object with the parent as a kinematic object and the children as dynamic objects? The kinematic parent will be completely in your control but the dynamic children will be affected by the kinematic parent but also by the world dynamics.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

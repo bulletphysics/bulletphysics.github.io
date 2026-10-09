@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; ContactTest tunneling</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>ContactTest tunneling</h2>
+		<p><a href="viewtopic.php%3Ft=9317.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9317</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>ContactTest tunneling</h3>
+				<div class="date">Posted: <strong>Thu Aug 01, 2013 12:37 am</strong></div>
+				<div class="author">by <strong>Trioxin</strong></div>
+				<div class="content">Evening bullet forums,<br>
+I've recently encountered an issue when I implemented ContactTest into a kinematic object.<br>
+If the object is moving slow enough per frame, it will behave exactly as expected, except that the object will "sink" into the collision surface a little bit, but otherwise will be stopped from leaving the field.<br>
+However if it's moving fast enough it will pass right through.<br>
+<br>
+Below is a snippet of code I'm using. I tried to keep it to the relevant parts, since the project is a little big to just dump it all here.<br>
+<br>
+I've simulated throughout the code a 60 frames per second update.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9317&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+struct ContactSensorCallback : public btCollisionWorld::ContactResultCallback
+{
+	btVector3 m_Contact;
+
+	ContactSensorCallback()
+		: btCollisionWorld::ContactResultCallback()
+	{
+		m_Contact = btVector3(0,0,0);
+	}
+
+	virtual	btScalar	addSingleResult(btManifoldPoint&amp; cp,
+		const btCollisionObjectWrapper* colObj0Wrap,int partId0,int index0,
+		const btCollisionObjectWrapper* colObj1Wrap,int partId1,int index1)
+	{
+		btVector3 nor = cp.getPositionWorldOnB() - cp.getPositionWorldOnA();
+		float dist = cp.getDistance();
+		if (dist &lt; 0) {
+			m_Contact -= nor * dist;
+		}
+		return 0;
+	}
+};
+
+
+
+
+void KCC::update() {
+	float DELTA = 1.0f/60;
+	float SPEED = 60.0f;
+	rotate();
+
+	float t_Z = 0;
+	if (m_Forward) t_Z = -SPEED; else if (m_Backward) t_Z = SPEED;
+
+	Ogre::Vector3 t_Vec = Ogre::Vector3(0, 0, t_Z);
+	t_Vec = m_YawNode-&gt;getOrientation() * t_Vec;
+	btVector3 vel = btVector3(t_Vec.x, t_Vec.y, t_Vec.z) * DELTA;
+	fallRigidBody-&gt;translate(vel);
+
+	ContactSensorCallback collisions;
+	Engine::getSingleton()-&gt;m_DynamicsWorld-&gt;contactTest(fallRigidBody, collisions);
+	fallRigidBody-&gt;translate(collisions.m_Contact);
+
+	((OgreMotionState*)fallRigidBody-&gt;getMotionState())-&gt;
+		setKinematicPos(fallRigidBody-&gt;getWorldTransform());
+}
+</code></pre></div>
+
+<br>
+<br>
+if I set the SPEED variable to 5-10, everything goes relatively well, but setting it to about 15+ I get the tunnelling effect with increasing consistency the higher I set the speed.<br>
+<br>
+I reckon it's due to a need to take into account current velocity, though I'm not entirely sure how to do that, particularly at super fast movement speeds.<br>
+<br>
+I'm not really sure what to ask, specifically.<br>
+Does the test take into account only the objects position directly after a stepSimulation?<br>
+Is it independent and thus take its position exactly as held since the last translate()?<br>
+Is there a flag I need to set to implement some kind of kinematic CCD?<br>
+Is there a relatively simple method I'm overlooking somewhere?<br>
+is this unusual behaviour?<br>
+What is the meaning of life?<br>
+<br>
+Any suggestions are welcome, thanks <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

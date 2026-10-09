@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rope physics with position constraints question</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rope physics with position constraints question</h2>
+		<p><a href="viewtopic.php%3Ft=9005.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9005</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rope physics with position constraints question</h3>
+				<div class="date">Posted: <strong>Mon Apr 08, 2013 5:23 pm</strong></div>
+				<div class="author">by <strong>vitaminD</strong></div>
+				<div class="content">I apologize in advance for asking such a beginner question - I know almost nothing about physics but I couldn't find a better place to ask.<br>
+<br>
+I have a simple rope made up of mass-spring system with pretty high spring constant (~5000). I'm using semi-implicit Euler integration with timestep of 0.003 seconds. It looks pretty good, but it feels like the timesteps have to be excessively small because I'm doing something stupid.<br>
+To make the 2 ends of the rope constrained to a moving object (the rope is the only thing driven with physics, not the object), I'm simply setting the positions of the 2 ends of the rope to be on the object surface at every timestep. I recently became aware of existence of "constraint solvers" (eg Lagrange multipliers) but it's way over my head and I don't understand what they are or what they do.<br>
+<br>
+So here's my question: is what I'm doing (just forcing 2 end positions to whatever I want) a valid solution? Or is there something better that would allow me to increase timestep? Do I need to look into a "constraint solver", or does that only apply to rigid bodies and not to mass-spring system?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rope physics with position constraints question</h3>
+				<div class="date">Posted: <strong>Tue Apr 09, 2013 5:50 pm</strong></div>
+				<div class="author">by <strong>bone</strong></div>
+				<div class="content">If it looks good and the CPU usage isn't causing any problems, I'd say you are done.<br>
+<br>
+That being said, yes this could be solved more efficiently with a lot of work (note that I personally don't even consider a timestep of 0.003 seconds to be particularly small; presumably you'd never even go above the time it takes to render a frame anyway, for example 0.017 seconds on a 60Hz display). Yes, a constraint solver would work perfectly fine for a mass-spring system, one can even design such a system to handle both point masses and rigid bodies. Different solver methods could change the efficiency and how stiff you could make your springs.<br>
+<br>
+What you've done with forcing 2 end positions is actually the start of a slightly different kind of solver - Matthias Muller's position-based dynamics. This is more simple than a full-on velocity-based dynamics solver (which most of the current tech uses), and may be perfect for what you are doing. But some of its drawbacks may not be - IIRC, it can't act "springy".</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rope physics with position constraints question</h3>
+				<div class="date">Posted: <strong>Wed Apr 10, 2013 7:28 pm</strong></div>
+				<div class="author">by <strong>vitaminD</strong></div>
+				<div class="content">Thank you. That's reassuring. I have a question about using constraint solvers on a mass-spring system though - at high level, what is it that makes it more efficient than forcing end positions? Is the solver trying to figure out velocities for multiple points at once (throughout the whole mass-spring chain, sort of like fully implicit integration), instead of running multiple iterations for the spring forces to "propagate?"<br>
+That's the only thing I can think of, but then my imagination is limited due to my lack of knowledge on the subject...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rope physics with position constraints question</h3>
+				<div class="date">Posted: <strong>Wed Apr 10, 2013 11:05 pm</strong></div>
+				<div class="author">by <strong>c0der</strong></div>
+				<div class="content">In one of Erin Catto's GDC articles, he says that springs (F = kx) are difficult to tune in practice, so he uses soft constraints instead based on the harmonic oscillator.<br>
+<br>
+For me, the difference is that when you have multiple objects connected, eg. a suspension bridge with several planks (see Box2D), some constraints affect others. Also the constraint solver is generic, you can derive an equation for different constraints (prismatic, ropes, line, hinge etc) and solve them in the same manner, handle numeric instabilities by adding simple stabilisation terms to the equations and so on.<br>
+<br>
+It's not that difficult once you get into it, you just need a bit of knowledge on dynamics and calculus<br>
+<br>
+Here is a derivation for the solver, which can be used for 3D, but there are 2D constraint derivations on the site<br>
+<br>
+<a href="http://www.codezealot.org/archives/191" class="postlink">http://www.codezealot.org/archives/191</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rope physics with position constraints question</h3>
+				<div class="date">Posted: <strong>Thu Apr 11, 2013 4:39 pm</strong></div>
+				<div class="author">by <strong>vitaminD</strong></div>
+				<div class="content">Thank you. Your link led me to Erin Catto's GDC slides which are very educational,<br>
+however now I'm confused as hell. In his 2009 GDC archive, it contains example code with symplectic (ie semi-implicit) euler integration of spring force, and it's not what I understand as semi-implicit at all!<br>
+<br>
+I thought that semi-implicit is supposed to be exactly the same as implicit, except instead of solving for future spring forces with future position, it approximates the future position with timestep * current velocity. And, same as implicit, the spring force's Jacobian (simply spring constant in 1d zero-rest case) gets multiplied by approximated position and added to total force.<br>
+<br>
+edit: oops, when I say future position, i meant <em class="text-italics">change in</em> position.<br>
+edit2: to further clarify, this change in position isn't used to get the new position, but rather to approximate the new force.<br>
+<br>
+Here's my modification to the example code:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9005&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	state2-&gt;t = state1-&gt;t + h;
+	state2-&gt;x0 = state1-&gt;x;
+	float acceleration = -s * state1-&gt;x + -s * h * state1-&gt;v;
+	state2-&gt;v = state1-&gt;v + h * acceleration;
+	state2-&gt;x = state1-&gt;x + h * state2-&gt;v;</code></pre></div>
+
+And the result (Red line is my change. Green is fully implicit, and Blue is example code's symplectic euler):<br>
+<br>
+<img src="http://i.imgur.com/B86xfgw.png" class="postimage" alt="Image"><br>
+<br>
+As you can see, my code behaves more or less like implicit with low spring constant - which is what I expected.<br>
+However with higher spring constant it blows up, just like explicit euler, which makes me wonder why I would bother with semi-implicit at all.<br>
+<br>
+And by now I hope you can see my confusion. First of all, who's right? Is Erin's example mislabeled, or am I mistaken in assuming that semi-implicit is synonymous with symplectic? Or am I not understanding what semi-implicit is? If semi-implicit behaves similarly to implicit but without the stability (which is its primary benefit) what exactly is its use? It seems like a lot of trouble for nothing (those Jacobians are painful!). Please somebody help me understand!<br>
+<br>
+<br>
+<strong class="text-strong">P.S.</strong><br>
+Sorry about dumping more text.<br>
+Here's a paper that explains my reasoning well:<br>
+<a href="http://njoubert.com/teaching/cs184_sp09/section/simulation.pdf" class="postlink">http://njoubert.com/teaching/cs184_sp09 ... lation.pdf</a><br>
+(end of page 9 and beginning of page 10)<br>
+<img src="http://i.imgur.com/KcIufhf.png" class="postimage" alt="Image"><br>
+<br>
+because computing positions via spring force isn't a first-order differential equation, I basically took the equation from the following paper:<br>
+<a href="http://www.cimat.mx/~cesteves/cursos/animation/pdf/LargeStepsinClothSimulation.pdf" class="postlink">http://www.cimat.mx/~cesteves/cursos/an ... lation.pdf</a><br>
+<img src="http://i.imgur.com/qHkoZQD.png" class="postimage" alt="Image"><br>
+(eq 5 from page 46)<br>
+<br>
+and changed the top equation from <br>
+deltaX = h(v0 + deltaV)<br>
+to simply<br>
+deltaX = h(v0)<br>
+So the left side of equation 6 from the paper is reduced to simply deltaV (change of force wrt velocity is nothing because spring forces don't depend on it) and there's no need to do the whole linear solve thing, except there's still the Jacobian on the right side. So basically the same equation as the first paper, really.<br>
+<img src="http://i.imgur.com/fBjRGOZ.png" class="postimage" alt="Image"><br>
+<br>
+I can't understand where I went wrong. Obviously Erin's example code is far superior because it's closer to reference and it's more stable (hard to argue with the result!) but I don't understand how I ended up with a completely different formula.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

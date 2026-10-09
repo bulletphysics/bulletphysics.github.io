@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Best way to rotate a btRigidBody</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Best way to rotate a btRigidBody</h2>
+		<p><a href="viewtopic.php%3Ft=13133.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13133</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Best way to rotate a btRigidBody</h3>
+				<div class="date">Posted: <strong>Mon Jan 04, 2021 4:59 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hello to the group,<br>
+<br>
+I am creating a 3D space shooter game using OpenGL and Bullet Physics. I have stumbled upon a problem that might be easy for some but is a real challenge for me. So any help is deeply appreciated. <br>
+    I have a callback function that is passing in the mouse position on the screen as a vector2. I want to take the mouse input and convert it to rotations for the player object (a spaceship). It should rotate to the right when I move the mouse to the right, to the left when I move to the left, up when I move down and down when I move up. All the moves should be relative to the current rotation of the object so if, for example, it is rotated 90 degrees to the right (roll) then when I move the mouse down , the front part of the spaceship should move towards the screen.<br>
+    I tried to use quaternion rotations to avoid using torques for simplicity and as a first approach with the following code : 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13133&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void SpaceShip::onHover(const glm::vec2&amp; pos)
+{
+	static float yaw = 0.f;
+	static float roll = 0.f;
+	static float pitch = 0.f;
+	static float xOffset = 0.f;
+	static float yOffset = 0.f;
+	static float move = 0.005f;
+	static float restore = 0.001f;
+
+	xOffset = (prevPos.x == pos.x) ? 0.f : (prevPos.x &gt; pos.x) ? -move : move;
+	yOffset = (prevPos.y == pos.y) ? 0.f : (prevPos.y &gt; pos.y) ? move : -move;
+
+	roll += (xOffset * sensitivity);
+	pitch += (yOffset * sensitivity);
+
+	this-&gt;PhysicsSetRotation(yaw, pitch, roll);
+
+	prevPos = pos;
+}
+</code></pre></div>
+
+    The PhysicsSetRotation function is the following :
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13133&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform transform = body-&gt;getCenterOfMassTransform();
+btQuaternion rotation;
+rotation.setEuler(glm::radians(yaw), glm::radians(pitch), glm::radians(roll));
+transform.setRotation(rotation);
+body-&gt;setCenterOfMassTransform(transform);
+</code></pre></div>
+
+    The problem that I have with this method is that the rotation is not relative to the spaceship object. For example, when I rotate to the right 90 degrees and then I drag my mouse down the left part of the spaceship is moving to the screen instead of the front. <br>
+    So I think I should change the yaw also depending on the roll but I don't know what value should I put there. <br>
+    Another thing that I would like to ask is for some suggestions to do the rotation with torque and how to calculate this. If my description is not clear I can add some video or GIF to show what is happening.<br>
+<br>
+Thanks in advance.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Best way to rotate a btRigidBody</h3>
+				<div class="date">Posted: <strong>Mon Jan 04, 2021 7:26 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Your description is not clear to me.  A diagram or video would be helpful.<br>
+<br>
+That said, I think I can offer some advice already.  It would go like this:<br>
+<br>
+Avoid representing full rotations with Euler angles.  Use pure rotation math when possible.  It is ok to use Euler angles (roll, pitch, yaw) to compute rotations but it is almost always a bad idea to decompose a rotation back into Euler angles.<br>
+<br>
+I will assume your game is something like the old game called "Descent" where there is no true "up" direction and I will outline how I would do it.  Note when flying an airplane over ground then there would be an implicit "up" then you would want to "steer differently".<br>
+<br>
+Consider this pseudo-code.  It might not compile and may very well have bugs.  I'm writing this fresh and did not test it:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13133&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// use mouse position to compute a delta-rotation in spaceship local-frame
+btScalar yaw = 0.0;
+btScalar roll = xOffset * sensitivity;
+btScalar pitch = yOffset * sensitivity;
+btQuaternion deltaLocalRotation(yaw, pitch, roll);
+
+// get old ship rotation
+btTransform transform = body-&gt;getWorldTransform();
+btQuaternion oldBodyRotation = transform.getRotation();
+
+// newBodyRotation is a combination of oldBodyRotation and deltaLocalRotation,
+// but in general: rotations don't commute (their order matters) so...
+// what is the their order?
+//
+// This is how you do it: always imagine the rotations as operating FROM THE LEFT
+// on hypothetical vectors at the far RIGHT.
+//
+// Specifically, if we know the localForward direction
+// (probably along a cardinal axis like &lt;0,0,-1&gt; or something)
+// and we wanted to compute that axis in the world-frame we would:
+//
+// worldForward = bodyRotation * localForward
+//
+// Now that we've got that down, let us consider how to apply a deltaLocalRotation
+// to get newBodyRotation.
+//
+// Since deltaLocalRotation is in the local-frame it must operate on a local-frame vector
+// and therefore must be ordered on the RIGHT side:
+//
+// newWorldForward = newBodyRotation * localForward
+// newWorldForward = (oldBodyRotation * deltaLocalRotation) * localForward
+//
+// See the order inside the parentheses there?  The local delta must be on the RIGHT
+// so it can operate on the hypothetical localForward first.
+//
+btQuaternion newBodyRotation = oldBodyRotation * deltaLocalRotation;
+transform.setRotation(newBodyRotation);
+body-&gt;setTransform(transform);
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Best way to rotate a btRigidBody</h3>
+				<div class="date">Posted: <strong>Mon Jan 04, 2021 8:08 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hello,<br>
+<br>
+Thanks for the reply. I'll try to implement your suggestion. In the meantime you can take a look here : <a href="https://youtu.be/dFPNO_yQNZs" class="postlink">https://youtu.be/dFPNO_yQNZs</a>.<br>
+You can see in the first part I roll to the right and at 90 degrees I pitch down expecting the point of the spaceship to come up but instead it is rotating the left side of the spaceship like you correctly suggested with your code that the up is wrong...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Best way to rotate a btRigidBody</h3>
+				<div class="date">Posted: <strong>Tue Jan 05, 2021 8:19 am</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Thanks man, I tested your code and the rotation is object relative as I wanted. Once more thanks!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Squishy Physics?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Squishy Physics?</h2>
+		<p><a href="viewtopic.php%3Ft=13315.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13315</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Tue Nov 16, 2021 5:32 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Can anyone tell me why my physics is squishy?<br>
+Maybe CCD or some solver info settings?<br>
+<a href="https://i.imgur.com/YXGc1gK.mp4" class="postlink">https://i.imgur.com/YXGc1gK.mp4</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Tue Nov 16, 2021 5:06 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">It looks to me as if the boxes are going into a state of penetration before the system realizes they should be colliding.  The penetration resolution logic then kicks in and pushes them apart.<br>
+<br>
+<strong class="text-strong">(1)</strong> Perhaps the AABB of the boxes is just wrong (too small): by the time the broadphase figures out the AABB's are overlapping and submits the pair to the narrowphase the boxes are already in deep penetration.<br>
+<br>
+<strong class="text-strong">(2)</strong> It is hard to tell from the low-framerate video but maybe your timestep is way too long and the boxes are effectively tunneling.  The default value is 1/60 sec.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Tue Nov 16, 2021 11:06 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">I am calling<br>
+dynamicsWorld-&gt;stepSimulation(timeStep);<br>
+Every frame, and only once per frame, passing in the amount of time that has passed since the last frame.<br>
+Manipulating the value here does not appear to change the 'squish factor'.<br>
+<br>
+Can I turn on drawling bounding boxes with debug drawer?<br>
+If anything, the AABB are slightly too large as there is a small gap between objects that are stacked atop one another.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Wed Nov 17, 2021 3:10 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">So... how do you compute <strong class="text-strong">timeStep</strong>?  Is it a constant or do you measure it?  If you measure it: how big does it get?<br>
+<br>
+The gap between boxes is not caused by the AABB.  In any case: if you are using <strong class="text-strong">btBoxShape</strong> and you aren't explicitly overriding the AABB then it is difficult to imagine how the AABB could be wrong.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Wed Nov 17, 2021 11:46 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content"><div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    double CurTime = GetTime();
+    double CurTime_Last = GetTime();
+    
+    while (game_loop)
+    {
+        CurTime = GetTime();
+        double DelTime = CurTime - CurTime_Last;
+        CurTime_Last = CurTime;
+        printf("/tTIME %f %f\n", GetFrameTime(), DelTime);
+        _Physics-&gt;stepSimulation(DelTime);
+    }
+</code></pre></div>
+I believe my calculation of 'DelTime' to be a bit more accurate than 'GetFrameTime()' since it takes into account the entire time it took to compute the previous loop iteration.<br>
+<br>
+Needless to say I was previously passing like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>dynamicsWorld-&gt;stepSimulation(timeStep, 10);</code></pre></div>
+which was 10 substeps, changing it to 0 reduced the 'squish factor' down to an <em class="text-italics"><span style="text-decoration:underline">almost</span></em> unnoticeable amount albeit if you look hard enough you can tell the simulation still has some 'squish'..<br>
+<br>
+As far as the gap is concerned, you can better see it here:<br>
+<img src="https://i.imgur.com/NWN2UEm.png" class="postimage" alt="Image"><br>
+<br>
+I am actually using convex decomposition with VHACD:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#pragma once
+#include &lt;VHACD.h&gt;
+
+//
+//	Structure containing objects created during composition
+struct DecompResults {
+	btCompoundShape* CompoundShape = nullptr;
+	btAlignedObjectArray&lt;btConvexShape*&gt; m_convexShapes = {};
+	btAlignedObjectArray&lt;btTriangleMesh*&gt; m_trimeshes = {};
+};
+
+//
+//	FBXObject contains vectors of Vertices and Indices
+DecompResults* Decomp(Mesh RayMesh) {
+	//
+	//	Setup Indices
+	const uint32_t nTriangles = RayMesh.triangleCount;
+	printf("\tINDICE SIZE %i\n", (int)sizeof(RayMesh.indices));
+	printf("Decomp: NumTris %i\n", nTriangles);
+	std::vector&lt;uint32_t&gt; Triangles;
+	for (uint32_t i = 0; i &lt; nTriangles*3; i++) {
+		Triangles.push_back(RayMesh.indices[i]);
+	}
+	//
+	//	Setup Points (3 Points is 1 Vertex)
+	const uint32_t nPoints = RayMesh.vertexCount;
+	printf("Decomp: NumPoints %i\n", nPoints);
+	std::vector&lt;float&gt; Points;
+	for (uint32_t i = 0; i &lt; nPoints; i++) {
+		Points.push_back(RayMesh.vertices[i*3]);
+		Points.push_back(RayMesh.vertices[i * 3 + 1]);
+		Points.push_back(RayMesh.vertices[i * 3 + 2]);
+	}
+	//
+	//	Setup VHACD Parameters and create its interface
+	VHACD::IVHACD::Parameters params;
+	VHACD::IVHACD* interfaceVHACD = VHACD::CreateVHACD();
+	VHACD::IVHACD::ConvexHull Hull;
+	//
+	//	Compute approximate convex decomposition
+	//printf("Compute V-HACD: Points %i Triangles %i\n", Points.size(), Triangles.size());
+	bool res = interfaceVHACD-&gt;Compute(Points.data(), (uint32_t)(Points.size() / 3),
+		Triangles.data(), (uint32_t)(Triangles.size() / 3), params);
+	//
+	//	Get the number of convex hulls
+	unsigned int nConvexHulls = interfaceVHACD-&gt;GetNConvexHulls();
+	//printf("V-HACD Done: Hull Count %i\n", nConvexHulls);
+	//
+	//	Create a new DecompResults structure
+	DecompResults* Results = new DecompResults;
+	//
+	//	Create a new Compound Shape for this decomposition
+	Results-&gt;CompoundShape = new btCompoundShape();
+	//
+	//	Iterate through each convex hull and fill results
+	for (unsigned int h = 0; h &lt; nConvexHulls; ++h)
+	{
+		//printf("\tHull: %i\n", h);
+		//printf("\t\tPoints: %i\n", Hull.m_points);
+		//printf("\t\tTriangles: %i\n", Hull.m_triangles);
+		//printf("\t\tVertices: %i\n", vertices.size());
+		//
+		//	Fill 'Hull' for each individual convex hull
+		interfaceVHACD-&gt;GetConvexHull(h, Hull);
+		//
+		//	Create a new Triangle Mesh for this hull
+		btTriangleMesh* trimesh = new btTriangleMesh();
+		Results-&gt;m_trimeshes.push_back(trimesh);
+		//
+		//	Grab the hulls center position
+		const btVector3 centroid(Hull.m_center[0], Hull.m_center[1], Hull.m_center[2]);
+		//printf("Hull Center %f %f %f\n", Hull.m_center[0], Hull.m_center[1], Hull.m_center[2]);
+		//
+		//	Iterate through this hulls triangles
+		for (unsigned int i = 0; i &lt; Hull.m_nTriangles; i++) {
+			//
+			//	Calculate indices
+			const unsigned int index0 = Hull.m_triangles[i * 3];
+			const unsigned int index1 = Hull.m_triangles[i * 3 + 1];
+			const unsigned int index2 = Hull.m_triangles[i * 3 + 2];
+			//
+			//	Calculate vertices
+			const btVector3 vertex0(Hull.m_points[index0 * 3], Hull.m_points[index0 * 3 + 1], Hull.m_points[index0 * 3 + 2]);
+			const btVector3 vertex1(Hull.m_points[index1 * 3], Hull.m_points[index1 * 3 + 1], Hull.m_points[index1 * 3 + 2]);
+			const btVector3 vertex2(Hull.m_points[index2 * 3], Hull.m_points[index2 * 3 + 1], Hull.m_points[index2 * 3 + 2]);
+			//
+			//	Add this triangle into our Triangle Mesh
+			trimesh-&gt;addTriangle(vertex0 - centroid, vertex1 - centroid, vertex2 - centroid);
+		}
+		//
+		//	Create a new ConvexShape from this hulls Triangle Mesh
+		btConvexShape* convexShape = new btConvexTriangleMeshShape(trimesh);
+		Results-&gt;m_convexShapes.push_back(convexShape);
+		//
+		//	Create a transform using centroid as origin
+		btTransform trans;
+		trans.setIdentity();
+		trans.setOrigin(centroid);
+		//
+		//	Add this ConvexShape to our CompoundShape
+		Results-&gt;CompoundShape-&gt;addChildShape(trans, convexShape);
+	}
+	//
+	// release memory
+	interfaceVHACD-&gt;Clean();
+	interfaceVHACD-&gt;Release();
+	//
+	//	Return our DecompResults containing the CompoundShape full of Convexically Decomposed Convex Shapes
+	return Results;
+}</code></pre></div>
+And then finally creating my collision shape as follows:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	void InitPhysics(Physics* Phys)
+	{
+		Phy = Phys;
+		//
+		//	Check if we already have a cached btCollisionShape for this file
+		if (Phys-&gt;_CollisionShapes.count(_FileName))
+		{
+			_CollisionShape = Phys-&gt;_CollisionShapes[_FileName];
+		}
+		//
+		//	Otherwise create one and cache it away
+		else {
+			printf("\tCreate New ENTITY CollisionShape\n");
+
+			DecompResults* Results = Decomp(_Model.meshes[0]);
+			_CollisionShape = Results-&gt;CompoundShape;
+			for (int i = 0; i &lt; Results-&gt;m_convexShapes.size(); i++) {
+				Phys-&gt;_ConvexShapes.push_back(Results-&gt;m_convexShapes[i]);
+			}
+			for (int i = 0; i &lt; Results-&gt;m_trimeshes.size(); i++) {
+				Phys-&gt;_TriangleMeshes.push_back(Results-&gt;m_trimeshes[i]);
+			}
+			delete Results;
+
+			Phys-&gt;_CollisionShapes[_FileName] = _CollisionShape;
+		}
+		_CollisionShape-&gt;setUserPointer(this);
+
+		DefaultMass = 10.0f;
+		Mass = DefaultMass;
+		bool isDynamic = (Mass != 0.f);
+
+		if (isDynamic) {
+			_CollisionShape-&gt;calculateLocalInertia(Mass, localInertia);
+		}
+
+		SceneNodeMotionState* MotionState = new SceneNodeMotionState(this);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(Mass, MotionState, _CollisionShape, localInertia);
+		_RigidBody = new btRigidBody(rbInfo);
+		_RigidBody-&gt;setUserPointer(this);
+		Phys-&gt;dynamicsWorld-&gt;addRigidBody(_RigidBody);
+	}</code></pre></div>
+
+The vertex and index data being passed into VHACD should be exactly the same that is used to render the cube.<br>
+Turning on debug draw shows a 1:1 overlap of collision shape vs rendered object:<br>
+<img src="https://i.imgur.com/7OmdRRB.png" class="postimage" alt="Image"><br>
+<br>
+Maybe there are some solver settings or some other configuration that can be changed to optimize the simulation..?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Thu Nov 18, 2021 4:53 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Not sure if it is related but I also have two more examples of what I would say falls under the category of 'squishy physics'.<br>
+<br>
+Video 1 - Many objects spawn quickly in the same location, at first they all push out of each other and fall to the ground then spread out. As more and more objects spawn they start to create a 'black hole' and fall through each other, gravity pulls them down, and they end up falling through the ground. As time passes most objects end up spawning and falling down through the floor and none end up spreading out....<br>
+<a href="https://i.imgur.com/3WcWGsI.mp4" class="postlink">https://i.imgur.com/3WcWGsI.mp4</a><br>
+<br>
+Video 2 - Grabbing an object allows you to push it through other objects with relative ease. Objects are 'moved' by applying linear velocity but I would imaging using applyForce, with enough force, would have the same result....<br>
+<a href="https://i.imgur.com/U3388YG.mp4" class="postlink">https://i.imgur.com/U3388YG.mp4</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Thu Nov 18, 2021 5:23 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I've never used <strong class="text-strong">btConvexTriangleMeshShape</strong> before but since it is convex I assume the GJK algorithm is supported for dynamic objects.  You might try using <strong class="text-strong">btConvexHullShape</strong> to see if that helps you, but I don't expect this to change anything.  Ideally the VHACD decomposition is giving you only 8 points for a box mesh.  My experience has been that it works well for simple shapes.<br>
+<br>
+The gap between boxes is caused by the collision tolerance.  The only way around it for non-implicit shapes is to shave the shape vertices back from the surface by the collision tolerance distance.  This gets tricky in general, but for some varieties of shapes it can be straightforward.<br>
+<br>
+I had to remind myself of the declaration of the btDiscreteDynamicsWorld::stepSimulation function.  It looks like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    ///if maxSubSteps &gt; 0, it will interpolate motion between fixedTimeStep's
+    virtual int stepSimulation(btScalar timeStep, int maxSubSteps = 1, btScalar fixedTimeStep = btScalar(1.) / btScalar(60.));</code></pre></div>
+So this means, if you don't override the two optional arguments then your steps will only ever do one substep at 1/60th of a second.  This is fine if you call <strong class="text-strong">stepSimulation()</strong> with <strong class="text-strong">timeStep</strong> &lt; <strong class="text-strong">substep</strong>: on some calls the <strong class="text-strong">stepSimulation</strong> will do nothing but accumulate time and then once it has a full <strong class="text-strong">substep</strong> accumulated it will step and save the remainder to the accumulator.<br>
+<br>
+Note the comment above the declaration about interpolation.  I believe it means: the <strong class="text-strong">worldTransform</strong> supplied to the <strong class="text-strong">MotionState::setWorldTransform()</strong> method will be interpolated using the step accumulation remainder.  This to prevent aliasing of object motion when the rendering is asynchronous relative to the simulation step.  Which raises the question... are you using the <strong class="text-strong">MotionState</strong> mechanic for harvesting the object data?  Or some other method?<br>
+<br>
+If the interpolation of the <strong class="text-strong">worldTransform</strong> at the <strong class="text-strong">MotionState</strong> is source of your problem you can test for this by:  supplying <strong class="text-strong">timeStep = 1 * fixedSubstep</strong> (e.g. <strong class="text-strong">timeStep = 1.0/60.0</strong>) instead of the real measured time --&gt; no remainder --&gt; no interpolation.  To put this another way: it is possible that the "squishyness" is purely a visual artifact and is not "real" in the physics simulation itself.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Thu Nov 18, 2021 5:48 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">I was thinking about this some more and agree it may be a purely visual artifact at this point, might need to look into changing exactly when the object is drawn or something else. Thanks for the info on stepSimulation, i'll look into this in depth a little more tomorrow. Not completely sure what the benefits/tradeoffs of utilizing substeps are at this time.<br>
+<br>
+Still begs the question of what's happening in the last two videos posted?<br>
+<br>
+For reference here is my motionstate, basically just pulling the worldtransform matrix to update the visual representation
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class SceneNodeMotionState : public btMotionState {
+	SceneNode* _SceneNode;
+	btScalar* M;
+
+public:
+	SceneNodeMotionState(SceneNode* Node)
+		: _SceneNode(Node)
+	{}
+
+	//	This function is called when the physical representation of this object is created
+	//	Haven't seen it called anytime except for during object creation thus far..
+	void getWorldTransform(btTransform&amp; worldTrans) const
+	{
+		//printf("getWorldTransform\n");
+	}
+
+	//	This function is called whenever this object PHYSICALLY moves
+	//	Update a scenenode's VISUAL representation here based off its physical representation.
+	void setWorldTransform(const btTransform&amp; worldTrans)
+	{
+		M = new btScalar[16];
+		worldTrans.getOpenGLMatrix(M);
+		_SceneNode-&gt;_Model.transform.m0 = M[0];
+		_SceneNode-&gt;_Model.transform.m1 = M[1];
+		_SceneNode-&gt;_Model.transform.m2 = M[2];
+		_SceneNode-&gt;_Model.transform.m3 = M[3];
+		_SceneNode-&gt;_Model.transform.m4 = M[4];
+		_SceneNode-&gt;_Model.transform.m5 = M[5];
+		_SceneNode-&gt;_Model.transform.m6 = M[6];
+		_SceneNode-&gt;_Model.transform.m7 = M[7];
+		_SceneNode-&gt;_Model.transform.m8 = M[8];
+		_SceneNode-&gt;_Model.transform.m9 = M[9];
+		_SceneNode-&gt;_Model.transform.m10 = M[10];
+		_SceneNode-&gt;_Model.transform.m11 = M[11];
+		_SceneNode-&gt;_Model.transform.m12 = M[12];
+		_SceneNode-&gt;_Model.transform.m13 = M[13];
+		_SceneNode-&gt;_Model.transform.m14 = M[14];
+		_SceneNode-&gt;_Model.transform.m15 = M[15];
+	}</code></pre></div>
+If there is a better/more appropriate way then I'm all ears. Doesn't matter if I draw objects before or after stepSimulation, I still get about a 1 frame lag between the physics object moving before the visual representation begins to move.<br>
+<br>
+EDIT:<br>
+It was simple enough to switch to btConvexHullShape, exact same results, no noticeable differences.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Thu Nov 18, 2021 2:54 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content"><blockquote class="uncited"><div>So this means, if you don't override the two optional arguments then your steps will only ever do one substep at 1/60th of a second. This is fine if you call stepSimulation() with timeStep &lt; substep: on some calls the stepSimulation will do nothing but accumulate time and then once it has a full substep accumulated it will step and save the remainder to the accumulator.</div></blockquote>
+Sorry, I forgot to mention the <strong class="text-strong">else</strong> case.  If <strong class="text-strong">timeStep &gt; substep</strong> every frame, and if your <strong class="text-strong">stepSimulation()</strong> only takes a maximum of one substep per step, then your simulation will "loose time" against real time.  Effectively this manifests as the objects moving in slow motion.  For example, if your frame rate is 1/30th of a second under the above hypothetical configuration then for each 1 second of real-world time flow only 1/2 second virtual world timeflow will pass.<br>
+<br>
+Try the simple hack to test if you have a <strong class="text-strong">MotionState</strong> interpolation problem: hard code your <strong class="text-strong">timeStep</strong> to be 1/60th of a second (or whatever is your fixed <strong class="text-strong">substep</strong>) and see if the interpolation goes away.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Thu Nov 18, 2021 11:38 pm</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">Okay, I've put the rendering of objects in the correct location and eliminated the 1frame delay between physics update-&gt;visual update. The residual 'squish' appears to be gone now.<br>
+<br>
+Do you have any comment on these last two issues?
+<blockquote class="uncited"><div>Video 1 - Many objects spawn quickly in the same location, at first they all push out of each other and fall to the ground then spread out. As more and more objects spawn they start to create a 'black hole' and fall through each other, gravity pulls them down, and they end up falling through the ground. As time passes most objects end up spawning and falling down through the floor and none end up spreading out....<br>
+<a href="https://i.imgur.com/3WcWGsI.mp4" class="postlink">https://i.imgur.com/3WcWGsI.mp4</a><br>
+<br>
+Video 2 - Grabbing an object allows you to push it through other objects with relative ease. Objects are 'moved' by applying linear velocity but I would imaging using applyForce, with enough force, would have the same result....<br>
+<a href="https://i.imgur.com/U3388YG.mp4" class="postlink">https://i.imgur.com/U3388YG.mp4</a></div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Fri Nov 19, 2021 6:58 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Re: pile of objects... you are putting too many into a state of penetration.  The penetration resolution logic works well for two overlapping objects but less well for N simultaneously overlapping objects, because it tries to separate them by pairs and alternate pairs can work against each other.  You're exploring the boundaries of the "well behaved" possibility space by overloading the logic and this could be considered "poor behavior on the part of the developer".  Another way to look at it is: the creation of a new object directly into a state of penetration with another is a non-physical event -- and you shouldn't be too surprised when the consequences are non-physical.  If this gives you a rash then... stop rubbing your own skin so hard.<br>
+<br>
+Re: pushing the object through the ground... you could do it with forces but I would expect you to struggle with units.  A well-behaved force algorithm will require object <strong class="text-strong">mass</strong> and <strong class="text-strong">substep</strong> as input.  When it comes to slamming the velocity: you are slamming it too hard.  Never slam the velocity to the value that will solve the motion in one or two substeps.  Instead adjust the velocity such that the object moves will reach its target position over several substeps.  The easiest way to do this is to assume the behavior of a critically damped spring.  This method is <strong class="text-strong">mass agnostic</strong> and doesn't use the <strong class="text-strong">substep</strong> time except for the instability condition mentioned below.  The pseudo looks something like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>tau = approximate_time_for_object_to_reach_target_position / 3.0;
+offset = target_position - current_position;
+if (offset.length &lt; CLOSE_ENOUGH) {
+    target_velocity = zero;
+} else {
+    target_velocity = offset * (1.0 / tau);
+}
+delta_velocity = target_velocity - current_velocity;
+if (delta_velocity.length &gt; MIN_DELTA_SPEED) {
+    blend_coefficient = substep / tau; // DANGER: this ratio should never be larger than about 0.9
+    new_velocity = current_velocity + blend_coefficient * delta_velocity;
+    body-&gt;setLinearVelocity(new_velocity);
+}</code></pre></div>
+It is very important that your choice for <strong class="text-strong">tau</strong> be larger than one substep, else you will suffer instability.  For human interaction you can use rather large values, such as <strong class="text-strong">tau = 0.5</strong> seconds.<br>
+<br>
+Even with that method... if you let the <strong class="text-strong">offset</strong> get too large then the object will still be able to tunnel, especially through thin mesh triangles.  You can clamp the magnitude of <strong class="text-strong">offset</strong> to avoid this.  You'd have to test and tune such a clamp to suit your needs.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Tue Sep 06, 2022 6:07 am</strong></div>
+				<div class="author">by <strong>KKlouzal</strong></div>
+				<div class="content">I've been going through the ExampleBrowser and noticed the 'squishy physics' exist here too.<br>
+If you open up the very first example, a 5x5x5 block of cubes drop and hit the ground. If you zoom in and restart the demo a few times, you can see that when two cubes collide, they 'squish' into each other for a moment before getting pushed out. Originally I was going to use this demo as an example of what I expect should happen. I was surprised when I saw the cubes squishing here too..<br>
+<br>
+I've uploaded a video showing the issue..<br>
+<a href="https://youtu.be/McWCdIJ7mv0" class="postlink">https://youtu.be/McWCdIJ7mv0</a><br>
+<br>
+Is there anything that can be done to make the collisions more...solid..?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Squishy Physics?</h3>
+				<div class="date">Posted: <strong>Tue Sep 06, 2022 2:38 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Yes, you can reduce the <strong class="text-strong">fixedTimeStep</strong>.  The declaration of <strong class="text-strong">btDiscreteDynamicsWorld::stepSimulation()</strong> is as follows:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>virtual int stepSimulation(btScalar timeStep, int maxSubSteps = 1, btScalar fixedTimeStep = btScalar(1.) / btScalar(60.));</code></pre></div>
+The default <strong class="text-strong">fixedTimeStep</strong> is <strong class="text-strong">1/60th</strong> of a second.  If you supply an alternative smaller value your soft collisions will stiffen up.  Note: you probably also want to set <strong class="text-strong">maxSubSteps</strong> to a higher value, something like:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13315&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int maxSubSteps = int(largestExpectedFrameTime / fixed_time_step) + 1;</code></pre></div>
+Of course this is a trade-off between cost and accuracy and increases the likelihood your simulation will run slower than real-time.  If you try to push too many objects with insufficient CPU resources it could hit the <strong class="text-strong">maxSubSteps</strong> limit.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

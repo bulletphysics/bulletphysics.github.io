@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Gino's Book - Robustness section</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Gino's Book - Robustness section</h2>
+		<p><a href="viewtopic.php%3Ft=232.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=232</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Gino's Book - Robustness section</h3>
+				<div class="date">Posted: <strong>Thu Feb 02, 2006 6:24 pm</strong></div>
+				<div class="author">by <strong>omicron</strong></div>
+				<div class="content">Hi,<br>
+<br>
+This question is mainly directed to Gino van den Bergen as it is a little doubt from his book. However, anyone able to help is very welcome. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+So, from page 59 I'm not understanding what Gino is trying to explain in the phrase that starts with "Assume". It's located right in the bottom of the page just before he finds the upper bound for the relative error for approximation of gamma. I don't want to break any copyright law, else, I would have copied it over here. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> There's no need to explain what's below the upper bound inequality.<br>
+<br>
+Thank you!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Gino's Book - Robustness section</h3>
+				<div class="date">Posted: <strong>Fri Feb 03, 2006 7:55 am</strong></div>
+				<div class="author">by <strong>Christer Ericson</strong></div>
+				<div class="content"><blockquote><div><cite>omicron wrote:</cite>So, from page 59 I'm not understanding what Gino is trying to explain in the phrase that starts with "Assume".</div></blockquote>
+I'm not Gino, but perhaps I can explain anyway.  Let's start by nothing that a typical floating point operation 'op' introduces an error along the lines of:<br>
+<br>
+fl(a op b) = (a op b)(1+e) where |e| &lt;= u (where u is the machine epsilon).<br>
+<br>
+Now consider the computation of e.g. a*b*c in floating point.  This is equivalent to [((a*b)*(1+e1))*c]*(1+e2) = a*b*c*(1+e1)*(1+e2) = a*b*c*(1+e1+e2+e1*e2). This is just straightforward manipulation so far.<br>
+<br>
+At this point, with |ei| &lt;= u, we can simply say that 1+e1+e2+e1*e2 = 1+e1+e2+O(u^2) and we then promptly ignore the O(u^2) term because it is so small that it (typically) won't affect the result. That leaves us with:<br>
+<br>
+a*b*c*(1+e1+e2)<br>
+<br>
+as the value computed for the floating-point expression a*b*c. Gino's sentence on page 59 is in reference to dropping this O(u^2) term that I talked about above.<br>
+<br>
+Hope that helps to clarify what's meant.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Gino's Book - Robustness section</h3>
+				<div class="date">Posted: <strong>Fri Feb 03, 2006 4:20 pm</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content"><blockquote><div><cite>Christer Ericson wrote:</cite><blockquote><div><cite>omicron wrote:</cite>So, from page 59 I'm not understanding what Gino is trying to explain in the phrase that starts with "Assume".</div></blockquote>
+
+Hope that helps to clarify what's meant.</div></blockquote>
+
+Well put. Thanks Christer.<br>
+<br>
+The only thing I'd like to add is that computations would still classify as 'fairly accurate' if |ei| &lt;= C * u for C greater than 1. For example,  for errors ei of 100 * u, the term e1 * e2 would still not be anywhere near the machine epsilon of single-precision floats and can be safely ignored in your analysis.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Feb 03, 2006 6:38 pm</strong></div>
+				<div class="author">by <strong>omicron</strong></div>
+				<div class="content">Well, first off, thank you both for your help! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"><br>
+<br>
+So, I wrote this little program to test cancellation when subtracting two nearly equal values.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=232&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	// Both delta0 and delta1 suffer from rounding
+	// errors because they're not representable in IEEE-754
+
+	float delta0 = 0.432343547394f;
+	float delta1 = 0.432343587394f;
+
+	// Relative errors from both delta0 and delta1
+	// are bounded by machine epsilon
+
+	float delta0_rel_error = FLT_EPSILON;
+	float delta1_rel_error = FLT_EPSILON;
+	
+	float add = delta1 + delta0;
+	float sub = delta1 - delta0;
+	float mul = delta1 * delta0;
+
+	float add_rel_error = ( fabs( delta0 * delta0_rel_error ) + fabs( delta1 * delta1_rel_error ) ) / ( fabs( add ) ) + FLT_EPSILON;
+	float sub_rel_error = ( fabs( delta0 * delta0_rel_error ) + fabs( delta1 * delta1_rel_error ) ) / ( fabs( sub ) ) + FLT_EPSILON;
+	float mul_rel_error = fabs( delta0_rel_error ) + fabs( delta1_rel_error ) + FLT_EPSILON;
+</code></pre></div>
+
+The results are:<br>
+<br>
+add = 0.86468714475631714;<br>
+sub = 5.96046644775390625e-8;<br>
+mul = 0.18692097067832947;<br>
+<br>
+add_rel_error = 2.384185791015625e-7;<br>
+sub_rel_error = 1.7293744087219238;<br>
+mul_rel_error = 3.5763786865234375e-7;<br>
+<br>
+Using exact arithmetic sub would be 4e-8 but with floating-point arithmetic it is quite far from it ( see above ). So, I guess that this turned out to be a catastrophic cancellation situation because both results ( from floating-point and exact arithmetic ) don't have any digits in common, therefore, the relative error is huge ( see above ), am I right ?<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Feb 06, 2006 12:24 pm</strong></div>
+				<div class="author">by <strong>gino</strong></div>
+				<div class="content"><blockquote><div><cite>omicron wrote:</cite>
+<br>
+Using exact arithmetic sub would be 4e-8 but with floating-point arithmetic it is quite far from it ( see above ). So, I guess that this turned out to be a catastrophic cancellation situation because both results ( from floating-point and exact arithmetic ) don't have any digits in common, therefore, the relative error is huge ( see above ), am I right ?<br>
+<br>
+Thanks!</div></blockquote>
+
+Correct. Note that IEEE 754 single-precision numbers have only 24 accurate bits (= +/- 7 decimal digits). In reality things may not be that bad (on Intel at least), since temporary values are often evaluated and stored at higher precisions (IA-32 float registers have 64-bit mantissas).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

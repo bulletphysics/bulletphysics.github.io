@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15488" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2023-11-20T00:37:53+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/15488</id>
+
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2023-11-20T00:37:53+00:00</updated>
+
+		<published>2023-11-20T00:37:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44478#p44478</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44478#p44478"/>
+		<title type="html"><![CDATA[Re: Using btIndexedMesh with btTriangleIndexVertexArray+btBvhTriangleMeshShape]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44478#p44478"><![CDATA[
+Thank you!<br><br>That makes sense... sneaky.  This language is no nuanced.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Mon Nov 20, 2023 12:37 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2023-11-12T19:43:47+00:00</updated>
+
+		<published>2023-11-12T19:43:47+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44470#p44470</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44470#p44470"/>
+		<title type="html"><![CDATA[Re: Using btIndexedMesh with btTriangleIndexVertexArray+btBvhTriangleMeshShape]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44470#p44470"><![CDATA[
+The following code makes <strong class="text-strong">verts</strong> a copy of the data:<div class="codebox"><p>Code: </p><pre><code>auto verts = element-&gt;vertices();</code></pre></div>and is equivalent to:<div class="codebox"><p>Code: </p><pre><code>std::vector&lt;Vertex&gt; verts = elements-&gt;vertices();</code></pre></div>Note, the <strong class="text-strong">vertices()</strong> method is declared <strong class="text-strong">const</strong> (it does not modify the class instance's data members) which is why it returns a <strong class="text-strong">const reference</strong>, and since the local variable being assigned is not a const reference... a copy happens.  And you would be able to modify the contents of <strong class="text-strong">verts</strong> without offending the compiler.<br><br>This will make <strong class="text-strong">verts</strong> a const reference to the data:<div class="codebox"><p>Code: </p><pre><code>const auto&amp; verts = elements-&gt;vertices();</code></pre></div>and is equivalent to:<div class="codebox"><p>Code: </p><pre><code>const std::vector&lt;Vertex&gt;&amp; verts = elements-&gt;vertices();</code></pre></div>Under the hood <strong class="text-strong">verts</strong> is effectively a pointer, but the syntactic sugar of the "const reference" feature of C++ obscures that fact.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Sun Nov 12, 2023 7:43 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2023-10-31T19:19:50+00:00</updated>
+
+		<published>2023-10-31T19:19:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44462#p44462</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44462#p44462"/>
+		<title type="html"><![CDATA[Re: Using btIndexedMesh with btTriangleIndexVertexArray+btBvhTriangleMeshShape]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44462#p44462"><![CDATA[
+Here is what I have found.<br><br>Recall my face/triangle and vertex data are declared in the GeometryElement class interface as:<div class="codebox"><p>Code: </p><pre><code>std::vector&lt;Vertex&gt;_vertices;std::vector&lt;Face&gt;_faces;const std::vector&lt;Vertex&gt;&amp; vertices() const;const std::vector&lt;Face&gt;&amp;faces() const;</code></pre></div>I find that if I reference the base array addresses in either of these ways, it works:<br><div class="codebox"><p>Code: </p><pre><code>auto vertsBase = element-&gt;vertices().data();auto facesBase = element-&gt;faces().data();// - OR --auto vertsBase = &amp;element-&gt;vertices()[0];auto facesBase = &amp;element-&gt;faces()[0];auto indexedMesh = make_shared&lt;btIndexedMesh&gt;();indexedMesh-&gt;m_numTriangles = (int)element-&gt;faces().size();indexedMesh-&gt;m_triangleIndexBase = (const unsigned char *)facesBase;indexedMesh-&gt;m_triangleIndexStride = sizeof(Face);indexedMesh-&gt;m_numVertices = (int)element-&gt;vertices().size();indexedMesh-&gt;m_vertexBase = (const unsigned char *)vertsBase;indexedMesh-&gt;m_vertexStride = sizeof(Vertex);indexedMesh-&gt;m_vertexType = PHY_FLOAT;</code></pre></div>Yet if I reference them like this, the vector contents appears to be copied and disappears off the stack once scope of the iteration is lost, causing <strong class="text-strong">btBvhTriangleMeshShape</strong>'s constructor to fail.<br><div class="codebox"><p>Code: </p><pre><code>auto verts = element-&gt;vertices();auto faces = element-&gt;faces();auto vertsBase = verts.data();auto facesBase = faces.data();</code></pre></div>Sorry to turn this topic into my own personal C++ tutoring session, but clearly there is something about C++ references I am not understanding.  Can someone point out what is going on?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Tue Oct 31, 2023 7:19 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[goosesensor]]></name></author>
+		<updated>2023-10-29T17:19:54+00:00</updated>
+
+		<published>2023-10-29T17:19:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44461#p44461</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44461#p44461"/>
+		<title type="html"><![CDATA[Using btIndexedMesh with btTriangleIndexVertexArray+btBvhTriangleMeshShape]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=44461#p44461"><![CDATA[
+I am trying to create static physics bodies using <strong class="text-strong">btBvhTriangleMeshShape</strong>.<br><br>This works fine if I <em class="text-italics">copy</em> vertex data into <strong class="text-strong">btTriangleMesh</strong>, and use that to create a <strong class="text-strong">btBvhTriangleMeshShape</strong>.  However, copying is obviously not desirable.<br><br>The approach I am currently trying is:<ol style="list-style-type:decimal"><li>Describe vertex layout using <strong class="text-strong">btIndexedMesh</strong> referencing existing visual data</li><li>Create <strong class="text-strong">btTriangleIndexVertexArray</strong> using <strong class="text-strong">btIndexedMesh</strong></li><li>Create <strong class="text-strong">btBvhTriangleMeshShape</strong> using <strong class="text-strong">btTriangleIndexVertexArray</strong></li></ol>My Face and Vertex structures:<br><div class="codebox"><p>Code: </p><pre><code>typedef struct {int a;int b;int c;} Face;typedef struct {glm::vec3 position;glm::vec3 normal;glm::vec2 textureCoordinate;} Vertex;</code></pre></div>In my mesh class ("GeometryElement"):<div class="codebox"><p>Code: </p><pre><code>const std::vector&lt;Vertex&gt;&amp; vertices() const;const std::vector&lt;Face&gt;&amp;faces() const;</code></pre></div>Code for creating the <strong class="text-strong">btIndexedMesh</strong> + <strong class="text-strong">btTriangleIndexVertexArray</strong> + <strong class="text-strong">btBvhTriangleMeshShape</strong>:<br><div class="codebox"><p>Code: </p><pre><code>auto triangleIndexVertexArray = btTriangleIndexVertexArray();for (auto&amp; element : geometry-&gt;elements()) {auto verts = element-&gt;vertices();auto faces = element-&gt;faces();auto indexedMesh = btIndexedMesh();indexedMesh.m_numTriangles = (int)faces.size();indexedMesh.m_triangleIndexBase = (const unsigned char *)&amp;faces[0];indexedMesh.m_triangleIndexStride = sizeof(Face); // sizeof(Face), sizeof(int)?indexedMesh.m_indexType = PHY_INTEGER;indexedMesh.m_numVertices = (int)verts.size();indexedMesh.m_vertexBase = (const unsigned char *)&amp;verts[0];indexedMesh.m_vertexStride = sizeof(Vertex); // sizeof(Vertex), sizeof(glm::vec3)?indexedMesh.m_vertexType = PHY_FLOAT;triangleIndexVertexArray.addIndexedMesh(indexedMesh);}auto shape = btBvhTriangleMeshShape(&amp;triangleIndexVertexArray, true);</code></pre></div>I am getting a segfault in <strong class="text-strong">btStridingMeshInterface::InternalProcessAllTriangles()</strong> when initializing the <strong class="text-strong">btBvhTriangleMeshShape</strong>.  From the debugger <strong class="text-strong">gfxindextype</strong> is <strong class="text-strong">PHY_INTEGER</strong>, which leads me to believe it's getting hung up processing the vertex faces array.<br><br>Can anybody shed some light on this?  Am I using <strong class="text-strong">btIndexedMesh</strong> incorrectly?  Much thanks.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12815">goosesensor</a> — Sun Oct 29, 2023 5:19 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13309" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-12-06T05:32:18+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13309</id>
+
+		<entry>
+		<author><name><![CDATA[KKlouzal]]></name></author>
+		<updated>2021-12-06T05:32:18+00:00</updated>
+
+		<published>2021-12-06T05:32:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43749#p43749</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43749#p43749"/>
+		<title type="html"><![CDATA[Re: Issues with multi-threading and compound shapes]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43749#p43749"><![CDATA[
+I seem to be having this same issue however it's only happening on 1 of my 5 test machines.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10757">KKlouzal</a> — Mon Dec 06, 2021 5:32 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[desaic]]></name></author>
+		<updated>2021-10-28T18:18:18+00:00</updated>
+
+		<published>2021-10-28T18:18:18+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43672#p43672</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43672#p43672"/>
+		<title type="html"><![CDATA[Issues with multi-threading and compound shapes]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43672#p43672"><![CDATA[
+I'm working on a demo with both compound shapes and multi-threading. I observed the number of contact manifolds keep increasing overtime (m_manifoldsPtr in <a href="https://github.com/bulletphysics/bullet3/blob/master/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp" class="postlink">btCollisionDispatcherMt</a>), this eventually slows down the simulation. I did a few experiments and here is what I found:<br><br>When using both multi-threading and compound shapes, the function <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L77" class="postlink">btCollisionDispatcherMt::releaseManifold </a> will be called, but the variable <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L81" class="postlink">m_batchUpdating </a> will always be true during the simulation. Then I found the compoundcompound collision algorithm will attempt to <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCompoundCompoundCollisionAlgorithm.cpp#L395" class="postlink">deallocate collision algorithms</a> while it is processing collisons. When the collision algorithm deallocates, it will <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.cpp#L206" class="postlink">release the contact manifold</a> and in then calls the <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L77" class="postlink"> btCollisionDispatcherMt::releaseManifold</a>. But because this funciton is called while the compound algorithm is processing collisions, the member m_batchUpdating will always be true, because the collision is processed in the <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L141" class="postlink">parallel for </a> after m_batchUpdating is set to true. As a result, <a href="https://github.com/bulletphysics/bullet3/blob/ac3c283842fe5ceddc55fcdef5489fdf4458f6f6/src/BulletCollision/CollisionDispatch/btCollisionDispatcherMt.cpp#L83" class="postlink">this section of the code</a> will never get run during the simulation and m_manifoldsPtr will keep increasing.<br><br>Is this a potential bug, or I'm missing something?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14131">desaic</a> — Thu Oct 28, 2021 6:18 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

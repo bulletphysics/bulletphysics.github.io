@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12553" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2018-12-31T21:27:16+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12553</id>
+
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2018-12-31T21:27:16+00:00</updated>
+
+		<published>2018-12-31T21:27:16+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41730#p41730</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41730#p41730"/>
+		<title type="html"><![CDATA[Re: How to implement a Continuous Control of a quadruped robot with Deep Reinforcement Learning in Pybullet and OpenAI G]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41730#p41730"><![CDATA[
+Thanks for sharing, that looks pretty cool!<br><br>You could try to use ARS, augmented random search or alternatively PPO.<br>Implement your environment as a Gym environment, with a reset, step etc.<br><br>Here is a simple ARS implementation:<br><a href="https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_envs/ARS" class="postlink">https://github.com/bulletphysics/bullet ... t_envs/ARS</a><br><br>Also there is a PPO implementation:<br><a href="https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_envs/agents" class="postlink">https://github.com/bulletphysics/bullet ... nvs/agents</a><br>Edit the config.py accordingly.<br><br>You can also use OpenAI baselines instead, it has a PPO implementation.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Mon Dec 31, 2018 9:27 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[rubencg195]]></name></author>
+		<updated>2018-12-27T17:11:00+00:00</updated>
+
+		<published>2018-12-27T17:11:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41723#p41723</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41723#p41723"/>
+		<title type="html"><![CDATA[How to implement a Continuous Control of a quadruped robot with Deep Reinforcement Learning in Pybullet and OpenAI Gym?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=41723#p41723"><![CDATA[
+<strong class="text-strong">Description</strong><br><br>I have designed this robot in URDF format and its environment in pybullet. Each leg has a minimum and maximum value of movement. <br><br>What reinforcement algorithm will be best to create a walking policy in a simple environment in which a positive reward will be given if it walks in the positive X-axis direction?<br><br><em class="text-italics">The expected output from the policy is an array in the range of (-1, 1) for each joint. The input of the policy is the position of each joint, the center of mass of the body, the difference in height between the floor and the body to see if it has fallen and the movement in the x-axis.<br></em><br><strong class="text-strong"><br>Limitations<br></strong><br>left_front_joint      =&gt; lower="-0.4" upper="2.5" id=0<br><br>left_front_leg_joint  =&gt; lower="-0.6" upper="0.7" id=2<br><br>right_front_joint     =&gt; lower="-2.5" upper="0.4" id=3<br><br>right_front_leg_joint =&gt; lower="-0.6" upper="0.7" id=5<br><br>left_back_joint       =&gt; lower="-2.5" upper="0.4" id=6<br><br>left_back_leg_joint   =&gt; lower="-0.6" upper="0.7" id=8<br><br>right_back_joint      =&gt; lower="-0.4" upper="2.5" id=9<br><br>right_back_leg_joint  =&gt; lower="-0.6" upper="0.7" id=11<br><br><br>The code above is just a test of the environment with a manual set of movements hardcoded in the robot just to test how it could walk later. The environment is set to real time, but I assume it needs to be in a frame by frame lapse during the policy training.<br><br><strong class="text-strong">A video of it can be seen in:</strong><br><br><a href="https://youtu.be/j9sysG-EIkQ" class="postlink">https://youtu.be/j9sysG-EIkQ</a><br><br><strong class="text-strong">Code:</strong><br><div class="codebox"><p>Code: </p><pre><code>    import pybullet as p    import time    import pybullet_data    def moveLeg( robot=None, id=0, position=0, force=1.5  ):        if(robot is None):            return;        p.setJointMotorControl2(            robot,            id,            p.POSITION_CONTROL,            targetPosition=position,            force=force,            #maxVelocity=5        )    pixelWidth = 1000    pixelHeight = 1000    camTargetPos = [0,0,0]    camDistance = 0.5    pitch = -10.0    roll=0    upAxisIndex = 2    yaw = 0    physicsClient = p.connect(p.GUI)#or p.DIRECT for non-graphical version    p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally    p.setGravity(0,0,-10)    viewMatrix = p.computeViewMatrixFromYawPitchRoll(camTargetPos, camDistance, yaw, pitch, roll, upAxisIndex)    planeId = p.loadURDF("plane.urdf")    cubeStartPos = [0,0,0.05]    cubeStartOrientation = p.getQuaternionFromEuler([0,0,0])    #boxId = p.loadURDF("r2d2.urdf",cubeStartPos, cubeStartOrientation)    boxId = p.loadURDF("src/spider.xml",cubeStartPos, cubeStartOrientation)    # boxId = p.loadURDF("spider_simple.urdf",cubeStartPos, cubeStartOrientation)    toggle = 1    p.setRealTimeSimulation(1)    for i in range (10000):        #p.stepSimulation()                moveLeg( robot=boxId, id=0,  position= toggle * -2 ) #LEFT_FRONT        moveLeg( robot=boxId, id=2,  position= toggle * -2 ) #LEFT_FRONT        moveLeg( robot=boxId, id=3,  position= toggle * -2 ) #RIGHT_FRONT        moveLeg( robot=boxId, id=5,  position= toggle *  2 ) #RIGHT_FRONT        moveLeg( robot=boxId, id=6,  position= toggle *  2 ) #LEFT_BACK        moveLeg( robot=boxId, id=8,  position= toggle * -2 ) #LEFT_BACK        moveLeg( robot=boxId, id=9,  position= toggle *  2 ) #RIGHT_BACK        moveLeg( robot=boxId, id=11, position= toggle *  2 ) #RIGHT_BACK        #time.sleep(1./140.)g        #time.sleep(0.01)        time.sleep(1)                toggle = toggle * -1        #viewMatrix        = p.computeViewMatrixFromYawPitchRoll(camTargetPos, camDistance, yaw, pitch, roll, upAxisIndex)        #projectionMatrix  = [1.0825318098068237, 0.0, 0.0, 0.0, 0.0, 1.732050895690918, 0.0, 0.0, 0.0, 0.0, -1.0002000331878662, -1.0, 0.0, 0.0, -0.020002000033855438, 0.0]        #img_arr = p.getCameraImage(pixelWidth, pixelHeight, viewMatrix=viewMatrix, projectionMatrix=projectionMatrix, shadow=1,lightDirection=[1,1,1])    cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId)    print(cubePos,cubeOrn)    p.disconnect()</code></pre></div><strong class="text-strong">The complete code can be seen here:</strong><br><br><a href="https://github.com/rubencg195/WalkingSpider_OpenAI_PyBullet_ROS" class="postlink">https://github.com/rubencg195/WalkingSp ... Bullet_ROS</a><br><br><br><strong class="text-strong">Images</strong><br><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1664" class="postimage" alt="spider(7).jpeg" onclick="viewableArea(this);" /></dt></dl></div><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1663" class="postimage" alt="PyBullet.png" onclick="viewableArea(this);" /></dt></dl></div><div class="inline-attachment"><dl class="file"><dt class="attach-image"><img src="https://pybullet.org/Bullet/phpBB3/download/file.php?id=1665" class="postimage" alt="youtube.png" onclick="viewableArea(this);" /></dt></dl></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13147">rubencg195</a> — Thu Dec 27, 2018 5:11 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

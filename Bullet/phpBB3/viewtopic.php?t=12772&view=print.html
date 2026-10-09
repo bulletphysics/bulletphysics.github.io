@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Arm not affected by gravity</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Arm not affected by gravity</h2>
+		<p><a href="viewtopic.php%3Ft=12772.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12772</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Arm not affected by gravity</h3>
+				<div class="date">Posted: <strong>Mon Sep 23, 2019 2:23 pm</strong></div>
+				<div class="author">by <strong>nathaniel</strong></div>
+				<div class="content">Hi all, a beginner here.<br>
+<br>
+I've created a basic URDF file containing a box with an "arm" attached to it by a revolute joint. The quick start guide says I can disable the default motor by setting the joint to a velocity controller with a force of 0. So my expectation is that on running the below code, the robot should fall from its starting point and its arm should flop to the ground:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12772&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import pybullet_data
+
+physicsClient = p.connect(p.GUI)#or p.DIRECT for non-graphical version
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+p.setGravity(0,0,-10)
+planeId = p.loadURDF("plane.urdf")
+startPos = [0,0,1]
+startOrientation = p.getQuaternionFromEuler([0,0,0])
+
+robot = p.loadURDF("./testbot.urdf",startPos, startOrientation)
+
+for i in range(p.getNumJoints(robot)):
+	p.setJointMotorControl2(robot, i, p.VELOCITY_CONTROL, force=0)
+
+for i in range (10000):
+	p.stepSimulation()
+	time.sleep(1./480.)
+p.disconnect()
+</code></pre></div>
+
+However, instead the arm stays rigidly in place, not moving relative to the box when the robot hits the floor. At first I thought that disabling the motor wasn't working, but I found I can move the arm using the mouse. It behaves quite strangely, and it seems like it's not being affected by gravity - if I give it a small amount of motion upwards it will continue moving at a constant angular velocity until it hits its limits.<br>
+<br>
+Am I doing something wrong here?<br>
+<br>
+Here are the contents of testbot.urdf:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12772&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;?xml version="1.0"?&gt;
+&lt;robot name="testbot"&gt;
+  &lt;link name="body"&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;box size="1 0.7 0.4" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0 0 0" rpy="0 0 0" /&gt;
+      &lt;material name="default_material"&gt;
+        &lt;color rgba="0.8 0.8 0.8 1.0" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;box size="1 0.7 0.4" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0 0 0" rpy="0 0 0" /&gt;
+    &lt;/collision&gt;
+    &lt;inertial&gt;
+      &lt;mass value="10" /&gt;
+      &lt;inertia ixx="0.5416666666666666" ixy="0" ixz="0" iyy="0.9666666666666668" iyz="0" izz="1.2416666666666667" /&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+  &lt;link name="arm1"&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;box size="0.55 0.2 0.1" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0.25 0.0 0.0" rpy="0 0 0" /&gt;
+      &lt;material name="default_material"&gt;
+        &lt;color rgba="0.8 0.8 0.8 1.0" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;box size="0.55 0.2 0.1" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0.25 0.0 0.0" rpy="0 0 0" /&gt;
+    &lt;/collision&gt;
+    &lt;inertial&gt;
+      &lt;mass value="2" /&gt;
+      &lt;inertia ixx="0.008333333333333335" ixy="0" ixz="0" iyy="0.05208333333333334" iyz="0" izz="0.05708333333333334" /&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+  &lt;joint name="shoulder1" type="revolute"&gt;
+    &lt;parent link="body" /&gt;
+    &lt;child link="arm1" /&gt;
+    &lt;axis xyz="0 1 0" /&gt;
+    &lt;limit lower="-2.199114857512855" upper="2.199114857512855" effort="1000.0" velocity="1.0" /&gt;
+    &lt;origin xyz="0.5 0 0" rpy="0 0 0" /&gt;
+  &lt;/joint&gt;
+&lt;/robot&gt;
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Arm not affected by gravity</h3>
+				<div class="date">Posted: <strong>Mon Sep 23, 2019 3:34 pm</strong></div>
+				<div class="author">by <strong>nathaniel</strong></div>
+				<div class="content">Ah, I've solved this I think. It seems the &lt;inertial&gt; tag also needs an origin. I've added one with the same values as the origin in the &lt;collision&gt; and &lt;visual&gt; tags, and it now seems to behave as I would expect.<br>
+<br>
+However, I'm now unsure whether my moments of inertia are correct. The documentation at <a href="http://wiki.ros.org/urdf/XML/link" class="postlink">http://wiki.ros.org/urdf/XML/link</a> discusses it, but it's pretty terse and I'm not sure if I've understood correctly what it means. Do I understand correctly that if my link is a basic shape like box, cylinder etc. whose centre of gravity is at the origin, then I can just calculate my moment of inertia around the origin, and then copy the &lt;origin&gt; tag from &lt;collision&gt; into &lt;inertial&gt; and it should work?<br>
+<br>
+Anyway, for completeness, here's the probably-corrected testbot.urdf file:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12772&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>&lt;?xml version="1.0"?&gt;
+&lt;robot name="testbot"&gt;
+  &lt;link name="body"&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;box size="1 0.7 0.4" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0 0 0" rpy="0 0 0" /&gt;
+      &lt;material name="default_material"&gt;
+        &lt;color rgba="0.8 0.8 0.8 1.0" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;box size="1 0.7 0.4" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0 0 0" rpy="0 0 0" /&gt;
+    &lt;/collision&gt;
+    &lt;inertial&gt;
+      &lt;mass value="10" /&gt;
+      &lt;origin xyz="0 0 0" rpy="0 0 0" /&gt;
+      &lt;inertia ixx="0.5416666666666666" ixy="0" ixz="0" iyy="0.9666666666666668" iyz="0" izz="1.2416666666666667" /&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+  &lt;link name="arm1"&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;box size="0.5 0.2 0.1" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0.27 0.0 0.0" rpy="0 0 0" /&gt;
+      &lt;material name="default_material"&gt;
+        &lt;color rgba="0.8 0.8 0.8 1.0" /&gt;
+      &lt;/material&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;box size="0.5 0.2 0.1" /&gt;
+      &lt;/geometry&gt;
+      &lt;origin xyz="0.27 0.0 0.0" rpy="0 0 0" /&gt;
+    &lt;/collision&gt;
+    &lt;inertial&gt;
+      &lt;mass value="2" /&gt;
+      &lt;origin xyz="0.27 0.0 0.0" rpy="0 0 0" /&gt;
+      &lt;inertia ixx="0.008333333333333335" ixy="0" ixz="0" iyy="0.043333333333333335" iyz="0" izz="0.04833333333333334" /&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+  &lt;joint name="shoulder1" type="revolute"&gt;
+    &lt;parent link="body" /&gt;
+    &lt;child link="arm1" /&gt;
+    &lt;axis xyz="0 1 0" /&gt;
+    &lt;limit lower="-2.199114857512855" upper="2.199114857512855" effort="1000.0" velocity="1.0" /&gt;
+    &lt;origin xyz="0.5 0 0" rpy="0 0 0" /&gt;
+  &lt;/joint&gt;
+&lt;/robot&gt;
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8698" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2013-01-02T18:29:48+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/8698</id>
+
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2013-01-02T18:29:48+00:00</updated>
+
+		<published>2013-01-02T18:29:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29580#p29580</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29580#p29580"/>
+		<title type="html"><![CDATA[Re: Inverting a matrix of any size]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29580#p29580"><![CDATA[
+I assume you a trying to build the effective mass block matrices. Note that these are symmetric and positive definite. So another option would be Cholesky decomposition. For small matrices I would still use cofactor expansion and since the matrix is symmetric it can be optimized a bit more. Look at the Doom 3 SDK. It has some good examples.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Wed Jan 02, 2013 6:29 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[c0der]]></name></author>
+		<updated>2012-12-26T11:00:55+00:00</updated>
+
+		<published>2012-12-26T11:00:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29547#p29547</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29547#p29547"/>
+		<title type="html"><![CDATA[Inverting a matrix of any size]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=29547#p29547"><![CDATA[
+Hi,<br><br>I have managed to implement a Gauss-Jordan elimination function and tested it in inverting a 6x6 matrix successfully. It's a lot faster than cofactors (which I wasted time on) and hopefully it'll help anyone who needs it and save you a lot of pain when dealing with 5 and 6 D.O.F constraint block matrices.<br><br>Also, it computes the determinant of the matrix early on in the process.<br><br>Here is some sample code, let me know if I can clarify anything, the process is straightforward once you get the hang of it.<br><div class="codebox"><p>Code: </p><pre><code>// 00 01 02 03 ...// 10 11 12 13 ...// 20 21 22 23 ...// 30 31 32 33 ...// .  .  .  .  ...// .  .  .  .  ...// .  .  .  .  ...//// [ A I ]// AA^-1 = I// Inverse is the property of a square matrixif(rows!=cols)return;// Matrix must be 3x3 minimumif(rows&lt;3)return;MatrixRxC A = m;MatrixRxC I(rows, cols);I.identity();Scalar sDeterminant = 1.0f;// Forward pass, triangularize lower matrixfor(int i=0; i&lt;cols-1; ++i) {Scalar pivot = A.e[i][i];for(int j=i+1; j&lt;rows; ++j) {Scalar factor;if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&lt;0)factor = -fabsf(A.e[j][i]/pivot);else if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&gt;0)factor = fabsf(A.e[j][i]/pivot);else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&lt;0)factor = fabsf(A.e[j][i]/pivot);else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&gt;0)factor = -fabsf(A.e[j][i]/pivot);// Complete operation on entire rowfor(int k=0; k&lt;cols; ++k) {A.e[j][k] = A.e[j][k] + factor*A.e[i][k];I.e[j][k] = I.e[j][k] + factor*I.e[i][k];}}}// Check matrix determinant by reduction to triangular formfor(int i=0; i&lt;rows; ++i) {// Add the elements on the main diagonal to obtain the determinantsDeterminant *= A.e[i][i];}if(sDeterminant==0.0f)return; // Matrix has no inverse// Identity pass, triangularize identity diagonalfor(int i=0; i&lt;cols; ++i) {Scalar divide = 1/A.e[i][i];// Complete operation on entire rowfor(int j=0; j&lt;cols; ++j) {A.e[i][j] = A.e[i][j] * divide;I.e[i][j] = I.e[i][j] * divide;}}// Backward pass, triangularize upper matrixfor(int i=cols-1; i&gt;=1; --i) {Scalar pivot = A.e[i][i];for(int j=i-1; j&gt;=0; --j) {Scalar factor;if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&lt;0)factor = -fabsf(A.e[j][i]/pivot);else if(A.e[j][i]&lt;0 &amp;&amp; A.e[i][i]&gt;0)factor = fabsf(A.e[j][i]/pivot);else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&lt;0)factor = fabsf(A.e[j][i]/pivot);else if(A.e[j][i]&gt;0 &amp;&amp; A.e[i][i]&gt;0)factor = -fabsf(A.e[j][i]/pivot);// Complete operation on entire rowfor(int k=0; k&lt;cols; ++k) {A.e[j][k] = A.e[j][k] + factor*A.e[i][k];I.e[j][k] = I.e[j][k] + factor*I.e[i][k];}}}*this = I;}</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9431">c0der</a> — Wed Dec 26, 2012 11:00 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

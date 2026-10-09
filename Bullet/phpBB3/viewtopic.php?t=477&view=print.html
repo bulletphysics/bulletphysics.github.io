@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Some practical questions about my first actual application.</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Some practical questions about my first actual application.</h2>
+		<p><a href="viewtopic.php%3Ft=477.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=477</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Some practical questions about my first actual application.</h3>
+				<div class="date">Posted: <strong>Mon Aug 21, 2006 10:28 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">So - I've played with the demo's and built enough infrastructure into my game that I can bring in objects of various kinds and apply impulses to them to kick them around.  Boxes, cylinders and spheres bounce around convincingly - and I can replace them with real geometry for the graphics - so that a car can be a couple of cubes with some cylinders for wheels in the physics yet look like a nice shiney car in the graphics....Yeah!  So far, so good!<br>
+<br>
+So now I need to start wiring all of this into my game logic - and creating some 'real' objects.  This brings me to some questions.<br>
+<br>
+1) If I'm using 9.8m/s for gravity - lengths in meters, masses in kg, times in seconds - what units are things like friction, linear and rotational damping and such in?  Are these 'real' units?  Does anyone have a good online source of frictional coefficients for common materials?  What damping forces am I considering anyway? Air resistance is negligable at the speeds I care about.<br>
+<br>
+2) The first object I want to be able to drive around is a fork-lift truck (one of those should be a lot of fun in a room full of packing crates and barrels!).  For collision purposes, I can have the 'forks' be one 'BoxShape', the body of the forklift be another box and the wheels be little cylinders that I can use to drive and steer with.   But if I do that, the center of gravity of the thing is about a meter off the ground - and any small collision makes it fall over.   In reality, these things have huge weights built into them close to the ground to stop that from happening.  So I clearly need to move the simulated center of gravity down much lower.  How do I do that?  Do I need to make the body out of two boxes - one very heavy one and one light one?  (Perhaps, in this case, I can just make the wheels unreasonably heavy - but that's a kludge and I'm asking a general question here...I'll probably need to put a bunch of weight in the back of the forklift in order to prevent it tipping forwards when it lifts something too),<br>
+<br>
+3) The steering wheels on my forklift need to be able to rotate freely in one axis - so that they roll nicely - and need to be driven actively in the other axis in response to my player's joystick movements - yet have no motion at all in the third axis.  It's not clear what kind of constraint setup I need to make that happen - any clues?  (Or better still, an example?)<br>
+<br>
+4) I have a LOT of static geometry in the scene.  Is it better to keep this in one giant triangle mesh - or to divide it up into a bunch of smaller mesh objects within one CompoundShape - or should I perhaps have a ton of tiny separate static objects.  Where are the efficiencies to be had?<br>
+<br>
+5) I've seen comments elsewhere that large triangles are a bad idea (and also very small ones) - somewhere I saw a lower limit of maybe 20cm - what kind of upper limit are we talking about here?   There was also a comment that long, thin triangles would be bad.  How long/thin is that? <br>
+<br>
+Thanks in advance.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 21, 2006 11:20 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">First of all, thanks Steve for your attempt to improve the friction model. I will add some mechanism to choose friction models in the next version.<br>
+
+<blockquote><div><cite>SteveBaker wrote:</cite>So - I've played with the demo's and built enough infrastructure into my game that I can bring in objects of various kinds and apply impulses to them to kick them around.  Boxes, cylinders and spheres bounce around convincingly - and I can replace them with real geometry for the graphics - so that a car can be a couple of cubes with some cylinders for wheels in the physics yet look like a nice shiney car in the graphics....Yeah!  So far, so good!<br>
+<br>
+So now I need to start wiring all of this into my game logic - and creating some 'real' objects.  This brings me to some questions.<br>
+<br>
+1) If I'm using 9.8m/s for gravity - lengths in meters, masses in kg, times in seconds - what units are things like friction, linear and rotational damping and such in?  Are these 'real' units?  Does anyone have a good online source of frictional coefficients for common materials?  What damping forces am I considering anyway? Air resistance is negligable at the speeds I care about.
+</div></blockquote>
+The friction and damping values are very simplistic tweaking parameters, not reflecting realistic friction model. The current friction in Bullet is approximated by a collection of at most 4 contact points, that approximate the contact area.<br>
+
+<blockquote class="uncited"><div>
+2) The first object I want to be able to drive around is a fork-lift truck (one of those should be a lot of fun in a room full of packing crates and barrels!).  For collision purposes, I can have the 'forks' be one 'BoxShape', the body of the forklift be another box and the wheels be little cylinders that I can use to drive and steer with.   But if I do that, the center of gravity of the thing is about a meter off the ground - and any small collision makes it fall over.   In reality, these things have huge weights built into them close to the ground to stop that from happening.  So I clearly need to move the simulated center of gravity down much lower.  How do I do that?  Do I need to make the body out of two boxes - one very heavy one and one light one?  (Perhaps, in this case, I can just make the wheels unreasonably heavy - but that's a kludge and I'm asking a general question here...I'll probably need to put a bunch of weight in the back of the forklift in order to prevent it tipping forwards when it lifts something too),<br>
+<br>
+3) The steering wheels on my forklift need to be able to rotate freely in one axis - so that they roll nicely - and need to be driven actively in the other axis in response to my player's joystick movements - yet have no motion at all in the third axis.  It's not clear what kind of constraint setup I need to make that happen - any clues?  (Or better still, an example?)
+</div></blockquote>
+I will add such example that answers question 2+3 in the next release. Hopefully within a few weeks, if time allows.<br>
+
+<blockquote class="uncited"><div>
+4) I have a LOT of static geometry in the scene.  Is it better to keep this in one giant triangle mesh - or to divide it up into a bunch of smaller mesh objects within one CompoundShape - or should I perhaps have a ton of tiny separate static objects.  Where are the efficiencies to be had?
+</div></blockquote>
+Good question, it really depends on a lot of factors. But in general, it's good to use big static triangle meshes, and use a couple of them. Each static triangle mesh will automatically get an entry in the broadphase for culling. Avoid inserting hundreds of static triangle meshes in the broadphase. Many small triangle meshes should be avoided, and compounds are currently not very well optimized for this task.
+<blockquote class="uncited"><div>
+5) I've seen comments elsewhere that large triangles are a bad idea (and also very small ones) - somewhere I saw a lower limit of maybe 20cm - what kind of upper limit are we talking about here?   There was also a comment that long, thin triangles would be bad.  How long/thin is that? 
+</div></blockquote>
+
+Not easy to convert this into an actual number. The triangle is processed by GJK collision detection, together with another convex object. If possible, try to avoid ratios 'much larger' then 10 between triangle sides.<br>
+<br>
+If your units are in meters, try to keep the minimum length of a triangle side above 10 centimeter, and maximum length below 5 meter. This might not always be possible, but its a general guideline.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Aug 21, 2006 11:55 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Cool!  Thanks for your quick reply...all good stuff.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+I will add such example that answers question 2+3 in the next release. Hopefully within a few weeks, if time allows.
+</div></blockquote>
+
+Could you give me a quick hint for each?   I'm not averse to experimenting and rummaging around to try things out - but an ounce of expert advice can save days of hacking around!<br>
+<br>
+For mass distribution within my forklift:  Split up into cubes of different masses - or is there some way to adjust this by not using the default moments of inertia or center of mass or something?   If I know what to look for - I can find it by myself,<br>
+<br>
+For the steerable-wheel constraint: Is there one single constraint that can do this (like a point constraint with some limits or something) - or should I be thinking in terms of concatenating 'hinge' type constraints?<br>
+<br>
+I hope that as I figure out more of this stuff I can be a source of demo's &amp; documents rather than a sink!<br>
+
+<blockquote class="uncited"><div>
+<blockquote class="uncited"><div>
+4) I have a LOT of static geometry in the scene.  Is it better to keep this in one giant triangle mesh - or to divide it up into a bunch of smaller mesh objects within one CompoundShape - or should I perhaps have a ton of tiny separate static objects.  Where are the efficiencies to be had?
+</div></blockquote>
+Good question, it really depends on a lot of factors. But in general, it's good to use big static triangle meshes, and use a couple of them. Each static triangle mesh will automatically get an entry in the broadphase for culling. Avoid inserting hundreds of static triangle meshes in the broadphase. Many small triangle meshes should be avoided, and compounds are currently not very well optimized for this task.
+</div></blockquote>
+OK - so I have a scene whose graphics are made up of 20m tiles - each with varying amounts of interior geometry - maybe twenty to fifty collidable triangles (and butt-loads of graphics triangles that don't matter for collisions).  If I made each tile into a mesh object then maybe only turned on the ones that are close to moving objects?  Since they are in a regular grid, I guess I can use that knowledge to do that much more cheaply than the broadphase can.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 22, 2006 2:46 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>SteveBaker wrote:</cite>Cool!  Thanks for your quick reply...all good stuff.<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>
+I will add such example that answers question 2+3 in the next release. Hopefully within a few weeks, if time allows.
+</div></blockquote>
+
+Could you give me a quick hint for each?   I'm not averse to experimenting and rummaging around to try things out - but an ounce of expert advice can save days of hacking around!<br>
+<br>
+For mass distribution within my forklift:  Split up into cubes of different masses - or is there some way to adjust this by not using the default moments of inertia or center of mass or something?   If I know what to look for - I can find it by myself,<br>
+<br>
+For the steerable-wheel constraint: Is there one single constraint that can do this (like a point constraint with some limits or something) - or should I be thinking in terms of concatenating 'hinge' type constraints?<br>
+<br>
+I hope that as I figure out more of this stuff I can be a source of demo's &amp; documents rather than a sink!
+</div></blockquote>
+Waiting for an example is probably more encouraging then trying yourself I'm afraid, because it's not straightforward. For the collision geometry of the forklift, I would probably start with a compound, which allows shifting the geometry, relative to the center of mass. The built-in inertia-tensor computation ignores compounds at the moment, it just approximates compounds by their combined AABB.<br>
+<br>
+For the wheel, either hinge or generic D6 joint is a good start, but it will require extra work, no out-of-the-box experience (hence waiting for a a sample+modifications is probably best <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=";-)" title="Wink">
+<blockquote class="uncited"><div>
+<blockquote class="uncited"><div>
+<blockquote class="uncited"><div>
+4) I have a LOT of static geometry in the scene.  Is it better to keep this in one giant triangle mesh - or to divide it up into a bunch of smaller mesh objects within one CompoundShape - or should I perhaps have a ton of tiny separate static objects.  Where are the efficiencies to be had?
+</div></blockquote>
+Good question, it really depends on a lot of factors. But in general, it's good to use big static triangle meshes, and use a couple of them. Each static triangle mesh will automatically get an entry in the broadphase for culling. Avoid inserting hundreds of static triangle meshes in the broadphase. Many small triangle meshes should be avoided, and compounds are currently not very well optimized for this task.
+</div></blockquote>
+OK - so I have a scene whose graphics are made up of 20m tiles - each with varying amounts of interior geometry - maybe twenty to fifty collidable triangles (and butt-loads of graphics triangles that don't matter for collisions).  If I made each tile into a mesh object then maybe only turned on the ones that are close to moving objects?  Since they are in a regular grid, I guess I can use that knowledge to do that much more cheaply than the broadphase can.</div></blockquote>
+
+Indeed, if you have extra knowledge, you can derive your custom static mesh shape from TriangleMeshShape and improve performance by dynamically creating the triangles on request. Objects of this (derived) class receive a call to the virtual ProcessAllTriangles, with an aabbMin/aabbMax as input, so you can generate the triangle (callbacks) yourself:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=477&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>virtual void	ProcessAllTriangles(TriangleCallback* callback,const SimdVector3&amp; aabbMin,const SimdVector3&amp; aabbMax) const;
+</code></pre></div>
+
+Hope this helps a bit,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Aug 22, 2006 9:57 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>
+Waiting for an example is probably more encouraging then trying yourself I'm afraid, 
+</div></blockquote>
+
+Urgh!  OK - well I guess I'll have to be patient then.<br>
+
+<blockquote class="uncited"><div>
+because it's not straightforward. For the collision geometry of the forklift, I would probably start with a compound, which allows shifting the geometry, relative to the center of mass. The built-in inertia-tensor computation ignores compounds at the moment, it just approximates compounds by their combined AABB.
+</div></blockquote>
+
+OK - so combining a small, heavy BoxShape with a larger, lighter one into one Compound shape won't work because of this approximation?  Darn!<br>
+
+<blockquote class="uncited"><div>
+For the wheel, either hinge or generic D6 joint is a good start, but it will require extra work, no out-of-the-box experience (hence waiting for a a sample+modifications is probably best ;-)
+</div></blockquote>
+
+What I actually need is either a '2 DOF' joint - or two consecutive hinge joints set at right angles to one-another.  I figure I can probably do the latter using a teeny-tiny intermediate object so I'd have a chain of: body-&gt;vertical_hinge-&gt;intermediate-&gt;horizontal_hinge-&gt;wheel.<br>
+<br>
+This sounds like it ought to work in theory - but whether it actually does in practice is unclear.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

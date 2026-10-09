@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; State of the art cloth simulation</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>State of the art cloth simulation</h2>
+		<p><a href="viewtopic.php%3Ft=12724.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12724</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>State of the art cloth simulation</h3>
+				<div class="date">Posted: <strong>Tue Jul 23, 2019 7:56 pm</strong></div>
+				<div class="author">by <strong>chen</strong></div>
+				<div class="content">Hi guys. What is the state of the art cloth simulation that can be approached at real-time? The technique I know is to use the mass-spring model then apply constraints and integrate using F=ma. Is there better ways to do this nowadays?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: State of the art cloth simulation</h3>
+				<div class="date">Posted: <strong>Thu Jul 25, 2019 5:47 pm</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">A commonly used approach in the industry is the continuum approach described in the paper of David Baraff.<br>
+<br>
+<a href="https://www.cs.cmu.edu/~baraff/papers/sig98.pdf" class="postlink">https://www.cs.cmu.edu/~baraff/papers/sig98.pdf</a><br>
+<br>
+However, some forces like the shear (and bend) force can introduce problems into the linear system described above if included incorrectly so it can't be solved by the Conjugate Gradient method anymore. <br>
+<br>
+Therefore, I would recommend a system that would mix the continuum approach with the mass-spring system approach.<br>
+<br>
+For example, you can include the stretch forces using the continuum approach described above since they don't introduce problems into the system if included correctly. They can be effectively included correctly into the system. <br>
+<br>
+Then you add shear and bend springs like the ones described below since they also don't introduce problems into the linear system. They also can be effectively included correctly into the system.<br>
+<br>
+<a href="http://gamma.cs.unc.edu/CSTREAMS/cloth/cloth.pdf" class="postlink">http://gamma.cs.unc.edu/CSTREAMS/cloth/cloth.pdf</a> <br>
+<br>
+Here Choi et al shows how to include a spring force into the system without introducing problems into it:<br>
+<br>
+<a href="http://graphics.snu.ac.kr/~kjchoi/publication/cloth.pdf" class="postlink">http://graphics.snu.ac.kr/~kjchoi/publication/cloth.pdf</a><br>
+<br>
+Note this is not a mass-spring system approach. I would call it a semi-continuum approach. It can be made realtime by optimizing it. In the abscence of additional forces and particles, you can create a mechanism that allows us to build the Hessian in O(n) since the matrix topology is static. This is an interesting optimization.<br>
+<br>
+Also look for Rony Goldenthal PhD thesis. He adresses implicit integration with constraints.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: State of the art cloth simulation</h3>
+				<div class="date">Posted: <strong>Fri Jul 26, 2019 4:03 pm</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">Then there is corotational FEM which can be done realtime. The algorithm complexity of this solver is dominated by the CG method as in David Baraff's cloth solver.<br>
+<br>
+You can apply the same constraint satisfaction technique described in Baraff's solver to a corotational FEM solver.<br>
+<br>
+For cloth it seems that there is a specific FEM solver described in this paper:<br>
+<br>
+<a href="https://animation.rwth-aachen.de/media/papers/2013-CAG-AdaptiveCloth.pdf" class="postlink">https://animation.rwth-aachen.de/media/ ... eCloth.pdf</a><br>
+<br>
+It's important to remember that corotational FEM is considered by many as state of the art soft body simulation for games.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: State of the art cloth simulation</h3>
+				<div class="date">Posted: <strong>Tue Jul 30, 2019 8:09 am</strong></div>
+				<div class="author">by <strong>chen</strong></div>
+				<div class="content">Wow, awesome information! Thanks for the help, that was really good info!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: State of the art cloth simulation</h3>
+				<div class="date">Posted: <strong>Tue Jul 30, 2019 4:53 pm</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">For collision detection between cloth and arbitrary convex/concave meshes you want fast point queries. This can be done using a signed distance field (SDF). For convex shapes, calling GJK thousands of times per step can substantially hit performance.<br>
+<br>
+SDF allow O(1) evaluation of distance between a point and the mesh. It also gives you the normal at the boundary. <br>
+<br>
+For simple shapes like spheres or capsules you can use implicit functions since the query is also O(1). <br>
+<br>
+The PBD framework has good examples of using Discregrid's SDF and implicit functions for collision detection. Though is used in a different context, rigid body dynamics:<br>
+<br>
+<a href="https://github.com/InteractiveComputerGraphics/PositionBasedDynamics" class="postlink">https://github.com/InteractiveComputerG ... edDynamics</a><br>
+<br>
+Bullet also contains good examples of using Discregrid's SDF for collision detection.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: State of the art cloth simulation</h3>
+				<div class="date">Posted: <strong>Tue Jul 30, 2019 5:00 pm</strong></div>
+				<div class="author">by <strong>irlanrobson</strong></div>
+				<div class="content">It's worth mentioning that there is a book about cloth simulation that was released recently.  The author announced the book release in this thread last year:<br>
+<br>
+<a href="viewtopic.php%3Ff=6&amp;t=12356.html" class="postlink">viewtopic.php?f=6&amp;t=12356</a><br>
+<br>
+I don't own one, but it seems a good book, and it has some math. The part about artistic driven cloth simulation seems interesting and state of the art as well.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Maximum number of multibody links?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Maximum number of multibody links?</h2>
+		<p><a href="viewtopic.php%3Ft=12880.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12880</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Maximum number of multibody links?</h3>
+				<div class="date">Posted: <strong>Mon Mar 02, 2020 4:55 pm</strong></div>
+				<div class="author">by <strong>camnelson</strong></div>
+				<div class="content">Does anyone understand this behavior/have any tips? It could well be a rookie mistake.<br>
+<br>
+I have created a sample code that simulates a "string" as a chain of rigid bodies (spheres in this case). I programmatically create links along a profile curve by adding relative position of each link to the last in the array "linkPos". However, when I include more than 125 links, only the first ~125 seem to be registered. No errors are thrown and the simulation runs realistically, but as if the "string" were shortened to 125/n of its intended length of n links. Originally I thought it was a parsing issue with Python because the array was defined explicitly, and all on one line... so way more than the recommended max characters per line. But putting each vector on a new line didn't help. In the example below (should work as is), I made a circular loop of string with up to n=250 links, but it only ever makes 125 (a half circle). You can play with the value of n; if it's less than 125 you see a corresponding shortening of the arc, but if it's greater than or equal to 125, it maxes out at the half circle.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12880&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import math
+
+p.connect(p.GUI, options='--background_color_red=1.0 --background_color_green=1.0 --background_color_blue=1.0')
+p.configureDebugVisualizer(p.COV_ENABLE_SHADOWS,0)
+p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+
+orientation = [0,0,0,-1]
+radius = 0.091
+mass = 0.0
+
+linkCol = p.createCollisionShape(
+  p.GEOM_SPHERE,
+  radius = radius)
+linkVis = p.createVisualShape(
+  p.GEOM_SPHERE,
+  radius = radius,
+  rgbaColor = [1,1,1,1],
+  specularColor = [1,1,1,1])
+
+n = 250
+
+link_Masses = []
+linkCollisionShapeIndices = []
+linkVisualShapeIndices = []
+linkPos = [[-0.002168,-0.002597,-0.269228],
+[-0.006504,-0.00779,-0.269058],
+[-0.010835,-0.012978,-0.268718],
+[-0.01516,-0.018157,-0.268209],
+[-0.019475,-0.023325,-0.26753],
+[-0.023778,-0.028479,-0.266681],
+[-0.028065,-0.033614,-0.265665],
+[-0.032335,-0.038728,-0.264481],
+[-0.036585,-0.043818,-0.263129],
+[-0.040811,-0.04888,-0.261611],
+[-0.045012,-0.053911,-0.259929],
+[-0.049184,-0.058908,-0.258082],
+[-0.053325,-0.063868,-0.256072],
+[-0.057433,-0.068787,-0.2539],
+[-0.061504,-0.073664,-0.251569],
+[-0.065536,-0.078493,-0.249077],
+[-0.069527,-0.083273,-0.246428],
+[-0.073474,-0.088,-0.243624],
+[-0.077375,-0.092672,-0.240667],
+[-0.081227,-0.097285,-0.237557],
+[-0.085028,-0.101837,-0.234297],
+[-0.088774,-0.106325,-0.230889],
+[-0.092465,-0.110745,-0.227335],
+[-0.096097,-0.115095,-0.223638],
+[-0.099669,-0.119373,-0.219799],
+[-0.103177,-0.123575,-0.215822],
+[-0.106621,-0.1277,-0.211708],
+[-0.109997,-0.131743,-0.20746],
+[-0.113303,-0.135703,-0.203082],
+[-0.116539,-0.139578,-0.198575],
+[-0.1197,-0.143365,-0.193943],
+[-0.122786,-0.147061,-0.189188],
+[-0.125794,-0.150664,-0.184314],
+[-0.128724,-0.154172,-0.179324],
+[-0.131571,-0.157582,-0.17422],
+[-0.134335,-0.160893,-0.169006],
+[-0.137015,-0.164103,-0.163685],
+[-0.139608,-0.167208,-0.158261],
+[-0.142113,-0.170208,-0.152737],
+[-0.144527,-0.1731,-0.147116],
+[-0.146852,-0.175884,-0.141403],
+[-0.149083,-0.178556,-0.1356],
+[-0.15122,-0.181116,-0.129712],
+[-0.153261,-0.183561,-0.123742],
+[-0.155206,-0.18589,-0.117693],
+[-0.157052,-0.188101,-0.111571],
+[-0.158799,-0.190194,-0.105377],
+[-0.160447,-0.192167,-0.099117],
+[-0.161992,-0.194018,-0.092795],
+[-0.163436,-0.195747,-0.086414],
+[-0.164776,-0.197352,-0.079978],
+[-0.166012,-0.198832,-0.073492],
+[-0.167143,-0.200187,-0.06696],
+[-0.168169,-0.201416,-0.060385],
+[-0.169088,-0.202517,-0.053772],
+[-0.169901,-0.20349,-0.047125],
+[-0.170606,-0.204335,-0.040448],
+[-0.171204,-0.205051,-0.033746],
+[-0.171693,-0.205637,-0.027022],
+[-0.172074,-0.206093,-0.020282],
+[-0.172347,-0.20642,-0.013528],
+[-0.17251,-0.206615,-0.006766],
+[-0.172564,-0.20668,-5.0191e-9],
+[-0.17251,-0.206615,0.006766],
+[-0.172347,-0.206419,0.013528],
+[-0.172075,-0.206094,0.020282],
+[-0.171693,-0.205637,0.027022],
+[-0.171204,-0.20505,0.033746],
+[-0.170606,-0.204335,0.040448],
+[-0.169901,-0.20349,0.047125],
+[-0.169088,-0.202517,0.053772],
+[-0.16817,-0.201417,0.060385],
+[-0.167143,-0.200187,0.06696],
+[-0.166012,-0.198832,0.073492],
+[-0.164776,-0.197352,0.079978],
+[-0.163435,-0.195746,0.086414],
+[-0.161993,-0.194019,0.092795],
+[-0.160446,-0.192166,0.099117],
+[-0.158799,-0.190194,0.105377],
+[-0.157052,-0.188101,0.11157],
+[-0.155206,-0.18589,0.117693],
+[-0.153261,-0.18356,0.123742],
+[-0.15122,-0.181116,0.129713],
+[-0.149083,-0.178556,0.1356],
+[-0.146852,-0.175884,0.141403],
+[-0.144528,-0.173101,0.147117],
+[-0.142113,-0.170208,0.152737],
+[-0.139608,-0.167208,0.158261],
+[-0.137015,-0.164102,0.163685],
+[-0.134335,-0.160893,0.169006],
+[-0.131571,-0.157582,0.174219],
+[-0.128723,-0.154172,0.179323],
+[-0.125794,-0.150664,0.184314],
+[-0.122786,-0.147061,0.189188],
+[-0.1197,-0.143365,0.193943],
+[-0.116539,-0.139579,0.198576],
+[-0.113304,-0.135704,0.203082],
+[-0.109997,-0.131743,0.207461],
+[-0.106621,-0.1277,0.211708],
+[-0.103177,-0.123575,0.215822],
+[-0.099669,-0.119373,0.219799],
+[-0.096097,-0.115095,0.223638],
+[-0.092464,-0.110744,0.227333],
+[-0.088774,-0.106325,0.230889],
+[-0.085027,-0.101837,0.234297],
+[-0.081227,-0.097285,0.237557],
+[-0.077375,-0.092672,0.240667],
+[-0.073474,-0.088,0.243624],
+[-0.069527,-0.083273,0.246429],
+[-0.065536,-0.078493,0.249077],
+[-0.061504,-0.073663,0.251568],
+[-0.057433,-0.068787,0.2539],
+[-0.053325,-0.063868,0.256072],
+[-0.049184,-0.058908,0.258082],
+[-0.045012,-0.053911,0.259929],
+[-0.040811,-0.04888,0.261611],
+[-0.036585,-0.043818,0.263129],
+[-0.032335,-0.038728,0.264481],
+[-0.028065,-0.033614,0.265665],
+[-0.023778,-0.028479,0.266682],
+[-0.019475,-0.023325,0.26753],
+[-0.01516,-0.018157,0.268209],
+[-0.010835,-0.012978,0.268718],
+[-0.006504,-0.00779,0.269058],
+[-0.002168,-0.002597,0.269228],
+[0.002168,0.002597,0.269228],
+[0.006504,0.00779,0.269058],
+[0.010835,0.012978,0.268718],
+[0.01516,0.018157,0.268209],
+[0.019475,0.023325,0.26753],
+[0.023778,0.028479,0.266681],
+[0.028065,0.033614,0.265665],
+[0.032335,0.038728,0.264481],
+[0.036585,0.043818,0.263129],
+[0.040811,0.04888,0.261611],
+[0.045012,0.053911,0.259929],
+[0.049184,0.058908,0.258082],
+[0.053325,0.063868,0.256072],
+[0.057433,0.068787,0.2539],
+[0.061504,0.073664,0.251569],
+[0.065536,0.078493,0.249077],
+[0.069527,0.083273,0.246428],
+[0.073474,0.088,0.243624],
+[0.077375,0.092672,0.240667],
+[0.081227,0.097285,0.237557],
+[0.085028,0.101837,0.234297],
+[0.088774,0.106325,0.230889],
+[0.092465,0.110745,0.227335],
+[0.096097,0.115095,0.223638],
+[0.099669,0.119373,0.219799],
+[0.103177,0.123575,0.215822],
+[0.106621,0.1277,0.211708],
+[0.109997,0.131743,0.20746],
+[0.113303,0.135703,0.203082],
+[0.116539,0.139578,0.198575],
+[0.1197,0.143365,0.193943],
+[0.122786,0.147061,0.189188],
+[0.125794,0.150664,0.184314],
+[0.128724,0.154172,0.179324],
+[0.131571,0.157582,0.17422],
+[0.134335,0.160893,0.169006],
+[0.137015,0.164103,0.163685],
+[0.139608,0.167208,0.158261],
+[0.142113,0.170208,0.152737],
+[0.144527,0.1731,0.147116],
+[0.146852,0.175884,0.141403],
+[0.149083,0.178556,0.1356],
+[0.15122,0.181116,0.129712],
+[0.153261,0.183561,0.123742],
+[0.155206,0.18589,0.117693],
+[0.157052,0.188101,0.111571],
+[0.158799,0.190194,0.105377],
+[0.160447,0.192167,0.099117],
+[0.161992,0.194018,0.092795],
+[0.163436,0.195747,0.086414],
+[0.164776,0.197352,0.079978],
+[0.166012,0.198832,0.073492],
+[0.167143,0.200187,0.06696],
+[0.168169,0.201416,0.060385],
+[0.169088,0.202517,0.053772],
+[0.169901,0.20349,0.047125],
+[0.170606,0.204335,0.040448],
+[0.171204,0.205051,0.033746],
+[0.171693,0.205637,0.027022],
+[0.172074,0.206093,0.020282],
+[0.172347,0.20642,0.013528],
+[0.17251,0.206615,0.006766],
+[0.172564,0.20668,5.0191e-9],
+[0.17251,0.206615,-0.006766],
+[0.172347,0.206419,-0.013528],
+[0.172075,0.206094,-0.020282],
+[0.171693,0.205637,-0.027022],
+[0.171204,0.20505,-0.033746],
+[0.170606,0.204335,-0.040448],
+[0.169901,0.20349,-0.047125],
+[0.169088,0.202517,-0.053772],
+[0.16817,0.201417,-0.060385],
+[0.167143,0.200187,-0.06696],
+[0.166012,0.198832,-0.073492],
+[0.164776,0.197352,-0.079978],
+[0.163435,0.195746,-0.086414],
+[0.161993,0.194019,-0.092795],
+[0.160446,0.192166,-0.099117],
+[0.158799,0.190194,-0.105377],
+[0.157052,0.188101,-0.11157],
+[0.155206,0.18589,-0.117693],
+[0.153261,0.18356,-0.123742],
+[0.15122,0.181116,-0.129713],
+[0.149083,0.178556,-0.1356],
+[0.146852,0.175884,-0.141403],
+[0.144528,0.173101,-0.147117],
+[0.142113,0.170208,-0.152737],
+[0.139608,0.167208,-0.158261],
+[0.137015,0.164102,-0.163685],
+[0.134335,0.160893,-0.169006],
+[0.131571,0.157582,-0.174219],
+[0.128723,0.154172,-0.179323],
+[0.125794,0.150664,-0.184314],
+[0.122786,0.147061,-0.189188],
+[0.1197,0.143365,-0.193943],
+[0.116539,0.139579,-0.198576],
+[0.113304,0.135704,-0.203082],
+[0.109997,0.131743,-0.207461],
+[0.106621,0.1277,-0.211708],
+[0.103177,0.123575,-0.215822],
+[0.099669,0.119373,-0.219799],
+[0.096097,0.115095,-0.223638],
+[0.092464,0.110744,-0.227333],
+[0.088774,0.106325,-0.230889],
+[0.085027,0.101837,-0.234297],
+[0.081227,0.097285,-0.237557],
+[0.077375,0.092672,-0.240667],
+[0.073474,0.088,-0.243624],
+[0.069527,0.083273,-0.246429],
+[0.065536,0.078493,-0.249077],
+[0.061504,0.073663,-0.251568],
+[0.057433,0.068787,-0.2539],
+[0.053325,0.063868,-0.256072],
+[0.049184,0.058908,-0.258082],
+[0.045012,0.053911,-0.259929],
+[0.040811,0.04888,-0.261611],
+[0.036585,0.043818,-0.263129],
+[0.032335,0.038728,-0.264481],
+[0.028065,0.033614,-0.265665],
+[0.023778,0.028479,-0.266682],
+[0.019475,0.023325,-0.26753],
+[0.01516,0.018157,-0.268209],
+[0.010835,0.012978,-0.268718],
+[0.006504,0.00779,-0.269058]]
+linkOrientations = []
+linkInertialFramePositions = []
+linkInertialFrameOrientations = []
+indices = []
+jointTypes = []
+axis = []
+
+for i in range(len(linkPos)):
+  link_Masses.append(mass)
+  linkCollisionShapeIndices.append(linkCol)
+  linkVisualShapeIndices.append(linkVis)
+  linkOrientations.append(orientation)
+  linkInertialFramePositions.append([0,0,0])
+  linkInertialFrameOrientations.append(orientation)
+  indices.append(i)
+  jointTypes.append(p.JOINT_FIXED)
+  axis.append([0,0,0])
+
+link_Masses = link_Masses[:n]
+linkCollisionShapeIndices = linkCollisionShapeIndices[:n]
+linkVisualShapeIndices = linkVisualShapeIndices[:n]
+linkPos = linkPos[:n]
+linkOrientations = linkOrientations[:n]
+linkInertialFramePositions = linkInertialFramePositions[:n]
+linkInertialFrameOrientations = linkInertialFrameOrientations[:n]
+indices = indices[:n]
+jointTypes = jointTypes[:n]
+axis = axis[:n]
+
+p.createMultiBody(
+  baseMass=mass,
+  baseCollisionShapeIndex=linkCol,
+  baseVisualShapeIndex=linkVis,
+  basePosition= [-5.444793, 17.301618, 0],
+  baseOrientation=orientation,
+  linkMasses=link_Masses,
+  linkCollisionShapeIndices=linkCollisionShapeIndices,
+  linkVisualShapeIndices=linkVisualShapeIndices,
+  linkPositions=linkPos,
+  linkOrientations=linkOrientations,
+  linkInertialFramePositions=linkInertialFramePositions,
+  linkInertialFrameOrientations=linkInertialFrameOrientations,
+  linkParentIndices=indices,
+  linkJointTypes=jointTypes,
+  linkJointAxis=axis,
+  useMaximalCoordinates=True)
+
+p.setGravity(0, 0, -9.8)
+dt = 1./120.
+p.setRealTimeSimulation(1)
+
+for i in range(1000000):
+    p.stepSimulation()
+    time.sleep(dt)
+
+exit()
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Maximum number of multibody links?</h3>
+				<div class="date">Posted: <strong>Tue Mar 10, 2020 4:05 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There is currently a maximum of 128 links (see MAX_DEGREE_OF_FREEDOM)<br>
+The intention was for typical robots, which usually have only tens of links.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Maximum number of multibody links?</h3>
+				<div class="date">Posted: <strong>Mon Mar 23, 2020 5:38 pm</strong></div>
+				<div class="author">by <strong>XavierB</strong></div>
+				<div class="content">Hi,<br>
+<br>
+The URDF file modelling our robot contains 333 links (output of getNumLinks) and thus the robot state won't compute due to: <br>
+<a href="https://github.com/bulletphysics/bullet3/blob/34eb3d19bf4ec9c5faf6906b6a9d1f3cdf663441/examples/SharedMemory/PhysicsServerCommandProcessor.cpp#L7093" class="postlink">https://github.com/bulletphysics/bullet ... .cpp#L7093</a><br>
+<br>
+Locally I am able to change the value of MAX_DEGREE_OF_FREEDOM and it seems to work well in our case but I'd like to know if there is any better way to make it work ? or any known workaround ?<br>
+<br>
+regards</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

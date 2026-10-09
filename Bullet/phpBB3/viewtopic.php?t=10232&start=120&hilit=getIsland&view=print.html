@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; CPU multithreading is working! - Page 9</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>CPU multithreading is working!</h2>
+		<p><a href="viewtopic.php%3Ft=10232.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10232</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>9</strong> of <strong>10</strong></div>
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Tue Aug 22, 2017 5:44 pm</strong></div>
+				<div class="author">by <strong>Mako_energy02</strong></div>
+				<div class="content">A few quick clarifications:  <br>
+<br>
+This only arguably counts, but I did make sure everything worked with the SequentialTaskScheduler prior to writing my own scheduler.  I can confirm everything works fine with it.  But...it's not multi-threaded.  That said, these issues appear to be race conditions.  I'll probably try OpenMP for testing purposes, but I don't consider that to be a long term solution for my project.<br>
+<br>
+Wrapping around would make sense, however I was observing issues on the first or second call to StepSimulation.  Assuming it's only incrementing once on thread creation and starts at zero (which I believe is what I saw), then not enough threads are being created prior to the error for that to occur.  I could debug further.<br>
+<br>
+I am aware that the BvhTriangleMeshShape can't collide with itself (That was one of the first things I tried doing with bullet years ago).  The collisions are boxes and spheres with most being convex hulls.  All of the bodies are RigidBodies.  When those collisions occur, infinite loop.  As I said above, the loop doesn't occur with the SequentialTaskScheduler.<br>
+<br>
+Edit:<br>
+I've debugged further and found that I was focusing in on the wrong counter.  In the "getNext()" method on the ThreadSafeCounter class you perform a check to see if it has exceeded the maximum supported number of threads and assert if it has.  That was the error I was hitting.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Thu Aug 24, 2017 7:26 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">If you are hitting that assertion, then it means more than 64 unique threads have been used for doing tasks in bullet.  Your task scheduler should only be creating/using one thread per CPU core (actually one less because the main thread already exists).  The task scheduler should not be creating threads on an on going basis -- that would be a red flag right there.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Fri Sep 15, 2017 12:18 am</strong></div>
+				<div class="author">by <strong>Mako_energy02</strong></div>
+				<div class="content">The message in the assert was self explanatory when I found it in source.  And yes, clearly creating that many threads that often is bad.  I do create and destroy threads elsewhere in my engine, but I had greatly underestimated how often btParallelFor is called with this new multi-threaded system.  Depending on the amount of activity, I recorded between 2 and 25 calls per frame.  I had naively assumed it would be twice, once for the narrowphase and once for the solver.  Looking more in depth I see it's called in 5 places, so I guess either some are called multiple times per frame, or simulation sub-steps are involved.<br>
+<br>
+As I said in a previous post, I've been working on this little by little.  I have found none of the existing TaskSchedulers suitable for me, so I tried to make my own.  I've gone through more bug fixing and alternative approaches than I've listed here, nor do I care to list them all.  I focused on C++ threading primitives where I could, because I don't share Bullets allergy to the c++ standard library.  Ultimately, I couldn't get acceptable performance with any of my attempts.  <br>
+<br>
+I feel that, ultimately, having a system/interface to distribute parrallelfor's is a poor design that forces more poor designs on anyone that uses it.  More intelligent systems exist and can be deployed with Bullet.  It requires the ability to freely change the Bullet API though, which I understand wasn't something that could be done with this refactor.  I feel that is a requirement for good, long-lasting support for CPU multi-threading in Bullet to be realized.<br>
+<br>
+Lunkhound, thank you for your effort.  I'm sure others have found it useful and are using it, but I can't.  So now I have to decide if the other improvements in the newest version are worth a very significant feature regression (CPU multi-threading) from the version I've been using (2.83).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sat Sep 16, 2017 7:23 am</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">Mako_energy02, thanks for contributing to this thread and sharing your experiences. I appreciate it.<br>
+<br>
+Yes, parallelFor is called typically 5 times per simulation sub-step. In the work I am currently doing where I'm parallelizing the constraint solver, I'm leaning much harder on the task scheduler, and parallelFor gets called potentially hundreds of times per constraint solver. This is not a problem for a well-implemented task scheduler.<br>
+<br>
+Here is a profile graph of my work-in-progress parallel solver using the btDefaultTaskScheduler on a 4-core (very old) computer of mine.<br>
+This example compares solving constraints for a single stack of 961 boxes with 7890 contact manifolds (more than 8 manifolds per body) on a single thread and also with my new parallel solver.<br>
+In this example, the parallel solver is calling parallelFor more than 300 times.<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1564" class="postimage" alt="bullet-profile-bigstack-comparison.png" onclick="viewableArea(this);" /></dt>
+						<dd>bullet-profile-bigstack-comparison.png (502.83 KiB) Viewed 197368 times</dd>
+		</dl>
+		
+		
+			</div>
+
+The single threaded solver (SequentialImpulseConstraintSolver) took 21.4ms, whereas the new parallel solver took 12.7ms. So roughly a 1.68X speedup.<br>
+However, this is still a work in progress, and I think I can get better results. In the graphic I put red circles showing where threads are sitting idle.<br>
+With better batching of constraints I should be able to reduce that idle time and improve performance more.<br>
+<br>
+But it is true that the task scheduler is key to getting good performance. It is extremely easy for a bad task scheduler to cause terrible performance.<br>
+I REALLY don't recommend trying to write one from scratch, I suggest using one of the ones provided.<br>
+<br>
+Did you have trouble getting the default task scheduler working?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sat Sep 16, 2017 11:24 pm</strong></div>
+				<div class="author">by <strong>Mako_energy02</strong></div>
+				<div class="content"><blockquote class="uncited"><div>Did you have trouble getting the default task scheduler working?</div></blockquote>
+
+I didn't try.  I reviewed the code itself and recalled comments about it that you had made.  A combination of needing to move 6+ files, concerns over the interface, the lack of inclusion in the core library, and references to Bullet 3 code (I'm still very much using Bullet 2) all eliminated it as a prospect for me.  If the default task scheduler has moved to the core lib, then I'll do an update when I eventually revisit this(no idea when) and try that. <br>
+<br>
+Opinionated Rant incoming:<br>
+<br>
+While what you've shown me is faster than what I had achieved, a less than 2x speedup over 4 cores is not what I would have expected.  Combining that with the strong recommendation to use a pre-packaged solution, both of these from the author of the system is not as encouraging one would hope.  Personally, I feel that either the work is generic enough that overrides and customization can take place, or it's not generic enough and Bullet should lock down the implementation.  Currently, the implementation seems stuck in between the two ideologies.  <br>
+<br>
+For example, Ogre3D had this issue where in 1.7-2.0, there was a WorkQueue interface that tried a similar approach to the btITaskScheduler.  They provided some implementations, such as TBB that people could use.  One major difference is that the Ogre WorkQueue didn't focus on ParallelFor's.  It was more generic so it could use work given to it by Ogre's terrain system at the time.  Regardless, it was large, difficult to maintain, and made some assumptions about how Ogre was to be used in relation to the rest of the engine.  Custom WorkQueue's made by users were impractical.  It ended up getting scrapped in favor of an entirely internal and much simpler, more focused threading solution that directly addressed Ogre's needs.<br>
+<br>
+I can't say the current design is just like the Ogre WorkQueue, but I do see a number of similarities.  If the threading needs of Bullet are so specific that only the author can write implementations, why bother with the interface?  Why even try to appeal to the use of other threading solutions?  I know I'm making it sound like I'm going back on wanting to change the Bullet API to better accommodate threading solutions, so I'll state directly that either could work.  You'd likely have to change the API a little bit regardless due to the modular nature of Bullet.  <br>
+<br>
+Then again, maybe I'm just a special snowflake.  I am only one person complaining and the threading model I use in my engine is different from nearly every other threading model I've seen.  So I have some opinionated views on threading that I know many others don't share.  So take what I say with a grain of salt.  <br>
+<br>
+Regardless of my opinions on design, I eagerly look forward to future updates to the system.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sun Sep 17, 2017 10:35 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><blockquote><div><cite>Mako_energy02 wrote:</cite>I didn't try.  I reviewed the code itself and recalled comments about it that you had made.  A combination of needing to move 6+ files, concerns over the interface, the lack of inclusion in the core library, and references to Bullet 3 code (I'm still very much using Bullet 2) all eliminated it as a prospect for me.  If the default task scheduler has moved to the core lib, then I'll do an update when I eventually revisit this(no idea when) and try that. </div></blockquote>
+
+I agree it should be moved to the core lib, however, it should be quite easy to copy those 8 files (btTaskScheduler.h/cpp, b3ThreadSupportInterface.h/cpp, b3Win32ThreadSupport.h/cpp, b3PosixThreadSupport.h/cpp) into your project and get it working. There are no significant dependencies on Bullet 3 libraries (depite the "b3" prefix on some things). You should be able to easily remove all references to Bullet 3 headers with 3 edits:
+<ul><li>- in btTaskScheduler.cpp, delete the include of b3Clock.h -- it's not needed<br>
+- in b3ThreadSupportInterface.h, replace the b3Scalar.h include with LinearMath/btScalar.h<br>
+- replace B3_ATTRIBUTE_ALIGNED16 with BT_ATTRIBUTE_ALIGNED16 (I only see one occurance of it)</li></ul>
+
+That's all it should take to use the default task scheduler now. Hopefully in the future it will be part of the core lib and those steps won't be needed.<br>
+
+<blockquote><div><cite>Mako_energy02 wrote:</cite>While what you've shown me is faster than what I had achieved, a less than 2x speedup over 4 cores is not what I would have expected.</div></blockquote>
+
+I think you've missed the point I was trying to make there. In the official version of Bullet, the constraint solver is single-threaded. If you have many simulation islands of bodies, it is able to run the constraint solvers in parallel on different threads, but each solver is only using a single thread to do it's work. In a best case scenario (many equal-sized simulation islands) you should get close to a 4x speedup on 4 cores for the solving of the constraints (assuming a reasonably performant task scheduler).<br>
+In a worst-case scenario, where there is only a single simulation island (all bodies in a single big stack), there is no speedup at all because it is single threaded.<br>
+For solving constraints it is much more difficult to extract parallelism from a single simulation island because of data dependencies -- it is not an "embarrassingly parallel" problem like the narrowphase collision, or like solving independent simulation islands in parallel.<br>
+<br>
+The point I was trying to make is that there is nothing wrong with the performance of "parallelFor" as you seemed to be implying. In the example I posted, parallelFor was being invoked over 300 times (far far more than the 25 times you were concerned about), and the performance issues were caused by the batching algorithm of the new (work in progress) parallel constraint solver -- NOT the task scheduler.<br>
+If you look closely at the profile graph you can see that the task scheduler is working exactly as it should -- tasks are being quickly dispatched to the worker threads, and the parallelFor finishes very shortly after the last task completes.<br>
+
+<blockquote><div><cite>Mako_energy02 wrote:</cite>Combining that with the strong recommendation to use a pre-packaged solution, both of these from the author of the system is not as encouraging one would hope.  Personally, I feel that either the work is generic enough that overrides and customization can take place, or it's not generic enough and Bullet should lock down the implementation.  Currently, the implementation seems stuck in between the two ideologies.</div></blockquote>
+
+My feeling is that if Bullet multithreading is to be useful to the broadest range of projects, it must not dictate a particular task scheduler. Many (most?) game projects already have a custom task scheduler, my own included. I do not want to deal with multiple different task schedulers, each having a set of worker threads, and the added complexity and risk of thread oversubscription issues it would bring.<br>
+At the same time, it should just work out of the box by default, for people who don't mind letting Bullet manage threads on its own. That's what the default task scheduler is supposed to be for.<br>
+
+<blockquote><div><cite>Mako_energy02 wrote:</cite>If the threading needs of Bullet are so specific that only the author can write implementations, why bother with the interface?  Why even try to appeal to the use of other threading solutions?</div></blockquote>
+
+ParallelFor is the most generic, highest level threading abstraction I know of. The TBB, OpenMP and PPL implementations all work and are reasonably performant.<br>
+
+<blockquote><div><cite>Mako_energy02 wrote:</cite>Regardless of my opinions on design, I eagerly look forward to future updates to the system.</div></blockquote>
+
+Stay tuned!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Wed Jan 10, 2018 12:37 am</strong></div>
+				<div class="author">by <strong>quant</strong></div>
+				<div class="content">Thank you for all your work on this.<br>
+<br>
+I'm seeing between 2-4x performance increase with thousands of simulated bodies. Running an i7-7700.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Fri Jan 19, 2018 4:24 am</strong></div>
+				<div class="author">by <strong>quant</strong></div>
+				<div class="content">I've run into a problem when using constraints with kinematic bodies (simulated bodies work fine).<br>
+<br>
+btSimulationIslandManagerMt calls buildAndProcessIslands(), which calls addConstraintsToIslands(), which calls btGetConstraintIslandId(), which returns -1.<br>
+<br>
+The next line, "Island* island = <span class="posthilit">getIsland</span>(islandId);" asserts the id &gt;= 0,<br>
+<br>
+No problems with the non-MT build. Any idea how to fix this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sun Jan 28, 2018 1:01 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=40342#p40342"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=12090.html">quant</a> wrote: <a href="viewtopic.php%3Fp=40342.html#p40342" data-post-id="40342" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Fri Jan 19, 2018 4:24 am</span></cite>
+I've run into a problem when using constraints with kinematic bodies (simulated bodies work fine).<br>
+<br>
+btSimulationIslandManagerMt calls buildAndProcessIslands(), which calls addConstraintsToIslands(), which calls btGetConstraintIslandId(), which returns -1.<br>
+<br>
+The next line, "Island* island = <span class="posthilit">getIsland</span>(islandId);" asserts the id &gt;= 0,<br>
+<br>
+No problems with the non-MT build. Any idea how to fix this?
+</div></blockquote>
+
+Hi quant,<br>
+Sorry for the delayed response, I forgot to check this thread for a while.<br>
+<br>
+From looking at the code, I would only expect <strong class="text-strong">btGetConstraintIslandId()</strong> to return -1 if the constraint is between 2 kinematic bodies.<br>
+Perhaps you are accidentally creating a constraint between 2 kinematic bodies? Constraints will only work if at least 1 of the 2 bodies is dynamic.<br>
+<br>
+I wrote a quick test to see if constraints do in fact work when one of the bodies is kinematic (using the point-to-point constraint) -- no issues.<br>
+<br>
+Hope that helps with your issue, if not I'll need more info -- preferably a code snippet that reproduces your problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Mon Jan 29, 2018 1:36 am</strong></div>
+				<div class="author">by <strong>StabInTheDark</strong></div>
+				<div class="content">Where is the correct link to this multithreaded code?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Mon Jan 29, 2018 10:35 am</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=40366#p40366"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=10233.html">StabInTheDark</a> wrote: <a href="viewtopic.php%3Fp=40366.html#p40366" data-post-id="40366" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Mon Jan 29, 2018 1:36 am</span></cite>
+Where is the correct link to this multithreaded code?
+</div></blockquote>
+
+It has been in the main repo for some time now (<a href="https://github.com/bulletphysics/bullet3" class="postlink">https://github.com/bulletphysics/bullet3</a>). However multithreading is not enabled by default, you have to turn it on in Cmake configuration.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Tue Feb 27, 2018 12:35 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><a href="https://github.com/bulletphysics/bullet3/pull/1579" class="postlink">https://github.com/bulletphysics/bullet3/pull/1579</a><br>
+<br>
+<span style="font-size:150%;line-height:116%"><strong class="text-strong"><span style="text-decoration:underline">Multithreaded constraint solver</span></strong></span><br>
+<br>
+Adds a new class SequentialImpulseConstraintSolverMt, which is basically a multithreaded version of SequentialImpulseConstraintSolver.<br>
+<br>
+Supports all of the features of the normal sequential impulse solver such as:<br>
+- split penetration impulse<br>
+- rolling friction<br>
+- interleaving constraints<br>
+- warmstarting contact points<br>
+- 2 friction directions<br>
+- randomized constraint ordering<br>
+- early termination of solver iterations when leastSquaresResidualThreshold is satisfied<br>
+<br>
+A few changes were made to SequentialImpulseConstaintSolver to reduce code duplication. These changes are purely cosmetic in nature, and basically consist of moving certain chunks of code into functions so they can be called by a derived class.<br>
+<br>
+So how does this integrate with the existing multithreading which solves multiple islands in parallel?<br>
+In my tests, dispatching multithreaded solvers in parallel resulted in poor performance with the task schedulers I tested it with. The default task scheduler does not support nested parallel-for, but some of the others do -- and they all performed rather poorly.<br>
+<br>
+I tried a different approach: send large islands to the multithreaded solver one at a time, and then afterwards send the smaller islands to single-threaded solvers in parallel.<br>
+An island is considered "large" if the number of manifolds it has exceeds a certain threshold value (which is user settable).<br>
+<br>
+Additionally, the default task scheduler (based on Win32 threads or pthreads) has been moved into the LinearMath project. This should make it much easier to get multithreading working out of the box for end users. And since this adds built-in multithreading, the Cmake config variable for multithreading has been renamed from "BULLET2_USE_THREAD_LOCKS" to just "BULLET2_MULTITHREADING"</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Thu Mar 01, 2018 10:07 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks, this is very interesting. Have you experimented with graph coloring (solving a large island in parallel)?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Fri Mar 02, 2018 9:47 pm</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=40457#p40457"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=2.html">Erwin Coumans</a> wrote: <a href="viewtopic.php%3Fp=40457.html#p40457" data-post-id="40457" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Thu Mar 01, 2018 10:07 pm</span></cite>
+Thanks, this is very interesting. Have you experimented with graph coloring (solving a large island in parallel)?
+</div></blockquote>
+
+Yes, that's what this is. I experimented with various ways of batching the constraints (graph coloring). I probably tried 5 different approaches, discarding all except for the grid-based approach. I have 2 variants of the grid batching, 3D and 2D. The 3D variant creates 8 phases of batches while the 2D variant only needs 4.<br>
+<br>
+Here is a performance comparison for solving a single large island single-threaded vs the parallel constraint solver with 8 threads/4 cores using the 2D grid method:
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1604" class="postimage" alt="bullet-profile-bigstack-comparison2.png" onclick="viewableArea(this);" /></dt>
+						<dd>bullet-profile-bigstack-comparison2.png (262.37 KiB) Viewed 195835 times</dd>
+		</dl>
+		
+		
+			</div>
+
+Note that the time axis has been scaled so that they match (approximately), and in both cases the solvers are doing the same number of iterations (10) and are using the same solver options.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: CPU multithreading is working!</h3>
+				<div class="date">Posted: <strong>Sat Mar 03, 2018 1:36 am</strong></div>
+				<div class="author">by <strong>lunkhound</strong></div>
+				<div class="content">To show how the new parallel solver can improve on and integrate with the existing multithreading, consider the demo from the example browser found under "Benchmarks/1000 stack". In this scene we have a large island, a medium island and 3 small islands. This graphic shows a comparison of using the existing multithreading (which doesn't handle single large islands well) with a new approach which augments the existing method with a parallel solver (which does handle large islands well -- but not small ones).<br>
+<br>
+In each case we are using 4 threads to solve all 5 islands:<br>
+<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1605" class="postimage" alt="demo1kstack-batching-threshold-comparison.png" onclick="viewableArea(this);" /></dt>
+						<dd>demo1kstack-batching-threshold-comparison.png (472.62 KiB) Viewed 195940 times</dd>
+		</dl>
+		
+		
+			</div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>9</strong> of <strong>10</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

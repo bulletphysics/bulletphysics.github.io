@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Position based dynamics and collision constraints</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Position based dynamics and collision constraints</h2>
+		<p><a href="viewtopic.php%3Ft=10083.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=10083</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Position based dynamics and collision constraints</h3>
+				<div class="date">Posted: <strong>Wed Aug 27, 2014 10:13 am</strong></div>
+				<div class="author">by <strong>bartk</strong></div>
+				<div class="content">I was reading through "Position-based Method for the Simulation of Solid Objects" and noticed something about the algorithm outlined there. Collision constraints are generated for the ray/line from current positions to the initially predicted positions and this is only done once. <br>
+<br>
+What seems "strange" though is that when modifying predicted positions over several iterations, I guess new collisions could occur and would go undetected if, say, we were to use a general triangle mesh as the collider. <br>
+<br>
+So what is the assumption here?<br>
+- The chances of this happening are so small that it's of no use to be worried about them?<br>
+- The colliders are substantial enough (general spheres, cubes, capsules, large triangles) that it's still THE valid collider? i.e. no general triangle meshes with "small" triangles<br>
+- ...<br>
+<br>
+Or am I off in my interpretation somewhere are would you re-generate constraints based on the modification of the predicted positions?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Position based dynamics and collision constraints</h3>
+				<div class="date">Posted: <strong>Thu Sep 04, 2014 1:36 pm</strong></div>
+				<div class="author">by <strong>raigan2</strong></div>
+				<div class="content">I think there are a few different ways to handle this.<br>
+<br>
+An approach I've used with a position-based solver is "speculative collisions": at the start of the frame, generate all pairs of <em class="text-italics">potentially</em> colliding features, and solve them speculatively (i.e inside the solver you check if there's penetration, and if not you skip/ignore that constraint).<br>
+<br>
+This type of approach is explained pretty well here: <a href="http://www.wildbunny.co.uk/blog/2011/03/25/speculative-contacts-an-continuous-collision-engine-approach-part-1/" class="postlink">http://www.wildbunny.co.uk/blog/2011/03 ... ch-part-1/</a><br>
+<br>
+Two problems with this approach are (1) the heuristic for "potentially colliding" isn't always correct (IIRC I swept objects from start to end, generated AABBs that covered the sweep, inflated them, and tested them for overlap; the inflation step is meant to deal with the case where the solver moves things quite a bit, but if it moves things by more than the inflation amount, collisions can be missed), (2) the number of constraints to solve is much higher (since you're generating lots of speculative pairs).<br>
+<br>
+A different approach suggested in this (excellent) recent paper is to use a signed distance field: <a href="http://mmacklin.com/uppfrta_preprint.pdf" class="postlink">http://mmacklin.com/uppfrta_preprint.pdf</a> i.e rather than trying to sweep and predict/avoid penetration, they use a signed distance field to recover from penetration. <br>
+<br>
+<br>
+IMO one problem with position-based solvers is that they seem to want collision detection to be moved into the solving loop, which can be a performance bottleneck. Finding novel ways to avoid this (or speed this up) seems necessary. Or maybe not -- it's been a few years since I worked on this, there may be better approaches I'm not aware of.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

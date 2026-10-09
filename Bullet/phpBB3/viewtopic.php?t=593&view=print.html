@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Does scaling work OK?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Does scaling work OK?</h2>
+		<p><a href="viewtopic.php%3Ft=593.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=593</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Does scaling work OK?</h3>
+				<div class="date">Posted: <strong>Mon Oct 09, 2006 9:38 am</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content">Situation:<br>
+<br>
+1) Static Box vs Dynamic Sphere -&gt; Collision OK<br>
+2) Scaled Static Box vs Dynamic Sphere -&gt; No collision at all. They do not sense each other.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=593&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void					SetScale(D3DXVECTOR3 &amp;v)
+{
+	_pPhyObj-&gt;m_worldTransform.scale(*(btVector3*)&amp;v);
+}</code></pre></div>
+
+What can be wrong?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Does scaling work OK?</h3>
+				<div class="date">Posted: <strong>Mon Oct 09, 2006 1:46 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>Situation:<br>
+<br>
+1) Static Box vs Dynamic Sphere -&gt; Collision OK<br>
+2) Scaled Static Box vs Dynamic Sphere -&gt; No collision at all. They do not sense each other.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=593&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void					SetScale(D3DXVECTOR3 &amp;v)
+{
+	_pPhyObj-&gt;m_worldTransform.scale(*(btVector3*)&amp;v);
+}</code></pre></div>
+
+What can be wrong?</div></blockquote>
+
+You should set the scaling on the btCollisionShape. Please do so before you calculate the inertia tensor, and preferably before you add it to the world.<br>
+<br>
+I will remove the scaling on the worldtransform, we are only dealing with rigid transforms in Bullet (the scaling method on btTransform it is an obsolete remainder).<br>
+<br>
+Thanks for pointing this out,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Does scaling work OK?</h3>
+				<div class="date">Posted: <strong>Mon Oct 09, 2006 2:44 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite><blockquote><div><cite>Jack wrote:</cite>Situation:<br>
+<br>
+1) Static Box vs Dynamic Sphere -&gt; Collision OK<br>
+2) Scaled Static Box vs Dynamic Sphere -&gt; No collision at all. They do not sense each other.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=593&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void					SetScale(D3DXVECTOR3 &amp;v)
+{
+	_pPhyObj-&gt;m_worldTransform.scale(*(btVector3*)&amp;v);
+}</code></pre></div>
+
+What can be wrong?</div></blockquote>
+
+You should set the scaling on the btCollisionShape. Please do so before you calculate the inertia tensor, and preferably before you add it to the world.<br>
+<br>
+I will remove the scaling on the worldtransform, we are only dealing with rigid transforms in Bullet (the scaling method on btTransform it is an obsolete remainder).<br>
+<br>
+Thanks for pointing this out,<br>
+Erwin</div></blockquote>
+
+That worked. But:<br>
+1) getOpenGLMatrix does not include scaling in the returned matrix. Do you think it is right?<br>
+2) As I understood I can not change scale dynamicaly. Right? Then it is going to be useless feature, I think...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Does scaling work OK?</h3>
+				<div class="date">Posted: <strong>Mon Oct 09, 2006 2:56 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>
+That worked. But:<br>
+1) getOpenGLMatrix does not include scaling in the returned matrix. Do you think it is right?<br>
+2) As I understood I can not change scale dynamicaly. Right? Then it is going to be useless feature, I think...</div></blockquote>
+
+You have to apply the scaling yourself on the graphics object, the world transform doesn't contain the scaling.<br>
+<br>
+You can dynamically scale rigid bodies, as long as you make sure to call a method to update the inertial tensor. WARNING: not all shapes might support the re-scaling yet, especially static triangle meshes that use a bounding volume hierarchy need to rebuild this hierarchy probably.<br>
+<br>
+1) update the scaling on the btCollisionShape derived class<br>
+2) calculate new localinertia on that collision shape<br>
+3) call the setMassProps(mass,updatedLocalInertia) on btRigidBody<br>
+4) call the updateInertiaTensor on the btRigidBody<br>
+<br>
+If you are rescaling a dynamic rigidbody make also sure to activate it, and don't cause too deep penetration in one timestep.<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Does scaling work OK?</h3>
+				<div class="date">Posted: <strong>Mon Oct 09, 2006 3:34 pm</strong></div>
+				<div class="author">by <strong>Jack</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite><blockquote><div><cite>Jack wrote:</cite>
+That worked. But:<br>
+1) getOpenGLMatrix does not include scaling in the returned matrix. Do you think it is right?<br>
+2) As I understood I can not change scale dynamicaly. Right? Then it is going to be useless feature, I think...</div></blockquote>
+
+You have to apply the scaling yourself on the graphics object, the world transform doesn't contain the scaling.<br>
+<br>
+You can dynamically scale rigid bodies, as long as you make sure to call a method to update the inertial tensor. WARNING: not all shapes might support the re-scaling yet, especially static triangle meshes that use a bounding volume hierarchy need to rebuild this hierarchy probably.<br>
+<br>
+1) update the scaling on the btCollisionShape derived class<br>
+2) calculate new localinertia on that collision shape<br>
+3) call the setMassProps(mass,updatedLocalInertia) on btRigidBody<br>
+4) call the updateInertiaTensor on the btRigidBody<br>
+<br>
+If you are rescaling a dynamic rigidbody make also sure to activate it, and don't cause too deep penetration in one timestep.<br>
+<br>
+Hope this helps,<br>
+Erwin</div></blockquote>
+
+Do not you think these steps should be done automaticaly by Bullet? Do not you think that Inertia Tensor to be managed entirely By Bullet? Probably there could be method GetInertiaTensor (if user wants to know it), but such methods as calculateLocalInertia, updateInertiaTensor, setMassProps look redundant. <br>
+When you create the shape you pass body density. Then Volume, Mass, Inertia are managed automaticaly. User can get these values, but not set...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Does scaling work OK?</h3>
+				<div class="date">Posted: <strong>Mon Oct 09, 2006 3:43 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Jack wrote:</cite>
+Do not you think these steps should be done automaticaly by Bullet? Do not you think that Inertia Tensor to be managed entirely By Bullet? Probably there could be method GetInertiaTensor (if user wants to know it), but such methods as calculateLocalInertia, updateInertiaTensor, setMassProps look redundant. <br>
+When you create the shape you pass body density. Then Volume, Mass, Inertia are managed automaticaly. User can get these values, but not set...</div></blockquote>
+
+No, I don't want to force users to use Bullet's inertial tensor calculation. You can optionally use it, but also load it from file (COLLADA physics provides the inertia tensor that it gets from the tool (Maya, Max, XSI, Blender etc)) or calculate it yourself.<br>
+I haven't checked it out yet, but perhaps setMassProps  already updates the cached inverse of the inertia tensor. Otherwise I will add that, to reduce the work. <br>
+Note however that scaling/rescaling is not a common use case in rigid body dynamics.<br>
+<br>
+Thanks for the feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Does scaling work OK?</h3>
+				<div class="date">Posted: <strong>Wed Oct 11, 2006 7:10 am</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>I will remove the scaling on the worldtransform, we are only dealing with rigid transforms in Bullet (the scaling method on btTransform it is an obsolete remainder).</div></blockquote>
+
+So, is a btTransform only for rotations and translations?<br>
+<br>
+If so, would it be bad form to do something like:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=593&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>myBtTransform . getBasis ( ) . scaled ( myBtVector ) ;</code></pre></div>
+
+Thanks,<br>
+  Braden</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

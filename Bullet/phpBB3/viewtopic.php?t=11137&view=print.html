@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Steiner's Theorem for Composite Bodies</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Steiner's Theorem for Composite Bodies</h2>
+		<p><a href="viewtopic.php%3Ft=11137.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11137</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Sun May 01, 2016 12:57 am</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">In calculating the inertia tensor for composite bodies in 3D one can use Steiner's Theorem (also called the Parallel-Axis Theorem, <a href="https://en.wikipedia.org/wiki/Parallel_axis_theorem" class="postlink">https://en.wikipedia.org/wiki/Parallel_axis_theorem</a>) to shift the local tensor to another point, specifically to each shape's respective local transform and additionally the center of mass for the entire body. This process is described by Dirk Gregorius <a href="viewtopic.php%3Ft=3702.html" class="postlink">http://www.bulletphysics.org/Bullet/php ... f=4&amp;t=3702</a>. <br>
+<br>
+I understand the use of Steiner's Theorem in this algorithm, but I do not understand why the Steiner term is added when shifting to the shape's transform and subtracted when shifting to the center of mass of the entire body. Box2D performs a subtraction as well in b2Body::ResetMassData to center the inertia about the center of mass. Furthermore, I'm actually unsure as to how this operation is correct. I would figure that for each shape the tensor would need to be shifted from it's local position to the final center of mass for the entire body. Bullet seems to do just this in btCompoundShape::calculatePrincipalAxisTransform, and with an addition instead of a subtraction.<br>
+<br>
+If someone could shed some light as to this derivation and edify me on the physics, that would be greatly appreciated!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Mon May 02, 2016 12:20 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Usually inertia tensors are calculated in model space (or local space) of the rigid body. Let's call the rigid body's reference frame A. Say we have a convex hull fixed in A. When A rotates the hull will rotate about A's origin, remaining fixed. When the inertia tensor of the hull is computed the tensor summation function used is probably Stan Melax's open source code (or just some version of his code). If so, his function will compute the inertia tensor of the hull with respect to the reference frame A, as if the hull were to be swung around A's origin.<br>
+<br>
+Now say we have many hulls in A and would like to find an inertia tensor to represent all hulls in A together. We compute each hull's tensor and sum them together. The parallel axis theorem (PAT) only allows for the tensor to be shifted directly to the origin, or if at the origin already to another point. To shift from the origin to a point we do: I += PAT( offset_vector, mass ). To shift from a point to the origin we do: I -= PAT( offset_vector, mass ), which could also be thought of as I += PAT( -offset_vector, mass ). Shifting from one arbitrary point to another prerequisites a shift to the origin.<br>
+<br>
+Since A's center of mass now likely does not reside at the origin, we must use the PAT to shift the tensor to A's origin (hence the subtraction). It is useful for A's tensor to be placed with respect to the origin such that transforming the tensor to world space takes up less computations -- this is just a way to precalculate the tensor for run-time.<br>
+<br>
+Does that make sense? Hope that helps!<br>
+<br>
+Edit: If a function calculates the tensor of a shape and assumes the shape sits in its own reference frame, then the tensor must be shifted from the origin of the shape space to local transform's center, hence I += PAT( vector, mass ). This is probably why Bullet is using an addition. It's just a difference between which space the tensor is calculated in originally.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Mon May 02, 2016 5:14 am</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">Awesome! Yes, that fully dispels my confusion. Thank you so much for the explanation, Randy!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Wed May 04, 2016 4:49 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Regarding the addition/subtraction you were asking about:<br>
+- The inertia tensor is 'smallest' at the center of mass. So if you shift away from the center of mass you add (grow) and if you move into the center of mass you subtract (reduce).<br>
+<br>
+Edit: Looking at the quoted post there was a sign error I just fixed.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Wed May 04, 2016 5:48 pm</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">Thanks for the elaboration, Dirk!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Thu May 12, 2016 2:54 pm</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">I stumbled across a more mathematical explanation <a href="http://www.gamedev.net/page/resources/_/technical/math-and-physics/capsule-inertia-tensor-r3856" class="postlink">here</a>, specifically equations 10 and 11.<br>
+<br>
+Steiner's theorem states that:<br>
+<br>
+I' = I_cm + mr^2<br>
+<br>
+In Dirk's derivation while accumulating individual shape mass, we have I_cm and need to shift it by mr^2 to get I'. After we have accumulated all inertia, we have I' and need to find I_cm:<br>
+<br>
+I_cm = I' - mr^2<br>
+<br>
+I still don't know why Dirk uses the negative center of mass for the final shift, but I'm fairly sure this would result in the same Steiner term if using positive center of mass (just by looking at the algebra).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Thu May 12, 2016 4:24 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I think I fixed the negative center of mass in your cited post. This is what I was referring to in my earlier post.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Thu May 12, 2016 4:41 pm</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">If I recall the T.mTranslation was originally negative and the mass.center was always negative, although I could be mistaken. In any case, thanks for all the help!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Thu May 12, 2016 6:00 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">A 7 year old bug! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Thu May 12, 2016 8:08 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">There is no bug. The sign of the translation doesn't matter (I leave this an exercise to prove). I agree that it is confusing though. What is important is that you add when you move <strong class="text-strong">away </strong>from the center of mass and subtract when you move <strong class="text-strong">into </strong>the center of mass.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Thu May 12, 2016 8:19 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Oh I see what you meant. I thought the old post was shifting to COM with a subtraction (I didn't read carefully).<br>
+<br>
+I = I_cm + md^2, d^2 -&gt; always positive, aka the distance from origin matters, and any vector (positive or negative) fixed on the origin will be the same result.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Fri Sep 09, 2016 10:25 am</strong></div>
+				<div class="author">by <strong>gilbo</strong></div>
+				<div class="content">Hi Joe,<br>
+<br>
+I can't comment on the code much, but as for the math, there are some simple principles from which you can derive nearly all of rotational/rigid-body mechanics, including the inertia tensor.  (Apologies if these are obvious.)<br>
+<br>
+principle 1)  You can think of linear and angular velocity as jointly defining a vector field over 3d-space, which is the velocity at each point in space. (although of course only meaningful for points actually on the rigid body.)  Specifically, let v be the linear velocity and w the angular velocity.  Then the velocity of a point V(p) = v + (w x p).  (x being the cross product)<br>
+<br>
+1.1) The set of all velocity fields of the above form is closed under changes of origin/basis.  proof sketch: Let Rp + r be a change of basis formula, where R is an orthonormal matrix.  Then V(p) = (v + (w x r)) + (w x Rp).  (w x y) = Wy, where W is an anti-symmetric matrix.  The product WR of an anti-symmetric and orthonormal matrix is anti-symmetric, which means we can transform it back into a cross product.  We usually choose to express angular velocity at the center of mass because it's convenient for many formulas, and for reasoning about the values, but we could express all our velocities in world coordinates...<br>
+<br>
+principle 2)  You can (more or less) derive all rotational mechanics by just looking at particle mechanics, the above notion of a velocity field, and cranking through the mathematical consequences.  Many particular quantities fall out from this process.<br>
+<br>
+2.1) Define the kinetic energy of a rigid body as the integration over the kinetic energy of all of its constituent particles.  i.e. Integrate_p[ 0.5 * m(p) * &lt;V(p),V(p&gt; ]  (where &lt;x,y&gt; denotes dot product of vectors).  Now, consider the following algebraic manipulations:<br>
+<br>
+(Let S_p be an abbreviation of Integrate_p)<br>
+(Let W be the anti symmetric matrix corresponding to the cross product (w x ...))<br>
+(Let P be the anti symmetric matrix corresponding to the cross product (p x ...))<br>
+(Let A’ x’ denote transposes of matrices and vectors)<br>
+<br>
+= 0.5*S_p[ m(p) * &lt;v,v&gt; + 2*&lt;v,(w x p)&gt; + &lt;(w x p),(w x p)&gt; ]<br>
+= 0.5*S_p[ m(p)*&lt;v,v&gt; ]  +  S_p[ m(p)*&lt;v,(w x p)&gt; ]  +  0.5*S_p[ m(p) * (see below) ]<br>
+= 0.5*S_p[ m(p) ]*&lt;v,v&gt;  +  &lt;v, (w x S_p[ m(p) p ])&gt;  +  0.5*S_p[ m(p) * w’P’Pw ]<br>
+= 0.5* M *&lt;v,v&gt;  +  &lt;v, (w x CoM)&gt;  +  0.5*w’ I w<br>
+<br>
+for above: &lt;(w x p),(w x p)&gt; = &lt;(p x w),(p x w)&gt; = w’P’Pw<br>
+<br>
+That is, we now have an expression, where none of the integrals depend any longer on the velocity field.  So, we can pre-compute these three values<br>
+<br>
+M = S_p[ m(p) ] is the total mass of the body.<br>
+CoM = S_p[ m(p) * p ] is the center-of-mass of the body<br>
+I = S_p[ m(p) * P’P ] is the “inertia tensor”<br>
+<br>
+Note that the first of the three terms in the summation is the linear kinetic energy.  If we use a coordinate frame centered at the center of mass, then the second term will always be zero.  Finally, the last term is the angular kinetic energy, in which the inertia tensor plays the role of mass.<br>
+<br>
+If we compose these two principles together, we can derive a formula for the inertia tensor expressed in a different coordinate frame.  Forgive me for skipping that part.  You can derive Steiner's theorem as a special case of such an exercise.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Steiner's Theorem for Composite Bodies</h3>
+				<div class="date">Posted: <strong>Sat Sep 10, 2016 9:13 pm</strong></div>
+				<div class="author">by <strong>JoeLubertazzi</strong></div>
+				<div class="content">Hey, gilbo!<br>
+<br>
+First of all, thank you for the wonderful explanation; it was very clear and and gave me enough detail to expand the derivation about a different coordinate frame. If you have the opportunity, please let me know if my derivation is correct:<br>
+<br>
+Given p' = Rp + r, where p is the original particle position, R is the rotation into the new coordinate frame, r is the translation into the new coordinate frame, and p' is the particle's position in the new coordinate frame, we can use the original derivation of kinetic energy with p' in place of p:<br>
+<br>
+Integrate_p[ 0.5 * m(p) * &lt;V(p'),V(p')&gt; ]<br>
+<br>
+= 0.5*S_p[ m(p) * [ &lt;v,v&gt; + 2 *&lt;v,(w x p')&gt; + &lt;(w x p'),(w x p')&gt; ] ]<br>
+= 0.5*S_p[ m(p) * [ &lt;v,v&gt; + 2 *&lt;v,(w x (Rp + r))&gt; + &lt;(w x (Rp + r)),(w x (Rp + r))&gt; ] ]<br>
+= 0.5*S_p[ m(p) * [ &lt;v,v&gt; + 2 *&lt;v,((w x Rp) + (w x r))&gt; + &lt;((w x Rp) + (w x r)),((w x Rp) + (w x r))&gt; ] ]<br>
+= 0.5*S_p[ m(p) * [ &lt;v,v&gt; + 2 *&lt;v, (w x Rp)&gt; + 2 * &lt;v, (w x r)&gt; + &lt;(w x Rp), (w x Rp)&gt; + &lt;(w x r), (w x r)&gt; + 2 * &lt;(w x Rp), (w x r)&gt; ] ]<br>
+<br>
+Now using the scalar-triple product &lt;a, (b x c)&gt; = &lt;b, (c x a)&gt; = &lt;c, (a x b)&gt;, the definition of &lt;(w x p),(w x p)&gt; = w’P’Pw, and let Q be the anti-symmetric matrix of r:<br>
+<br>
+= 0.5 * S_p[ m(p) * &lt;v, v&gt; + 2 * m(p) * &lt;Rp, (v x w)&gt; * + 2 * m(p) * &lt;r, (v x w)&gt; + m(p) * w'R'P'PRw + m(p) * w'Q'Qw + 2 * m(p) * &lt;(w x Rp), (w x r)&gt; ]<br>
+= 0.5 * S_p[ m(p) * &lt;v, v&gt; + 2 * m(p) * &lt;(v x w), (r + Rp)&gt; + m(p) * w'( R'P'PR +Q'Q )w + 2 * m(p) * &lt;(w x Rp), (w x r)&gt; ]<br>
+= 0.5 * M * &lt;v, v&gt; + M*&lt;(v x w), (r + R*CoM)&gt; + 0.5 * w'(R'IR + MQ'Q)w + &lt;(w x (w x r)), R*CoM&gt;<br>
+<br>
+Here, the first term is the linear kinetic energy. The second term makes use of the center of mass in the new coordinate frame. The third term makes use of the inertia tensor in the new coordinate frame. I'm not entirely sure what the fourth term is (possibly related to gyroscopic motion?).<br>
+<br>
+The R'IR makes sense, as this is how we transform the inertia tensor at CoM from body-space to world-space. The MQ'Q is the second term of Steiner's theorem (as described <a href="https://en.wikipedia.org/wiki/Parallel_axis_theorem" class="postlink">here</a>). The r + R*CoM also makes sense, as this how how we transform the CoM from body-space to world-space.<br>
+<br>
+Once again, if you can offer some feedback on my derivation that'd be greatly appreciated (I probably messed up some algebra along the way, too).<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

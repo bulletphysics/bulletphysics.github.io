@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Toy vehicles (again)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Toy vehicles (again)</h2>
+		<p><a href="viewtopic.php%3Ft=9226.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9226</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Toy vehicles (again)</h3>
+				<div class="date">Posted: <strong>Sat Jun 29, 2013 9:21 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1068" class="postimage" alt="Hinge2VehicleDemo.jpg" onclick="viewableArea(this);" /></dt>
+						<dd>Hinge2VehicleDemo.jpg (43.94 KiB) Viewed 27038 times</dd>
+		</dl>
+		
+		
+			</div>This is mostly a restyling of the Hinge2VehicleDemo I made several years ago (further details here: <a href="viewtopic.php%3Ft=4660.html" class="postlink">http://www.bulletphysics.org/Bullet/php ... =17&amp;t=4660</a>).<br>
+I've just added a forklift and a generator of planar railway tracks (*).<br>
+For the restyling, I reused the libOpenGLSupport extension (in the OpenGLEx project subfolder), I introduced here: <a href="viewtopic.php%3Ft=7159.html" class="postlink">http://www.bulletphysics.org/Bullet/php ... =17&amp;t=7159</a>, and "btHACDCompoundShape.h" (same link) to perform convex decomposition of concave meshes at init time.<br>
+Hope you like it!  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"><br>
+<br>
+(*) Actually I've recently discovered that simple bridges work quite well with it.<br>
+<br>
+[Edit:] There is probably an error in the source code. In file OpenGLEx/GlutDemoApplicationEx.cpp, in method GlutDemoApplicationEx::localCreateCollisionObjectByUnwrappingCompoundShape(...), please replace:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9226&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const short collisionFilterGroup = GetDefaultCollisionFilterGroup(collisionFilterGroup,false);
+const short collisionFilterMask = GetDefaultCollisionFilterMask(collisionFilterMask,false);
+m_dynamicsWorld-&gt;addCollisionObject(co,collisionFilterGroup,collisionFilterMask);</code></pre></div>With:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9226&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>const short collisionFilterGroup2 = GetDefaultCollisionFilterGroup(collisionFilterGroup,false);
+const short collisionFilterMask2 = GetDefaultCollisionFilterMask(collisionFilterMask,false);
+m_dynamicsWorld-&gt;addCollisionObject(co,collisionFilterGroup2,collisionFilterMask2);
+</code></pre></div>Sorry for the inconvenience <img class="smilies" src="images/smilies/icon_redface.gif" width="15" height="15" alt=":oops:" title="Embarassed"> .</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Toy vehicles (again)</h3>
+				<div class="date">Posted: <strong>Fri Sep 06, 2013 3:21 pm</strong></div>
+				<div class="author">by <strong>CHAOS-THEORY</strong></div>
+				<div class="content">are you kiddin me, <strong class="text-strong">CPU is not fast enought to bla bla...</strong><br>
+Which means my CPU have a Special Core to handle TrickyTruck's physics? i didn't knew that lol</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Toy vehicles (again)</h3>
+				<div class="date">Posted: <strong>Sun Sep 08, 2013 8:22 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content"><blockquote><div><cite>CHAOS-THEORY wrote:</cite>are you kiddin me, CPU is not fast enought to bla bla...<br>
+Which means my CPU have a Special Core to handle TrickyTruck's physics? i didn't knew that lol</div></blockquote>If you look at the code:<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9226&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	static btScalar bulletFixedTimeStep(btScalar(1.)/btScalar(60.));
+	static unsigned long frame(0);	// A simple frame counter
+	++frame;
+
+
+	float dt = (getDeltaTimeMicroseconds() * 0.000001);
+    if (dt&gt;6*bulletFixedTimeStep &amp;&amp; frame&gt;5)	{
+		printf("Error. CPU is not fast enough to produce physic support at frame n.%d\n",frame);
+		dt=0;
+	}
+	else m_dynamicsWorld-&gt;stepSimulation(dt,5,bulletFixedTimeStep);
+</code></pre></div>you should understand that that message appears only if the max number of physic substeps is reached in stepSimulation(...) in a particular frame. <br>
+<br>
+That simply means that your CPU is too slow to run the demo if this message gets displayed continuously for multiple frames. This is important to detect when physic cycles are "eaten" and the physic simulation is not good due to the lack of CPU power. In the demo this message appears for sure when you take a raycast screenshot (but for a single frame).<br>
+<br>
+In short: if you see that message for a specific frame do not worry, otherwise your PC is really too slow to run the demo.<br>
+<br>
+But, above all, for your interest, I don't sell CPUs and I'm not kidding anyone. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Toy vehicles (again)</h3>
+				<div class="date">Posted: <strong>Mon Oct 21, 2013 1:36 pm</strong></div>
+				<div class="author">by <strong>CHAOS-THEORY</strong></div>
+				<div class="content">Tricky trucks physics are more sofisticated then your's and i still cant get in mind that i can't play ur game which seems less CPU hunger. well thanks anyway keep selling CPUs lol</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Toy vehicles (again)</h3>
+				<div class="date">Posted: <strong>Mon Oct 21, 2013 9:34 pm</strong></div>
+				<div class="author">by <strong>c6burns</strong></div>
+				<div class="content"><blockquote><div><cite>CHAOS-THEORY wrote:</cite>Tricky trucks physics are more sofisticated then your's and i still cant get in mind that i can't play ur game which seems less CPU hunger. well thanks anyway keep selling CPUs lol</div></blockquote>
+
+Your attitude is as bad as your CPU  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> (mostly kidding)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Toy vehicles (again)</h3>
+				<div class="date">Posted: <strong>Wed Dec 18, 2013 11:14 am</strong></div>
+				<div class="author">by <strong>Flix</strong></div>
+				<div class="content">I've made a small video based on the code I posted here, although I've added some extra features:<br>
+<a href="http://www.youtube.com/watch?v=kA1W_KXHWGA" class="postlink"><img src="http://img.youtube.com/vi/kA1W_KXHWGA/1.jpg" class="postimage" alt="Image"></a><br>
+<br>
+[Edit] I've added another video to show a different railway-circuit (with a bridge) that can be created using the same railway generator included in the source code:<br>
+<a href="http://www.youtube.com/watch?v=9cRzmJy2p9Q" class="postlink"><img src="http://img.youtube.com/vi/9cRzmJy2p9Q/1.jpg" class="postimage" alt="Image"></a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13141" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-01-21T11:23:59+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13141</id>
+
+		<entry>
+		<author><name><![CDATA[cc9cii]]></name></author>
+		<updated>2021-01-21T11:23:59+00:00</updated>
+
+		<published>2021-01-21T11:23:59+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43265#p43265</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43265#p43265"/>
+		<title type="html"><![CDATA[Re: inertia vector from inertia tensor matrix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43265#p43265"><![CDATA[
+Thank you both.  I can't say I fully understand it all, but I will go study it and will also try it out.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11967">cc9cii</a> — Thu Jan 21, 2021 11:23 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2021-01-20T16:44:29+00:00</updated>
+
+		<published>2021-01-20T16:44:29+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43264#p43264</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43264#p43264"/>
+		<title type="html"><![CDATA[Re: inertia vector from inertia tensor matrix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43264#p43264"><![CDATA[
+To clarify some points in the hope of being useful:<br><br>The "inertia tensor" of an object is the analogous to "mass", but for rotational motion.  In linear dynamics you are probably familiar with the formula:<br><br><strong class="text-strong">force = mass * acceleration</strong><br><br>In its full 3D glory that is a vector equation: <strong class="text-strong">force</strong> and <strong class="text-strong">acceleration</strong> have three components while <strong class="text-strong">mass</strong> is a scalar.  There is a similar equation for rotational dynamics:<br><br><strong class="text-strong">torque = inertia_tensor * angular_acceleration</strong><br><br>Again, that is a vector equation: <strong class="text-strong">torque</strong> and <strong class="text-strong">angular_acceleration</strong> have three components, however this time the "mass" term is a 3x3 matrix! <strong class="text-strong">(1)</strong><br><br>The coefficients inside the 3x3 matrix depend on the reference frame.  For a tumbling rigid body simulated in a static world-frame the coefficients will "tumble" over time, however in the body's local-frame with origin at its center of mass, the coefficients of the inertia tensor are invariant (do no change).  Within the infinite possibilities of centered local-frames there are some rotations in which the inertia tensor is diagonal.  These values along the diagonal are known as its "eigen values".  For some symmetric objects (sphere, cube) the inertia tensor is always diagonal (the choice of local-frame rotation does not matter) whereas most asymmetrical objects have diagonal inertia tensors at only a few choice rotations.<br><br>The Bullet API requires you to specify the three diagonal eigen values of the inertia tensor.  In other words: it assumes you've specified the body geometry in the local-frame such that its inertia tensor is diagonal.  It later uses those invariant values to compute the "world-frame inverse inertia tensor" (whose coefficients "tumble" as the object rotates) as necessary when running the simulation.<br><br>The good news: for games it is usually not necessary to get the inertia tensor exactly right.  As long as it is close enough: players will not be able to tell the difference between an accurate inertia tensor and the inertia tensor of its bounding box.  Do it this way because it is easy.<br><br>However, if you are using Bullet to perform "accurate" rigid body dynamics for simulation purposes then it might be important to get it just right.<br><br><strong class="text-strong">(1)</strong> Why does the rotation equation need a 3x3 matrix?  Fundamentally: the linear mass is scalar because translations commute (the end result does not change depending on how operations are ordered) however rotations do NOT commute, hence the math must track how the components of torque "mix" into the various components of angular acceleration.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Wed Jan 20, 2021 4:44 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[YessMasster]]></name></author>
+		<updated>2021-01-20T10:20:53+00:00</updated>
+
+		<published>2021-01-20T10:20:53+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43263#p43263</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43263#p43263"/>
+		<title type="html"><![CDATA[Re: inertia vector from inertia tensor matrix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43263#p43263"><![CDATA[
+Matrix of inertia represents how much torque is needed to make body get certain angular acceleration. In coordinates, which origin start in a center of mass the matrix is diagonal, meaning that providing torque at the origin in X axis ur will not make a body start spinning around Y or Z axes. If you provide those torques, however, not around center of mass, then this is not true anymore. This is why many physics engines compute rotations in body coordinates - it makes calculations much more simple.<br><br>If you are not getting diagonalized matrices, you need to diagonalize them. <br><br><a href="https://yutsumura.com/how-to-diagonalize-a-matrix-step-by-step-explanation/" class="postlink">https://yutsumura.com/how-to-diagonaliz ... planation/</a><br><br>btMatrix3x3 has a diagonalize() function, which uses Jacobi method, according to manual, although i did not use it mysel<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13880">YessMasster</a> — Wed Jan 20, 2021 10:20 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[cc9cii]]></name></author>
+		<updated>2021-01-19T21:55:35+00:00</updated>
+
+		<published>2021-01-19T21:55:35+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43262#p43262</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43262#p43262"/>
+		<title type="html"><![CDATA[Re: inertia vector from inertia tensor matrix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43262#p43262"><![CDATA[
+Hi,<br><br>Thanks for your response.  However I would like to understand a little bit more about this - what does this vector represent?  Is it the axis of rotation for this rigid body?<br><br>Also, I can't be certain that all the NIF models will have similar inertia tensor matrices (i.e. non-zero values only in the diagonal).  In such cases how would I derive the inertia vector?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11967">cc9cii</a> — Tue Jan 19, 2021 9:55 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[YessMasster]]></name></author>
+		<updated>2021-01-19T07:18:07+00:00</updated>
+
+		<published>2021-01-19T07:18:07+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43260#p43260</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43260#p43260"/>
+		<title type="html"><![CDATA[Re: inertia vector from inertia tensor matrix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43260#p43260"><![CDATA[
+As you can see, the matrix is diagonal (which is good in local body coords). The most foolproof method would be to just create new vector like:<br><div class="codebox"><p>Code: </p><pre><code>btVector3 your_new_vector(matrix.m11, matrix.m22, matrix.m33)</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13880">YessMasster</a> — Tue Jan 19, 2021 7:18 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[cc9cii]]></name></author>
+		<updated>2021-01-19T03:36:46+00:00</updated>
+
+		<published>2021-01-19T03:36:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43258#p43258</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43258#p43258"/>
+		<title type="html"><![CDATA[inertia vector from inertia tensor matrix]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43258#p43258"><![CDATA[
+Hi,<br><br>I've posted this question to the pybullet sub forum by mistake and have now moved it here.  Sorry about that.<br><br>I am trying to use btRigidBody::setMassProps() where the second parameter inertia is a btVector3.  Now, I have the rigid body description from a NIF file with an inertia tensor matrix (given that it is from a NIF I suspect it is from Havok):<br><br>    m11 = 1916.75<br>    m12 = 0.0<br>    m13 = 0.0<br>    m14 = 0.0<br>    m21 = 0.0<br>    m22 = 46.2<br>    m23 = 0.0<br>    m24 = 0.0<br>    m31 = 0.0<br>    m32 = 0.0<br>    m33 = 1915.6<br>    m34 = 0.0<br><br>How do I convert this matrix to a vector so that Bullet can use it?<br><br>Many thanks in advance<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11967">cc9cii</a> — Tue Jan 19, 2021 3:36 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

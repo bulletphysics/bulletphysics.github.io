@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Soft bodies early preview</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Soft bodies early preview</h2>
+		<p><a href="viewtopic.php%3Ft=1984.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1984</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>3</strong></div>
+					<div class="post">
+				<h3>Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 10:41 am</strong></div>
+				<div class="author">by <strong>Nathanael</strong></div>
+				<div class="content">Here's a (very) early preview of soft bodies implementation for Bullet.<br>
+<br>
+<a href="http://bulletphysics.com/ftp/pub/test/index.php?dir=physics/demos/&amp;file=BulletSoftBody.zip" class="postlink">http://bulletphysics.com/ftp/pub/test/i ... ftBody.zip</a><br>
+<br>
+Basic keys:<br>
+- ']' Next sub demo.<br>
+- [space] Reset scene.<br>
+<br>
+All comments/critics are welcome, just don't ask THE question, "when?" ^^.<br>
+<br>
+Enjoy.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 12:24 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Nice demos! Very well done <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+I assume this is an implementation of a position based solver (e.g. like Jacobsen or Muller)? How do you handle the coupling between the cloth and the rigid bodies? Do you solve both in one loop while correcting position for the cloth and velocities for the rigid body e.g. using the displacement of the particle divided by the timestep. Or is the cloth and rigid body handled on the position level?<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 1:11 pm</strong></div>
+				<div class="author">by <strong>Nathanael</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Nice demos! Very well done <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"></div></blockquote>
+Thanks,<br>
+<br>
+Yes, the solver itself is based on Matthias Muller's work, mainly because its simple to implement and provide velocities which are needed for some future features.<br>
+<br>
+Coupling between rigid and soft bodies is indeed currently done inside the (soft bodies) constraints solver loop, through impulses conversion from position displacements, it work well for a demo, but the constraints solver generate too much 'noise/jumps' so i had to damp those impulses with a arbitrary factor, its not clean, and make things harder to use, so I'm currently investigating alternative approaches will not introducing coupling between soft and rigid solvers.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 4:15 pm</strong></div>
+				<div class="author">by <strong>DevO</strong></div>
+				<div class="content">Great Demos!!!<br>
+<br>
+Are you working alone or with Erwin on this?<br>
+<br>
+As I can see the collision has as usual problems with tunneling.<br>
+What are you using for collision between soft-bodies and rigid-bodies?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 4:20 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">So you solve the rigid bodies and the particles in two different loops and only in the particle loop you apply impulse derived from the particle displacements? Did you try to solve both in the same loop, e.g.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1984&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>for ( n iterations )
+  {
+  for ( all rigid bod constraints c )
+    c-&gt;Satisfy();
+
+  for ( all particle constraints c )
+    c-&gt;Satisfy();
+
+  for ( all coupling constraints c )
+     c-&gt;Satisfy();
+  }
+</code></pre></div>
+
+<br>
+The final sweep would adjust positions for the particles and apply impulses on the rigid bodies derived from the particle correction. <br>
+<br>
+<br>
+Since you mention the Muller paper. For the soft bodies you simply use tetrahedral meshes with volume preserving constraints and distance constraints between the nodes? Basically:<br>
+<br>
+C(p1, p2) = |p2  p1|- L0 = 0<br>
+C(p1, p2, p3, p4) = |(p2 - p1) * (p3 - p1) x (p4 - p1)| / 6 - V0 = 0</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 5:46 pm</strong></div>
+				<div class="author">by <strong>Nathanael</strong></div>
+				<div class="content"><blockquote><div><cite>DevO wrote:</cite>Great Demos!!!<br>
+<br>
+Are you working alone or with Erwin on this?<br>
+<br>
+As I can see the collision has as usual problems with tunneling.<br>
+What are you using for collision between soft-bodies and rigid-bodies?</div></blockquote>
+
+Thanks a lot,<br>
+Yes, tunneling is quite obvious at this point, and the effect is worsen by the fact that the soft solver is one time step late (see Dirk comment).<br>
+<br>
+I am working with Erwin for the integration into Bullet.<br>
+<br>
+For collision i currently use a dynamic signed distance field built on the fly during simulation via gjk/epa.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 6:35 pm</strong></div>
+				<div class="author">by <strong>Nathanael</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>So you solve the rigid bodies and the particles in two different loops and only in the particle loop you apply impulse derived from the particle displacements? Did you try to solve both in the same loop, e.g.<br>
+The final sweep would adjust positions for the particles and apply impulses on the rigid bodies derived from the particle correction. <br>
+<br>
+Since you mention the Muller paper. For the soft bodies you simply use tetrahedral meshes with volume preserving constraints and distance constraints between the nodes? Basically:<br>
+<br>
+C(p1, p2) = |p2  p1|- L0 = 0<br>
+C(p1, p2, p3, p4) = |(p2 - p1) * (p3 - p1) x (p4 - p1)| / 6 - V0 = 0</div></blockquote>
+
+Yes i rigid and soft bodies are solved in two different loops, i didn't try to solve them in the same loop because I'm sure it will work much better <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> but that create a coupling between the two that I'd like to dodge. just few of my rationals:<br>
+- Iterations number for rigid simulation should, in an ideal world be set to +inf, because we want to solve the system, but in soft bodies, it's more a parameter of the system, that can vary from bodies to bodies for 'aesthetic' reasons.<br>
+- Almost by definition, soft bodies create 'soft' constraints on rigid bodies, it should be possible to get nice results using only impulses outside the loop (at least i try to).<br>
+- Code/architecture, i don't know or maintain the rigid simulation of Bullet, and peoples who do surely don't want to have include the soft bodies part each time a change occur or new ideas are tested for rigid bodies. That's a trade off between accuracy and simplicity.<br>
+<br>
+For volume, three different methods are demonstrated,<br>
+- the demo named 'Pressure' use forces, as describe in 'Pressure soft bodies model' from Maciej Matyka.<br>
+- the demo named 'Volume' uses forces proportional to (V-V0)*area per vertex in the direction of the normal, there is no tetrahedrons involved, just global volume.<br>
+- the demos named 'TorusMatch' and 'BunnyMatch' use polar decomposition to extract linear transforms (just rotation for the moment) from the deformed model, and 'pulling' vertices's toward the reference shape, see 'shape matching' from Matthias Muller (him again  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> ). Still no tetrahedron.<br>
+<br>
+The reason i don't make use tetrahedrons is twofold, first, authoring, i don't know of any commonly available 3d package that output tetrahedral meshes, second, the three previously mentioned methods work well for volume conservation, and i have ideas to 'emulate' finite elements (for plasticity and fracture, the next step after volume conservation) using the properties of polar decomposition.  <br>
+<br>
+Nat.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Wed Mar 19, 2008 7:12 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Thanks for the links regarding the soft bodies. I need to look them up so we can maybe discuss them a little more. Still I would be interested in the volume constraints since it will be fast and simple (if it works).  There is a simple open source tool that can create the tetra mesh for you. I need to look it up tomorrow in the company and post it here...<br>
+<br>
+Again - great work!<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Thu Mar 20, 2008 9:20 am</strong></div>
+				<div class="author">by <strong>Nathanael</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>Still I would be interested in the volume constraints since it will be fast and simple (if it works).  There is a simple open source tool that can create the tetra mesh for you.</div></blockquote>
+
+I just finished deriving the tetrahedral volume constraint for positions, as you said, its simple enough, so I'll give it a try. For speed, we need to get rid of the cubic root, but I guess the approximation (power series expansion) that Thomas Jakobsen used for distance constraints should work there too.<br>
+<br>
+It may take a while before i get back to you a that, because right now the priority is Bullet integration. Concerning that tool to generate tetra's, does it work with triangles soup (or a least slightly non manifold/open) meshes?<br>
+<br>
+Thanks again, Nat.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Thu Mar 20, 2008 9:38 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I am sure you did this, but you can simplify the derivation of the volume constraint by making p1 the origin. Basically you have p1, p2, p3 and p4. The volume constraint is:<br>
+<br>
+C = |(p2 - p1) * (p3 - p1) x (p4 - p1)| / 6 - V0<br>
+<br>
+Now we move p1 into the origin:<br>
+<br>
+p1' = p1 - p1 = ( 0,0,0 )<br>
+p2' = p2 - p1<br>
+p3' = p3 - p1<br>
+p4' = p4 - p1<br>
+<br>
+This way the constraint becomes:<br>
+<br>
+C' = |p2' * p3' x p4'| / 6 - V0<br>
+<br>
+The gradients of C and C' are the same, but it is a little bit easier to find the gradients of C' in my opinion. The following holds then:<br>
+<br>
+Define V = p2' * p3' x p4'<br>
+<br>
+dC'/dp4 = dC/dp4 = sign( V ) * (p2' x p3') / 6<br>
+dC'/dp3 = dC/dp3 = sign( V ) * (p4' x p2') / 6<br>
+dC'/dp2 = dC/dp2 = sign( V ) * (p3' x p4') / 6<br>
+<br>
+dC/dp1 = -( dC/dp4 + dC/dp3 + dC/dp2) = -( dC'/dp4 + dC'/dp3 + dC'/dp2)<br>
+<br>
+<br>
+I also derived the area constraint for a triangle A = |(p2 - p1) x (p3 - p1)| / 2. Basically I always apply the above technique for all these constraints. Also for the simple distance constraint.<br>
+<br>
+<br>
+The tetra generator can be found here. You need to look up its limitations since I don't know from the back of my had if it works for your requirements: <a href="http://tetgen.berlios.de/" class="postlink">http://tetgen.berlios.de/</a><br>
+<br>
+<br>
+I now look at the references you mention,<br>
+-Dirk</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Thu Mar 20, 2008 11:41 am</strong></div>
+				<div class="author">by <strong>Antonio Martini</strong></div>
+				<div class="content"><blockquote><div><cite>Nathanael wrote:</cite>
+Yes, the solver itself is based on Matthias Muller's work, mainly because its simple to implement and provide velocities which are needed for some future features.
+</div></blockquote>
+How is your solver related to Matthias Muller's work? is it using the same method?<br>
+<br>
+cheers,<br>
+Antonio</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Thu Mar 20, 2008 12:29 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I edited my post above and added the results for the gradients. How do you get a cubic root?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Thu Mar 20, 2008 2:00 pm</strong></div>
+				<div class="author">by <strong>Nathanael</strong></div>
+				<div class="content"><blockquote><div><cite>Antonio Martini wrote:</cite>
+How is your solver related to Matthias Muller's work? is it using the same method?
+</div></blockquote>
+Hi Antonio,<br>
+In fact, a tiny bit of it, but useful indeed, at the end of the step, Muller explicitly evaluate the velocity where Jacobsen implicitly evaluate it. That's not much, but i didn't thought about it before, that's what we call thinking too much inside the box i guess. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> , the rest of it is a classic Jacobsen iterative solver.<br>
+For bending constraints i use the same Jacobsen distance constraints as for structural constraints, generated from the adjacency graph of the soft body mesh topology.<br>
+Some of the demos use polar decomposition the extract a rigid frame from the deformed model, as explained in great details in 'Matrix Animation and Polar Decomposition, Ken Shoemake.', the decomposition implementation method itself come from 'The Polar Decomposition Properties, Applications And Algorithms,  Pawel Zielinski, Krystyna Zietak'. Muller make use of it in one paper, but goes beyond linear deformation, and far beyond my understanding... <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+Nat.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Thu Mar 20, 2008 2:22 pm</strong></div>
+				<div class="author">by <strong>Nathanael</strong></div>
+				<div class="content"><blockquote><div><cite>Dirk Gregorius wrote:</cite>I edited my post above and added the results for the gradients. How do you get a cubic root?</div></blockquote>
+
+First, I'd like you to understand that I am probably better at coding than at solving equations, and probably better at cooking than at coding...<br>
+I did drop p1 too, more zeros, better i feel.<br>
+Then i am solving (p2'*k) * (p3'*k) x (p4'*k) = V0 for k, doing so, i am looking the scaling factor that bring my tetrahedron to it rest volume.<br>
+Let V be p2' * p3' x p4' <br>
+I got k = 1 / (V/V0)^1/3 . Applying that factor from the center of mass do the job.<br>
+The method work for distance, triangle, tetrahedron, etc... but can't figure why we got different results.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Soft bodies early preview</h3>
+				<div class="date">Posted: <strong>Thu Mar 20, 2008 4:03 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">So you do this the following?<br>
+<br>
+c = ( p1 + p2 + p3 + p4 ) / 4 <br>
+<br>
+p1 += k * (p1 - c) / |p1 - c|<br>
+p2 += k * (p2 - c) / |p2 - c|<br>
+p3 += k * (p3 - c) / |p3 - c|<br>
+p4 += k * (p4 - c) / |p4 - c|<br>
+<br>
+This would be an interesting approach. I am not sure if this is physical correct though. The displacements should be in the direction of the gradients to be kind of "workless"". I need to think about this. The gradients I posted above are the derivatives of C w.r.t p_i where i = 1..4.<br>
+<br>
+<br>
+Or do you just do this:<br>
+<br>
+c = ( p1 + p2 + p3 + p4 ) / 4 <br>
+<br>
+p1 -= c;<br>
+p2 -= c;<br>
+p3 -= c;<br>
+p4 -= c;<br>
+<br>
+p1 *= k;<br>
+p2 *= k;<br>
+p3 *= k;<br>
+p4 *= k;<br>
+<br>
+p1 += c;<br>
+p2 += c;<br>
+p3 += c;<br>
+p4 += c;<br>
+<br>
+<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>3</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

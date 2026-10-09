@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Collision response filtering</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Collision response filtering</h2>
+		<p><a href="viewtopic.php%3Ft=11950.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11950</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Collision response filtering</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2017 4:25 pm</strong></div>
+				<div class="author">by <strong>forsslund</strong></div>
+				<div class="content">Hello,<br>
+I am making an application where the user control a sphere, moving it freely in a confined space with a 3D haptic device (a kind of joystick) using a generic 6dof constraint. In the space there a number of boxes the user can pick up with the sphere (using additional 6dof constraints) and move about. However, as a first step, I would like the other boxes to remain static visavi the picked up box. Any other motion is ok, like gravity, affecting all boxes. <br>
+<br>
+I have tried with collision filtering, but obviously then there is no collision response at all. I would still like collision response but only one-way, that is my picked up box should be constrained from moving into the other boxes in the environment, but the boxes should otherwise be free to move. I have tried setting mass to 0 when in contact and then back to some non-zero mass after release but some energy is still added. Is there a proper way to handle this scenario?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response filtering</h3>
+				<div class="date">Posted: <strong>Mon Dec 11, 2017 7:32 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">There is no such thing as one-way collision response, since Newton laws action force = - reaction force.<br>
+<br>
+It is not clear what you try to achieve, and why this requires a non-physical interaction. Usually you let the user control some object (sphere) using some constraint that follows the user intention (such as a VR gripper etc).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response filtering</h3>
+				<div class="date">Posted: <strong>Tue Dec 12, 2017 2:18 pm</strong></div>
+				<div class="author">by <strong>forsslund</strong></div>
+				<div class="content">Thanks for the quick reply! I will try to explain better. Here is a screenshot of the full environment, showing our avatar (green sphere) which is indeed controlled by a btGeneric6DofConstraint, whose A frame offset is updated with the device position at each step.
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1585" class="postimage" alt="all.PNG" onclick="viewableArea(this);" /></dt>
+						<dd>all.PNG (105.48 KiB) Viewed 9324 times</dd>
+		</dl>
+		
+		
+			</div>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1586" class="postimage" alt="push.PNG" onclick="viewableArea(this);" /></dt>
+						<dd>push.PNG (36.93 KiB) Viewed 9324 times</dd>
+		</dl>
+		
+		
+			</div>
+Here box A is picked up with another btGeneric6DofConstraint and both avatar and box A can be moved about, however A very easily pushes box B. In reality we would at least have friction. I assume that the constraint simply has higher priority(?), making both boxes move without effort. (I have tried various friction values)<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1587" class="postimage" alt="push2.PNG" onclick="viewableArea(this);" /></dt>
+						<dd>push2.PNG (34.96 KiB) Viewed 9324 times</dd>
+		</dl>
+		
+		
+			</div>
+If we push B to the static wall the "spring" of the btGeneric6DofConstraint is enlarged, illustrated by showing the device position (user intent) in yellow vs the avatar (green). I would like something similar, as a way to model friction, for situations above as well. If friction is set very high, I think it would make boxes semi-static without breaking newtons laws..(?)<br>
+<br>
+To clarify further, I am using the difference between the device position and avatar position as the real force feedback to be output to the haptic device. This way the user would be able to feel objects before they are pushed away, and feel if box B is pushed by the held Box A.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Collision response filtering</h3>
+				<div class="date">Posted: <strong>Wed Dec 13, 2017 4:44 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I think maybe the strengths (max force/torque?) of btGenetic6DofConstraint can be tuned to make the constraint "weaker".  Even if that works you wouldn't be able to make one setting to get the gradual increase of pressure it sounds like you want, unless you dynamically update the constraint's parameters.  Also, the parameters of the constraint are many and not necessarily intuitive.<br>
+<br>
+There is another way to do what you want.  This article talks about it:<br>
+<br>
+<a href="http://www.vrinflux.com/newton-vr-physics-based-interaction-on-the-vive/" class="postlink">http://www.vrinflux.com/newton-vr-physi ... -the-vive/</a><br>
+<br>
+In short: you slam the velocity of boxA toward its target position and allow that push boxB.  You may need to tweak the mass of boxA (make it less massive) while it is pushing to get the exact feel that you want.<br>
+<br>
+In Bullet you would do this by deriving an Action from btActionInterface.  Something like this "critically damped spring with zero history" that can be tuned with a simple "timescale".  To tune: figure out how fast you want the spring to be able to move the object to its target position when unimpeded.  1 second?  2 seconds? half a second?  Whatever, the longer the time the weaker the spring, the shorter the timescale the stronger.  Once you know how much time for the spring to be able to reposition the object, divide that number by about three and use that as  the action's "timescale".  Why 3?  Because the action will reduce the object's offset by about 1/e every substep and e^-3 is a pretty small number.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11950&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class TractorAction : public btActionInterface {
+public:
+    TractorAction(btRigidBody* body, btScalar timescalel) : m_timescale(timescale), m_body(body) {
+        m_targetPosition = body-&gt;getPosition();
+    }
+
+    void setTargetPosition(const btVector3&amp; position) { m_targetPosition = position; };
+
+    void setTimescale(btScalar) {
+        // DANGER: timescale should NEVER be smaller than the largest possible substep, else instability
+        const btScalar MIN_TRACTOR_TIMESCALE(2 * MAX_SUBSTEP_PERIOD);
+        m_timescale = btMax(timescale, MIN_TRACTOR_TIMESCALE);
+    }
+
+    void updateAction(btCollisionWorld* world, btScalar timeStep) {
+        // this is a "critically damped spring with zero history":
+        // every frame it slams the velocity of m_body to approach m_targetPosition with exponential decay
+        const btScalar MIN_ACTIVATION_OFFSET_SQUARED = 0.0001f; // 1cm^2
+        btVector3 offset = m_targetPosition - m_body-&gt;getPosition();
+        if (m_body-&gt;isActive()) {
+            m_body-&gt;setLinearVelocity((timeStep / m_timescale) * offset);
+        } else if (offset.length2() &gt; MIN_ACTIVATION_OFFSET_SQUARED) {
+            m_body-&gt;activate();
+            m_body-&gt;setLinearVelocity((timeStep / m_timescale) * offset);
+        }
+    }
+
+private:
+    btVector3 m_targetPosition;
+    btScalar m_timescale;
+    btRigidBody* m_body;
+};
+</code></pre></div>
+
+Some notes:<br>
+<br>
+I'm typing this example code from scratch and memory.  Dunno if this actually compiles or is bug-free.<br>
+<br>
+This action doesn't care about the object's mass.  It just computes a velocity that always pushes the object toward its target. When the object gets close to its target it will set the velocity to a small value (the object will come to a stop).<br>
+<br>
+You might want to temporarily reduce the sprung object's mass to tune how hard it "hits" any dynamic obstacles as it moves toward its target.  When the sprung object is light it will tend to be stopped by the obstacle: it makes the "friction" effect you're looking for more noticeable.  That is, you could keep the action responsive by setting its timescale small (1/10 a second for example) but make its strength weak by setting the sprung object's mass artificially small.<br>
+<br>
+You might also want to temporarily reduce the sprung object's restitution so that it doesn't "bounce" off of heavy obstacles and static objects.<br>
+<br>
+You might also want to temporarily increase the sprung object's angular damping (or to modulate its angular velocity inside the updateAction()) to prevent it from swinging about fast when clipping an obstacle.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

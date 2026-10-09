@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9023" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2013-04-22T14:23:36+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/9023</id>
+
+		<entry>
+		<author><name><![CDATA[mike1]]></name></author>
+		<updated>2013-04-22T14:23:36+00:00</updated>
+
+		<published>2013-04-22T14:23:36+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30549#p30549</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30549#p30549"/>
+		<title type="html"><![CDATA[Re: calculating new object location]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30549#p30549"><![CDATA[
+You're absolutely right. At first I wanted to choose a partial solution, which I thought would make my life easier. I was wrong. It's partial and harder to implement.<br><br>What I had before I started this thread was:<br>1. Server sends world information to client<br>2. Client sets state according to message &lt;-- this is where objects in client world jumps from place to place<br>3. Client sends state to server<br><br>I wanted to just update the controlling character's position based on the deltaT, meaning to calculate new position, move while performing collision detection. As I said, this is both partial and hard to implement.<br>Instead, what I'm doing now, which is super easy to implement, is to keep track of the time between deltas and call something like this:<div class="codebox"><p>Code: </p><pre><code>StepPhysics( m_ConnectStart.GetDelta() - m_LastDeltaTicks );</code></pre></div>Easier, proven, and works for all objects.<br><br>Thanks for the advice buddy!<br>Mike<br><br>P.S: thanks for taking the time to read the article. I think it's great, I hope you enjoyed it as much as I did.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9290">mike1</a> — Mon Apr 22, 2013 2:23 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jyavoc]]></name></author>
+		<updated>2013-04-20T22:09:03+00:00</updated>
+
+		<published>2013-04-20T22:09:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30541#p30541</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30541#p30541"/>
+		<title type="html"><![CDATA[Re: calculating new object location]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30541#p30541"><![CDATA[
+I had a really long post written out, and then decided to check your link. It turns out that I what I was suggesting was the second of the three -- the pure Client/Server setup. But I'm suggesting, from what you're asking, that you want the Client/Server setup with Client-side prediction (off the list, the best of the three, so it'd be stupid for me to argue against it <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz">).<br><br>The first thought off the top of my head would be something rudimentary like so:<div class="codebox"><p>Code: </p><pre><code>void MoveObject(object, previousTransform, velocity, angularVelocity, deltaT){    object.setWorldTransformation(previousTransform);    object.setLinearVelocity(velocity);    object.setAngularVelocity(velocity);    world.stepSimulation(deltaT);}</code></pre></div>None of the code above is meant to be directly translated -- just barely above pseudocode. But if you set up where it was at the last transformation, then set the velocity and the angular velocity, you could step the world by however long it's been since, and then get the new information for where it is at. Since I'm assuming that you'd want to have the object move more often than once every time the server spoke, you could have two Bullet worlds <strong class="text-strong">on</strong> the client -- one for the client itself, and one pseudo-world for the server (on the client). The client world would be what you'd keep everything in, and would be what you'd be using primarily. But for every object in the client world, you'd have one in the server world (unless I say otherwise, "server world" will mean this secondary client-side world). And when you get information from the server machine, you could update the objects appropriately using the above function in the server world, and then step the server world by the deltaT. With that all done, you'd have updated positions and information that you could just copy from the server world into the client world (easily enough done through a MotionState). If the server world and the client world information both match up, then you're golden; if they don't, then you'd need to correct appropriately (you'd want to trust the server world over the client world, because you always want the client to reflect what's going on in the server machine).<br><br>As for collision, I might suggest leaving this up to the server machine itself. Unless you're writing a P2P program, it means you'd have a server machine that you get to choose, and generally server machines run much better than the average client computer. Plus, with a server machine, you could ignore any rendering and allow it to work with "pure data" -- what I'm getting at is that it'd be much faster, and since every client is already speaking to it, you wouldn't need to have it pass information from client A to client B about what client A is doing in client A's world; the server machine would just tell client B how client B should respond to what client A did. Because the server would run faster than the clients, I would have collision done on the server, and just report any collisions back to the client. Again, I could be wrong, so my word isn't gospel, but that seems like it would be faster and less prone to client-side mistakes or mismatches (or, if you're worried about it, cheating <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_razz.gif" width="15" height="15" alt=":P" title="Razz">).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10156">Jyavoc</a> — Sat Apr 20, 2013 10:09 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mike1]]></name></author>
+		<updated>2013-04-19T14:15:20+00:00</updated>
+
+		<published>2013-04-19T14:15:20+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30538#p30538</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30538#p30538"/>
+		<title type="html"><![CDATA[Re: calculating new object location]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30538#p30538"><![CDATA[
+Hi Jyavoc,<br>Thanks for the reply!<br>You can read more about games networking in this article: <a href="http://gafferongames.com/networking-for-game-programmers/what-every-programmer-needs-to-know-about-game-networking/" class="postlink">http://gafferongames.com/networking-for ... etworking/</a><br>I do something very similar to what you suggested - the client &amp; server decide on their own 'epoc' time and every delta has the milliseconds since then.<br><br>However, my question isn't about how to make a network game, but more detailed and technical: what Bullet APIs should I use to calculate an object's new location, given its speed and time passed.<br>Ideally I would like a function that looks like this:<div class="codebox"><p>Code: </p><pre><code>void MoveObject(object, previousTransform, velocity, angularVelocity, deltaT);</code></pre></div>And this function would take into consideration collisions, etc.<br><br>Any idea how to implement such a function?<br><br>Thanks,<br>Mike<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9290">mike1</a> — Fri Apr 19, 2013 2:15 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Jyavoc]]></name></author>
+		<updated>2013-04-18T17:28:19+00:00</updated>
+
+		<published>2013-04-18T17:28:19+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30534#p30534</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30534#p30534"/>
+		<title type="html"><![CDATA[Re: calculating new object location]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30534#p30534"><![CDATA[
+This is all untested, so don't take my word as law, but this might be an idea (only really works if you have a physics world on both the server and in the client):<br><br>When sending information, instead of sending location, send the linear and angular velocities at each ping. Instead of setting the new position of the objects, you would make sure that the linear and angular velocities match up. Every so often, you could also send the orientation and position of the object, just to make sure that everything is in the right location.<br><br>But any time that the client player experiences collision or a change in linear/angular velocity, the linear and/or angular velocities from the server and in the client would not match up. In this instance, the server could send the position and orientation, as well as a GMT timestamp for when the message was first sent. When the data gets to the client, the client gets the current GMT timestamp, and determines how much time has elapsed between when the message was sent and when it was received. It would set the new angular and linear velocities of the character on the client to the new velocities that the server specified, and <em class="text-italics">also</em> set the world transformation of the player to the position and orientation that the server sent, but modified using the timestamp; in example, something like "server-sent position + (server-sent velocity * lag time) = new client position." You'd do this for position and for orientation (angular velocity), and then update the client accordingly.<br><br>I haven't tackled networked gaming before, so this might not work, or it might be horrible, but these were at least my initial thoughts on the matter.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=10156">Jyavoc</a> — Thu Apr 18, 2013 5:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[mike1]]></name></author>
+		<updated>2013-04-16T06:21:05+00:00</updated>
+
+		<published>2013-04-16T06:21:05+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30512#p30512</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30512#p30512"/>
+		<title type="html"><![CDATA[calculating new object location]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=30512#p30512"><![CDATA[
+Hi everyone,<br><br>I'm writing a network game. I would like clients to show their players' location based on what the server sends them. However, due to lag between the server and the client, when the server sends location X in time T to the client, the client should calculate where the player will be in T+dt (dt = ping between server and client).<br>I can easily move the client to location X, but I'm not sure what would be a good way to calculate it's new location. I couldn't use forces / impulses as that will affect the following frames, which is undesired.<br><br>Please assume I know the player's velocity, shape, ping to server and probably anything else of interest.<br><br>Can anyone think of an idea for me?<br><br>Thanks,<br>Mike<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=9290">mike1</a> — Tue Apr 16, 2013 6:21 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</h2>
+		<p><a href="viewtopic.php%3Ft=13377.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13377</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</h3>
+				<div class="date">Posted: <strong>Tue Feb 15, 2022 4:22 am</strong></div>
+				<div class="author">by <strong>whitwhoa</strong></div>
+				<div class="content">Hello again! If anyone reading this has seen my other posts I've made recently you've probably gathered that I've been working on implementing a kinematic controller. I've started from scratch more or less using btKinematicCharacterController as a reference and implementing the most basic pieces first (correcting some things as I go along, and taking some different directions where I'm thinking things could be simplified). Once I get to a point where I feel it's usable the plan is to throw it up on github and post some links around, as I've come to find resources in this department are more scarce than I would have thought.<br>
+<br>
+With that being said I've recently run into a case where I believe knowing all normal directions from a convexSweepTest would be beneficial. I've dug around and from what I can tell there does not seem to be a way to obtain this from the result callback. My guess is that when multiple contacts are detected their normals are interpolated and the result then becomes `ConvexCastCallback.m_hitNormalWorld`...is that correct? If so, what might be the simplest way to obtain the true hit normals?<br>
+<br>
+What I'm attempting to solve is the case where the controller sets it's Y position relative to the hitpoint of a spherecast (for stepping up onto terrain). My current implementation handles this just fine, until I'm on a steep slope which should not be traversable. To handle this I could use the angle of the normal which the controller is standing on (spherecast result) and if over/under a certain value, invoke sliding...BUT...since `ConvexCastCallback.m_hitNormalWorld` appears to be returning an interpolated value I cannot accurately determine if I'm stepping over valid terrain or am standing on a slope which I should be sliding down. For example:<br>
+<br>
+
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1921" class="postimage" alt="003.jpg" onclick="viewableArea(this);" /></dt>
+						<dd>003.jpg (121.53 KiB) Viewed 22579 times</dd>
+		</dl>
+		
+		
+			</div>
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1922" class="postimage" alt="004.jpg" onclick="viewableArea(this);" /></dt>
+						<dd>004.jpg (90.94 KiB) Viewed 22579 times</dd>
+		</dl>
+		
+		
+			</div>
+
+<br>
+My thinking is that if I knew all normal directions from the spherecast I would have the information required to determine if the controller should be stepping over something as opposed to sliding down something...if that makes sense? Or maybe my logic's flawed?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</h3>
+				<div class="date">Posted: <strong>Tue Feb 15, 2022 3:07 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I scanned the relevant code and I do not see evidence of interpolated normals, at least not at the context of <strong class="text-strong">ConvexCastCallback.m_hitNormalWorld</strong>.  AFAICT, it is always set directly to an already computed normal and is never blended.   There may be interpolation happening earlier in the normal calculation, dunno -- I didn't dig too deep.<br>
+<br>
+I have written a few character controllers that had special logic for walking up ledges and sliding down slopes.  They were always dynamic controllers rather than kinematic, but I was doing custom analysis of the normals at the base of the character's collision shape and using the data to decide whether the character should push forward or sky-hook upward.  As I recall, I ended up with complicated tuned systems.  One of them would perform scattershot ray-tracing against nearby objects (e.g. as known to a <strong class="text-strong">btPairCachingGhostObject</strong>) to determine if it was about to run into a step -- it would jump early to land on top of the step since otherwise when moving too fast it would hit the step and snag (slow down while it scraped over the edge).<br>
+<br>
+I never did find a simple way to do it.  After several iterations and much discarded research I was able to make it work each time and be performant enough, but it was always very tuned.  I suspect you will have to do the same thing.  Here are some tricks that were successfully employed across several different controllers:<br>
+<br>
+<strong class="text-strong">(1)</strong> Aformentioned step detection with calculated jump.<br>
+<strong class="text-strong">(2)</strong> Tuned <strong class="text-strong">btConvexHullShape</strong> whose vertices were chosen to make it easier to determine if it was hitting a steppable ledge, unpassable wall, or sliding-slope.<br>
+<strong class="text-strong">(3)</strong> Split character with hovering collidable torso sprung to ghost legs.  The dynamic torso would bump against walls and sky-hook hover above a kinematic non-colliding ghost object that was detecting the floor.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</h3>
+				<div class="date">Posted: <strong>Wed Feb 16, 2022 3:21 am</strong></div>
+				<div class="author">by <strong>whitwhoa</strong></div>
+				<div class="content"><blockquote cite="./viewtopic.php?p=43859#p43859"><div><cite><a href="memberlist.php%3Fmode=viewprofile&amp;u=11033.html">drleviathan</a> wrote: <a href="viewtopic.php%3Fp=43859.html#p43859" data-post-id="43859" onclick="if(document.getElementById(hash.substr(1)))href=hash">↑</a><span class="responsive-hide">Tue Feb 15, 2022 3:07 pm</span></cite>
+I have written a few character controllers that had special logic for walking up ledges and sliding down slopes. They were always dynamic controllers rather than kinematic... As I recall, I ended up with complicated tuned systems.
+</div></blockquote>
+
+THIS. THIS exactly. The reason I started work on a kinematic controller is because I've spent in total probably about 6 months worth of time building a dynamic controller so I know exactly what you're talking about  <img class="smilies" src="images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing">. I got to a point where it was usable and functioned quite well for the most part (after quite a few nasty hacks).<br>
+<br>
+For sliding down slopes I was probably doing something very similar to what you had described where I would check the normals with a ghost object that's mirrored to a rigidbody. I never could get stepping worked out on it however...or at least not a version of stepping that I'd say was usable (my "solution" was to cast a ray from a step height position downward in the direction the capsule was moving, which indeed would pull the capsule up but it was a sudden stuttery motion). <br>
+<br>
+Also, when the rigidbody was being pushed into an object (say you were walking into the edge of a table) and I applied an impulse for jump, the body would jump backwards as if the penetration response direction was being added to the applied impulse...little things like that which I knew would be very difficult to work out...that's what led me to  attempt a kinematic controller. <br>
+<br>
+Having the ability to tweak everything and get the feel exactly how I want it, not being fixed to a rigidbody in a physics simulation sounds heavenly (however down the road I'll need to figure out how to have the kinematic controller push physics objects and react to them...which is a whole other can of worms that I'm going to leave the lid on for now).<br>
+<br>
+Your trick #2 is interesting. I'm going to put some thought into that.<br>
+<br>
+Your trick #3 is kind of what I'm doing at the moment but in a kinematic sense. I have a capsule object that rides on top of a sphere cast without the spring logic (there's also a compoundshape ghost object I switch to when falling so the controller will slide smoothly off ledges, and another sphere cast to determine if gravity should be applied). This works perfectly as the cylinder keeps the controller from climbing angles it shouldn't and still allows you to step over terrain...it's not until implementing jump that I realized what I had done is only really functional if the controller never falls onto an angle it shouldn't be on, which is why I'm attempting to find a way to accurately determine this.<br>
+<br>
+Nice to hear from someone who has implemented multiple character controllers. Greatly appreciate the ideas you have provided <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</h3>
+				<div class="date">Posted: <strong>Wed Feb 16, 2022 3:54 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">More detail about trick <strong class="text-strong">(2)</strong> in case it helps anyone:<br>
+<br>
+I used the "zero inverse inertia tensor hack" to limit its rotation to only be about its "up" axis.  It was linearly dynamic but I would slam its orientation according to user control (e.g. the orientation was effectively kinematic).<br>
+<br>
+It used a  <strong class="text-strong">btConvexHullShape</strong> that was much like a capsule except for a few things: <strong class="text-strong">(a)</strong> its foot was a single point so it walked around like a big floating ballpoint pen rolling on a very small footprint, <strong class="text-strong">(b)</strong> the shape sloped up from the "foot" to the "knee" and this determined the maximum steepness of slope on which the character could stand, <strong class="text-strong">(c)</strong> the knee's height from the foot determined the maximum height of step that could be climbed, <strong class="text-strong">(d)</strong> I added a single forward protruding point in the chest which I used to disambiguate collisions at the knee, because otherwise sometimes the contact point against a vertical wall would show up at the knee: but the forward point, or its slanted triangle going downward to the knee, would hit walls first and provide a clear signal when an obstacle was not passable.<br>
+<br>
+The shape alone did not solve all problems: there was still much hackery to allow the character to climb stairs at an acceptable rate or to stand still on a slope without slowly creeping down.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</h3>
+				<div class="date">Posted: <strong>Fri Feb 18, 2022 8:10 pm</strong></div>
+				<div class="author">by <strong>whitwhoa</strong></div>
+				<div class="content">After some more research I found the <a href="viewtopic.php%3Ft=3538.html" class="postlink">following thread</a> where Erwin explains how the `m_hitNormalWorld` is calculated. I believe I've come up with a solution for my particular use case that will provide me with the data that I require, however I've yet to implement it to confirm. If it works as I expect, I will explain in a subsequent post.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Obtaining multiple face normals from convexSweepTest? (to determine stepping vs sliding for kinematic controller)</h3>
+				<div class="date">Posted: <strong>Sun Feb 20, 2022 1:17 am</strong></div>
+				<div class="author">by <strong>whitwhoa</strong></div>
+				<div class="content">Alright, so that didn't work. But I believe my logic to have been sound, I just didn't take into consideration collision margins. I took my spherecast position and then generated a ghost object slightly in the opposite direction of the contact point (so that it would intersect the geometry which the spherecast was "sitting" on), then looped through all overlapping manifold pairs thinking I would receive all of the overlapped normals, but that's not the case. The only reason I can think of as to why I was receiving the results I was would be do to collision margins being rounded, and the data you receive from `btManifoldPoint.m_normalWorldOnB` is that of the collision margin? Maybe...IDK?<br>
+<br>
+Got a couple more ideas to try, neither of which I'm as confident in as I was that one, but we'll see what happens. If anyone wants to reply with questions or comments, feel free, but I'm kind of just using this thread as somewhere to track my progress with this and list everything I've attempted for people going down a similar path in the future to find.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

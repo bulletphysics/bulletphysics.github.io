@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13400" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-03-15T13:34:03+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13400</id>
+
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-03-15T13:34:03+00:00</updated>
+
+		<published>2022-03-15T13:34:03+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43941#p43941</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43941#p43941"/>
+		<title type="html"><![CDATA[Re: Is it safe to add rigidbody/collisionObject into the world during StepSimulation? [Single Thread Situation]]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43941#p43941"><![CDATA[
+I remembered something and figured I would mention it for the record:<br><br>I had a situation where I wanted to be able to add/update/remove objects ASAP for a multi-threaded system where the operations could arrive from a different thread.  The pending ops would be collated into three lists (add, update, delete) and passed to the simulation thread in a lock, but since there was no standard callback between substeps --&gt; I added one.  That is, I derived <strong class="text-strong">MyDiscreteDynamicsWorld</strong> from <strong class="text-strong">btDiscreteDynamicsWorld</strong> and overrode the <strong class="text-strong">stepSimulation()</strong> method.  My own version was just copied over from the original except I added a check between substeps which would lock, move the lists of ops into the simulation thread context, unlock, and then apply them.  So even if my step happened to have multiple substeps I was still able to perform add/update/remove (in that order) as soon as "possible" (e.g. not mid-substep).<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Tue Mar 15, 2022 1:34 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[douya_5200]]></name></author>
+		<updated>2022-03-11T08:58:48+00:00</updated>
+
+		<published>2022-03-11T08:58:48+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43929#p43929</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43929#p43929"/>
+		<title type="html"><![CDATA[Re: Is it safe to add rigidbody/collisionObject into the world during StepSimulation? [Single Thread Situation]]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43929#p43929"><![CDATA[
+Thanks for replying !<br><br>It's the gameplay code that triggers events of [ breaking up "fixed-constrained-rigidbodies" into separate ones], causing unexpected add/remove actions.  The assertion checking for within-loop adding/removing was there long time ago , that's why it gets spotted. <br><br>I guess this is the design problem of our event system. I did not intend to let this happen, normally we'd avoid it and put it at the end of the tick. <br><br>Right now I'm already working on this problem <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br><br>Again thanks a lot for replying. It helped !<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14215">douya_5200</a> — Fri Mar 11, 2022 8:58 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-03-11T06:37:38+00:00</updated>
+
+		<published>2022-03-11T06:37:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43928#p43928</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43928#p43928"/>
+		<title type="html"><![CDATA[Re: Is it safe to add rigidbody/collisionObject into the world during StepSimulation? [Single Thread Situation]]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43928#p43928"><![CDATA[
+The simple answer: no.<br><br>A more complicated answer: the <strong class="text-strong">step</strong> consists of multiple <strong class="text-strong">substeps</strong>.  It might be ok to add/remove a RigidBody/CollisionObject between substeps, however there is no default hook for calling your add/remove logic between substeps: you would have to add your own.<br><br>Within the substep there are multiple <strong class="text-strong">stages</strong> including (but not limited to, and not necessarily in this order):<br><br><strong class="text-strong">integrate</strong> - move objects forward in time<br><strong class="text-strong">broadphase</strong> - figure out what objects overlap<br><strong class="text-strong">narraowphase</strong> - figure out which overlapping pairs actually touch and create contact points<br><strong class="text-strong">solve</strong> - apply contacts and compute new velocities<br><strong class="text-strong">apply custom actions</strong><br><br>Between which of those stages would you like to add/remove objects?<br>Why would it be a good idea to deprive earlier stages of knowledge about those objects?<br><br>Edit: fixed spelling typo.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Mar 11, 2022 6:37 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[douya_5200]]></name></author>
+		<updated>2022-03-11T03:33:54+00:00</updated>
+
+		<published>2022-03-11T03:33:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43927#p43927</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43927#p43927"/>
+		<title type="html"><![CDATA[Is it safe to add rigidbody/collisionObject into the world during StepSimulation? [Single Thread Situation]]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43927#p43927"><![CDATA[
+I'm talking about single-threaded. I know it's possibly not safe for deleting but what about adding within the tick?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14215">douya_5200</a> — Fri Mar 11, 2022 3:33 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

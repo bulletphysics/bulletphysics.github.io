@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/497" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2006-08-31T04:09:05+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/497</id>
+
+		<entry>
+		<author><name><![CDATA[SteveBaker]]></name></author>
+		<updated>2006-08-31T04:09:05+00:00</updated>
+
+		<published>2006-08-31T04:09:05+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1623#p1623</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1623#p1623"/>
+		<title type="html"><![CDATA[Minimum Delta for proceeding 1 step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1623#p1623"><![CDATA[
+Ideally, use the same step size every iteration - but with an interactive graphics display, your graphical frame rate may vary up and down and if your program is only iterating at (say) 20Hz then everything will appear to run in slow motion.  When your frame rate speeds up (because maybe there is very little to draw) - then everything would be moving fast than it should.<br><br>This effect is very upsetting in a game - and should be avoided.<br><br>There are several ways to address this:<br><br>1) Run the physics with a variable time step so that if (say) 20ms elapsed since your last call to the physics code, then just say that to the physics library.  Theoretically, this ought to be OK - but in practice, you definitely get very bad results from updating the physics too infrequently and with some physics packages, the results get flakey when you update it more frequently too.  So maybe this is a bad idea.<br><br>2) You could decide on a fixed physics frame time (say 16ms),  measure how long actually went by,  subtract one from the other and accumulate the amount of 'temporal error'.  When that gets to be more than 16ms, call the Physics code twice in that frame instead of once.  If the error gets to be negative 16ms or more, then skip doing the physics in that iteration.  This has two bad effects.  One is that objects in the graphics tend to 'jitter' when you either skip the physics or run it twice in one frame.  This can be fixed by extrapolating the position of each object that comes out of the physics code forwards in time to when the graphics are expected to finish rendering (typically using a simple velocity-based extrapolator).  The second problem is that you can get into the dreaded "Spiral of Death".   When the main iteration rate is taking too long, you have to run the physics twice in each frame.  However, that makes the frame take even longer - so next time around your frame is even longer.  That can force you to do physics THREE times on the following frame....and that can cause your frame time to spiral out of control to the point where your CPU is only doing physics and there are no graphical updates at all!  To fix this, simply limit the amount of time that you let the graphics get ahead of the physics and just have things 'jump' when the delay starts to get to the point where you'd have to run the physics three or more times.<br><br>3) You could attempt to determine totally fixed timing for everything - and just tune to the worst case you ever find in your application.   A lot of video console games do this because they know exactly what hardware they are running on and absolutely every player has the same exact hardware.   However, this approach is generally hopeless when you can't test on every single hardware setup you'll ever need to support.<br><br>You can also do a mixture of (1) and (2) - where you use variable rates up to some limit - then call the physics more than once.<br><br>There is no elegant solution sadly.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=726">SteveBaker</a> — Thu Aug 31, 2006 4:09 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[cippyboy]]></name></author>
+		<updated>2006-08-31T00:51:27+00:00</updated>
+
+		<published>2006-08-31T00:51:27+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1622#p1622</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1622#p1622"/>
+		<title type="html"><![CDATA[Minimum Delta for proceeding 1 step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1622#p1622"><![CDATA[
+CcdPhysicsDemo works fine with the constant delta of 1/60, the problem was when I modifyed the delta into 1/5(=0.2, about 10 times of what you said it was bad <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy">)<br><br>I now just give it the time it passed from the last frame, and running at about 200-300 FPS, but when something big happens and drops to like 20 FPS it gives a delta of 0.05, and the objects(a sphere in my case) just flies into the ground so I have to restrict it to the minimum timestep, and I was asking what was that minimum, I use 1/30.<br><br>The alternative was to increase the SubSteps but the processor dies.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=757">cippyboy</a> — Thu Aug 31, 2006 12:51 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[SteveBaker]]></name></author>
+		<updated>2006-08-31T00:39:55+00:00</updated>
+
+		<published>2006-08-31T00:39:55+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1620#p1620</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1620#p1620"/>
+		<title type="html"><![CDATA[Minimum Delta for proceeding 1 step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1620#p1620"><![CDATA[
+<blockquote class="uncited"><div>Its best just to stick with a fixed timestep of 60 hertz.<br><br>You can decouple the graphics rendering from the physics timestep, by interpolating (based on velocity), to allow variable framerates.<br><br>It's probably better to optimize the physics so it runs fine at 60 hertz. How many active objects do you have?</div></blockquote>Presumably this advice is talking about some presumed 'normal' range of object sizes and masses.  To take an extreme example, if you were simulating something like two galaxies colliding - then a timestep of a million years might be about right.<br><br>For objects of 'human scale', I think 1/60th is OK - but when you try to work with smaller, lighter objects, you need smaller steps and for larger, heavier objects a larger timestep should suffice.<br><br>...or is there something I misunderstand here?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=726">SteveBaker</a> — Thu Aug 31, 2006 12:39 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-08-30T17:51:41+00:00</updated>
+
+		<published>2006-08-30T17:51:41+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1619#p1619</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1619#p1619"/>
+		<title type="html"><![CDATA[Minimum Delta for proceeding 1 step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1619#p1619"><![CDATA[
+are you using 50/60 hertz fixed timestep?<br><br>Please modify a bullet sample that demonstrated your problem, but don't use a bigger timestep then 0.02. How does CcdPhysicsDemo perform on you platform? It has 120 objects, and pressing 'd' disabled sleeping (so they are all active).<br><br>Thanks,<br>Erwin<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Aug 30, 2006 5:51 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[cippyboy]]></name></author>
+		<updated>2006-08-30T07:45:32+00:00</updated>
+
+		<published>2006-08-30T07:45:32+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1617#p1617</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1617#p1617"/>
+		<title type="html"><![CDATA[Minimum Delta for proceeding 1 step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1617#p1617"><![CDATA[
+I only got 2 (for the moment of testing) but I tryed the "ccdphysicsdemo" with something like 1/5 and the objects started shivering like little soldiers as if they wore the salvation army  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_biggrin.gif" width="15" height="15" alt=":D" title="Very Happy"><br><br>EDIT:It remembers me of my old collision detection algo, if I tryed to push into a wall I would jump back and forth until eventually I'd pass the wall and fell over  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_lol.gif" width="15" height="15" alt=":lol:" title="Laughing"> This was generally because I didn't know where exactly to put the object so the next time it won't collide with the wall, heh.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=757">cippyboy</a> — Wed Aug 30, 2006 7:45 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Erwin Coumans]]></name></author>
+		<updated>2006-08-30T03:31:34+00:00</updated>
+
+		<published>2006-08-30T03:31:34+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1616#p1616</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1616#p1616"/>
+		<title type="html"><![CDATA[Minimum Delta for proceeding 1 step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1616#p1616"><![CDATA[
+Its best just to stick with a fixed timestep of 60 hertz.<br><br>You can decouple the graphics rendering from the physics timestep, by interpolating (based on velocity), to allow variable framerates.<br><br>It's probably better to optimize the physics so it runs fine at 60 hertz. How many active objects do you have?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=2">Erwin Coumans</a> — Wed Aug 30, 2006 3:31 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[cippyboy]]></name></author>
+		<updated>2006-08-30T03:02:52+00:00</updated>
+
+		<published>2006-08-30T03:02:52+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1615#p1615</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1615#p1615"/>
+		<title type="html"><![CDATA[Minimum Delta for proceeding 1 step]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=1615#p1615"><![CDATA[
+At 1.0f/20.0f or 20 frames per second, objects start to shiver. I see that it can be fixed by increasing the substeps but it turns to be really slow in the end, what is the best option besides limiting the delta to something like 1/30 ?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=757">cippyboy</a> — Wed Aug 30, 2006 3:02 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

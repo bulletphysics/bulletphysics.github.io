@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Controlling a robot using Position Control, while taking into account the joint velocities</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Controlling a robot using Position Control, while taking into account the joint velocities</h2>
+		<p><a href="viewtopic.php%3Ft=13120.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13120</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Controlling a robot using Position Control, while taking into account the joint velocities</h3>
+				<div class="date">Posted: <strong>Mon Dec 07, 2020 3:17 pm</strong></div>
+				<div class="author">by <strong>Dyu</strong></div>
+				<div class="content">Hi,<br>
+I want to control a robot using Position Control and at the same time restrict the joint velocities to their maximum values.<br>
+I need to control all joints at once so using <strong class="text-strong">p.setJointMotorControlArray()</strong> is preferable instead of <strong class="text-strong">p.setJointMotorControl2()</strong><br>
+<br>
+Since <strong class="text-strong">p.setJointMotorControlArray()</strong> does not have a "maxVelocity" parameter, this is what I'm doing to take max velocities into account:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13120&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>target_joint_positions = [x, y, z]
+current_joint_positions = [x', y', z']
+joint_velocity_limits = [a, b, c]
+
+# Calculate relative positions
+joint_position_difference = target_joint_positions - current_joint_positions
+
+# Calculate the time needed to complete the motion -- This will determine how many times to call p.stepSimulation() (1/240 of a second)
+max_total_time = max(joint_positions_difference / joint_velocity_limits)
+
+# Number of times to call p.stepSimulation
+num_timesteps = ceil( max_total_time / (1/240) )
+
+# Divide the motion into equal steps that will each take less than or 1/240 th of a second
+delta_joint_positions = joint_positions_difference / num_timesteps
+
+# Make the robot move to the target positions in an additive manner
+for t in range(1, num_timesteps+1):
+	joint_positions = current_joint_positions + delta_joint_positions * t
+	p.setJointMotorControlArray(id, [0,1,2], p.POSITION_CONTROL, targetPositions=joint_positions)
+	
+	# Step the simulation by 1/240 seconds
+	p.stepSimulation()
+	time.sleep(1/240)
+
+</code></pre></div>
+
+This does not complete the motion. The joint angles come close to their targets, but not exactly. <br>
+However, When I switch on <strong class="text-strong">p.setRealTimeSimulation(1)</strong>, It completes the motion. <br>
+Is there something I haven't understood about <strong class="text-strong">p.stepSimulation()</strong> ? What could be wrong?<br>
+Thanks!</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

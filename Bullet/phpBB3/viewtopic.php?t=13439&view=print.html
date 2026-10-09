@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Issues using Inverse Kinematics on Spherical Joints (DeepMimic Humanoid)</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Issues using Inverse Kinematics on Spherical Joints (DeepMimic Humanoid)</h2>
+		<p><a href="viewtopic.php%3Ft=13439.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13439</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Issues using Inverse Kinematics on Spherical Joints (DeepMimic Humanoid)</h3>
+				<div class="date">Posted: <strong>Fri May 20, 2022 6:11 pm</strong></div>
+				<div class="author">by <strong>Herou</strong></div>
+				<div class="content">Hi!<br>
+I am working on trying to apply Inverse Kinematics to DeepMimic's humanoid model (<a href="https://github.com/xbpeng/DeepMimic/blob/master/data/characters/humanoid3d.txt" class="postlink">https://github.com/xbpeng/DeepMimic/blo ... noid3d.txt</a>) in order to slightly alter the character's motion in real time.<br>
+<br>
+In order to figure out how to do so I have reduced the problem into a small example - Trying to modify the Humanoid's left wrist position using Inverse Kinematics.<br>
+The humanoid has 8 Spherical Joints and 4 Revolute Joints<br>
+<br>
+I wrote the following code in order to try to dynamically alter the humanoid's wrist position taking in new values from the user:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13439&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>endEffector = 14
+curPos = self._get_joint_pose(phys_model, endEffector)[0]
+
+if(self.first):
+	self.first = False
+ 	self.c = [self._pybullet_client.addUserDebugParameter("lWrist x", -2, 2, curPos[0]), self._pybullet_client.addUserDebugParameter("lWrist y", -2, 2, curPos[1]), self._pybullet_client.addUserDebugParameter("lWrist z", -2, 2, curPos[2])]
+
+targetPos = [self._pybullet_client.readUserDebugParameter(self.c[0]), self._pybullet_client.readUserDebugParameter(self.c[1]), self._pybullet_client.readUserDebugParameter(self.c[2])]
+
+jointPoses = self._pybullet_client.calculateInverseKinematics(phys_model, endEffector, targetPos)
+
+currentPointer = 0
+for i in range(s.num_joints):
+	jtype = s.joint_types[i]
+	
+	if jtype is JointType.BASE: #Root
+		pass
+      	elif jtype is JointType.FIXED: #R/L Wrist
+        	pass
+      	elif jtype is JointType.REVOLUTE: #R/L Knee ; R/L Elbow
+        	self._pybullet_client.resetJointStateMultiDof(phys_model, i, [jointPoses[currentPointer]])
+       		currentPointer += 1
+      	elif jtype is JointType.SPHERE: #Chest ; Neck ; R/L Hip ; R/L Ankle ; R/L Shoulder
+        	quat = self._pybullet_client.getQuaternionFromEuler([jointPoses[currentPointer], jointPoses[currentPointer+1], jointPoses[currentPointer+2]])
+        	self._pybullet_client.resetJointStateMultiDof(phys_model, i, quat)
+        	currentPointer += 3
+</code></pre></div>
+
+However, I am not getting the expected results as the final outcome appears distorted/incorrect. <br>
+<br>
+<img src="https://imgur.com/J62zUXJ.png" class="postimage" alt="Image"><br>
+<img src="https://imgur.com/HgSsjFV.png" class="postimage" alt="Image"><br>
+<br>
+I believe the issue has to do with me not really knowing what to do with the outcome of the CalculateInverseKinematics function. I have tried looking at other examples, but I couldn't find anyone else using a combination of InverseKinematics and Spherical Joints. Has anyone tried doing something similar (i.e using InverseKinematics on Spherical joints/the DeepMimic Humanoid.urdf)?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

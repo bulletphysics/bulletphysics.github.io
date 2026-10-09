@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; TriplVing's Bullet Vs PhysX Vs ODE performance comparison</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>TriplVing's Bullet Vs PhysX Vs ODE performance comparison</h2>
+		<p><a href="viewtopic.php%3Ft=5509.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=5509</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>TriplVing's Bullet Vs PhysX Vs ODE performance comparison</h3>
+				<div class="date">Posted: <strong>Mon Aug 09, 2010 11:23 pm</strong></div>
+				<div class="author">by <strong>TriplVing</strong></div>
+				<div class="content">* ADMIN split topic, originally started here: <a href="viewtopic.php%3Ft=5477.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... f=9&amp;t=5477</a><br>
+<br>
+One of my other Vs comparisons has been the processing time taken for each time-step of each engine. <br>
+<br>
+i have tried to make each scenario as simple and therefore as similar as possible for each engine, so for this test I just have a sphere falling, with nothing for it to contact, and simply have a bit of timing code that starts before the simulate call for each engine, and ends directly after. I have setup each engine using as many of its default values as possible, and all are set to step for 1/60th of a second. What I am finding is really surprising me, I was under the impression that ODE was considered the slowest of the engines, with Bullet and PhysX being on par, but in reality, I have found that, for 1000 iterations, taken 3 times, all compiled for 64 bit by the same compiler and run on the same machine with the same background processes the average time-steps are as follows:<br>
+<br>
+Bullet: 0.047273ms<br>
+ODE: 0.002644ms<br>
+PhysX: 0.125971ms<br>
+<br>
+That's really quite significant! <br>
+<br>
+Why is ODE so much faster than both? I assumed as there were no contacts involved at all that primarily the processing overhead would come from the integration method and implementation in each engine, and I was also under the impression that all three now use a second order symplectic scheme of some kind by default? Certainly the error propagation values I have seen from all three would support that.<br>
+<br>
+If anybody more enlightened as to the inner workings of all 3 engines could provide me with a bit of insight, that would be really good.<br>
+<br>
+P.S: I have tried to "turn off" as much processing as I can for each engine, pairing them down to their very lowest form, so I have ensured in PhysX for example that anything like contact point generation and reporting is turned off. I haven't messed around with multi-threading and have just left all engines at their default values, though I don't believe that ODE or Bullet or PhysX multi-thread by default anyway.<br>
+<br>
+Test setup is as follows:<br>
+<br>
+Sphere of density 1 with a starting position of 0,100,0 (x,y,z) and a radius of 10, all engines "initialised" in their default way, code mainly pulled from each respective engines "hello world" example app, though I imagine as there are no collisions, the choice of pruning tree and broadphase etc shouldn't be as important here? <br>
+<br>
+Gravity is set to 0,-9.81,0, I then have a small bit of timing code that uses the windows timing library, totally standard stuff. I then have a while loop that iterates to 1000 in which i have a call to start my timer, then a call to advance the simulation by 1/60, then a call to stop the timer and finally i write the recorded time out to a file stream. <br>
+<br>
+The machine itself is a laptop, Intel T7700 (dual core 2.4Ghz) with 4GB 667Mhz RAM and an 800Mhz FSB.<br>
+<br>
+The libraries have all been compiled for 64 bit, I am using 2.76 for bullet, 0.11.1 for ODE and PhysX system software 9.10.0224 (64 bit).<br>
+<br>
+The test app is of course compiled for 64 bit, using VS 2010. Each was run 3 times, the values were then averaged for each iteration, and then the values I have posted here are the average of the averages.<br>
+<br>
+I mean, I have access to the PhysX dev code (the 50k license) but it doesn't give me access to the integration methods and being honest the general quality of coding seems relatively high, so I'm really quite surprised to see all three engines producing identical positional values, yet there being speed differences in the range of a whole magnitude or two! <br>
+<br>
+Any thoughts would be great.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Mon Aug 09, 2010 11:40 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">You are comparing tests will full optimizations turned on, right?<br>
+<br>
+The integration in Bullet is not optimized as it usually doesn't show up in typical profilings, so you might be measuring an un-optimized code path. <br>
+<br>
+Can you provide more detailed profiling data for Bullet, using CProfileManager::dumpAll(); after stepSimulation?<br>
+If you want further help it is best to share your test bed for each engine (attach a zipfile to this topic), so we can reproduce your results and investigate further.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Mon Aug 09, 2010 11:55 pm</strong></div>
+				<div class="author">by <strong>TriplVing</strong></div>
+				<div class="content">Hi Erwin,<br>
+<br>
+Ok thanks, I don't actually have my test beds at home, they are on my office laptop, so i'll have to get at them tomorrow.<br>
+<br>
+I'll make doubly sure I'm not doing something silly, and then clean up the three frameworks and upload them.<br>
+<br>
+Thanks again.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2010 7:07 pm</strong></div>
+				<div class="author">by <strong>TriplVing</strong></div>
+				<div class="content">Ok, I made sure that I hadn't compiled Bullet with debug info enabled, and although I was positive i had disabled it, the libs I produced this time round were half the size. <br>
+<br>
+ODE and Bullet are now more comparable, with ODE mostly producing figures in the region of low e-06 and high e-07 and bullet mid to high e-06, certainly closer than before. <br>
+<br>
+I also totally nuked my PhysX SDK and re-installed everything just to make sure I hadn't compiled a dodgy lib or DLL at some point and forgotten about it. Anyway I am now seeing PhysX produce results in the mid to high e-05. So faster than before, but still significantly slower than Bullet or ODE! <br>
+<br>
+I can upload the frameworks if anybody wants me to, but really I suppose my "problem" with Bullet is resolved, the difference between them is now small enough that it can be explained away simply through implementation. As I understand it, ODE is generally a more lightweight library than Bullet or PhysX, but with less features. <br>
+<br>
+I was wondering though, can anybody explain the difference for PhysX? I know its a black box library so anything anyone can offer would be speculation, but I'd be interested to hear peoples thoughts.<br>
+<br>
+Also, let me know if anybody wants me to upload the frameworks.<br>
+<br>
+Thanks again.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2010 8:27 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Yes, please upload that framework somewhere, or attach it as a zipfile to this forum topic.<br>
+
+<blockquote class="uncited"><div>
+As I understand it, ODE is generally a more lightweight library than Bullet or PhysX, but with less features. 
+</div></blockquote>
+
+The core ODE library isn't necessarily more lightweight: its collision detection and rigid body dynamics code size should be similar to Bullet. <br>
+<br>
+Here are some lacking features of ODE from my perspective:<br>
+<br>
+1) ODE lacks warmstarting of contact constraints, so ODE should have inferior contact/stacking stability than Bullet or PhysX<br>
+2) ODE doesn't have proper convex hull collision detection, which is a desired feature<br>
+3) ODE, Bullet and PhysX use the same algorithm for the constaint solver (PGS iterative LCP solver) but Bullet's constraint solver is SIMD optimized so it should be faster<br>
+4) ODE doesn't have a PlayStation 3 Cell SPU optimized version, Bullet and PhysX do<br>
+5) Bullet is written in a more modular fashion than ODE, so it is easier to replace or customize parts of the engine<br>
+6) ODE doesn't provide physics authoring plugins for Maya, 3ds Max , Blender etc. Bullet and PhysX do<br>
+<br>
+On the good side for ODE, it has an additional direct constraint solver (dWorldStep based on a Dantzig LCP solver) that Bullet or PhysX doesn't have <a href="http://code.google.com/p/bullet/issues/detail?id=152" class="postlink">yet</a>, and its simple C API is attractive to many and makes scripting language bindings easier.<br>
+<br>
+It would be interesting to figure out why your test shows those timings for integration, there might be some issue that can be fixed.<br>
+<br>
+If you want to share more findings, please let us know.<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2010 9:26 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">IIRC there is a define in ODE that let's you activate warmstarting. Anyway, the lack of tools and general convex collision detection in the ODE are show stoppers in my opinion.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2010 9:41 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">This warmstarting option in ODE is only for non-contact joints, not for contact constraints. ODE doesn't provide persistent contact point management to store warm starting information, as far as I know.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Bullet Vs PhysX Vs ODE performance comparison</h3>
+				<div class="date">Posted: <strong>Tue Aug 10, 2010 9:45 pm</strong></div>
+				<div class="author">by <strong>TriplVing</strong></div>
+				<div class="content">Ok, have attached the three frameworks, apologies that the timing code uses a windows header. It was given to me by a colleague and I have used it elsewhere in my work, so I just keep using it to be consistent. I know its not the best way to take critical timings, but it should at least produce comparative results, even if not entirely accurate.<br>
+<br>
+They are all Visual Studio 2008 projects (earliest version of VS I had). In the case of Bullet and ODE, I have included the libraries that I have compiled for x64, for PhysX, it will be necessary to alter system paths from my system to make it compile as well as having the latest SDK (2.8.3 build 21) and the latest system software.<br>
+<br>
+In all cases, only the "x64: Release" profile is properly setup.<br>
+<br>
+I'm very open to the possibility I am doing something quite stupid <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> I am a researcher, not software developer and while I like to think I am OK at it, it is not my main trade, rather a tool that lets me do my research. <br>
+<br>
+So I would be very interested to hear any feedback anyone has to offer.<br>
+<br>
+Thanks again.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Wed Aug 11, 2010 9:07 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">You might be correct since I remember now that the contact constraints are not persistent. I cannot say 100%. Anyway I was refering to this line from the code which gave me the impression that they use warmstarting also for contacts:<br>
+<br>
+//***************************************************************************<br>
+// configuration<br>
+<br>
+// for the SOR and CG methods:<br>
+// uncomment the following line to use warm starting. this definitely<br>
+// help for motor-driven joints. unfortunately it appears to hurt<br>
+// with high-friction contacts using the SOR method. use with care<br>
+<br>
+#define WARM_STARTING 1</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Wed Aug 11, 2010 5:51 pm</strong></div>
+				<div class="author">by <strong>TriplVing</strong></div>
+				<div class="content">In case anybody is interested to see the graph of my results, I thought i'd attach it to this post.<br>
+<br>
+<img src="http://img225.imageshack.us/img225/2122/peintegrationtiming.png" class="postimage" alt="Image"><br>
+<br>
+This was produced using the three test frameworks included 2 posts up, with a fourth added created using a very simple little RK4 integrator I wrote purely to get some baseline figures (it calculates position and rotation only, no collision response etc, but I thought it would be interesting purely as a baseline addition).<br>
+<br>
+500 iterations were performed 3 times for each engine and the results plotted are the average of those 3 values.<br>
+<br>
+ODE really does seem to whip along!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 10:34 am</strong></div>
+				<div class="author">by <strong>DannyChapman</strong></div>
+				<div class="content">I'm not sure that this is a very fair performance test for the engines! Engines will be optimised for more than one body, and also probably for bodies in contact rather than unconstrained.<br>
+<br>
+For example, when I run the PhysX test case I get timings of around 0.07ms, for one sphere falling.<br>
+<br>
+However, the total time for 100 spheres falling is 0.17ms - i.e. only 0.0017ms per sphere. Obviously that's a huge speedup per sphere, even though there's now lots of collision detection to be done! <br>
+<br>
+Obviously there's an overhead in updating the engine, and whilst that overhead may be much more than the cost of updating a single object in the scene, it would normally be pretty small compared to the overall physics budget in most real simulations.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 12:01 pm</strong></div>
+				<div class="author">by <strong>TriplVing</strong></div>
+				<div class="content"><blockquote><div><cite>DannyChapman wrote:</cite>I'm not sure that this is a very fair performance test for the engines! Engines will be optimised for more than one body, and also probably for bodies in contact rather than unconstrained.<br>
+<br>
+For example, when I run the PhysX test case I get timings of around 0.07ms, for one sphere falling.<br>
+<br>
+However, the total time for 100 spheres falling is 0.17ms - i.e. only 0.0017ms per sphere. Obviously that's a huge speedup per sphere, even though there's now lots of collision detection to be done! <br>
+<br>
+Obviously there's an overhead in updating the engine, and whilst that overhead may be much more than the cost of updating a single object in the scene, it would normally be pretty small compared to the overall physics budget in most real simulations.</div></blockquote>
+
+Agreed, I understand that. I was just quite interested to see the difference between the engines in such a pared down case. I agree it's more likely that rather than the actual coding standard being better in ODE, it is just structured in such a way that for smaller tests, its better.<br>
+<br>
+What I might do in a minute is run some larger tests as you suggest, maybe 1000 spheres aligned cubically with each row slightly above each other so that everything falls to begin with, and a plane at zero. That might offer an interesting alternative insight and provide a more fair comparison. <br>
+<br>
+I'm not really bashing any engine per se, i'm just trying to do an objective black-box test of them all.<br>
+<br>
+I'll post up the results of said larger tests in a bit.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Bullet Vs PhysX Vs ODE Restitution question</h3>
+				<div class="date">Posted: <strong>Thu Aug 12, 2010 4:28 pm</strong></div>
+				<div class="author">by <strong>TriplVing</strong></div>
+				<div class="content">OK,<br>
+<br>
+I have performed some more tests and its quite revealing! <br>
+<br>
+I have re-done the tests from the uploaded frameworks in order to make everything fair and equal. So I have ensured that for all tests I am using a SaP broadphase (set to single rather than multi in PhysX). <br>
+<br>
+The first graph is as before, so this is just a sphere falling due to Gravity, nothing for it to impact. As before, all plotted points are an average of 3 runs on the same machine (T7700, 4GB 667Mhz DDR2 RAM):<br>
+<br>
+<img src="http://img248.imageshack.us/img248/2122/peintegrationtiming.png" class="postimage" alt="Image"><br>
+<br>
+The second graph really highlights what DannyChapman says though. In this test there is now a ground plane defined and 625 of the spheres from test 1 are arranged in 5 planes of 5x5, with each "plane" of spheres raised above the other by 2 units, just to ensure that there is movement through the system due to gravity, rather than them all starting in contact. Now we see PhysX and Bullet really steam ahead of ODE:<br>
+<br>
+<img src="http://img830.imageshack.us/img830/8660/peintegrationtiming625.png" class="postimage" alt="Image"><br>
+<br>
+Quite an interesting set of comparisons for me.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13163" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2021-02-18T14:28:51+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13163</id>
+
+		<entry>
+		<author><name><![CDATA[Eturcim]]></name></author>
+		<updated>2021-02-18T14:28:51+00:00</updated>
+
+		<published>2021-02-18T14:28:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43318#p43318</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43318#p43318"/>
+		<title type="html"><![CDATA[Re: Player moving on a sphere surface]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43318#p43318"><![CDATA[
+Answering my own question:<br><br>The character's rigid body was missing angular damping (which was causing the spinning to occur):<br>Calling <strong class="text-strong">setDamping </strong> on the character's rigidbody with value greater than 0 for angularDamping solves the issue.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13886">Eturcim</a> — Thu Feb 18, 2021 2:28 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Eturcim]]></name></author>
+		<updated>2021-02-17T22:27:54+00:00</updated>
+
+		<published>2021-02-17T22:27:54+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43316#p43316</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43316#p43316"/>
+		<title type="html"><![CDATA[Player moving on a sphere surface]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43316#p43316"><![CDATA[
+Hello there,<br><br>I am moving a rigidbody (the character) on the surface of a sphere, like what is described in this former post <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=34525#p34525" class="postlink">viewtopic.php?p=34525#p34525</a> <br><br>I am facing the following issue that I am having hard time to solve:<br>After moving the character, it's starts spinning really slightly around it's Y axis.<br><br>As a side note, I am using Ammo.js which is a javascript/webassembly port of Bullet 2.82, but this has no impact on the problem. <br><br>To "stick" the player (a dynamic rigidbody with a cylinder shape) to the sphere (a static rigid body with a sphere shape), here is the code, called on each game loop iteration:<div class="codebox"><p>Code: </p><pre><code>_applyAttraction() {    let sphereOrigin = this.body.getWorldTransform().getOrigin();    let characterOrigin = this._characterEntity.body.getWorldTransform().getOrigin();    // compute and apply sphere gravity to character body    let sphereAttractionForce = new ammo.btVector3(      characterOrigin.x() - sphereOrigin.x(),      characterOrigin.y() - sphereOrigin.y(),      characterOrigin.z() - sphereOrigin.z()    );    sphereAttractionForce.normalize();    sphereAttractionForce.op_mul(gravity);    this._characterEntity.body.applyForce(sphereAttractionForce, ammo.btVector3(0, 0, 0));    // align character up with sphere origin    const gravityDirection = bt2ThreeVec3(sphereAttractionForce).normalize().multiplyScalar(-1);    // extract up axis of character transform basis    let characterUp = new THREE.Vector3();    this._characterEntity.graphic.matrixWorld.extractBasis(      new THREE.Vector3(),      characterUp,      new THREE.Vector3()    );    // apply rotation to align up with gravity vector    let verticalAlignmentRotation = new Quaternion()      .setFromUnitVectors(characterUp, gravityDirection)      .multiply(bt2ThreeQuat(this._characterEntity.body.getWorldTransform().getRotation()));    this._characterEntity.body.getWorldTransform().setRotation(three2BtQuat(verticalAlignmentRotation));  }  </code></pre></div>And to move the character on the sphere (I removed the code dealing with the mouse controlled orientation since it is irrelevant to track down the problem). This code is also called on every game loop iteration:<br><div class="codebox"><p>Code: </p><pre><code>let scalingFactor = 0.02;    let moveX = inputController.getMoveX();    let moveZ = inputController.getMoveZ();    if (moveX === 0 &amp;&amp; moveZ === 0) return;    let movement = new THREE.Vector3(moveX, 0, moveZ).normalize();    movement.multiplyScalar(scalingFactor);    let wantedWorldPos = this.graphic.localToWorld(movement);    this.body      .getWorldTransform()      .setOrigin(new ammo.btVector3(wantedWorldPos.x, wantedWorldPos.y, wantedWorldPos.z));</code></pre></div>In plain English here is what I am doing:<br><br>1) Get the direction from the player to the sphere<br>2) Apply a force using that vector: <div class="codebox"><p>Code: </p><pre><code>this._characterEntity.body.applyForce(sphereAttractionForce, ammo.btVector3(0, 0, 0));</code></pre></div>3) Align the player Up with the gravity direction, to do so I:<br> 3) a. normalize and "flip" gravity vector direction<br> 3) b. extract character up vector and compute the quaternion which give the rotation to align this up vector with the gravity vector<br> 3) c. compute the new player orientation by applying quaternion from 3.b to it's current orientation<br>4) Apply movement (from keyboard inputs), in details:<br>  4) a. get a vector resulting from the requested movement alongside x and z axis<br>  4) b. convert this vector from player local basis to world basis <div class="codebox"><p>Code: </p><pre><code> this.graphic.localToWorld(movement);</code></pre></div>  4) c. set the new transform origin with this new vector<br><br>  The project may be seen here  <a href="https://ai-gallery.vercel.app/" class="postlink">https://ai-gallery.vercel.app/</a> with the spinning issue I am describing.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=13886">Eturcim</a> — Wed Feb 17, 2021 10:27 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

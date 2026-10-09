@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13380" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2022-02-20T07:34:42+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/13380</id>
+
+		<entry>
+		<author><name><![CDATA[kcjsend2]]></name></author>
+		<updated>2022-02-19T03:42:12+00:00</updated>
+
+		<published>2022-02-19T03:42:12+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43873#p43873</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43873#p43873"/>
+		<title type="html"><![CDATA[Re: Can I make btTrangleMeshShape from btHeightfieldTerrainShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43873#p43873"><![CDATA[
+Thanks for the answer!<br><br>I found this post : <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=38852&amp;hilit=btTriangleIndexVertexArray#p38852" class="postlink">viewtopic.php?p=38852&amp;hilit=btTriangleI ... ray#p38852</a><br><br>so I modify that codes like this : <br><div class="codebox"><p>Code: </p><pre><code>class btTriangleCollector : public btTriangleCallback{public:std::vector&lt;XMFLOAT3&gt;* m_pVerticesOut;std::vector&lt;unsigned short&gt;* m_pIndicesOut;btTriangleCollector(){m_pVerticesOut = NULL;m_pIndicesOut = NULL;}virtual void processTriangle(btVector3* tris, int partId, int triangleIndex){for (int k = 0; k &lt; 3; k++){btVector3 v;for (int l = 0; l &lt; 3; l++){v[l] = tris[k][l];}m_pIndicesOut-&gt;push_back(m_pVerticesOut-&gt;size());XMFLOAT3 vertex(v[0], v[1], v[2]);m_pVerticesOut-&gt;push_back(vertex);}}};auto TerrainShape = new btHeightfieldTerrainShape(mWidth * mTerrainScale.x, mDepth * mTerrainScale.z, mHeightmapData, minHeight, maxHeight, 1, false);TerrainShape-&gt;setLocalScaling(btVector3(1, mTerrainScale.y, 1));btVector3 aabbMin, aabbMax;for (int k = 0; k &lt; 3; k++){aabbMin[k] = -BT_LARGE_FLOAT;aabbMax[k] = BT_LARGE_FLOAT;}std::vector&lt;XMFLOAT3&gt; vertices;std::vector&lt;unsigned short&gt; Targetindices;btTriangleCollector collector;collector.m_pVerticesOut = &amp;vertices;collector.m_pIndicesOut = &amp;Targetindices;TerrainShape-&gt;processAllTriangles(&amp;collector, aabbMin, aabbMax);mVertexArray = std::make_shared&lt;btTriangleIndexVertexArray&gt;();btIndexedMesh tempMesh;mVertexArray-&gt;addIndexedMesh(tempMesh, PHY_FLOAT);btIndexedMesh&amp; mesh = mVertexArray-&gt;getIndexedMeshArray()[0];const int32_t VERTICES_PER_TRIANGLE = 3;size_t numIndices = Targetindices.size();mesh.m_numTriangles = numIndices / VERTICES_PER_TRIANGLE;if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max()){mesh.m_triangleIndexBase = new unsigned char[sizeof(int16_t) * (size_t)numIndices];mesh.m_indexType = PHY_SHORT;mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int16_t);}else{mesh.m_triangleIndexBase = new unsigned char[sizeof(int32_t) * (size_t)numIndices];mesh.m_indexType = PHY_INTEGER;mesh.m_triangleIndexStride = VERTICES_PER_TRIANGLE * sizeof(int32_t);}mesh.m_numVertices = vertices.size();mesh.m_vertexBase = new unsigned char[VERTICES_PER_TRIANGLE * sizeof(btScalar) * (size_t)mesh.m_numVertices];mesh.m_vertexStride = VERTICES_PER_TRIANGLE * sizeof(btScalar);btScalar* vertexData = static_cast&lt;btScalar*&gt;((void*)(mesh.m_vertexBase));for (int32_t i = 0; i &lt; mesh.m_numVertices; ++i){int32_t j = i * VERTICES_PER_TRIANGLE;const XMFLOAT3&amp; point = vertices[i];vertexData[j] = point.x;vertexData[j + 1] = point.y;vertexData[j + 2] = point.z;}if (numIndices &lt; std::numeric_limits&lt;int16_t&gt;::max()){int16_t* indices = static_cast&lt;int16_t*&gt;((void*)(mesh.m_triangleIndexBase));for (int32_t i = 0; i &lt; numIndices; ++i) {indices[i] = (int16_t)Targetindices[i];}}else{int32_t* indices = static_cast&lt;int32_t*&gt;((void*)(mesh.m_triangleIndexBase));for (int32_t i = 0; i &lt; numIndices; ++i) {indices[i] = Targetindices[i];}}btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(mVertexArray.get(), true);btTransform btTerrainTransform;btTerrainTransform.setIdentity();btTerrainTransform.setOrigin(btVector3(0, 0, 0));mBtRigidBody = physics-&gt;CreateRigidBody(0.0f, btTerrainTransform, shape);</code></pre></div>if this codes works well, mBtRigdBody's AABB must be min(-511.5, 4, -511.5), max(511.5, 242, 511.5)<br>but, actually what i got is min(-511.5, -105.389..., -511.5), max(511.5, 25.8... ,-500.5)<br><br>definitely wrong values.<br><br>I think btTriangleIndexVertexArray doesn't have right data of terrain, but, I can't find where's wrong.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14021">kcjsend2</a> — Sat Feb 19, 2022 3:42 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[drleviathan]]></name></author>
+		<updated>2022-02-18T16:10:30+00:00</updated>
+
+		<published>2022-02-18T16:10:30+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43869#p43869</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43869#p43869"/>
+		<title type="html"><![CDATA[Re: Can I make btTrangleMeshShape from btHeightfieldTerrainShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43869#p43869"><![CDATA[
+<blockquote class="uncited"><div>Why does the vertexBase of the getLockedVertexIndexBase function receive double pointers?</div></blockquote>The actual declaration for that API looks like this:<div class="codebox"><p>Code: </p><pre><code>void getLockedVertexIndexBase(    unsigned char** vertexbase,    int&amp; numverts,    PHY_ScalarType&amp; type,    int&amp; stride, unsigned char** indexbase,    int&amp; indexstride,    int&amp; numfaces,    PHY_ScalarType&amp; indicestype,    int subpart = 0)</code></pre></div>The API is: <strong class="text-strong">btStridingMeshInterface</strong> will cast a pointer to its own data to <strong class="text-strong">unsigned char*</strong> then set the supplied <strong class="text-strong">vertexbase</strong> to it, and also set <strong class="text-strong">type</strong> accordingly.  All this so the receiving side can have the vertexbase pointer and cast back accordingly.<br><blockquote class="uncited"><div>Unlike vector, btAlignedObjectArray does not have a data() function, so how do I get the location of the actual data?</div></blockquote>There is <strong class="text-strong">btAlignedObjectArray::at(int n)</strong> (both const and non-const varieties) which returns the data by reference.  You could probably snag the pointers from the references.<br><blockquote class="uncited"><div>is this correct data?</div></blockquote><div class="codebox"><p>Code: </p><pre><code>m_pIndicesOut-&gt;push_back(m_pVerticesOut-&gt;size());</code></pre></div>AFAICT the code is building its own triangle data which is a list of vertices (<strong class="text-strong">MyTriangleCollector3::m_pVerticesOut</strong>) and indices into that array of vertices (<strong class="text-strong">MyTriangleCollector3::m_pIndicesOut</strong>).  So the index to the about-to-be-created vertex is the size of the array right before the vertex is added.  It looks correct to me.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=11033">drleviathan</a> — Fri Feb 18, 2022 4:10 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kcjsend2]]></name></author>
+		<updated>2022-02-18T07:14:00+00:00</updated>
+
+		<published>2022-02-18T07:14:00+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43868#p43868</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43868#p43868"/>
+		<title type="html"><![CDATA[Re: Can I make btTrangleMeshShape from btHeightfieldTerrainShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43868#p43868"><![CDATA[
+I found it. threre's Demo named HeightFieldExample.<br><br>it collects all vertices and indices by TriangleCallback and processAllTriangles.<br><br>there's three more questions.<br><br>first, Why does the vertexBase of the getLockedVertexIndexBase function receive double pointers? The vertex information I have is in the form of btAlignedObjectArray&lt;XMFLOAT3&gt;, but I don't know how to pass it over to work well.<br><br>second, Unlike vector, btAlignedObjectArray does not have a data() function, so how do I get the location of the actual data?<br><br>third, actually in HeightFieldExample, btTriangleCallback collects indices by this code :<br><div class="codebox"><p>Code: </p><pre><code>m_pIndicesOut-&gt;push_back(m_pVerticesOut-&gt;size());</code></pre></div>is this correct data? I can't sure this data fits to btTriangleIndexVertexArray object.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14021">kcjsend2</a> — Fri Feb 18, 2022 7:14 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[kcjsend2]]></name></author>
+		<updated>2022-02-20T07:34:42+00:00</updated>
+
+		<published>2022-02-18T04:43:50+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43867#p43867</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43867#p43867"/>
+		<title type="html"><![CDATA[Can I make btTriangleMeshShape from btHeightfieldTerrainShape?]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=43867#p43867"><![CDATA[
+continues from this question : <a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?f=9&amp;t=13374" class="postlink">viewtopic.php?f=9&amp;t=13374</a><br><br>hi.<br><br>I know these questions may seem a little short technically, but I don't know how to proceed, so I'm asking you this question.<br><br>We found that btStridingMeshInterface is required to create btBvhTriangleMeshShape.<br><br>But all I have is as much data as (Width * Height) for btTerrainHeightfieldShape. There is no index information on the data, so I don't know how to create a mesh in the Bullet.<br><br>Is there a simple way to change btTerrainHeightfieldShape to btBvhTriangleMeshShape? If there's no such way, how should I process my data?<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14021">kcjsend2</a> — Fri Feb 18, 2022 4:43 am</p><hr />
+]]></content>
+	</entry>
+	</feed>

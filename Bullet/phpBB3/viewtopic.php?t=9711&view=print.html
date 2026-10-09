@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Ghost object collisions</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Ghost object collisions</h2>
+		<p><a href="viewtopic.php%3Ft=9711.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9711</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Ghost object collisions</h3>
+				<div class="date">Posted: <strong>Tue Jan 28, 2014 7:43 pm</strong></div>
+				<div class="author">by <strong>ZeroPoint</strong></div>
+				<div class="content">Have a little technical question about how Bullet Physics sets up collision pairs with ghost objects.  I want to ignore collisions for a specific object the ghost object hits.  I'm using the code in the Bullet Physics tutorials.....<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9711&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>void GhostCollisions()
+{
+    hitobject=false;
+    hitPosition=btVector3(0,0,0);
+    btManifoldArray   manifoldArray;
+    btBroadphasePairArray&amp; pairArray = ghostobject-&gt;getOverlappingPairCache()-&gt;getOverlappingPairArray();
+    int numPairs = pairArray.size();
+
+    for (int i=0;i&lt;numPairs;i++)
+    {
+        manifoldArray.clear();
+        const btBroadphasePair&amp; pair = pairArray[i];
+
+         //unless we manually perform collision detection on this pair, the contacts are in the dynamics world paircache:
+        btBroadphasePair* collisionPair = world-&gt;getPairCache()-&gt;findPair(pair.m_pProxy0,pair.m_pProxy1);
+        if (!collisionPair)
+            continue;
+
+        if (collisionPair-&gt;m_algorithm)
+            collisionPair-&gt;m_algorithm-&gt;getAllContactManifolds(manifoldArray);
+
+        for (int j=0;j&lt;manifoldArray.size();j++)
+        {
+            btPersistentManifold* manifold = manifoldArray[j];
+            btScalar directionSign = manifold-&gt;getBody0() == ghostobject ? btScalar(-1.0) : btScalar(1.0);
+            int num=manifold-&gt;getNumContacts();
+            for (int p=0;p&lt;num;p++)
+            {
+             	const btManifoldPoint&amp;pt = manifold-&gt;getContactPoint(p);
+                if (pt.getDistance()&lt;0.0f)
+                {
+                    //const btVector3&amp; ptA = pt.getPositionWorldOnA();
+                    //const btVector3&amp; ptB = pt.getPositionWorldOnB();
+                    //const btVector3&amp; normalOnB = pt.m_normalWorldOnB;
+                    hitobject=true;
+                    hitPosition += pt.m_normalWorldOnB*    directionSign * pt.getDistance() * btScalar(1.01);
+
+                    /// work here
+                }
+            }
+         }
+      }
+}</code></pre></div>
+
+  So does the ghostobject always end up in  manifold-&gt;getBody0()  and the object it hits in manifold-&gt;getBody1() or does Bullet Physics get it in reversed order sometimes?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

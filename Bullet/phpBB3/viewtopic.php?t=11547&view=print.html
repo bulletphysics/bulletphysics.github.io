@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Damping oscillations in PBD?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Damping oscillations in PBD?</h2>
+		<p><a href="viewtopic.php%3Ft=11547.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11547</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Damping oscillations in PBD?</h3>
+				<div class="date">Posted: <strong>Sat Feb 25, 2017 1:11 pm</strong></div>
+				<div class="author">by <strong>sebjf</strong></div>
+				<div class="content">Hi,<br>
+<br>
+In my PBD system, some of the particles are oscillating. I captured a few frames worth of the position buffers and put them into matlab to plot how the positions evolve over time and through the solve.<br>
+<br>
+The green lines connect each sample to the next in time. The plot looks a little odd on first glance, but you can see what is happening. Between two subsequent frames, small changes in position cause the constraint solves to differ significantly. The collision response then moves the particles into a different location to before, where the constraint and collision solves then move them into the initial position.<br>
+<br>
+Its like the system is cycling between two steady states.<br>
+<br>
+There are two ostensible causes to this:<br>
+<br>
+1. The collision response should have moved particles to the initial place with repulsive force.<br>
+2. The system should be damped more to avoid the large changes in predicted position, which in turn cause large changes in constraint solve.<br>
+<br>
+I don't think either are fatal or should be though. Its reasonable for a particle to collide in one frame, then not on another, e.g. if its only just against a surface.<br>
+<br>
+The behaviour is very dependent on system conditions, e.g. where the particle is re: colliders, timestep count, velocity damping, etc.<br>
+<br>
+Is there some system wide technique we can apply to prevent this kind of behaviour? It almost looks like its resonating - perhaps something like introducing tiny randomisations into constraint solves?<br>
+<br>
+Sj</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Damping oscillations in PBD?</h3>
+				<div class="date">Posted: <strong>Sat Feb 25, 2017 6:03 pm</strong></div>
+				<div class="author">by <strong>mobeen</strong></div>
+				<div class="content">Hi there,<br>
+  We might be able to help you if you show us how you are doing the solves currently. And is it in bullet or have you created your own framework?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Damping oscillations in PBD?</h3>
+				<div class="date">Posted: <strong>Sat Feb 25, 2017 7:02 pm</strong></div>
+				<div class="author">by <strong>sebjf</strong></div>
+				<div class="content">Hi mobeen,<br>
+<br>
+It is my own framework. The system is very simple. The cloth particles are constrained with edge constraints. The solver performs weighted-averaging over projected positions similar to Weiler el al's Projective Fluids. The weights of the projected positions are scaled by an energy potential that is a function of constraint violation similar to Macklin et al's XPBD. Pseudo Continuous Collision Detection is performed with distance fields, with the response computed by approximating a plane and moving colliding particles to the surface.<br>
+<br>
+Originally I had asynchronous constraint solves based on per-particle strain value, somewhat like Ozgen and Kallmann's Directional Constraint enforcement. This has been commented out for the moment as removing it improves stability. I think this is more symptomatic than the cause however. By that I mean, asynchronous constraints will always be more unstable than those solved equally between particles, but in the same sense, a set of constraints using energy potentials will always be more unstable than the same set without (when solved in discrete timesteps). <br>
+<br>
+The 'problem' as I see it, is one of quantisation. Non-linear responses from the collision detection system and constraint solve, combined with non-zero time-steps will always leave the potential for these 'loops' to arise where the system bounces between two states. <br>
+<br>
+This is what I am guessing is going on of course. Due to the platform I can't walk every step of the solve in the debugger. While I could reduce the time-step, or I could improve the surface approximation of the collision detection system, these don't fundamentally solve the problem if that is it. For example, if two cells of a field that are discontinuous could 'cause' that behaviour, but in reality surfaces can be discontinuous, so I wonder if there is a better system-wide way to solve this.<br>
+<br>
+<br>
+<br>
+<br>
+Sj</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

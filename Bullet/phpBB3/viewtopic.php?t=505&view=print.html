@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Crash in ~CcdPhysicsController on empty controller</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Crash in ~CcdPhysicsController on empty controller</h2>
+		<p><a href="viewtopic.php%3Ft=505.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=505</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Crash in ~CcdPhysicsController on empty controller</h3>
+				<div class="date">Posted: <strong>Tue Sep 05, 2006 6:40 pm</strong></div>
+				<div class="author">by <strong>Dragonlord</strong></div>
+				<div class="content">For testing purpose I create a CcdPhysicsController without attaching it to a physics environment yet. Upon cleaning up ( "delete" ) I got a segmentation fault:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=505&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>(gdb) bt
+#0  0xb6ed3023 in __gnu_cxx::__normal_iterator&lt;TypedConstraint**, std::vector&lt;TypedConstraint*, std::allocator&lt;TypedConstraint*&gt; &gt; &gt;::__normal_iterator ()
+#1  0xb6ed23d9 in std::vector&lt;TypedConstraint*, std::allocator&lt;TypedConstraint*&gt; &gt;::begin ()
+#2  0xb6ece7ef in CcdPhysicsEnvironment::removeCcdPhysicsController ()
+#3  0xb6ecb9d4 in CcdPhysicsController::~CcdPhysicsController ()</code></pre></div>
+
+Looking at the source code I noticed that there is no NULL-Check on line CcdPhysicsController:107
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=505&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	m_cci.m_physicsEnv-&gt;removeCcdPhysicsController(this);</code></pre></div>
+
+Using the latest stable version from the homepage.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Sep 05, 2006 10:48 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Thanks for the report. It was indeed assumed the pointer is filled in.<br>
+An assert/check will be added.<br>
+<br>
+<a href="http://code.google.com/p/bullet/issues/detail?id=8&amp;can=2&amp;q=" class="postlink">http://code.google.com/p/bullet/issues/ ... 8&amp;can=2&amp;q=</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 06, 2006 11:43 am</strong></div>
+				<div class="author">by <strong>Dragonlord</strong></div>
+				<div class="content">Wow... off-topic.<br>
+<br>
+Anyways. Is an assertion the right thing to do? Just asking as not attaching a controller to the environment doesn't sound to me like a logical error. I did simply add a check to call the remove only if the pointer is non-NULL as the rest of the destructor works fine.<br>
+<br>
+- Pl?ss Roland</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 06, 2006 4:59 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content">Yeah - I agree.  If the package allows you to create something - then it has to give you a way to destroy it again.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

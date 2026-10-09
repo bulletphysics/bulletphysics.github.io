@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; hi. new user here with a Q</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>hi. new user here with a Q</h2>
+		<p><a href="viewtopic.php%3Ft=4270.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4270</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Mon Nov 02, 2009 6:45 pm</strong></div>
+				<div class="author">by <strong>stooch</strong></div>
+				<div class="content">Is there an SDK for the plugin side of this librarY? like all the commands i can use in maya with python, mel, etc?<br>
+<br>
+i found some issues with the current plugin that make it unusable so im writing a production toolset, I fixed the object level transforms, created world constraints, integrated with voronoi shatter, and still need to handle dynamic switching from passive to active state.<br>
+<br>
+also, is there a way to make a "sleeping" hardbody become active upon collision&gt;? like an:  "isColliding" flag for passive/active bodies - would be nice so that i can dynamically wake up pieces in a chain reaction type effect and at the same time turn off the constraints, im having to constrain my debris in world space since the maya plugin seems to be only written for world coordinates.<br>
+<br>
+thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Sat Nov 07, 2009 2:00 am</strong></div>
+				<div class="author">by <strong>stooch</strong></div>
+				<div class="content">anyone? id really like to get this figured out, unless there is a better way to activate rbs on collision.. or create a cluster of RBS that breaks up on impacts.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Thu Nov 12, 2009 4:55 am</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content">Well all of the source code for the plugin (and Bullet) is available... see <a href="http://code.google.com/p/bullet/source/browse/#svn/trunk/Extras/MayaPlugin" class="postlink"><em class="text-italics">Extras &gt; MayaPlugin</em> under the source code</a>; you should be able to find what you want from the plugin *Cmd and *Node sources.<br>
+<br>
+The Bullet Physics engine itself offers what you are asking for (sleeping, compound rigid bodies) and a lot more, but unfortunately these features are not exposed by the Dynamica plugin... yet; you would need to address that at the C++ plugin level to expand/expose additional Bullet features to Maya.  Volunteers are always welcomed.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Sun Nov 15, 2009 10:50 pm</strong></div>
+				<div class="author">by <strong>stooch</strong></div>
+				<div class="content"><blockquote><div><cite>RBD wrote:</cite>Well all of the source code for the plugin (and Bullet) is available... see <a href="http://code.google.com/p/bullet/source/browse/#svn/trunk/Extras/MayaPlugin" class="postlink"><em class="text-italics">Extras &gt; MayaPlugin</em> under the source code</a>; you should be able to find what you want from the plugin *Cmd and *Node sources.<br>
+<br>
+The Bullet Physics engine itself offers what you are asking for (sleeping, compound rigid bodies) and a lot more, but unfortunately these features are not exposed by the Dynamica plugin... yet; you would need to address that at the C++ plugin level to expand/expose additional Bullet features to Maya. Volunteers are always welcomed.</div></blockquote>
+
+thanks for the reply! i was beginning to lose hope lol.<br>
+<br>
+im cracking into the plugin code, i have some bugs to kill <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+speaking of bugs, im not sure if this is intentional, but it seems that the plugin resets all RB positions EXACTLY on the simulation start frame, while the desired behavior is to reset all rigid bodies  when currentTime is &lt;= rbSolver start time.<br>
+<br>
+is there some kind of workflow im simply ignorant of here? currently im resetting  RBs using some of my own python scrips, but i would imagine that if it was built into the plugin it would be more efficient... so is this a bug or feature?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Mon Nov 16, 2009 4:33 am</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><blockquote><div><cite>stooch wrote:</cite>[...]it seems that the plugin resets all RB positions EXACTLY on the simulation start frame, while the desired behavior is to reset all rigid bodies  when currentTime is &lt;= rbSolver start time.[...]</div></blockquote>I don't know?  I assume you're referring to this line in dSolverNode.cpp (dSolverNode::computeRigidBodies):<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=4270&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    if(time == startTime) {
+        //first frame, init the simulation</code></pre></div>I'm guessing the idea for the dSolver Start Time was simply to allow people to change it to match the playback range's start frame.  I assume in your case you're using the start time as a way to delay the simulation start?  Then I can see <em class="text-italics"><strong class="text-strong">&lt;=</strong></em> instead would make more sense.  There doesn't appear to be anyone actively working on the Maya plugin at this time.  I think you could recommend fixes in the forum, Erwin or one of the active team members could apply them if they've been properly tested.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Mon Nov 16, 2009 6:06 am</strong></div>
+				<div class="author">by <strong>stooch</strong></div>
+				<div class="content">yeah thats exactly what im talking about, basically thats the behavior that i expect based on using all other solvers in maya<br>
+thanks for pointing out where i could find it, im still reading through the plugin code but ill definitelly share any findings as i work on integrating this into our pipeline.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Sat Nov 21, 2009 1:41 am</strong></div>
+				<div class="author">by <strong>stooch</strong></div>
+				<div class="content">ok so after more study, it appears that setting it to &lt;= would be a bad idea since then the plugin will reinitialize the hard bodies every frame that is less than the plugin start time.<br>
+<br>
+the better solution is to use this class:<br>
+<br>
+MTime MAnimControl::animationStartTime<br>
+<br>
+if: MTime MAnimControl::animationStartTime  == current time, perform a hard body init.<br>
+<br>
+that way hard bodies will initialize every time the playhead restarts OR hits the start frame setting on the dynamic solver.<br>
+<br>
+but wont keep reinitializing the solver for 100 frames if your solver is set to start at frame 100.<br>
+<br>
+are there any favorite compilers or IDEs that are being used for this project? id like to try my hand at compiling this..<br>
+<br>
+also a little bit more comments on the code would be much appreciated, for example, id love to have an overview of what each module does, currently its taking alot of hunting on my end to piece all this together.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: hi. new user here with a Q</h3>
+				<div class="date">Posted: <strong>Sat Nov 21, 2009 9:02 pm</strong></div>
+				<div class="author">by <strong>RBD</strong></div>
+				<div class="content"><blockquote><div><cite>stooch wrote:</cite>[...]are there any favorite compilers or IDEs that are being used for this project? id like to try my hand at compiling this..<br>
+<br>
+also a little bit more comments on the code would be much appreciated, for example, id love to have an overview of what each module does, currently its taking alot of hunting on my end to piece all this together.</div></blockquote>
+For Linux, just look at the makefile and ensure proper env. variable assignments.<br>
+For Windows, there is a Microsoft Visual Studio (2005 or later) solution file (BulletMayaPlugin.sln).<br>
+<br>
+A bit of background, as I understand it: The plugin was written by Nicola Candussi under Disney; he applied some quick fixes and enhancements to it soon after they released it to open source late 2008.  Disney released it to open source because they didn't have the resources to fully realize the project, hoping the open source community could pick it up and run with it.  Last spring Herbert Law worked on trying to fix / add constraints support (I'm guessing just before leaving Sony for Palm).  And now it appears Erwin (Bullet creator and lead) has assigned Roman Ponomarev (Sony, I think) to hopefully work on the plugin, but it seems he's been busy (for Bullet anyhow) working on the OpenCL branch.<br>
+<br>
+So, right now, I don't think there is an expert resource available for the plugin (to add comments or offer guidance and such).  I've been wanting to dive into the source myself... but... {insert any number of excuses here}.  From the little I glanced at it seems there might be a thin "physics engine abstraction layer" in the plugin since it was originally meant to support multiple physics engines (but I'm not sure since I didn't really look into it).<br>
+<br>
+Note that the source code for the <a href="http://sourceforge.net/projects/nimaplugin/" class="postlink">Nima PhysX for Maya plugin</a> is also available for reference.  It could provide ideas (like perhaps to handle compounded physics shapes in Maya, or convex mesh reduction/simplification? <em class="text-italics">edit: there's also Bullet Demo ConvexDecompositionDemo available</em>).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

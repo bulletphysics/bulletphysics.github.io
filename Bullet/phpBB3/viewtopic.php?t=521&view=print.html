@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; using Bullet: flying Triangles and SimdTransform's</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>using Bullet: flying Triangles and SimdTransform's</h2>
+		<p><a href="viewtopic.php%3Ft=521.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=521</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>using Bullet: flying Triangles and SimdTransform's</h3>
+				<div class="date">Posted: <strong>Tue Sep 12, 2006 6:33 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+We're one step away from switching from SOLID to Bullet.  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+<br>
+GJKPairDetector / clostestPoints is working great and very accurate.<br>
+<br>
+Now we try to use SubsimplexConvexCast::calcTimeOfImpact for our CCD.<br>
+<br>
+We have starting position and end position of all triangle vertexes and use TriangleShape's as representation in bullet (all vertex positions of the triangles are global). <br>
+How do we use "SimdTransform fromA" and ""SimdTransform toA" (as example, then we know how to use it in general) to represent the position change of our three vertexes per triangle (no rotation)? <br>
+The demos doesn't help in that case.<br>
+<br>
+Thank you very much in advance for your help!<br>
+<br>
+Two more things: <br>
+1. Great! Bullet's distance calculation is faster than SOLID <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+2. we would love some option to set the accurancy of the calcTimeOfImpact return value (seems to be set to "epsilon = 0.0001f;"). <br>
+<br>
+Greetings so far!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>to put it simple...</h3>
+				<div class="date">Posted: <strong>Wed Sep 13, 2006 10:25 am</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Ok, my request seems to be to difficult.<br>
+<br>
+Here in plain as example:<br>
+<br>
+I have the positions of 3 vertexes forming a triangle:<br>
+<br>
+v1 = (1,0,1)<br>
+v2 = (1,1,0)<br>
+v3 = (0,1,1)<br>
+<br>
+Now, in the next step in is<br>
+<br>
+v1 = (4,1,1)<br>
+v2 = (-1,3,1)<br>
+v3 = (-1,1,6)<br>
+<br>
+How can I calculate the "SimdTransform fromA" and "SimdTranform toA" from that? <br>
+I like to start with fromA as identity matrix. But that's not mandatory <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Thank you very much in advance!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Sep 13, 2006 11:41 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Bullet library so far focusses on rigid bodies. Your application seems to be deformable triangles. I've been thinking about supporting deformable triangles, but that is not implemented yet. There is no rigid transform that brings a triangle to its deformed state.<br>
+<br>
+The idea to do time of impact using deformed triangles, is similar to the Conservative Advancement CCD used in <a href="http://www.continuousphysics.com/BulletContinuousCollisionDetection.pdf" class="postlink">http://www.continuousphysics.com/Bullet ... ection.pdf</a>  and in <a href="http://www.continuousphysics.com/ftp/pub/test/index.php?dir=physics/papers/&amp;file=fast.pdf" class="postlink">http://www.continuousphysics.com/ftp/pu ... e=fast.pdf</a> ), and goes as follows:<br>
+<br>
+First, we need a measure of transformation. We can take the center of the triangle (average of 3 points), and use that as linear transform. Then, we need a conservative estimate for the maximum travel that the deformed vertices can do. This can be done by taking the maximum distance the triangles move, relative to this center. The orientation can stay identity, or appoximated (for example using the triangle normal etc.)<br>
+<br>
+Then, each iteration in the conservative advancement process, a safe upper bound is given and a fraction is calculated how much the triange can 'travel/deform'. We assume constant/linear deformation. After each step, we perform the actual deformation (for this fraction), and repeat the calculations.<br>
+<br>
+This would give time of impact estimation for cloth triangles for example. But it can also apply to deforming tetrahedra, which is useful for deformation/finite element method (FEM) approaches, etc. In the case of tetrahedra, there is some work done, how to estimate a local coordinate frame, given the 4 vertices. That could be useful.<br>
+<br>
+It wouldn't be too hard to implement, it's more a matter of time. My todo list is very long, both at work and for spare time fun-projects...<br>
+<br>
+Thanks,<br>
+Erwin<br>
+<br>
+Apart from that, adding selectable tolerance is possible.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>New status</h3>
+				<div class="date">Posted: <strong>Mon Nov 13, 2006 11:08 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+First of all, thank you Erwin for your great work in the bullet physics library!<br>
+<br>
+I made a workarround for the ccd thing and it seems to work fine (at least for simple setups).<br>
+<br>
+The weird thing was, that i missed some collisions in the "near"-mode. <br>
+I checked the distance like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=521&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>TriangleShape trishapeA(SimdVector3(p1[0], p1[1], p1[2]), SimdVector3(p2[0], p2[1], p2[2]), SimdVector3(p3[0], p3[1], p3[2]));
+	trishapeA.SetMargin(0.0f);
+
+	TriangleShape trishapeB(SimdVector3(q1[0], q1[1], q1[2]), SimdVector3(q2[0], q2[1], q2[2]), SimdVector3(q3[0], q3[1], q3[2]));
+	trishapeB.SetMargin(0.0f);
+	
+	VoronoiSimplexSolver sGjkSimplexSolver;	
+	
+	GjkPairDetector	convexConvex(&amp;trishapeA ,&amp;trishapeB,&amp;sGjkSimplexSolver,0);
+	PointCollector gjkOutput;
+	GjkPairDetector::ClosestPointInput input;
+	
+	SimdTransform tr;
+	tr.setIdentity();
+	
+	input.m_transformA = tr;
+	input.m_transformB = tr;
+	
+	convexConvex.GetClosestPoints(input, gjkOutput, 0);
+</code></pre></div>
+
+Under some configuration it results in bad/wrong distance results.<br>
+My impression is, that it is not bullets false but maybe a design limitation of GJK because i tested this distance problem also with SOLID (using double precission) and it gave me arorund the same results as bullet.<br>
+<br>
+I was testing the distance between two triangle where the first triangle is arround 1/10 - 1/20 of the size of the second triangle.<br>
+I subdivided the second triangle (after figuring that I did everything right) and the problem was gone! Bullet was working fine!<br>
+<br>
+So my question is: How can i get reliable distance results even when the size of the two triangles differ very much?<br>
+<br>
+Greetings and good work!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Found a paper about it</h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 1:03 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+I found a paper which describes a solution of the problem which I have.<br>
+It seems that the "normal" GJK algorithm suffer some limitation when having "difficult" settings like in my case (big triangle against smal triangle and only a little distance).<br>
+<br>
+<a href="http://citeseer.ist.psu.edu/cache/papers/cs/17667/ftp:zSzzSzftp.inrialpes.frzSzpubzSzsharpzSzpublicationszSzsundaraj:etal:iros:00.pdf/sundaraj00new.pdf" class="postlink">http://citeseer.ist.psu.edu/cache/paper ... j00new.pdf</a><br>
+<br>
+Greetings so far</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Found a paper about it</h3>
+				<div class="date">Posted: <strong>Tue Nov 14, 2006 7:41 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Can you provide a BulletDemo that can reproduce the failing case with big/small triangle? I am always welcoming feedback and suggestions for improvement. There is some current work going on into improving GJK + EPA (penetration case). I prefer getting the single precision floating point version as accurate as possible, but a double precision version might improve things too. Also, what value are you using for collision margin? Setting it to zero is not supported.<br>
+<br>
+I'm familiar with the paper you refer to.It is an interesting approach, I hope to implement at some stage. Are you planning to work on this?<br>
+<br>
+Thanks,<br>
+Erwin<br>
+<br>
+
+<blockquote><div><cite>Genscher wrote:</cite>Hello!<br>
+<br>
+I found a paper which describes a solution of the problem which I have.<br>
+It seems that the "normal" GJK algorithm suffer some limitation when having "difficult" settings like in my case (big triangle against smal triangle and only a little distance).<br>
+<br>
+<a href="http://citeseer.ist.psu.edu/cache/papers/cs/17667/ftp:zSzzSzftp.inrialpes.frzSzpubzSzsharpzSzpublicationszSzsundaraj:etal:iros:00.pdf/sundaraj00new.pdf" class="postlink">http://citeseer.ist.psu.edu/cache/paper ... j00new.pdf</a><br>
+<br>
+Greetings so far</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>bullet sample</h3>
+				<div class="date">Posted: <strong>Fri Nov 17, 2006 11:06 am</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">ok, here we go, in have a valid example where bullet computes the distance really wrong (but SOLID does the same, so i don't blame bullet):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=521&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>
+	p1[0] = -3.9242966175; 
+	p1[1] = -0.5582823175; 
+	p1[2] = 2.0101921558;
+	
+	p2[0] = -3.6731941700;
+	p2[1] = -0.5604774356;
+	p2[2] = 1.9995596409;
+	
+	p3[0] = -3.6698703766;
+	p3[1] = -0.3097069263;
+	p3[2] = 2.0073683262;
+	
+	
+	TriangleShape trishapeA(SimdVector3(p1[0], p1[1], p1[2]), SimdVector3(p2[0], p2[1], p2[2]), SimdVector3(p3[0], p3[1], p3[2]));
+	trishapeA.SetMargin(0.001f);
+	
+	
+	q1[0] = -2.6317186356; 
+	q1[1] = -1.0000005960; 
+	q1[2] = 1.9999998808;
+	
+	q2[0] = -2.6317174435;
+	q2[1] = 0.9999994636;
+	q2[2] = 1.9999998808;
+	
+	q3[0] = -4.6317176819;
+	q3[1] = 1.0f;
+	q3[2] = 1.9999998808;
+
+
+	TriangleShape trishapeB(SimdVector3(q1[0], q1[1], q1[2]), SimdVector3(q2[0], q2[1], q2[2]), SimdVector3(q3[0], q3[1], q3[2]));
+	trishapeB.SetMargin(0.001f);
+	
+	VoronoiSimplexSolver sGjkSimplexSolver;	
+	
+	GjkPairDetector	convexConvex(&amp;trishapeA ,&amp;trishapeB,&amp;sGjkSimplexSolver,0);
+	PointCollector gjkOutput;
+	GjkPairDetector::ClosestPointInput input;
+	
+	SimdTransform tr;
+	tr.setIdentity();
+	
+	input.m_transformA = tr;
+	input.m_transformB = tr;
+	
+	convexConvex.GetClosestPoints(input, gjkOutput, 0);
+	
+	if (gjkOutput.m_hasResult)
+	{
+		
+		VECCOPY(pa, gjkOutput.m_pointInWorld);
+		VECCOPY(pb, gjkOutput.m_pointInWorld);
+		VECADDFAC(pb, pb, gjkOutput.m_normalOnBInWorld, gjkOutput.m_distance);
+		
+		
+		printf("bullet: %10.10f\n", gjkOutput.m_distance); // = 0.24 =&gt; that's absolutely wrong! 
+
+		
+		
+		return gjkOutput.m_distance;
+	}</code></pre></div>
+
+Bullet also returns a big wrong values arround 0.24 - 0.27 when this two triangle do not intersect.<br>
+You can verify the non-interpenetrating test, if you set p2[2] = 2.00301921558;<br>
+so the distance should be arround 0.003 - 0.004.<br>
+But bullet returns 0.244 as distance for the non-interpenetrating test!<br>
+<br>
+I hope I could clearify my problem. <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Greetings!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sun Nov 19, 2006 5:53 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Is it distance or penetration depth problem? <br>
+<br>
+Several improvements have been made on Bullet GJK (distance) and EPA (penetration) recently. There is a good chance that this is not an algorithmic problem but just some implementation bugs. I noticed your GjkPairDetector doesn't have 'bt' prefix, so you might be using a very outdated Bullet version?<br>
+<br>
+Can you verify your case with this latest Bullet version 2.33? I will add the solving of your problem on my todo list.<br>
+<br>
+Also, you are passing a 0 pointer for the penetration depth solver, that will not work properly. Please pass a btGjkEpaPenetrationDepthSolver object, instead of 0 in
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=521&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>GjkPairDetector   convexConvex(&amp;trishapeA ,&amp;trishapeB,&amp;sGjkSimplexSolver,0); 
+</code></pre></div>
+
+Thanks for the feedback,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>gjk</h3>
+				<div class="date">Posted: <strong>Mon Nov 20, 2006 3:21 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Hello!<br>
+<br>
+thank you for your answer.<br>
+<br>
+As the code shows, it's not a penetration depth problem, it's a distance problem (I verified the problem with penetration AND without penetration and I already wrote).<br>
+That's why i don't pass any penetration depth solver to it.<br>
+<br>
+Just use the values i provided for two triangles and you can veirfy the problem.<br>
+I can't use any other bullet version since i use the blender bullet version.<br>
+But as i know, there wasn't changed anything in the gjk algorithm.<br>
+<br>
+Greetings so far!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: gjk</h3>
+				<div class="date">Posted: <strong>Mon Nov 20, 2006 4:35 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Genscher wrote:</cite>I can't use any other bullet version since i use the blender bullet version.
+</div></blockquote>
+The Bullet version in Blender will be upgraded to Bullet 2.33 this week. The refactored Bullet is already checked into cvs in Blender/extern/bullet2
+<blockquote class="uncited"><div>
+But as i know, there wasn't changed anything in the gjk algorithm.
+</div></blockquote>
+It is likely an implementation issue, not algorithmic. The implementation has improved.<br>
+<br>
+Thanks for your testcase, I will try it out,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>great</h3>
+				<div class="date">Posted: <strong>Mon Nov 20, 2006 7:27 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Good evening!<br>
+<br>
+That's great news! I can hardly wait until bullet 2.33 is compiled with blender!<br>
+<br>
+Genscher</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>GJK</h3>
+				<div class="date">Posted: <strong>Wed Nov 22, 2006 5:36 pm</strong></div>
+				<div class="author">by <strong>Genscher</strong></div>
+				<div class="content">Ok, i adapted my code to use the new Bullet which you integrated in Blender.<br>
+<br>
+First of all: Thank you for the great upgrade!<br>
+<br>
+But the problem stays, the GJK returns exactly the same value as before.<br>
+The only difference is, that the new bullet feels faster than before (but i switched from cygwin to mingw so i don't know if it's Bullet) <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=521&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>float p1[3], p2[3], p3[3], q1[3],q2[3], q3[3];
+
+	p1[0] = -3.9242966175; 
+	p1[1] = -0.5582823175; 
+	p1[2] = 2.0101921558;
+	
+	p2[0] = -3.6731941700;
+	p2[1] = -0.5604774356;
+	p2[2] = 2.00301921558;
+	
+	p3[0] = -3.6698703766;
+	p3[1] = -0.3097069263;
+	p3[2] = 2.0073683262;
+	
+	
+	btTriangleShape trishapeA(btVector3(p1[0], p1[1], p1[2]), btVector3(p2[0], p2[1], p2[2]), btVector3(p3[0], p3[1], p3[2]));
+	trishapeA.setMargin(0.001f);
+	
+	
+	q1[0] = -2.6317186356; 
+	q1[1] = -1.0000005960; 
+	q1[2] = 1.9999998808;
+	
+	q2[0] = -2.6317174435;
+	q2[1] = 0.9999994636;
+	q2[2] = 1.9999998808;
+	
+	q3[0] = -4.6317176819;
+	q3[1] = 1.0f;
+	q3[2] = 1.9999998808;
+
+
+	btTriangleShape trishapeB(btVector3(q1[0], q1[1], q1[2]), btVector3(q2[0], q2[1], q2[2]), btVector3(q3[0], q3[1], q3[2]));
+	trishapeB.setMargin(0.001f);
+	
+	btVoronoiSimplexSolver sGjkSimplexSolver;	
+	
+	btGjkPairDetector convexConvex(&amp;trishapeA ,&amp;trishapeB,&amp;sGjkSimplexSolver,0);
+	btPointCollector gjkOutput;
+	btGjkPairDetector::ClosestPointInput input;
+	
+	btTransform tr;
+	tr.setIdentity();
+	
+	input.m_transformA = tr;
+	input.m_transformB = tr;
+	
+	convexConvex.getClosestPoints(input, gjkOutput, 0);
+	
+	if (gjkOutput.m_hasResult)
+	{
+		
+		VECCOPY(pa, gjkOutput.m_pointInWorld);
+		VECCOPY(pb, gjkOutput.m_pointInWorld);
+		VECADDFAC(pb, pb, gjkOutput.m_normalOnBInWorld, gjkOutput.m_distance);
+		
+				 printf("bullet: %10.10f\n", gjkOutput.m_distance); // = 0.24 =&gt; that's absolutely wrong! 
+
+		
+		return gjkOutput.m_distance;
+	}
+</code></pre></div>
+
+Is there another distance function i could use in bullet? <br>
+<br>
+Greetings so far!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: GJK</h3>
+				<div class="date">Posted: <strong>Wed Nov 22, 2006 7:02 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content"><blockquote><div><cite>Genscher wrote:</cite>Ok, i adapted my code to use the new Bullet which you integrated in Blender.<br>
+<br>
+First of all: Thank you for the great upgrade!<br>
+<br>
+But the problem stays, the GJK returns exactly the same value as before.<br>
+The only difference is, that the new bullet feels faster than before (but i switched from cygwin to mingw so i don't know if it's Bullet) <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":-)" title="Smile"><br>
+<br>
+<br>
+Is there another distance function i could use in bullet? <br>
+Greetings so far!</div></blockquote>
+
+<br>
+This testcase works fine with Bullet, its not wrong!<br>
+<br>
+Please see this picture, the red line connects the triangles perfectly (ignore the additional white line, that's the minkowski simplex)<br>
+<br>
+<img src="http://www.continuousphysics.com/ftp/pub/test/physics/demos/genscher_tri_versus_tri.JPG" class="postimage" alt="Image"><br>
+I will add the testcase in the Bullet Demos/CollisionDemo demo, so you can see for yourself (see CHECK_GENSHER_TRIANGLE_CASE define in Bullet 2.35)<br>
+<br>
+You can do cloth triangles versus all Bullet shapes: this includes implicit box, sphere, cylinder, convex polyhedron etc. Bullet works best if one of the convex has 'volume', so triangle verus convex primitive is ideal. Usually on game characters, the cloth is colliding with cylinders or other volumetric shapes. <br>
+<br>
+In general, I can recommend using a larger collisionMargin, not just 0.001. This gives the cloth collision some 'thickness'.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Demo Linking problems on Linux w/ v2.12</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Demo Linking problems on Linux w/ v2.12</h2>
+		<p><a href="viewtopic.php%3Ft=581.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=581</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Demo Linking problems on Linux w/ v2.12</h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 11:15 am</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I am trying to use Bullet v2.12 on a 64 bit Linux machine, but am not having much luck.<br>
+<br>
+The libraries appear to build alright, but none of the example programs or my own program seem to be able to link against the Bullet libraries.  However, on a G5 running Mac OS X I am able to do both these things just fine.<br>
+<br>
+For example, here is what happens when trying to build CcdPhysicsDemo:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=581&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>LinkApplication CcdPhysicsDemo
+
+./out/linux/optimize/libs/libbulletopenglsupport.a(DemoApplication.o)(.text+0x2c80):
+    In function `DemoApplication::mouseFunc(int, int, int, int)':
+    : undefined reference to `btPoint2PointConstraint::btPoint2PointConstraint(btRigidBody&amp;, btVector3 const&amp;)'
+
+./out/linux/optimize/libs/libbulletopenglsupport.a(GL_ShapeDrawer.o)(.text+0x6b5):
+    In function `GL_ShapeDrawer::drawOpenGL(float*, btCollisionShape const*, btVector3 const&amp;, int)':
+    : undefined reference to `btStridingMeshInterface::InternalProcessAllTriangles(btInternalTriangleIndexCallback*, btVector3 const&amp;, btVector3 const&amp;) const'
+
+collect2: ld returned 1 exit status
+
+  g++ -o CcdPhysicsDemo ./out/linux/optimize/Demos/CcdPhysicsDemo/CcdPhysicsDemo.o  ./out/linux/optimize/libs/libbulletdynamics.a ./out/linux/optimize/libs/libbulletcollision.a ./out/linux/optimize/libs/libbulletopenglsupport.a ./out/linux/optimize/libs/libbulletmath.a -lglut -lGL -lSM -lICE -L/usr/X11R6/lib64 -lX11 -lXext -lpthread -lm -lGLU -lGL -lSM -lICE -L/usr/X11R6/lib64 -lX11 -lXext -lpthread -lm 
+
+...failed LinkApplication CcdPhysicsDemo ...
+</code></pre></div>
+
+Thank you for any help on this...<br>
+<br>
+  - Braden</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>GCC Version</h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 11:22 am</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content">Oh, and this is the gcc version on the machine:<br>
+
+<blockquote class="uncited"><div>gcc (GCC) 3.4.4 20050721 (Red Hat 3.4.4-2)</div></blockquote></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 1:40 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Hi,<br>
+<br>
+First of all, it looks like a linker error, not a compile error.<br>
+What build system are you using? CMake or jam?<br>
+I just verified the Jamfile build system, and the order of the libraries is wong.<br>
+
+<blockquote><div><cite>daBrado wrote:</cite>
+g++ -o CcdPhysicsDemo ./out/linux/optimize/Demos/CcdPhysicsDemo/CcdPhysicsDemo.o  ./out/linux/optimize/libs/libbulletdynamics.a ./out/linux/optimize/libs/libbulletcollision.a ./out/linux/optimize/libs/libbulletopenglsupport.a ./out/linux/optimize/libs/libbulletmath.a -lglut -lGL -lSM -lICE -L/usr/X11R6/lib64 -lX11 -lXext -lpthread -lm -lGLU -lGL -lSM -lICE -L/usr/X11R6/lib64 -lX11 -lXext -lpthread -lm 
+</div></blockquote>
+It looks like the linking order or not right. libopenglsupport.a needs to be included before libbulletdynamics.a.<br>
+CMakeLists.txt should have the order right, can you try CMake?
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=581&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>LINK_LIBRARIES(
+LibOpenGLSupport  LibBulletDynamics  LibBulletCollision LibLinearMath    ${GLUT_glut_LIBRARY} ${OPENGL_gl_LIBRARY} ${OPENGL_glU_LIBRARY}
+)
+</code></pre></div>
+
+The Jamfile in the demos have the ordering wrong, please move bulletopenglsupport before bulletdynamics in Demos/Jamfile and let me know if that solves the link problem.<br>
+<br>
+Demos/OpenglSupport defines a shared DemoApplication that uses Bullet or mouse picking and rendering of the collision shapes etc.<br>
+Link order for the libraries is openglsupport, bulletdynamics, bulletcollision, bulletmath.<br>
+<br>
+Can you download Bullet-2.12a.tgz and report if that fixes things?<br>
+<br>
+Thanks for the feedback<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 7:01 pm</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>First of all, it looks like a linker error, not a compile error.
+</div></blockquote>
+
+Indeed...<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>What build system are you using? CMake or jam?
+</div></blockquote>
+
+Jam<br>
+<br>
+Should I be using CMake for building Bullet?<br>
+
+<blockquote><div><cite>Erwin Coumans wrote:</cite>Demos/OpenglSupport defines a shared DemoApplication that uses Bullet or mouse picking and rendering of the collision shapes etc.<br>
+Link order for the libraries is openglsupport, bulletdynamics, bulletcollision, bulletmath.<br>
+<br>
+Can you download Bullet-2.12a.tgz and report if that fixes things?
+</div></blockquote>
+
+I did, and the demos seem to build just fine now (using Jam).<br>
+<br>
+Did you want me to do any of the other things mentioned above (edit the Jamfile, try CMake)?  Or does the fact Bullet-2.12a's demos build negate that need? <br>
+<br>
+Also, I tried the above link order for my own program, and it also builds on the Linux machine.  Thanks!<br>
+<br>
+I don't understand though.. the previous link order for my program failed on Linux but worked on my Mac OS X machine.  Does OS X's gcc v4.0.1 do something different in this regard?<br>
+<br>
+Thanks again,<br>
+  Braden</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 7:05 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">I'm glad it fixed your problem. I just made the changes in Bullet 2.12a, so if that works you are fine.<br>
+<br>
+Some linkers handle the forward/backward/cross-referencing of symbols automatically (doing a multi-pass approach etc), other linkers don't.<br>
+<br>
+Apple's and Microsoft compiler handle it automatically, and so do some versions of GCC. it's best to not rely on it, and get the order right. Also, I made effort not to have circular dependencies, so no need to add libraries more then once.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 7:49 pm</strong></div>
+				<div class="author">by <strong>daBrado</strong></div>
+				<div class="content">Thanks for the info.<br>
+<br>
+BTW, somewhat off topic though related to linking against Bullet libraries, when I link against bulletmath on OS X or Linux, I get something like this:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=581&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>/usr/bin/ld: warning empty table of contents: ./out/macosxppc/optimize/libs/libbulletmath.a (can't load from it)</code></pre></div>
+
+Is this a problem?<br>
+<br>
+  - Braden</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Oct 05, 2006 8:08 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">no, it's not a problem. Unless you enable profiling (btQuickprof.h) there is no symbols in the library, it is all inline headerfiles.<br>
+<br>
+You can safely ignore it.<br>
+I might add some large methods in a cpp, to avoid this warning.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Oct 06, 2006 12:30 pm</strong></div>
+				<div class="author">by <strong>SteveBaker</strong></div>
+				<div class="content"><blockquote><div><cite>Erwin Coumans wrote:</cite>no, it's not a problem. Unless you enable profiling (btQuickprof.h) there is no symbols in the library, it is all inline headerfiles.<br>
+<br>
+You can safely ignore it.<br>
+I might add some large methods in a cpp, to avoid this warning.<br>
+<br>
+Thanks,<br>
+Erwin</div></blockquote>
+
+One of the other problems with empty libraries is that people using autoconf/automake can't easily detect whether the library is present or not.  In your 'configure.in' file, you say things like:<br>
+<br>
+   AC_CHECK_LIB(GL, glBegin)<br>
+<br>
+...which writes a little C/C++ program containing a glBegin() call and verifies that the program compiles and links OK against '-lGL'.   However, this can only work if there is at least one function which is both guaranteed to be there and to *NOT* be 'inline'.<br>
+<br>
+So what I've started doing with my libraries is to define a 'do nothing' function that's explicitly there for AC_CHECK_LIB to find - it's a great convenience to the end user to have such a function and because it's only used for this special purpose, it's continued existance through any number of generations of the library is assured.  I always use the name of the library followed by the word 'Probe' - so (for example) my 'gameTools' library includes:<br>
+<br>
+   void gameToolsProbe () { }   /* For autoconf/AC_CHECK_LIB - do not remove!! */</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

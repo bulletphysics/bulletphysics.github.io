@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Jittering and shaking when moving a rigidBody</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Jittering and shaking when moving a rigidBody</h2>
+		<p><a href="viewtopic.php%3Ft=11255.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=11255</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>2</strong></div>
+					<div class="post">
+				<h3>Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Fri Jul 29, 2016 7:42 pm</strong></div>
+				<div class="author">by <strong>Zaladen</strong></div>
+				<div class="content">Hi, I'm having trouble with objects jittering and shaking when moving them using setLinearVelocity(). It doesn't matter if they move fast or slow, the rendered model is always jittering back and forth slightly. It jitters more when moving faster though. What could be the problem to something like this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Sat Jul 30, 2016 11:16 am</strong></div>
+				<div class="author">by <strong>Zaladen</strong></div>
+				<div class="content">I have to bump this, need a quite quick response. :/ I don't understand this, my world is scaled correctly, framerate is stable, and it doesn't matter if the framerate is high or low, the jittering is still there.<br>
+<br>
+Edit: I think this is a substep problem, because if I set the substep to 1 the jittering stops, but then of course everything slows down below 60 fps. When fps is higher than 60 though the jittering starts again even if I have substeps set to 1.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Fri Aug 12, 2016 7:54 am</strong></div>
+				<div class="author">by <strong>Zaladen</strong></div>
+				<div class="content">Bumping this thread again. How should I implement substeps properly to avoid jittering? This is the way I do it now:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>int maxSubsteps = 1;
+	
+	if (deltaTime &gt; 1.0f / 60.0f)
+	{
+		maxSubsteps = (deltaTime / (1.f / 60.0f));
+
+		if (maxSubsteps == 1)
+			maxSubsteps++;
+	}
+
+	dynamicsWorld-&gt;stepSimulation(deltaTime, maxSubsteps, 1.0f / 60.0f);</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Sun Aug 14, 2016 4:11 pm</strong></div>
+				<div class="author">by <strong>benelot</strong></div>
+				<div class="content">I am not sure if you should move your object with set linear velocity constantly. Have you considered using a kinematic object instead?<br>
+<br>
+Have a look at my determinism example in this thread, maybe it helps you fix your issue.<br>
+<br>
+<a href="viewtopic.php%3Ft=11187.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... =9&amp;t=11187</a><br>
+<br>
+It should be in the example browser since long ago, but is not accepted yet.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Thu Aug 18, 2016 3:23 pm</strong></div>
+				<div class="author">by <strong>Zaladen</strong></div>
+				<div class="content">Ok thank you, I have considered using a kinematic object but if I do that do I need to resolve collisions manually? How does kinematic objects work?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Fri Aug 19, 2016 1:48 am</strong></div>
+				<div class="author">by <strong>hyyou</strong></div>
+				<div class="content">I have never set velocity directly every frame.<br>
+I always change velocity by apply impulse, and never encounter any jittering.<br>
+<br>
+If you are hurry, a simple code to reproduce the issue can induce faster and better response from people.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Sun Aug 21, 2016 8:03 am</strong></div>
+				<div class="author">by <strong>Zaladen</strong></div>
+				<div class="content">I use a variable to manipulate speed that's a vec3 of 3 floats and then I set the speed every frame with that variable, it's a bit hard to make that work with apply impulse. I guess a kinematic object is better, but how do I get that to work with collision response?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Mon Aug 22, 2016 2:08 am</strong></div>
+				<div class="author">by <strong>hyyou</strong></div>
+				<div class="content">I am only a beginner, but as far as I know, kinematic is not designed to receive force from automated collision response.<br>
+<br>
+I doubt, setting velocity in every frame shouldn't cause jitter, otherwise Bullet would have rather-severe fault/bug.<br>
+<br>
+Where did you call set velocity? - hopefully not inside some bullet's callback<br>
+Which function did you call to set velocity?<br>
+Did you try to print what velocity you set every frame?  - just to make sure<br>
+Did you try with only single body in the scene.  - if so, can you place the code here?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Wed Aug 24, 2016 4:18 am</strong></div>
+				<div class="author">by <strong>Zaladen</strong></div>
+				<div class="content">I call set velocity inside the player class every frame. Even if I set it to a specific value and don't use the variable the jitter still happens. The thing is though, that it only happens between 30 and 60 fps, and this is what makes me wonder what the problem might be. If it's lower than 30 there's no jitter, if it's exactly 60 there's no jitter either (I use Vsync).</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Wed Jan 05, 2022 9:45 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Interested, have the same problem. I know it is an old post but I was wondering if someone found any solutions for this</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Thu Jan 06, 2022 3:47 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">For the record: I'm in favor of poking the velocity instead of using applyForce().  A properly implemented velocity algorithm can be agnostic about the object's mass.<br>
+<br>
+As to the jitter:<br>
+<br>
+Are you using MotionState's to get a body's transform or do you harvest directly from the body?<br>
+<br>
+The MotionState API is designed to supply a transform that is extrapolated forward from the body's current transform as known by the physics engine, using the body's current velocity and any "step remainder" (e.g. after the physics engine advances some integer number of substeps, when using fixed substeps).  This can reduce visible jitter which is otherwise more evident when the render framerate aliases with the simulation substep frame rate.<br>
+<br>
+If you are NOT using MotionStates but are harvesting the transform straight from the body then you will tend to see jitter... unless your render frame period and the simulation step duration always match and are always integer multiples of the fixed substep (assuming you are using fixed substeps which is recommended) -- this is tricky to accomplish so many people opt for the MotionState method.<br>
+<br>
+Finally, I will mention that I recall seeing jitter even with the MotionState method for fast moving objects (and fast camera following them) suffering from heavy damping.  Damping at high velocities isn't linear and so the linear extrapolation used by the MotionState system fails... at least this is what I remember but it was a long time ago.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Fri Jan 07, 2022 6:07 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Thanks for the quick reply @drleviathan. I am indeed using applyForce() but when I use stepSimulation with substeps = 0 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>mpDynamicsWorld-&gt;stepSimulation(delta, 0);</code></pre></div> the movement is fine I only get jitter on retrieving the rotation. So when I move my mouse to rotate the Spaceship in my game I get a stutter (only on rotation) every several frames. If I use substeps , 1, 2, 3 or something I get jitter on movement (with applyForce) too. I harvest the position and rotation directly from the rigid body as you say although I tried retrieving a world transform from the motionstate of the rigid body to get position and rotation with the same results. I don't know if that's what you meant... Can you also point me to the way I should calculate the substeps for my application on the stepSimulation?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Fri Jan 07, 2022 8:02 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">The delcaration for <strong class="text-strong">btDiscreteDynamicsWorld::stepSimulation()</strong> looks like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>   ·///if maxSubSteps &gt; 0, it will interpolate motion between fixedTimeStep's
+   ·virtual int stepSimulation(btScalar timeStep, int maxSubSteps = 1, btScalar fixedTimeStep = btScalar(1.) / btScalar(60.));
+</code></pre></div>
+It returns the number of substeps taken.  Harvesting the return value can be useful  in some cases where you need to do post-simulation work but only when the actual substeps taken is non-zero.  Note: if you submit a very tiny <strong class="text-strong">timeStep</strong> that is smaller than a <strong class="text-strong">fixedTimeStep</strong> then the <strong class="text-strong">stepSimulation(</strong>) might not actually make a substep: instead it will accumulate your small <strong class="text-strong">timeStep</strong> and return 0.  It will take a substep later when there is enough time piled up to fit a full <strong class="text-strong">fixedTimeStep</strong>.<br>
+<br>
+If you supply <strong class="text-strong">maxSubsteps=0</strong> then it goes into "variable step" mode where the simulation moves forward the full step duration, no matter its value.  Such a configuration is <strong class="text-strong">not recommended</strong>.  Only use it if you: <strong class="text-strong">(a)</strong> can guarantee reasonable limits to the range of step durations and <strong class="text-strong">(b)</strong> have a good understanding of the content in the simulation and how physics simulations work.  IBasically: it can lead to a variety of subtle and not so subtle bugs such as: variable success at solving constraints and instabilities that blow velocities to NaN.<br>
+<br>
+If you really want to eliminate transform glitch then consider this recommended checklist:<br>
+<br>
+<strong class="text-strong">(1)</strong> Use fixed substeps and set the maxSubSteps argument of btDiscreteDynamicsWorld::stepSimulation() to be the max number of substeps that fit into the largest step you expect to ever submit... plus one.  So, if you expect your main game loop to run at 30fps and your substeps are 1/60th of a second, then set <strong class="text-strong">maxSubSteps = 2 + 1</strong>.<br>
+<br>
+<strong class="text-strong">(2)</strong> You should only ever poke velocity or use <strong class="text-strong">applyForce()</strong> inside <strong class="text-strong">SomeCustomAction::updateAction()</strong> where <strong class="text-strong">SomeCustomAction</strong> is a class that derives from <strong class="text-strong">btActionInterface</strong>.  This guarantees that your poking logic happens every substep instead of every step... because Bullet will invoke that <strong class="text-strong">updateAction()</strong> method for every <strong class="text-strong">Action</strong> in the <strong class="text-strong">World</strong> every substep.<br>
+<br>
+<strong class="text-strong">(3)</strong> Create <strong class="text-strong">SomeCustomMotionState</strong> which derives from <strong class="text-strong">btMotionState</strong> and has custom code inside <strong class="text-strong">SomeMotionSubstep::setWorldTransform()</strong> which does the Right Thing with the <strong class="text-strong">worldTransform</strong> argument (e.g. copies that transform to the GameObject and computes the new camera location).  That method will be called every substep on every dynamic <strong class="text-strong">Body</strong> that is "active" and that has a non-null <strong class="text-strong">SomeMotionState</strong> instance.<br>
+<br>
+If you still experience transform glitches with that system... then something odd is happening: submit relevant code snippets for review and be ready to: describe your render pipeline and justify your math.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Sun Jan 09, 2022 5:52 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Hi again,<br>
+<br>
+I implemented your first two suggestions with minor improvements. First of all now irrelevant of frame rate I get the same response from the physics engine, for example the maximum velocity of the spaceship is the same with 10 fps and with 60 fps but the jitter is still there. only on low framerates below 30 or at 60 fps I don't get jitter. Can you elaborate a bit on how to create a custom motion state? If you need to see code I can post here. Thanks in advance!<br>
+<br>
+Edit:<br>
+after getting the position this way the jitter for the applyForce is gone
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>btTransform trans;
+(*body)-&gt;getMotionState()-&gt;getWorldTransform(trans);
+pos = trans.getOrigin();
+retPos = glm::vec3(pos.getX(), pos.getY(), pos.getZ());
+</code></pre></div>
+
+The only jitter that remains is that of the rotation. Inside the Action I am updating the rotation this way:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// use mouse position to compute a delta-rotation in spaceship local-frame
+btQuaternion deltaLocalRotation(yaw, pitch, roll);
+
+// get old ship rotation
+btTransform transform = body-&gt;getWorldTransform();
+btQuaternion oldBodyRotation = transform.getRotation();
+
+btQuaternion newBodyRotation = oldBodyRotation * deltaLocalRotation;
+
+transform.setRotation(newBodyRotation);
+body-&gt;setWorldTransform(transform);
+</code></pre></div>
+
+I can not use the motion state here, correct? I think here is the jitter of the rotation. This happens every substep.<br>
+I am calculating the substeps this way:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>maxSubsteps = static_cast&lt;int&gt;(fabs(delta / (1.f / 60.0f) + 0.5f)) + 1;</code></pre></div>
+
+and that's all. Any ideas on the rotation? Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Jittering and shaking when moving a rigidBody</h3>
+				<div class="date">Posted: <strong>Mon Jan 10, 2022 5:32 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Here is an example minimal custom <strong class="text-strong">MotionState</strong>.  This implementation assumes you have a <strong class="text-strong">GameObject</strong> class outside of Bullet which knows how to get/set its transform.  If your Application is using some other math library (e.g. GLM) outside of the Bullet simulation then you will have to embed transcription logic either in the <strong class="text-strong">GameObject</strong> itself, or here in <strong class="text-strong">MyMotionState</strong> (this work is left as an exercise for the reader).<br>
+<br>
+You can think of the MotionState as a "bridge object" which communicates between the Body in the simulation and the GameObject in your game logic and render pipeline.  It is a good place to add other Body-vs-GameObject intelligence (e.g. activation, deactivation, changing other Body parameters (gravity, damping, restitution, etc) to help prevent you from leaking Bullet dependencies into other sections of your Application logic which should be physics-engine agnostic.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=11255&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>class MyMotionState : public btMotionState
+{
+    btRigidBody* m_body;
+    GameObject* m_gameObject;
+
+public:
+    MyMotionState(btRigidBody* body, GameObject* gameObject)
+        :   m_body(body), m_gameObject(gameObject)
+    {}
+
+    // getWorldTransform() relays transform from external logic to Bullet.
+    // It is called by Bullet in two places:
+    // (1) Once when the Body is created and added to the world.
+    // (2) Once per substep iff the Body is Kinematic and active.
+    //
+    void getWorldTransform(btTransform&amp; worldTrans) const {
+        // Note: worldTrans is passed by reference
+        // It is our duty here to copy into it the correct transform as known
+        // to external logic and Bullet will harvest·
+        //·
+        m_gameObject-&gt;getWorldTransform(worldTrans);
+    }
+
+    // setWorldTransform() relays Body transform from the Bullet simulation to the GameObject
+    // and is called once per substep iff the Body is Dynamic and active.
+    //
+    void setWorldTransform(const btTransform&amp; worldTrans) {
+        // It is our duty here to apply worldTrans to GameObject.
+        // Note: worldTrans is NOT necessarily the Body's transform as known to Bullet.
+        // It is an extrapolated transform based on the Body's state at the
+        // end of the last substep... extrapolated forward into the future (e.g. the remainder
+        // not yet stepped) according the current Body velocities.
+        //
+        m_gameObject-&gt;setWorldTransform(worldTrans);
+    }
+};
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>2</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

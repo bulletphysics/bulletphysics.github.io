@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Implementing friction correctly</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Implementing friction correctly</h2>
+		<p><a href="viewtopic.php%3Ft=257.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=257</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Implementing friction correctly</h3>
+				<div class="date">Posted: <strong>Wed Mar 08, 2006 5:41 am</strong></div>
+				<div class="author">by <strong>gfaraj</strong></div>
+				<div class="content">I'm trying to implement friction correctly. I am having trouble computing the right impulse magnitude for the friction. I haven't found much information about friction in an impulse-based physics engine. Is there a good article that discusses this fully?<br>
+<br>
+It seems that the friction applied has too much magnitude. I guess that  could that be caused by an incorrect inertia tensor. But, does anyone see any problem with my formulas?<br>
+<br>
+The function that does collision response is:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=257&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>        void BeSimulator::doCollisionResponse(Float DeltaTime)
+        {
+            ContactIterator ContactItr;
+            for (ContactItr = m_Contacts.begin(); ContactItr != m_Contacts.end(); ++ContactItr)
+            {
+                BeContactConstraint&amp; Contact = *ContactItr;                
+
+                BeRigidBody&amp; BodyA = *Contact.BodyA();
+                BeRigidBody&amp; BodyB = *Contact.BodyB();
+
+                if (BodyA.IsDynamic() || BodyB.IsDynamic())
+                {
+                    // We have to calculate the response impulse
+                    BeVector3 VelocityA = BodyA.LinearVelocity() + (BodyA.AngularVelocity() % Contact.RelativePositionA());
+                    BeVector3 VelocityB = BodyB.LinearVelocity() + (BodyB.AngularVelocity() % Contact.RelativePositionB());
+                    Float PreRelativeVel = Contact.CollisionNormal() * (VelocityA - VelocityB);
+
+                    if (PreRelativeVel &lt; 0.0f)
+                    {
+                        BeVector3 AxN = Contact.RelativePositionA() % Contact.CollisionNormal();
+                        BeVector3 BxN = Contact.RelativePositionB() % Contact.CollisionNormal();
+                        BeVector3 JInvAxN = BodyA.WorldInverseInertia() * AxN;
+                        BeVector3 JInvBxN = BodyB.WorldInverseInertia() * BxN;
+
+                        Float Restitution = Material(Contact.ShapeA()-&gt;MaterialIndex()).Restitution() +
+                                            Material(Contact.ShapeB()-&gt;MaterialIndex()).Restitution();
+
+                        Float ImpulseNumer = (-1.0f - Restitution) * PreRelativeVel;
+                        Float ImpulseDenom = BodyA.InverseMass() + BodyB.InverseMass() + (Contact.CollisionNormal() * (JInvAxN % Contact.RelativePositionA())) + (Contact.CollisionNormal() * (JInvBxN % Contact.RelativePositionB()));
+
+                        Float ImpulseMag = ImpulseNumer/ImpulseDenom;
+                        BeVector3 Impulse = Contact.CollisionNormal() * ImpulseMag;
+                        
+                        if (BodyA.IsDynamic())
+                        {
+                            BodyA.AddLinearMomentum(Impulse);
+                             BodyA.AddAngularMomentum(Contact.RelativePositionA() % Impulse);
+                        }
+
+                        if (BodyB.IsDynamic())
+                        {
+                            BodyB.AddLinearMomentum(-Impulse);
+                            BodyB.AddAngularMomentum(Contact.RelativePositionB() % -Impulse);
+                        }
+
+                        // Calculate and apply friction
+                        BeVector3 ContactTangent = (Contact.RelativeVelocity() - (Contact.CollisionNormal() * PreRelativeVel));
+                        ContactTangent.ToNormalize();
+
+                        VelocityA = BodyA.LinearVelocity() + (BodyA.AngularVelocity() % Contact.RelativePositionA());
+                        VelocityB = BodyB.LinearVelocity() + (BodyB.AngularVelocity() % Contact.RelativePositionB());
+
+                        BeVector3 RelVelocity = VelocityA - VelocityB;
+                        Float RelativeVelTangent = RelVelocity * -ContactTangent;
+
+                        Float FrictionCoefficient;
+                        if (RelVelocity.Length() &gt; m_RestSpeed)
+                        {
+                            FrictionCoefficient = Material(Contact.ShapeA()-&gt;MaterialIndex()).DynamicFriction() * 
+                                                  Material(Contact.ShapeB()-&gt;MaterialIndex()).DynamicFriction();
+                        }
+                        else
+                        {
+                            FrictionCoefficient = Material(Contact.ShapeA()-&gt;MaterialIndex()).StaticFriction() * 
+                                                  Material(Contact.ShapeB()-&gt;MaterialIndex()).StaticFriction();
+
+                            RelativeVelTangent /= m_RestSpeed;
+                        }
+
+                        if (RelativeVelTangent &lt; 0.0f)
+                        {
+                            BeVector3 AxT = Contact.RelativePositionA() % ContactTangent;
+                            BeVector3 BxT = Contact.RelativePositionB() % ContactTangent;
+                            BeVector3 JInvAxT = BodyA.WorldInverseInertia() * AxT;
+                            BeVector3 JInvBxT = BodyB.WorldInverseInertia() * BxT;
+
+                            Float FrictionNum = RelativeVelTangent * FrictionCoefficient;
+                            Float FrictionDen = BodyA.InverseMass() + BodyB.InverseMass() + (JInvAxT % AxT) * ContactTangent + (JInvBxT % BxT) * ContactTangent;
+
+                            Float FrictionMag = FrictionNum / FrictionDen;
+                            BeVector3 Friction = ContactTangent * FrictionMag;
+
+                            if (BodyA.IsDynamic())
+                            {
+                                BodyA.AddLinearMomentum(Friction);                                BodyA.AddAngularMomentum(Contact.RelativePositionA() % Friction);
+                            }
+
+                            if (BodyB.IsDynamic())
+                            {
+                                BodyB.AddLinearMomentum(-Friction);                                BodyB.AddAngularMomentum(Contact.RelativePositionB() % Friction);
+                            }
+                        }
+                    }
+                }
+            }
+
+            m_Contacts.clear();
+        }
+</code></pre></div>
+
+Thanks.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Mar 25, 2006 4:11 am</strong></div>
+				<div class="author">by <strong>sbroumley</strong></div>
+				<div class="content">Danny Chapman's "Jiglib" - is a very nice impulse based physics engine that implements contact, static, and dynamic friction using impulses just as you need.<br>
+<br>
+See here:<br>
+<a href="http://www.rowlhouse.co.uk/jiglib/index.html" class="postlink">http://www.rowlhouse.co.uk/jiglib/index.html</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

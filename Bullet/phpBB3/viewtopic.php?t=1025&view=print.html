@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Maximum number of objects.: 32k limit reached...</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Maximum number of objects.: 32k limit reached...</h2>
+		<p><a href="viewtopic.php%3Ft=1025.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1025</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Maximum number of objects.: 32k limit reached...</h3>
+				<div class="date">Posted: <strong>Wed Mar 07, 2007 2:21 pm</strong></div>
+				<div class="author">by <strong>tasora</strong></div>
+				<div class="content">Hallo,<br>
+  I am using Bullet as a collision engine for my multibody simulation<br>
+software - results, so far, are very satisfying.<br>
+ The problem is that the broadphase collision detection cannot<br>
+support more than 32767 proxies (see btAxisSweep3::btAxisSweep3)<br>
+and this is limiting my tests about massibe granular flows, where I <br>
+must simulate more than 50'000 rigid bodies. <br>
+  The following is an animation showing an example of what<br>
+I am doing (I stopped at 30'000 rigid bodies, but my target is<br>
+at least 50'000):<br>
+<br>
+    <a href="http://ied.eng.unipr.it/~tasora/download/reactor_09.avi" class="postlink">http://ied.eng.unipr.it/~tasora/download/reactor_09.avi</a><br>
+<br>
+How is it possible to overcome the 32767 limitation of the <br>
+broadphase? Is it just a matter of changing all the 'unsigned short'<br>
+into 'unsigned int' or such? <br>
+<br>
+bye<br>
+<br>
+Alessandro Tasora</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 08, 2007 12:39 am</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Wow, that is impressive. Are you using default GJK for the sphere-sphere, or the specialize sphere-sphere collision algorithm? <br>
+<br>
+Yes, it should be fairly straightforward to enable 32bit integer indices in the broadphase, by replacing the 'short int' by int, and also the 0xfffc into 0xfffffffc. Can you give it a try, and let me know if there are issues (I might have time to just add it to Bullet). <br>
+<br>
+Bullet 2.44a has a new overlapping pair management, that allows for easier parallel processing and should be more cache friendly. <br>
+<br>
+Could you benchmark if you notice any performance difference between Bullet 2.43 and Bullet 2.44a? <br>
+<br>
+Thanks for sharing this! <br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 08, 2007 9:59 am</strong></div>
+				<div class="author">by <strong>tasora</strong></div>
+				<div class="content">Hallo Erwin,<br>
+
+<blockquote class="uncited"><div>Wow, that is impressive. Are you using default GJK for the sphere-sphere, or the specialize sphere-sphere collision algorithm? 
+</div></blockquote>
+
+Well, I tested also the specialized sphere-sphere, but performance<br>
+increase wasn't that exceptional - if I remember well now I'm still<br>
+using the default GJK. The botleneck is rather the LCP solver.<br>
+<br>
+In fact I am using the Bullet solver, with some modifications, <br>
+into my Chrono::Engine middleware. I am planning to release this<br>
+library asap (the web site is under renewal, otherwise I'd tell you <br>
+the link for more precise infos). In general, I'm using an iterative <br>
+LCP solver which I'm developing together with Anitescu. This<br>
+solver is similar to the one proposed by Mangasarian.<br>
+
+<blockquote class="uncited"><div>by replacing the 'short int' by int, and also the 0xfffc into 0xfffffffc.</div></blockquote>
+
+thanks! - surely I would have forgotten the 0xfffc issue! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"> <br>
+ By switching from 'unsigned short' to 'unsigned int' I will double<br>
+memory requirement for SAP (2 times the bytes) but this is not the<br>
+most relevant problem.. I just hope that speed performance is not<br>
+affected when dealing with 4byte integers rather than with 2 byte<br>
+integers... Let's test and see.. <br>
+
+<blockquote class="uncited"><div>Bullet 2.44a has a new overlapping pair management, that allows for easier parallel processing and should be more cache friendly.
+</div></blockquote>
+
+I've not yet tested 2.44 - this week I have few spare time for this<br>
+collision issues- but I'll tell you if I find improvements.<br>
+<br>
+By the way, with 2.43 I had a strange 'problem'.. If i create all 30k<br>
+spheres at once (somewhat in random position) , the SAP takes<br>
+too much memory for temporary computations at first run, while<br>
+if I add spheres frame after frame (ex.+1000 spheres each step)<br>
+the requirement for temporary data is much lower and I can run in<br>
+few RAM without the initial memory peak. I hope this is not getting<br>
+worse in 2.44 <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><br>
+<br>
+Ok, later<br>
+<br>
+Alessandro Tasora</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Thu Mar 08, 2007 2:36 pm</strong></div>
+				<div class="author">by <strong>tasora</strong></div>
+				<div class="content"><blockquote class="uncited"><div>In fact I am using the Bullet solver, with some modifications, <br>
+into my Chrono::Engine middleware</div></blockquote>
+
+sorry, a typo..  <br>
+I meant:  'I am using the Bullet <strong class="text-strong">collision detection </strong>, with some <br>
+modifications... ' , etc. etc.  (not the solver, cause I use my own library) <br>
+<br>
+Alessandro Tasora</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Tue Mar 13, 2007 7:23 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Bullet 2.46 is now available, and the Sweep and Prune broadphase can be switched to 32bit indices, allowing more objects.<br>
+<br>
+Just enable 
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1025&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>#define BP_USE_FIXEDPOINT_INT_32 1
+</code></pre></div>
+in Bullet/src/BulletCollision/btAxisSweep3.h<br>
+<br>
+Hope this helps,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Wed Mar 14, 2007 1:56 pm</strong></div>
+				<div class="author">by <strong>tasora</strong></div>
+				<div class="content">Hi Erwin!<br>
+<br>
+ funny, I was just sending you my modified copy of Sweep<br>
+and Prune sourcecode, with a similar conditional switch to <br>
+compile with 32 bit indices, and in fact I already made experiments<br>
+with it. <br>
+  Just look at this simulation (which took few hours, mostly because<br>
+my LCP solver used 130 steps for good precision). There are<br>
+36'000 spheres with friction etc.<br>
+<br>
+ <a href="http://ied.eng.unipr.it/~tasora/download/reactor_10.avi" class="postlink">http://ied.eng.unipr.it/~tasora/download/reactor_10.avi</a><br>
+<br>
+Looks like that 32bit indices aren't affecting the performance.<br>
+Ok, I'll download Bullet 2.46 and use your 'official' modification.<br>
+<br>
+regards!<br>
+<br>
+Alessandro Tasora</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Mar 19, 2007 6:16 pm</strong></div>
+				<div class="author">by <strong>Remotion</strong></div>
+				<div class="content">Another limitation  was reached in btSequentialImpulseConstraintSolver.<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=1025&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>struct	btOrderIndex
+{
+	short int	m_manifoldIndex; 
+	short int	m_pointIndex;
+};
+
+#define SEQUENTIAL_IMPULSE_MAX_SOLVER_POINTS 16384
+static btOrderIndex	gOrder[SEQUENTIAL_IMPULSE_MAX_SOLVER_POINTS];
+</code></pre></div>
+
+This code only allows up to 16384 but in some of my test this limit was reached with crash!<br>
+<br>
+Also to make gOrder static seems to be not really thread safe for me.<br>
+Especially in some of my test I am using two or more Bullet instances simultaneous.<br>
+<br>
+Edit:  SOLVER_CACHE_FRIENDLY seems to solve this problem becouse solveGroupCacheFriendly() function used instate with dynamic arrays.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

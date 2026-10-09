@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Constraint of multiple objects?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Constraint of multiple objects?</h2>
+		<p><a href="viewtopic.php%3Ft=9510.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9510</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Constraint of multiple objects?</h3>
+				<div class="date">Posted: <strong>Thu Oct 31, 2013 4:44 pm</strong></div>
+				<div class="author">by <strong>ynm</strong></div>
+				<div class="content">I am writing some simple physics codes, e.g the spring joint and the distant joint based on PhysX: add force/ velocity based on current state of objects. It worked with two objects connect by one joint. The problem is when multiple objects connect to a single objects, the cumulative forces of each objects cancel/ adding each other and make them very unstable and quickly explode with very high velocity.<br>
+<br>
+E.g I have distant joint, basically it cancels velocity projected on link between them and add a pulse force to fix any distance error. But when multiple objects connect, they shake quite hard and then explode, I don't know how to solve this.<br>
+<br>
+How do physics engines solve the constraint of multiple objects?<br>
+<br>
+Regards</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraint of multiple objects?</h3>
+				<div class="date">Posted: <strong>Thu Oct 31, 2013 5:17 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">Are you using existing constraints, that are solved together (by PhysX) or are you manually applying external forces? Multiple constraints shouldn't cancel eachother.<br>
+
+<blockquote class="uncited"><div>
+How do physics engines solve the constraint of multiple objects?
+</div></blockquote>
+Pairwise constraints should work fine, as long as they are solved together. Another way is using multi body joints, such as Featherstone. That's what we added to Bullet recently.<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraint of multiple objects?</h3>
+				<div class="date">Posted: <strong>Fri Nov 01, 2013 2:50 am</strong></div>
+				<div class="author">by <strong>ynm</strong></div>
+				<div class="content">Thanks,<br>
+<br>
+I calculate relative position and velocity then add force/ velocity manually. I also add position correction force to push object back to original position instantly (in case of fixed joint or fixed axes) and while it works perfectly in two objects scene, it seems this instant correction makes physics very unstable when involved multiple object.<br>
+<br>
+I think I need to broadcast the fixed joint force from a pair to every fixed constraint of an object, but this will make computation increase with number of objects</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraint of multiple objects?</h3>
+				<div class="date">Posted: <strong>Fri Jun 13, 2014 4:35 pm</strong></div>
+				<div class="author">by <strong>kingchurch</strong></div>
+				<div class="content">If you just use a spring force to correct position error between each pair of bodies it will work assuming g:<br>
+1. You tune the PD constants of the spring nicely and don't attempt to correct any error "instantly"<br>
+2. Lower your simulation step size to small enough to pair with your body's mass and the spring stiffness constants<br>
+<br>
+This is essentially the penalty based method used by simulator such as the ROR truck sim.<br>
+<br>
+If you inclined to solve the error with impulse you can just use the sequential impulse solver directly in the engine. Does PhysX not have a distance joint to use?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Constraint of multiple objects?</h3>
+				<div class="date">Posted: <strong>Tue Jun 17, 2014 10:32 am</strong></div>
+				<div class="author">by <strong>DannyChapman</strong></div>
+				<div class="content">The 6DOF joint in PhysX is asymmetric (I find this bizarre) - it will generally be more effective if the first actor in the pair is the heavier one. This might be true of the distance constraint too.<br>
+<br>
+One problem that you may have is that the constraints are generating more angular motion than is desired (due to linearisation). This can happen when there's some joint separation, and/or when the moments of inertia of the objects are small. When the system is integrated this results in the joint separating even more, and then the problem becomes worse etc, until you're left with a jittering mess.<br>
+<br>
+To improve this you can encourage the solver to solve the constraint using linear forces rather than torques - either artificially increase the moments of inertia of the objects permanently, or pass in a smallish number (e.g. 0.1) to the inverse inertia scale functions on the constraint: PxJoint::setInvInertiaScale0 (and setInvInertiaScale1)<br>
+<br>
+You will also get better results by: making all the parts in the chain have similar masses, using a small (constant) timestep and increasing the iteration counts (PxRigidDynamic::setSolverIterationCounts - try increasing the position iterations).</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

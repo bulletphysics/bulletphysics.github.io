@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Angular constraints and baumgarte</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Angular constraints and baumgarte</h2>
+		<p><a href="viewtopic.php%3Ft=700.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=700</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Angular constraints and baumgarte</h3>
+				<div class="date">Posted: <strong>Thu Nov 16, 2006 1:56 am</strong></div>
+				<div class="author">by <strong>John McCutchan</strong></div>
+				<div class="content">Hey all,<br>
+<br>
+I've been working on deriving all of the constraints from first principles but I'm getting stuck on angular constraints. Let's say I want to stop rotation around axis A. The jacobian would be: <br>
+<br>
+Dc/dt = [0 0 0 Ax Ay Az 0 0 0 -Ax -Ay -Az]<br>
+<br>
+I can't figure out how to formulate it at the position level (C) properly. In the angular cases is the baumgarte still (C / dt) ? <br>
+<br>
+Is there a technique for constructing angular constraints at the position level and their baumgarte term?<br>
+<br>
+Thanks!</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Mon Nov 27, 2006 9:22 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I use a different formulation for the angular constraint. Given the constraint space u, v and w you can block the rotation around u like this:<br>
+<br>
+C = v1 * w2<br>
+dC/dt = 0 (v1 x w2) 0 -(v1 x w2)<br>
+<br>
+You could also try the following, but note that I never checked this. Compute the difference quaternion dq = Conjugate(q1) * q2. The length of the quaternion axis is sin( alpha/2 ). For small deviations you can use a small angle approximation, so sin( alpha/2 ) ~ alpha/2. You need to scale the axis by a factor two then and project onto your constraint axis. <br>
+<br>
+q32 dq = Conjugate(q1) * q2;<br>
+v32 q_axis = GetAxis( dq );<br>
+q_axis *= 2;<br>
+<br>
+f32 C = Dot( q_axis, constraint_axis );<br>
+f32 baumgarte = 0.1 * C/dt;<br>
+<br>
+This can be total nonsense. But if you give a try let me know how it worked. Your question was answered in the forum before. You can search for Erin Catto's and my recent posts and should find what you are looking for. I also recommend looking at the ODE constraint Universal, Hinge and Fixed.<br>
+<br>
+Cheers,<br>
+-Dirk</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

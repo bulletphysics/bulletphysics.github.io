@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Restitution handling</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Restitution handling</h2>
+		<p><a href="viewtopic.php%3Ft=780.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=780</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Restitution handling</h3>
+				<div class="date">Posted: <strong>Fri Dec 08, 2006 11:08 am</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Hi!<br>
+Recently, I've tried to impose restitution to my own physics simulator(based on sequentially impulses algorithm presented by E.Catto),<br>
+but faced a problem of making box bounce(Restitution works pretty good on bouncing spheres)<br>
+I guess that the reason is that sequentially applying impulses at more than 1 collision point makes the total impulse zero. It works correctly for objects with restitution of zero, but makes another objects behave the same way.<br>
+I've noticed that bullet physics simulation works with restitution a bit<br>
+better - an axis aligned box falling from some height jumps up just a little, gets angular velocity, falls down and rests. <br>
+In contrast, PhysX solves this problem - at restitution 1 the box jumps up about 12 times, than getting angular velocity(i think 12 times is comprehensible precision).<br>
+<br>
+Now I consider applying restitution impulse after all the contact solving iterations should help. And possibly apply it not at particular contact points <br>
+but to the whole body?<br>
+<br>
+Any suggestions?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Dec 08, 2006 12:33 pm</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content">I have a method that solves collisions also by impulses. I just tried the example you mentioned with an axis aligned box falling down. If the restitution is 1 the box jumps up and has the same height as before. The box jumped up about 1 hour of simulation time and then it got an angular velocity due to numerical errors. <br>
+<br>
+Maybe you will find the paper "Constraint-based collision and contact handling using impulses" about my method interesting. You can download it from my homepage <a href="http://www.impulse-based.de" class="postlink">http://www.impulse-based.de</a><br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Dec 08, 2006 12:53 pm</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Thanks, Jan. Wow 1 hour of bouncing - it's really high precision. I've downloaded the paper and just started to read it.<br>
+But what about solutions based on the same constraint solver?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Fri Dec 08, 2006 2:23 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">For single contact point cases like sphere-sphere, the restitution in Bullet works fine (apart from floating point drift,  we could use energy-preserving post processing to solve this drift). This indicates that the problem is not the impulse method / constraint solving, but contact manifold/point generation:<br>
+<br>
+At the moment in Bullet, one contact point is added per frame, so it takes 3 ~ 4 frames to get the full manifold.<br>
+This is fine for most cases, but 'perfect' restitution will not work, because the first frame will add a torque impulse, as there is only one corner point.<br>
+<br>
+So for 'perfect' or 'better' restitution, you will need at least full manifold in one go/instantaneously.<br>
+Bullet already contains code in Extras/SATcollision to calculate all points for the convex polyhedral cases. However Bullet also supports non-polyhedal convex objects, like implicit cylinders, cone and much more complicated shapes involving minkowski sums and convex hull of any combination of objects. <br>
+Also, I got several contributions, including one from Jan Bender and John Nagle to do the same, but again just for polyhedral cases.<br>
+There is also a special box-box in Bullet/Extras/AlternativeCollisionAlgorithms that you can try, it's the code from ODE, compatible with Bullet. It produces all contact points at once.<br>
+<br>
+From the constraint solver perspective, having impulse based method + restitution:<br>
+In Bullet, which uses a similar sequential impulse method as described by <a href="http://www.gphysics.com" class="postlink">Erin Catto</a> we use approach 1 for restitution:<br>
+<br>
+1)  the 'desired resulting velocity' which includes the restitution is calculated and stored before the solver / impulse iterations start. This is what Bullet does, see<br>
+2) Another approach is to just scale the resulting impulse after all iterations finish by the restitution factor.<br>
+<br>
+Jan, are you using one of above 2 methods to handle restitution, or another one?<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Dec 09, 2006 6:54 am</strong></div>
+				<div class="author">by <strong>Jan Bender</strong></div>
+				<div class="content"><blockquote class="uncited"><div>1) the 'desired resulting velocity' which includes the restitution is calculated and stored before the solver / impulse iterations start. This is what Bullet does, see<br>
+2) Another approach is to just scale the resulting impulse after all iterations finish by the restitution factor.<br>
+<br>
+Jan, are you using one of above 2 methods to handle restitution, or another one? </div></blockquote>
+
+I use both  <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_wink.gif" width="15" height="15" alt=":wink:" title="Wink"> <br>
+<br>
+In fact I implemented one method which is based on Newton's impact law. This method computes first the 'desired resulting velocity' for every contact point and stores it. Afterwards impulses are computed to reach these velocities. Of course you have to do this in a loop since new collision can occur due to the impulses. <br>
+<br>
+I also implemented a method based on Poisson's hypothesis. It works in the same way but in the beginning the 'desired resulting velocity' is set to zero. In this way I get the impulses of impact. Then I use Poisson's hypothesis to compute the resulting impulses of the collisions. <br>
+<br>
+Jan</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3></h3>
+				<div class="date">Posted: <strong>Sat Dec 09, 2006 1:49 pm</strong></div>
+				<div class="author">by <strong>stbuzer</strong></div>
+				<div class="content">Thanks Erwin. Yes, the problem with 'perfect' restitution in Bullet was mostly because of insufficient contact points at the first frames of collision. I replaced GJK algorithm with custom Box-Box, as you advised, and bouncing became much more realistic.<br>
+ Before posting the topic I tried something like the second approach, but<br>
+in this case the simulation became unstable because of jittering.<br>
+I applied restitution * accumulatedImpulse after all iterations. I guess it was needed to add a threshold of applying restitution(to relative velocity) to achieve system stability.<br>
+I've implemented the first method. it works pretty good, but still suffers from getting angular velocity.<br>
+I consider the question solved, but if you have any other ideas it would be very interesting to me.<br>
+<br>
+Stepan</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

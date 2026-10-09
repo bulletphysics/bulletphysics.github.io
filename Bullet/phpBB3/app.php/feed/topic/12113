@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12113" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2018-05-31T22:07:38+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/12113</id>
+
+		<entry>
+		<author><name><![CDATA[keithmgould]]></name></author>
+		<updated>2018-05-31T22:07:38+00:00</updated>
+
+		<published>2018-05-31T22:07:38+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40936#p40936</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40936#p40936"/>
+		<title type="html"><![CDATA[Re: how to determine rotational velocity relative to direction robot is &quot;facing&quot;]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40936#p40936"><![CDATA[
+Believe I've figured it out.<br><br>My guess above is correct, or at least, it works, though it might not be the best or most "pybullet/bullet" way to do things.<br><br>Below is the code I used to verify. I take R2D2, rotate him about the Z axis a bit, and set him spinning  "forward."<br><br>At this point, what I'd want to see for his relative rotational velocity is some mostly constant value for wx, and numbers close to 0 for wy and wz.<br><br>The below accomplishes this, and can be seen when looking at the results of the print statement.<br><div class="codebox"><p>Code: </p><pre><code>import pybullet as pbimport numpy as npimport timeimport pybullet_dataimport pdbphysicsClient = pb.connect(pb.GUI)#or pb.DIRECT for non-graphical versionpb.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionallypb.setGravity(0,0,0)planeId = pb.loadURDF("plane.urdf")r2d2StartPos = [0,0,1] # elevated# originally facing green. So Z with no rotation points along green (Y)# points R2 diagonally (via yaw rotation around Z)r2d2StartOrientation = pb.getQuaternionFromEuler([0,0,0.785398163397448])# load the robotr2d2Id = pb.loadURDF("r2d2.urdf",r2d2StartPos, r2d2StartOrientation)# set rotational velocity same direction as robot is facing.pb.resetBaseVelocity(1,(0,0,0),(-1, -1,0))# goal is to see rot velocity relative to R2's orientation# so X should be non-zero, and Y,Z both at zero.for i in range (10000):pb.stepSimulation()time.sleep(1./240.)r2d2Vel = pb.getBaseVelocity(r2d2Id)r2d2Pos, r2d2Orn = pb.getBasePositionAndOrientation(r2d2Id)r2d2ornEuler = pb.getEulerFromQuaternion(r2d2Orn)yaw = r2d2ornEuler[2]# I noticed this first in the link mentioned in my first post.# this is a "basic rotation around Z# see https://en.wikipedia.org/wiki/Rotation_matrix "Basic Rotations"rot_around_z = np.array([[np.cos(-yaw), -np.sin(-yaw), 0],[np.sin(-yaw), np.cos(-yaw), 0],[0, 0, 1]])# once we have that, we want to see what the world-frame rotations# are translated via rot_around_zwx, wy, wz = np.dot(rot_around_z, r2d2Vel[1])print(wx, wy, wz)pb.disconnect()</code></pre></div><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12742">keithmgould</a> — Thu May 31, 2018 10:07 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[keithmgould]]></name></author>
+		<updated>2018-05-31T18:25:51+00:00</updated>
+
+		<published>2018-05-31T18:25:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40934#p40934</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40934#p40934"/>
+		<title type="html"><![CDATA[how to determine rotational velocity relative to direction robot is &quot;facing&quot;]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=40934#p40934"><![CDATA[
+This feels like a common question but I could not find it...<br><br>Generally: I'm looking to know rotational velocity relative to world orientation.<br><br>Specifically: I have a "balancing robot", (a stick on two wheels), where the stick is the base link. I want to know how fast it's falling "forward", and "forward" is of course relative to the direction the robot is facing. <br><br>I tried: `getBaseVelocity` but I believe this returns the velocity relative to the world frame, not the direction the robot is "facing"<br>I tried: `getLinkState` but I believe that does not work for '-1' as linkID, so I can't use it.<br><br>Do I need to do something like this?: <br>1. determine the orientation of the base via `getBasePositionAndOrientation`<br>2. determine the rotational velocity of base (relative to world)<br>3. some sort of matrix transform here to calculate the base's rotational velocity relative to the direction its facing<br><br>Is there an example anywhere?<br><br>Thank you!<br><br>PS: I found this example, but it feels overly complicated. <a href="https://github.com/bulletphysics/bullet3/blob/c8dc4dc756f1c08bbafbf2972b9ac82150e0fc77/examples/pybullet/gym/pybullet_envs/robot_locomotors.py#L33" class="postlink">https://github.com/bulletphysics/bullet ... ors.py#L33</a><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12742">keithmgould</a> — Thu May 31, 2018 6:25 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

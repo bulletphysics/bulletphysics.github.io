@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rotate Object to Face Origin/Point</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rotate Object to Face Origin/Point</h2>
+		<p><a href="viewtopic.php%3Ft=12483.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12483</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rotate Object to Face Origin/Point</h3>
+				<div class="date">Posted: <strong>Wed Nov 07, 2018 1:05 pm</strong></div>
+				<div class="author">by <strong>carcamdou</strong></div>
+				<div class="content">Hello All! <br>
+<br>
+I'm completely new to pybullet, and I've been having some trouble figuring things out. I read through the quickstart guide, but it doesn't seem to have anything along these lines. <br>
+<br>
+I am interested in loading a URDF object and having it move around a sphere centered at the origin, always facing towards the origin. I have no problems getting a random (x,y,z) coordinate to place the position of the object, but figuring out how to get the quaternion is a bit of a problem for me. At the moment, I'm using spherical coordinates for the position and using from_spherical_coords(theta, phi) from this library (<a href="https://github.com/moble/quaternion" class="postlink">https://github.com/moble/quaternion</a>) to get the equivalent quaternion. I know this isn't right (both because it isn't working, and because it doesn't make much sense.<br>
+<br>
+TLDR: If I loadURDF an object into the scene, how to do I figure out the quaternion needed to point its face at the origin (or an arbitrary point!)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotate Object to Face Origin/Point</h3>
+				<div class="date">Posted: <strong>Sun Nov 11, 2018 2:30 pm</strong></div>
+				<div class="author">by <strong>richardbloemenkamp</strong></div>
+				<div class="content">I would do the same as you using the spherical coordinates and then transform to quaternion. I found however that with the Euler angles the order of the angle operations is important (first roll around the world-x, then yaw around the world-z, finally pitch around the world-y). In addition for the r2d2.urdf below, the x-direction is sideways, such that for the robot-pitch, I had to use the roll-angle to first rotate the robot around its y-axis and then add yaw. <br>
+<br>
+Below the code I used:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12483&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import numpy as np
+p.connect(p.GUI)
+p.createCollisionShape(p.GEOM_PLANE)
+p.resetDebugVisualizerCamera( cameraDistance=2, cameraYaw=10, cameraPitch=-20, cameraTargetPosition=[0.0, 0.0, 0.25])
+cubeStartPos = [0,0,1]
+cubeStartOrientation = p.getQuaternionFromEuler([0,0,0])
+boxId = p.loadURDF("r2d2.urdf",cubeStartPos, cubeStartOrientation)
+
+x=1
+y=0.5
+r_hor=np.sqrt(x*x+y*y)  #4.12 
+z=.7
+rollini = np.arctan2(z,r_hor) #0.4516 rad Needs roll because urdf x-direction points sideways
+phiini = np.arctan2(y,x)   #0.245 radians
+thetaini = 0
+
+roll=-rollini
+phi=phiini-np.pi-np.pi/2  #-np.pi/2 because urdf x-direction points sideways
+theta=thetaini
+q=p.getQuaternionFromEuler((roll,theta,phi))
+print(q)
+p.resetBasePositionAndOrientation(boxId,(x,y,z),q)
+
+t0=time.time()
+t=time.time()
+while ((t-t0)&lt;5):
+    t=time.time()
+p.disconnect()
+</code></pre></div>
+I hope this is of help.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

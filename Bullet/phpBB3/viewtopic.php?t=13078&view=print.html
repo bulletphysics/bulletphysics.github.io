@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Best way to scale up</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Best way to scale up</h2>
+		<p><a href="viewtopic.php%3Ft=13078.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13078</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Best way to scale up</h3>
+				<div class="date">Posted: <strong>Fri Oct 09, 2020 8:17 am</strong></div>
+				<div class="author">by <strong>FredP</strong></div>
+				<div class="content">Hi,<br>
+<br>
+I'm a beginner with Bullet and I'm trying to use it to detect collisions in an environment using industrial robots.<br>
+Everything seems to be working fine in small scale but if I try to scale up to the real size (the size of the models given by the robots constructor) I have problems with the forces to move the robots.<br>
+<br>
+I'm receiving joint position updates from the simulation and for each update I'm using setJointMotorControl2() with the new position and then call stepSimulation() to move to it.<br>
+<br>
+I tried to replicate the problem with a simple example. It moves one joint to a direction twice and then once in the opposite direction:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13078&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import pybullet as p
+import time
+import pybullet_data
+
+p.connect(p.GUI)
+
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+txId = p.loadURDF("kuka_iiwa/model.urdf", [0, 0, 0], globalScaling=1, useFixedBase=True)
+    
+numJoints = p.getNumJoints(txId)
+
+p.setGravity(0, 0, -10)
+
+for i in range(numJoints):
+    p.resetJointState(txId, i, 0)
+
+startTime = time.time()
+increment = 0.2
+position = 0.0
+
+direction = [1, 1, -1]
+max = len(direction)
+count = 0
+
+while 1:
+    currentTime = time.time()
+    t = currentTime - startTime
+    if t &gt; 1.0:
+        startTime = currentTime
+        position += increment * direction[count % max]
+        count += 1
+        for i in range(numJoints):
+            p.setJointMotorControl2(bodyIndex=txId,
+                                               jointIndex=i,
+                                               controlMode=p.POSITION_CONTROL,
+                                               targetPosition=position if i == 1 else 0,
+                                               targetVelocity=0,
+                                               force=500000,
+                                               positionGain=1,
+                                               velocityGain=1)
+        p.stepSimulation()
+    time.sleep(1/240)
+  
+p.disconnect()</code></pre></div>
+
+In this example everything is working fine but if I scale up the robot, let's say with globalScaling=5, the joint can't reach the target position anymore in a single stepSimulation(). I'm guessing that the force needs to be scaled up as well and if I do it it works... until the point where upping the force doesn't compensate the scaling anymore (the models I have for the robots are about 1000 times bigger than the Kuka model).<br>
+<br>
+What is the best way to scale up ? Actually I'm doing 2 stepSimulation() for every movement but it hardly seems like a good solution. I have thought about scaling everything down but I have a lot of objects in my simulation and I would prefer to avoid it.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; btBvhTriangleMeshShape and btTriangleInfoMap serialization</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>btBvhTriangleMeshShape and btTriangleInfoMap serialization</h2>
+		<p><a href="viewtopic.php%3Ft=8297.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=8297</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>btBvhTriangleMeshShape and btTriangleInfoMap serialization</h3>
+				<div class="date">Posted: <strong>Thu Jul 26, 2012 10:13 am</strong></div>
+				<div class="author">by <strong>DavidM</strong></div>
+				<div class="content">We've just started using Bullet recently and as part of our build process we create a single btBvhTriangleMeshShape to represent the static part of our 'world'.  At this point we also create a btTriangleInfoMap and use btGenerateInternalEdgeInfo() to generate the data for the internal edge utility to prevent collision with internal triangle edges at runtime.<br>
+<br>
+These are then serialized out and loaded at runtime using the btBulletWorldImporter.<br>
+<br>
+I've found a couple of problems with this, firstly btTriangleInfoMap doesn't serialize properly.  It's derived from btHashMap and the hash map implementation uses the capacity of one of it's members.  This capacity gets changed when you serialize it out (it gets trimmed to the size of the array) and so none of the hashes match up anymore.  I've fixed this locally by adding a trim function to the hashmap and calling that before serializing it in the btTriangleInfoMap, but it's a problem with any btHashMap serialization.<br>
+<br>
+The second issue is that in btBulletWorldImporter the code that deserializes btOptimizedBVH is #if 0'ed out, so instead of using the bvh that's been stored a new one is generated at runtime.  I've put it back in and not had any obvious issues, but I guess there was a reason for removing it - does anyone know why?<br>
+<br>
+We're using Bullet 2.80-rev2531</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btBvhTriangleMeshShape and btTriangleInfoMap serializati</h3>
+				<div class="date">Posted: <strong>Wed Oct 17, 2012 4:36 pm</strong></div>
+				<div class="author">by <strong>VicariousEnt</strong></div>
+				<div class="content">I re-enabled that code as well and have had no problems with it thus far. Not sure why it was removed either. I still need to add the InternalEdgeInfo, good to know about that problem.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: btBvhTriangleMeshShape and btTriangleInfoMap serializati</h3>
+				<div class="date">Posted: <strong>Wed Oct 17, 2012 6:40 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The latest trunk, and Bullet 2.81 release enables the import/deserialization of the BVH, see<br>
+<a href="http://code.google.com/p/bullet/source/browse/trunk/Extras/Serialize/BulletWorldImporter/btWorldImporter.cpp" class="postlink">http://code.google.com/p/bullet/source/ ... porter.cpp</a><br>
+<br>
+We still need to fix the btTriangleInfoMap /btHashMap serialization indeed.<br>
+If you have a fix, can you contribute it to this issue?<br>
+<a href="https://code.google.com/p/bullet/issues/detail?id=353" class="postlink">https://code.google.com/p/bullet/issues/detail?id=353</a><br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

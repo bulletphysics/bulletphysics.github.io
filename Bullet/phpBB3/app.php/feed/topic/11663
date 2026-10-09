@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-gb">
+	<link rel="self" type="application/atom+xml" href="https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11663" />
+
+	<title>Real-Time Physics Simulation Forum</title>
+	
+	<link href="https://pybullet.org/Bullet/phpBB3/index.php" />
+	<updated>2017-04-27T03:27:11+00:00</updated>
+
+	<author><name><![CDATA[Real-Time Physics Simulation Forum]]></name></author>
+	<id>https://pybullet.org/Bullet/phpBB3/app.php/feed/topic/11663</id>
+
+		<entry>
+		<author><name><![CDATA[Himura78]]></name></author>
+		<updated>2017-04-27T03:27:11+00:00</updated>
+
+		<published>2017-04-27T03:27:11+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39258#p39258</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39258#p39258"/>
+		<title type="html"><![CDATA[Re: Contact constraint derivation question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39258#p39258"><![CDATA[
+Thanks for your reply Dirk, that makes more sense now.<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12149">Himura78</a> — Thu Apr 27, 2017 3:27 am</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Dirk Gregorius]]></name></author>
+		<updated>2017-04-24T21:24:46+00:00</updated>
+
+		<published>2017-04-24T21:24:46+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39226#p39226</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39226#p39226"/>
+		<title type="html"><![CDATA[Re: Contact constraint derivation question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39226#p39226"><![CDATA[
+A non-penetration constraint for two bodies usually looks like this:<br><br>C = (p2 - p1) * n<br><br>The time derivative yields:<br><br>dC/dt = ( v2 + cross( omega2, r2 ) - v1 - cross( omega1, r1 ) ) * n + <strong class="text-strong">( p2 - p1 ) * dn/dt</strong><br><br>Here p1 and p2 are the contact points in global space on each body. r1 and r2 are the offset vectors from these points to the center of mass. The way we usually create contact points p2 and p1 are actually coincident. So the second term can be neglected because it <strong class="text-strong"><span style="text-decoration:underline">is</span></strong> actually zero. Which means it is not small, but exactly zero. Even if the contact points are on the surfaces of each body and not coincident the second term will become zero. If you do the math you will get something like cross( p2 - p1, n ) which is zero as well since the normal and difference of the witness points (p2 - p1) are parallel. And as we remember from high school the cross product between two parallel (or anti-parallel) vectors is zero.<br><br>Regarding you second question for constrained rigid body dynamics we usually solve:<br><br>dx/dt = v<br>dv/dt = M * ( f_ext + fc ) = M * ( f_ext + JT * lambda )<br>C = 0<br><br>Three equations with three unknowns. Sadly the equations cannot be solved this way. So people usually utilize the fact that there are two more (hidden) constraints. The velocity and acceleration conditions. E.g. if you constraint a particle to move on a circular path obviously there cannot be any velocity or acceleration away from the arc (momentarily). Otherwise we move off. The point here is that is all three conditions must be satisfied. If you only satisfy e.g. the acceleration and velocity conditions you didn't solve the original problem.  Finally, the velocity and similarly the acceleration constraint have a special form:<br><br>dC/dt = del_C/del_x * dx/dt + del_C / del_t = J * v + del_C / del_t<br><br>So yes, the velocity constraints are indeed linear, but note the original problem is not! So if you only solve on the velocity level you solve a linearization of the original problem which usually results in constraint drift. The constraint drift can then be handled with some kind of Baumgart'ish stabilization or orthogonal projection of the position constraints.<br><br>The second term in this equation del_C / del_t is usually zero in rigid body dynamics because the constraints don't explicitly depend on time. An example where you need the second term could be a boat on a moving water surface.<br><br>HTH,<br>-Dirk<p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=14">Dirk Gregorius</a> — Mon Apr 24, 2017 9:24 pm</p><hr />
+]]></content>
+	</entry>
+		<entry>
+		<author><name><![CDATA[Himura78]]></name></author>
+		<updated>2017-04-23T12:40:51+00:00</updated>
+
+		<published>2017-04-23T12:40:51+00:00</published>
+		<id>https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39219#p39219</id>
+		<link href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39219#p39219"/>
+		<title type="html"><![CDATA[Contact constraint derivation question]]></title>
+
+		
+		<content type="html" xml:base="https://pybullet.org/Bullet/phpBB3/viewtopic.php?p=39219#p39219"><![CDATA[
+Hi,<br>This question is not specifically about Bullet, but it's related to the derivation of the contact constraint used in Box2D. I apologise if this is not the correct forum for this question, but it didn't seem to attract any attention on the Box2D forum, so I thought someone here might be able to answer.<br><br>From Erin Catto's paper "Iterative Dynamics With Temporal Coherence" he states that when we calculate Cdot for the contact (normal) constraint, we use the product rule and get two terms, one which is essentially the velocity dotted with the normal, and the other which is the penetration dotted with the derivative of the normal. His paper goes on to say that the second term can be neglected when we make the assumption that the penetration is small. What I'm wondering is, why is this a valid assumption? Particularly when (as in the paper) discrete collision detection is being used, doesn't that mean that the penetration can be arbitrarily deep, depending on the velocities and sizes of the interacting bodies?<br>The other question I have is, since Cdot is always going to be linear in the velocity (and will be equal to JV) doesn't that mean that we should still be able to rearrange the equation for Cdot into JV, with both of these terms (ie without neglecting the second term)? Would it not be more accurate to do so?<br>Thanks <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"><p>Statistics: Posted by <a href="https://pybullet.org/Bullet/phpBB3/memberlist.php?mode=viewprofile&amp;u=12149">Himura78</a> — Sun Apr 23, 2017 12:40 pm</p><hr />
+]]></content>
+	</entry>
+	</feed>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; SAT - Max Separation and Axis of Min Penetration</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>SAT - Max Separation and Axis of Min Penetration</h2>
+		<p><a href="viewtopic.php%3Ft=9109.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9109</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Mon May 20, 2013 8:32 am</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">I have a simple question regarding the usage of the SAT for generating collision information. It is my understanding that the axis of least penetration can be considered the penetration depth of two convex shapes. However I just realized that in my own code I seem to be finding the axis of most penetration.<br>
+<br>
+Both Box2D (Box2D Lite, along with old and current versions of Box2D) and in Dirk Gregorius's <a href="http://gdcvault.com/play/1017646/Physics-for-Game-Programmers-The" class="postlink">most recent GDC lecture</a>, the axis of most penetration seems to be used to identify the reference face.<br>
+<br>
+I created an image to try to help explain what I'm thinking:<br>
+<br>
+<img src="http://i.imgur.com/9yCNt7I.png" class="postimage" alt="Image"><br>
+<br>
+I'm imagining the red arrow to point to a support point intersecting the plane with normal n2. However, I imagine the blue arrow pointing towards the support point for the plane with a normal of n1.<br>
+<br>
+Here's a screenshot from Dirk's slides:<br>
+<br>
+<img src="http://i.imgur.com/IzcFkua.png" class="postimage" alt="Image"><br>
+<br>
+This algorithm would seem to me to end with a query resulting in the vertex the blue arrow points to, which is definitely not the vertex I'd be looking for. I'd want to end up finding the vertex the red arrow points to. It's my understanding that the &gt; operator I underlined should be flipped (which I know it shouldn't be, so my understanding is flawed).<br>
+<br>
+I'm imagining the vertex that represents the deepest penetration would be the support point that intersects it's corresponding plane, but has an intersection depth lower than all other possible intersection depths. This would properly represent the axis of least penetration, and penetration depth. So in other words, the intersecting support point with the lowest penetration.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Mon May 20, 2013 12:47 pm</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">I think Dirk's slide is computing the <strong class="text-strong">Minkowski Difference</strong> of two shapes.  An algorithm that uses this idea is GJK.  In GJK, you are combining both shapes into one conglomerate shape and if that shape contains the origin, then the shapes must be intersecting.  Here is a quick diagram of GJK:<br>
+<br>
+<img src="http://www.mikeshafer2009.com/img/gjk.png" class="postimage" alt="Image"><br>
+<br>
+Also, <a href="http://www.wildbunny.co.uk/blog/2011/04/20/collision-detection-for-dummies/" class="postlink">http://www.wildbunny.co.uk/blog/2011/04 ... r-dummies/</a> is a good read.  It will teach you everything you need to know about Minkowski Differences.<br>
+<br>
+Dirk's slide essentially performs a linear search without bothering to make a search simplex.  But it's pretty much computing the Minkowski Difference which is explained in the link above. The part that might be confusing you, is the negative sign in the GetSupport function.  This is how you take the Minkowski Difference.  The idea is the same as having two circles and having to find a left-to-right range (r1 + r2) and subtracting out the distance between them.  In other words:<br>
+<br>
+r1 + r2 &gt; ||c1 - c2||<br>
+r1 - ||c1 - c2|| &gt; -r2<br>
+<br>
+You see how the r2 becomes negative, this is the same phenomenon that we use to take the Minkowski Difference.  Note that GJK can only be used to detect penetration if you give it a "fake" margin (e.g. you tell the algorithm your box is 1.1x1.1) and then when it tells you the shapes are 0.05 apart, you simply subtract 0.1 to get -0.05 penetration.  To make your collision more robust you want to couple GJK with EPA.  There is a very fast version of these two in btGjkEpa2.cpp, but it's very cryptic and you'll have to study it to know exactly what it is doing.  Anyway, this might all be overkill, but learning about the Minkowski Difference will help you understand a lot.  Hope this makes sense.  Maybe Dirk can describe it better.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Mon May 20, 2013 4:40 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">Good question! Let me try to answer this:<br>
+<br>
+This is a *signed* distance. You are essentially approaching zero from the left since you are operating mostly on negative numbers (-1 &gt; -2). If there is <strong class="text-strong">no</strong> separating axis  this will return the axis of minimum penetration. The axis of minimum penetration is the <strong class="text-strong">largest </strong>negative distance.<br>
+<br>
+In your picture both the blue and red distance are negative and therefore d(n2) &gt; d(n1). The distances are negative since the support vertices you draw correctly are on the back side of your planes.<br>
+<br>
+Just put all signed distance on an axis and then sweep from left to right and stop at the smallest value. If the smallest value is negative this is the axis of minimum penetration.<br>
+<br>
+Does this answer your question? Please feel free to ask other question regarding the presentation here as well. The presentation was pretty dense and I covered a lot of material in 35 minutes!<br>
+<br>
+<br>
+<br>
+@Mike: No, this has nothing to do with GJK! But a good explanation nevertheless! <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Mon May 20, 2013 4:48 pm</strong></div>
+				<div class="author">by <strong>RandyGaul</strong></div>
+				<div class="content">Wow thank you both for the great explanations, and Dirk that answered my question perfectly! Makes complete sense now. I'll probably be back later to ask questions as I start writing 3D code and attempt to use the Gauss map optimizations <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile"></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Mon May 20, 2013 5:28 pm</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">@Mike:<br>
+<br>
+Your picture is wrong in step 6. The next vertex D would be the vertex above C'. I am also not sure why you build all these point X'. E.g. the point C' should never be computed. You just find the support point in the direction -OC. Sweep your red line in the direction -OC. OC means vector from origin towards point C<br>
+<br>
+I recommend having a look at Christer book again. He has a similar example there.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Tue May 21, 2013 1:57 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">@ Dirk,<br>
+<br>
+Haha, you're right.  The angle above it is smaller than the one I chose.  Good eye Dirk!  The reason I built the opposite points X' is basically to make it easier to code.  You get the closest point in the simplex then you make it a search vector on the opposite side.  But you're absolutely right, the points X' do not need to be computed.  Anyway, here is an image that shows what Dirk is talking about.  The angle is smaller above C' than below it, so my diagram is slightly wrong.<br>
+<br>
+<img src="http://www.mikeshafer2009.com/img/gjkcorrection.png" class="postimage" alt="Image"><br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Tue May 21, 2013 2:18 am</strong></div>
+				<div class="author">by <strong>Dirk Gregorius</strong></div>
+				<div class="content">I don't see how this is easier code. What can be easier as iterating over all vertices and return the vertex with the largest dot product? Don't get me wrong, you obviously understand GJK pretty well as one can see from your images, but in my opinion this adds some unnecessary complexity.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: SAT - Max Separation and Axis of Min Penetration</h3>
+				<div class="date">Posted: <strong>Tue May 21, 2013 2:27 am</strong></div>
+				<div class="author">by <strong>mikeshafer</strong></div>
+				<div class="content">Understood!  I will remove the X' points from my next demonstration <img class="smilies" src="https://pybullet.org/Bullet/phpBB3/images/smilies/icon_smile.gif" width="15" height="15" alt=":)" title="Smile">.  Thanks for the feedback.<br>
+<br>
+Mike</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

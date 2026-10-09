@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION if setting friction directions in gContactAddedCallback</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION if setting friction directions in gContactAddedCallback</h2>
+		<p><a href="viewtopic.php%3Ft=13203.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13203</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION if setting friction directions in gContactAddedCallback</h3>
+				<div class="date">Posted: <strong>Wed Apr 28, 2021 3:25 pm</strong></div>
+				<div class="author">by <strong>teolazza</strong></div>
+				<div class="content">In my gContactAddedCallback I always set m_lateralFrictionDir1 and m_lateralFrictionDir2.<br>
+Should I set the flag SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13203&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>pWorld-&gt;getSolverInfo().m_solverMode |= SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION ;
+</code></pre></div>
+?<br>
+<br>
+Would setting it give me advantages?<br>
+<br>
+This is part of my contactAddedCallback
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13203&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>	auto[direction, desired_speed] = ...
+
+	// In case it helps, note that soft body friction is controlled via the softBody-&gt;m_cfg.kDF parameter (0 = no friction, 1 = max):
+	// http://bulletphysics.org/Bullet/phpBB3/viewtopic.php?t=6730
+	// m_lateralFrictionDir1 is in local coordinates
+	auto proposed_lateral_friction_dir1 = beltBody.getWorldTransform().getBasis() * direction;
+	auto proposed_lateral_friction_dir2 = proposed_lateral_friction_dir1.cross(cp.m_normalWorldOnB);
+	// we should normalize dir2, but only if possible
+	btScalar l2 = proposed_lateral_friction_dir2.length2();
+	if (l2 &gt;= SIMD_EPSILON * SIMD_EPSILON)
+	{
+		// yes: this is now normalized!
+		proposed_lateral_friction_dir2 /= btSqrt(l2);
+
+		cp.m_lateralFrictionDir1 = std::move(proposed_lateral_friction_dir1);
+		cp.m_contactMotion1 = desired_speed;
+
+		// This is needed together with SOLVER_USE_2_FRICTION_DIRECTIONS
+		// m_lateralFrictionDir2 should always be perpendicular to m_lateralFrictionDir1
+		cp.m_lateralFrictionDir2 = std::move(proposed_lateral_friction_dir2);
+
+		cp.m_combinedFriction = ...
+
+		if (not body.isActive())
+			body.activate();
+
+		cp.m_contactPointFlags |= BT_CONTACT_FLAG_LATERAL_FRICTION_INITIALIZED;
+	}
+</code></pre></div>
+
+Thanks</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

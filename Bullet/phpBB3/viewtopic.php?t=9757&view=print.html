@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; softbody internal functions</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>softbody internal functions</h2>
+		<p><a href="viewtopic.php%3Ft=9757.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=9757</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>softbody internal functions</h3>
+				<div class="date">Posted: <strong>Wed Feb 12, 2014 7:20 am</strong></div>
+				<div class="author">by <strong>guernika</strong></div>
+				<div class="content">Dear all,<br>
+<br>
+I'm trying to understand what is the output of the functions ProjectOrigin and BaryCoord, contained in the file btSoftbodyInternals.h.<br>
+Any suggestion will be appreciated.<br>
+Thanks in advance,<br>
+Francesco<br>
+<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=9757&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>static inline btVector3		BaryCoord(	const btVector3&amp; a,
+									  const btVector3&amp; b,
+									  const btVector3&amp; c,
+									  const btVector3&amp; p)
+{
+	const btScalar	w[]={	btCross(a-p,b-p).length(),
+		btCross(b-p,c-p).length(),
+		btCross(c-p,a-p).length()};
+	const btScalar	isum=1/(w[0]+w[1]+w[2]);
+	return(btVector3(w[1]*isum,w[2]*isum,w[0]*isum));
+}
+
+static inline void			
+	ProjectOrigin(	const btVector3&amp; a,
+				  const btVector3&amp; b,
+				  btVector3&amp; prj,
+				  btScalar&amp; sqd)
+{
+	const btVector3	d=b-a;
+	const btScalar	m2=d.length2();
+	if(m2&gt;SIMD_EPSILON)
+	{	
+		const btScalar	t=Clamp&lt;btScalar&gt;(-btDot(a,d)/m2,0,1);
+		const btVector3	p=a+d*t;
+		const btScalar	l2=p.length2();
+		if(l2&lt;sqd)
+		{
+			prj=p;
+			sqd=l2;
+		}
+	}
+}
+
+static inline void			
+	ProjectOrigin(	const btVector3&amp; a,
+					  const btVector3&amp; b,
+					  const btVector3&amp; c,
+					  btVector3&amp; prj,
+					  btScalar&amp; sqd)
+{
+	const btVector3&amp;	q=btCross(b-a,c-a);
+	const btScalar		m2=q.length2();
+	if(m2&gt;SIMD_EPSILON)
+	{
+		const btVector3	n=q/btSqrt(m2);
+		const btScalar	k=btDot(a,n);
+		const btScalar	k2=k*k;
+		if(k2&lt;sqd)
+		{
+			const btVector3	p=n*k;
+			if(	(btDot(btCross(a-p,b-p),q)&gt;0)&amp;&amp;
+				(btDot(btCross(b-p,c-p),q)&gt;0)&amp;&amp;
+				(btDot(btCross(c-p,a-p),q)&gt;0))
+			{			
+				prj=p;
+				sqd=k2;
+			}
+			else
+			{
+				ProjectOrigin(a,b,prj,sqd);
+				ProjectOrigin(b,c,prj,sqd);
+				ProjectOrigin(c,a,prj,sqd);
+			}
+		}
+	}
+}
+
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

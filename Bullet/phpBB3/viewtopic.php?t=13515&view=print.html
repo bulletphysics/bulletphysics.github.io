@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Is it safe to retrieve objects transforms from one thread while stepSimulation is in other thread?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Is it safe to retrieve objects transforms from one thread while stepSimulation is in other thread?</h2>
+		<p><a href="viewtopic.php%3Ft=13515.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13515</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Is it safe to retrieve objects transforms from one thread while stepSimulation is in other thread?</h3>
+				<div class="date">Posted: <strong>Mon Jan 09, 2023 6:53 am</strong></div>
+				<div class="author">by <strong>graphene9932</strong></div>
+				<div class="content">I do physical simulation and rendering in my program.<br>
+People recommend using fixed step simulation independently of rendering thread and framerate.<br>
+<br>
+So I decided to call stepSimulation in, let's say, thread 0 and rendering in thread 1.<br>
+To render btRigidBody objects I need their transforms. As far as I know body-&gt;getWorldTransform() is the best way of doing it.<br>
+<br>
+So, the question is following:<br>
+Is it safe to call getWorldTransform() while simulation is ongoing in other thread?<br>
+<br>
+I heard that modifying state of rigid bodies is not thread safe, but I haven't seen anything about reading their states.<br>
+<br>
+Sorry for my bad English</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Is it safe to retrieve objects transforms from one thread while stepSimulation is in other thread?</h3>
+				<div class="date">Posted: <strong>Tue Jan 10, 2023 10:40 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Actually <strong class="text-strong">body-&gt;getWorldTransform()</strong> is not necessarily the best way to do it.<br>
+<br>
+When your render rate is NOT the same as your simulation step rate you can get aliased results from <strong class="text-strong">body-&gt;getWorldTransform()</strong> which can sometimes produce a visible jitter in the motion of otherwise smoothly moving objects.  What you want is a predicted transform of the object that includes an extrapolation for any not-yet-sub-stepped time between your render time and the physics world's simulation time.  The typical way to do this is to use a <strong class="text-strong">btMotionState</strong> for each physical body that also has a render component.<br>
+<br>
+<strong class="text-strong">btMotionState</strong> is a pure virtual class with two methods that must be overridden:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13515&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>    // simulation requests outside context for new world transform
+    // called once per substep for active kinematic objects, but also once for all objects when body is first added to the world
+   ·virtual void getWorldTransform(btTransform&amp; worldTrans) const = 0;
+
+    // simulation stores the extrapolated world transform
+    // called once per substep for active dynamic objects
+   ·virtual void setWorldTransform(const btTransform&amp; worldTrans) = 0;
+</code></pre></div>
+I added the extra comments above in an attempt to summarize how the Bullet simulation uses the <strong class="text-strong">btMotionState</strong> API.<br>
+<br>
+Bullet provides one non-virtual class derived from <strong class="text-strong">btMotionState</strong> for you called <strong class="text-strong">btDefaultMotionState</strong>.  That may suit your needs, or you can write your own if you need special behavior.</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

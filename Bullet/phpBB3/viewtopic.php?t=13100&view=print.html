@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Rotating one object at the expense of the second</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Rotating one object at the expense of the second</h2>
+		<p><a href="viewtopic.php%3Ft=13100.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13100</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Tue Nov 03, 2020 6:24 pm</strong></div>
+				<div class="author">by <strong>leusd1000</strong></div>
+				<div class="content">I'm new to Bullet physics I have a problem. My task is related to the rotation of two objects. The task is to rotate the lower object and the upper object would rotate due to friction. At this point, the bottom object rotates as needed, but it doesn't affect the top object in any way. I tried to change different friction values, but it didn't work. I will be grateful for any help.<br>
+<br>
+Best regards, Dmitry.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Tue Nov 03, 2020 10:29 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">If I understand what you're asking (correct me if I'm wrong): you want to have a <strong class="text-strong">dynamic</strong> object dragged around when it sits on a rotating <strong class="text-strong">kinematic</strong> "floor".<br>
+<br>
+The trick is: not only do you have to rotate the <strong class="text-strong">kinematic</strong> floor but you must also set its velocities to agree with its movement.<br>
+<br>
+There is one other gotcha: don't forget to <strong class="text-strong">activate</strong> the kinematic object when you start rotating it.  That will guarantee the dynamic object will also be activated and will be moved during the "integration" portion of Bullet's <strong class="text-strong">btDynamicsWorld::stepSimulation()</strong>.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Wed Nov 04, 2020 3:31 pm</strong></div>
+				<div class="author">by <strong>leusd1000</strong></div>
+				<div class="content">Thanks for the quick response. Your advice really helped me, but there are still some problems. The problem was that I did not activate the kinematic object, but now there is a new problem. When trying to put a dynamic object<br>
+to kinematic, then a bounce of a dynamic object occurs (from which you need to get rid). I also added a setRestitution (0.0) property for both objects, but that didn't fix the problem (getting rid of the bounce). Here is I rotate kinematic object(body-&gt;object) on simulation step:<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13100&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>//rotation
+btQuaternion m_lastRot;
+btTransform tranf = body-&gt;object-&gt;getWorldTransform();
+tranf.getBasis().getRotation(m_lastRot);
+btQuaternion qx(btVector3(1, 0, 0), 1);
+const btScalar RADIANS_PER_DEGREE = 3.14159 / btScalar(180.0);
+btQuaternion q = btQuaternion(0.0f, 0.0f, 1.0f * RADIANS_PER_DEGREE);
+tranf.setRotation(q * m_lastRot);
+
+body-&gt;object-&gt;setWorldTransform(tranf);
+
+body-&gt;object-&gt;setCollisionFlags(body-&gt;object-&gt;getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+body-&gt;object-&gt;activate(true);			
+body-&gt;object-&gt;setRestitution(btScalar(0.0));
+</code></pre></div>
+
+And also setting restitution for dynamic object on simulation step:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13100&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>body-&gt;object-&gt;setRestitution(btScalar(0.0));
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Wed Nov 04, 2020 8:38 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Dunno what is causing your "bounce".  Does the dynamic object fall onto the kinematic floor and bounce only when it first touches?  Or does it bounce constantly as the simulation continues?  Perhaps it is a tunneling penetration resolution glitch: what are your steps, substeps, and min_num_substeps? what are your object sizes?  What shape types are you using for dynamic object and kinematic floor?<br>
+<br>
+You don't need to: setCollisionFlags(), activate(), or setRestitution() constantly after every step.  Those can be done just once.<br>
+<br>
+BTW, there is a nice trick you can use for kinematic objects: if the floor doesn't need to visually rotate but you want the dynamic object to move as if the floor were spinning, then you can just set the <strong class="text-strong">angularVelocity</strong> of the floor once (don't forget to activate it) and then don't bother to update the floor's transform.  The dynamic object's contact points will detect the floor's <strong class="text-strong">angularVelocity</strong> and move accordingly.  You can do this with <strong class="text-strong">linearVelocity</strong> to make "conveyor belts" which don't actually move, but do move the dynamic objects that touch them.  One gotcha here: the velocities you use must be larger than the sleeping thresholds, else the kinematic conveyor will be deactivated after 2 seconds, and probably also the dynamic objects that touch them.<br>
+<br>
+A nice way to animate a kinematic object is to derive a <strong class="text-strong">CustomAction</strong> from <strong class="text-strong">btActionInterface</strong> and then add the action to the <strong class="text-strong">World</strong>.  So for a spinning kinematic object the <strong class="text-strong">CustomAction</strong> might look like this:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13100&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>// dunno if this works or even compiles (I did not test)
+
+constexpr btScalar MIN_ANGULAR_SPEED = 1.0e-4;
+
+class KinematicSpinnerAction : public btActionInterface {
+public:
+    KinematicSpinnerAction(btRigidBody* body)
+        : m_body(body), m_axis(0.0, 0.0, 0.0), m_angularSpeed(0.0)
+    {
+        assert(m_body != nullptr);
+    }
+
+    void setAngularVelocity(const btVector3&amp; angularVelocity) {
+        m_angularSpeed = angularVelocity.length();
+        if (m_angularSpeed &gt; MIN_ANGULAR_SPEED) {
+            m_axis = (1.0 / m_angularSpeed) * angularVelocity;
+            m_body-&gt;setAngularVelocity(angularVelocity);
+        } else {
+            m_body-&gt;setAngularVelocity(btVector3(0.0, 0.0, 0.0));
+        }
+    }
+
+    void updateAction(btCollisionWorld* collisionWorld, btScalar deltaTimeStep) final override {
+        if (m_angularSpeed &gt; MIN_ANGULAR_SPEED) {
+            // always activate if necessary
+            if (!m_body-&gt;isActive()) {
+                m_body-&gt;activate();
+            }
+            // compute and set new transform
+            btTransform t = m_body-&gt;getTransform();
+            btScalar angle = deltaTimestep * m_angularSpeed;
+            btQuaternion dq(m_axis, angle);
+            t.setRotation(dq * t.getRotation());
+            m_body-&gt;setTransform(t);
+        }
+    }
+
+    void debugDraw(btIDebugDraw* debugDrawer) final override { }
+
+private:
+    btRigidBody* m_body;
+    btVector3 m_axis; // normalized axis
+    btScalar m_angularSpeed; // radians/sec
+};
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Fri Nov 27, 2020 7:20 pm</strong></div>
+				<div class="author">by <strong>leusd1000</strong></div>
+				<div class="content">Thanks for the helpful tips, but the problem was different. I first build a hard case with default settings, and then use the setWorldTransform function to place this body where I need it. So, after the first step, the speed of the body becomes higher, and because of this (as I understand it) there was a ricochet. Now I set the conversion with btDefaultMotionState at build time and it works.<br>
+But now I have another problem... During rotation, objects begin to slide from the rotating object by centrifugal force(as I understand). This is normal, this is how physics works, but even when the rotation velocity is very low and the force should not be enough to move objects, the second ones still slip. So how can I handle (reduce or turn off) that force or could it be the problem with something else?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Sat Nov 28, 2020 5:42 am</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I have two ideas:<br>
+<br>
+<strong class="text-strong">(1)</strong> Increase the friction coefficient on one or both objects?  I believe friction &gt; 1.0 is ok.<br>
+<br>
+<strong class="text-strong">(2)</strong> Increase the substep frequency (e.g. reduce the substep duration) toward 240 Hz if you aren't already there yet.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Mon Dec 07, 2020 6:03 pm</strong></div>
+				<div class="author">by <strong>leusd1000</strong></div>
+				<div class="content"><strong class="text-strong">(1)</strong> I tried different values for friction (0, 10] for both objects but that doesn't helped, still slips.<br>
+<strong class="text-strong">(2)</strong> I didn't get how it could helps, but it looks like this value is already set <div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13100&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code> stepSimulation(0.1f, 10000, 1.0f / 2400.0f);</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Rotating one object at the expense of the second</h3>
+				<div class="date">Posted: <strong>Mon Dec 07, 2020 8:35 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">You're calling <strong class="text-strong">stepSimulation(timeStep, maxSubSteps, subStep)</strong> with:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13100&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>fixed timesStep = 0.1f
+maxSubSteps = 1000
+fixed subStep = 1.0f / 2400.0f</code></pre></div>
+I haven't explored it myself, but there have been reports of strange stuff happening at <strong class="text-strong">subSteps</strong> smaller than 1/1000.  Meanwhile, if you don't have objects moving at "unreasonably high speeds" then such a short <strong class="text-strong">subStep</strong> is probably not necessary, maybe even wasteful (in terms of CPU cycles spent for simulation results).<br>
+<br>
+If you don't expect tunneling at subStep= 1/240 I would suggest trying it just to see what happens.  If that doesn't solve your problems then well... I might be out of ideas without either: <strong class="text-strong">(a)</strong> more info <strong class="text-strong">(*)</strong> or <strong class="text-strong">(b)</strong> debugging a running example.<br>
+<br>
+<strong class="text-strong">(*)</strong> When it comes to more info, these questions come to mind:<br>
+<br>
+<strong class="text-strong">(1)</strong> You're using convex shapes for things that move, right?<br>
+<strong class="text-strong">(2)</strong> What are you really trying to do?  Are you making a game (which just needs to be fun and might benefit from non-physical hacks) or are you trying to provide a physically accurate simulation?</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

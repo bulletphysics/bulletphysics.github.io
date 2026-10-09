@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; Disable bullet serializer</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>Disable bullet serializer</h2>
+		<p><a href="viewtopic.php%3Ft=6029.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=6029</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>Disable bullet serializer</h3>
+				<div class="date">Posted: <strong>Sat Nov 27, 2010 2:38 am</strong></div>
+				<div class="author">by <strong>simulacrum</strong></div>
+				<div class="content">Hello,<br>
+<br>
+Im using bullet with my own cmakefiles derived from the original ones but the serializer wouldn't compile on win7 64, most likely due to my own fault. Since I wont be needing the embedded serializer i decided to #ifdef serialization and their data structures out.<br>
+Disabling the serializer doesn't really save much. Performance is the same and the compiled library files are only marginally smaller. But if anyone else wants to disable it, whether because they dont need it or provide their own physics format, then using the patch below on the released 2.77 sources should add an option in the cmake configuration to disable the serializer.<br>
+<br>
+Patch tested on 64 bit linux without demos and extras enabled.<br>
+<br>
+(since a cant attach .patch or .txt files i had to zip it up)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Disable bullet serializer</h3>
+				<div class="date">Posted: <strong>Mon Nov 29, 2010 9:56 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">It would be good to fix your compile problems. Can you provide the errors?<br>
+<br>
+Thanks,<br>
+Erwin</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Disable bullet serializer</h3>
+				<div class="date">Posted: <strong>Tue Nov 30, 2010 1:30 am</strong></div>
+				<div class="author">by <strong>simulacrum</strong></div>
+				<div class="content">no problem.<br>
+its the same as the problem mentioned here: <a href="viewtopic.php%3Ft=5483.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... +precision</a><br>
+<br>
+compiling under a 64bit platform works fine but when using mingw-w64 there are 'precision errors' due to line 69 of btAlignedAllocator.cpp:
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=6029&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>(alignment - (unsigned long)(real + sizeof(void *))) &amp; (alignment-1);</code></pre></div>
+and elsewhere in the code (such as btSerializer)<br>
+<br>
+the problem is that the width of 'long' is 32bits under mingw-w64 whereas most of the time its 64bits which is why it compiles fine everywhere else. Since pointers are 64bits wide casting real + sizeof(void*) can easily go over the unsinged long width in mingw-w64, hence the error.<br>
+<br>
+In short its easily fixed by replacing 'unsigned long' with 'uintptr_t' under systems that provide stdint.h which windows doesnt so win64 needs ULONG_PTR instead. I've already changed it with the necessary #ifdef's getting the system values from cmake and it compiles without problem on mingw-w64, vs2008, and gcc 4.4 under linux.<br>
+<br>
+i should have a patch ready sometime today for the 2.77 release. i'll checkout the latest dev version too, though i dont know if this was fixed already.<br>
+<br>
+hope this helps.<br>
+goran</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: Disable bullet serializer</h3>
+				<div class="date">Posted: <strong>Tue Nov 30, 2010 5:33 am</strong></div>
+				<div class="author">by <strong>simulacrum</strong></div>
+				<div class="content">i created a new thread for the mingw-w64 patch which also has a patch to fix compilation issues on linux.<br>
+<br>
+<a href="viewtopic.php%3Ft=6045.html" class="postlink">http://bulletphysics.org/Bullet/phpBB3/ ... f=9&amp;t=6045</a></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

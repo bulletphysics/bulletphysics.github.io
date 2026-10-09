@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to get the depth info/images with p.getCameraImage</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to get the depth info/images with p.getCameraImage</h2>
+		<p><a href="viewtopic.php%3Ft=13370.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=13370</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to get the depth info/images with p.getCameraImage</h3>
+				<div class="date">Posted: <strong>Fri Feb 04, 2022 8:50 am</strong></div>
+				<div class="author">by <strong>Emkey</strong></div>
+				<div class="content">I am trying to get the images from the camera (Synthetic Camera RGB data and Synthetic Camera Depth data). I do get the RGB one, but the depth one is wrong. I cannot save it in a '.png' because of errors regarding the floats, so I save it in a '.tiff'. 
+<div class="inline-attachment">
+			
+		
+				<dl class="file">
+			<dt class="attach-image"><img src="download/file.php%3Fid=1908" class="postimage" alt="The views of the camera I want to get" onclick="viewableArea(this);" /></dt>
+			<dd><em>The views of the camera I want to get</em></dd>			<dd>image0.jpeg (1.35 MiB) Viewed 81238 times</dd>
+		</dl>
+		
+		
+			</div>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13370&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>img = p.getCameraImage(224, 224, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+rgbBuffer = img[2] 
+depthBuffer = img[3] # .astype(np.uint8) ?
+rgbim = Image.fromarray(rgbBuffer)
+depim = Image.fromarray(depthBuffer)
+rgbim.save('test_img/rgbtest'+str(counter)+'.png')
+depim.save('test_img/depth'+str(counter)+'.tiff')</code></pre></div>
+
+I am not sure if I need to work with the view and projection matrixes (I have tried, no result). Maybe I am managing wrong the depth data (depthBuffer). My main goal would be to save a PNG as depth image, and a JPG (although it does not really matter rn). But I can't seem to find the error because everything is working fine. But the depth image is wrong for some reason...</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to get the depth info/images with p.getCameraImage</h3>
+				<div class="date">Posted: <strong>Wed Feb 09, 2022 10:17 am</strong></div>
+				<div class="author">by <strong>msaid</strong></div>
+				<div class="content">I would like to help you but i would like to ask you please how can i make the synthetic and depth image work inside ?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to get the depth info/images with p.getCameraImage</h3>
+				<div class="date">Posted: <strong>Wed Feb 09, 2022 1:28 pm</strong></div>
+				<div class="author">by <strong>Emkey</strong></div>
+				<div class="content">Of course! (I am more or less managing, using open3d btw). <br>
+Try adding these lines!<br>
+   p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 1)<br>
+    p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 1)<br>
+    p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 1)</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to get the depth info/images with p.getCameraImage</h3>
+				<div class="date">Posted: <strong>Thu Feb 10, 2022 11:10 am</strong></div>
+				<div class="author">by <strong>msaid</strong></div>
+				<div class="content">Thanks it runs but still no image i dont know why actually</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to get the depth info/images with p.getCameraImage</h3>
+				<div class="date">Posted: <strong>Fri Feb 18, 2022 7:16 pm</strong></div>
+				<div class="author">by <strong>Erwin Coumans</strong></div>
+				<div class="content">The images display after calling 'getCameraImage'.<br>
+<br>
+See <a href="https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/examples/testrender_np.py" class="postlink">https://github.com/bulletphysics/bullet ... nder_np.py</a><br>
+<br>
+Here is a snippet that shows depth (requires matplotlib and numpy, next to pybullet)
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=13370&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>import matplotlib.pyplot as plt
+import numpy as np
+import pybullet as p
+import pybullet_data as pd
+
+p.connect(p.GUI)
+p.setAdditionalSearchPath(pd.getDataPath())
+p.loadURDF('plane.urdf')
+p.loadURDF('cube_small.urdf', basePosition=[0.0, 0.0, 0.025])
+
+width = 128
+height = 128
+
+fov = 60
+aspect = width / height
+near = 0.02
+far = 1
+
+view_matrix = p.computeViewMatrix([0, 0, 0.5], [0, 0, 0], [1, 0, 0])
+projection_matrix = p.computeProjectionMatrixFOV(fov, aspect, near, far)
+
+# Get depth values using the OpenGL renderer
+images = p.getCameraImage(width, height, view_matrix, projection_matrix, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+depth_buffer_opengl = np.reshape(images[3], [width, height])
+depth_opengl = far * near / (far - (far - near) * depth_buffer_opengl)
+
+# Get depth values using Tiny renderer
+images = p.getCameraImage(width, height, view_matrix, projection_matrix, renderer=p.ER_TINY_RENDERER)
+depth_buffer_tiny = np.reshape(images[3], [width, height])
+depth_tiny = far * near / (far - (far - near) * depth_buffer_tiny)
+
+p.disconnect()
+
+# Plot both images - should show depth values of 0.45 over the cube and 0.5 over the plane
+plt.subplot(1, 2, 1)
+plt.imshow(depth_opengl, cmap='gray', vmin=0, vmax=1)
+plt.title('OpenGL Renderer')
+
+plt.subplot(1, 2, 2)
+plt.imshow(depth_tiny, cmap='gray', vmin=0, vmax=1)
+plt.title('Tiny Renderer')
+
+plt.show()
+</code></pre></div></div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>

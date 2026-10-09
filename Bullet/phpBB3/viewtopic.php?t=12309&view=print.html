@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-gb">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="noindex" />
+
+<title>Real-Time Physics Simulation Forum &bull; How to create a homing missile?</title>
+
+<link href="styles/prosilver/theme/print.css" rel="stylesheet">
+<link href="styles/prosilver/theme/bidi.css" rel="stylesheet">
+</head>
+<body id="phpbb" class="ltr">
+<div id="wrap" class="wrap">
+	<a id="top" class="top-anchor" accesskey="t"></a>
+
+	<div id="page-header">
+		<h1>Real-Time Physics Simulation Forum</h1>
+		<p><br /><a href="./">https://pybullet.org/Bullet/phpBB3/</a></p>
+
+		<h2>How to create a homing missile?</h2>
+		<p><a href="viewtopic.php%3Ft=12309.html">https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12309</a></p>
+	</div>
+
+	<div id="page-body" class="page-body">
+		<div class="page-number">Page <strong>1</strong> of <strong>1</strong></div>
+					<div class="post">
+				<h3>How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Sun Aug 12, 2018 3:52 pm</strong></div>
+				<div class="author">by <strong>Hotshot5000</strong></div>
+				<div class="content">I have a rocket that moves with constant velocity. The linear velocity is always applied to the -Z axis(moving it forward).  I want to be able to generate torque impulses that nudge the orientation of the rocket towards the enemy ship. I have searched these (and other forums) for the answer and there are things that are still unclear to me. I've read about calculateVelocity in src/LinearMath/btTransformUtil.cpp (<a href="viewtopic.php%3Ff=9&amp;t=6618&amp;p=22997&amp;hilit=torque+needed+to+rotate.html#p22997" class="postlink">https://pybullet.org/Bullet/phpBB3/view ... ate#p22997</a>) but it doesn't seem to to what I need it to do. The linear velocity is constant and the returned angular velocity does not help me with the needed impulse.<br>
+<br>
+What I would like is a function that gets called every frame and adjusts the course. Right now I have the following (java code from libgdx using a bullet wrapper):<br>
+
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12309&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>ENG_Vector4D entityPos = entityProperties.getNode().getPosition();
+        ENG_Quaternion entityOrientation = entityProperties.getNode().getOrientation();
+        ENG_Vector4D othEntityPosition = otherEntityProperties.getNode().getPosition();
+        ENG_Quaternion othEntityOrientation = otherEntityProperties.getNode().getOrientation();
+        ENG_Vector4D diff = otherEntityProperties.getNode().getPosition().subAsVec(entityProperties.getNode().getPosition());
+        diff.normalize();
+
+        ENG_Quaternion rotationTo = entityProperties.getNode().getLocalInverseZAxis().getRotationTo(diff);
+        btTransformUtil.calculateVelocityQuaternion(new Vector3(entityPos.x, entityPos.y, entityPos.z),
+                new Vector3(othEntityPosition.x, othEntityPosition.y, othEntityPosition.z),
+                new Quaternion(entityOrientation.x, entityOrientation.y, entityOrientation.z, entityOrientation.w),
+                new Quaternion(rotationTo.x, rotationTo.y, rotationTo.z, rotationTo.w),
+                MainApp.getMainThread().getCurrentElapsedTime(), linearVelocity, angularVelocity);
+        
+        entityProperties.getRigidBody().applyTorqueImpulse(angularVelocity * some scaling); //This makes no sense, I know</code></pre></div>
+
+What I do is I take the missile position with its front vector and find the quaternion that represents the rotation needed to get from the front to pointing in the enemy direction. Then I find the angular velocity using the calculateVelocityQuaternion() function. I then use (in code not shown here) the angular velocity as a sort of direction in which to apply the torque and scale it to some values until it mostly follows the enemy ship. The problem with this (wrong) approach is that sometimes the missile is almost properly aligned but still gets an impulse to fully align, but instead of aligning it overshoots. After that, the impulse gets bigger so it overshoots even more in the other direction, completely missing the target spinning around like an idiot.<br>
+<br>
+Any idea on how I can gently slow down correctly when the missile is almost on target?<br>
+<br>
+Another constraint that I forgot about is that the missile has a maximum angular velocity, so the impulse must not make the missile rotate more distance per second than allowed. If that limit is reached then the missile should simply fly around the target, missing it.<br>
+<br>
+[EDIT]: The game takes place in space and there is no gravity. But there is angular and linear damping so things don't spin and move endlessly. I also checked the first answer from <a href="https://answers.unity.com/questions/48836/determining-the-torque-needed-to-rotate-an-object.html?page=1&amp;pageSize=5&amp;sort=votes" class="postlink">https://answers.unity.com/questions/488 ... sort=votes</a> but I am not able to find the equivalent values from PhysX in Bullet. Namely the inertiaTensorRotation and the inertiaTensor. It seems bullet only uses inverse values for these things.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Mon Aug 13, 2018 11:47 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">Here's an idea: slam the velocity rather than applying impulse.  I would do it something like below.  Note: I don't know java so consider the example to be pseudocode.  Dunno if it is bug-free: I didn't test.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12309&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>ENG_Vector4D newMissileDirection = targetProperties.getNode().getPosition().subAsVec(missileProperties.getNode().getPosition());
+newMissileDirection.normalize();
+
+ENG_Vector4D missileDirection = missileProperties.getNode().getLocalInverseZAxis();
+float cosAngle = missileDirection.dot(newMissileDirection);
+if (cosAngle &gt; 0.99) {
+    // properly aligned so we zero angularVelocity
+    missileProperties.getRigidBody().setAngularVelocity(Vector3(0.0, 0.0, 0.0));
+} else {
+    // need to change orientation
+    if (cosAngle &lt;= -1.0) {
+        // need to flip all the way around
+        // ignore this case
+    } else {
+        float angle = acosf(cosAngle);
+        ENG_Vector axis = missileDirection.cross(newMissileDirection);
+        axis.normalize();
+        Vector3 angularVelocity(axis.x, axis.y, axis.z);
+
+        // exponentially decay the angular velocity toward the new direction
+        // this is easy because when we assume the motion has exponential form the velocity is a scaled version of the displacement
+        //     x(t) = Xo * exp(-t / tau)
+        //     v(t) = (-1/tau) x(t)
+        // for our case we've already computed the correct direction so we don't need the extra negative sign
+
+        // tune the angular response by adjusting EXPONENTIAL_TIMESCALE which represents the time it takes for the rotation
+        // to reduce its offset by 1/e.  After only three timescales the orientation should be very close.
+        // Larger timescales are slower, smaller timescales are faster.
+        float EXPONENTIAL_TIMESCALE = 0.5;
+
+        // but if you go too small because you risk instability (never use timescales smaller than the substep).
+        float deltaTime = MainApp.getMainThread().getCurrentElapsedTime();
+        if (deltaTime &gt; EXPONENTIAL_TIMESCALE) {
+            EXPONENTIAL_TIMESCALE = 1.5 * deltaTime;
+        }
+
+        // compute angularVelocity
+        float angularSpeed = angle / EXPONENTIAL_TIMESCALE;
+        if (angularSpeed &gt; MAX_ANGULAR_SPEED) {
+            angularSpeed = MAX_ANGULAR_SPEED;
+        }
+        angularVelocity *= angularSpeed;
+
+        missileProperties.getRigidBody().setAngularVelocity(angularVelocity);
+    }
+}
+</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Wed Aug 15, 2018 5:12 pm</strong></div>
+				<div class="author">by <strong>Hotshot5000</strong></div>
+				<div class="content">Thank you very much. Initially I did it using angular velocity but didn't take into account the EXPONENTIAL_TIMESCALE so I was seeing instability. I though about solving it by going the torque route. Turns out it wasn't needed and I only made things harder for myself. Again, thank you! Now it's working correctly.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Sun Aug 19, 2018 9:19 pm</strong></div>
+				<div class="author">by <strong>PcChip</strong></div>
+				<div class="content"><blockquote class="uncited"><div>is that sometimes the missile is almost properly aligned but still gets an impulse to fully align, but instead of aligning it overshoots. After that, the impulse gets bigger so it overshoots even more in the other direction</div></blockquote>
+
+sounds like you could solve this by using a simple PID controller, there are two good ones easily found on github  <br>
+  <br>
+I used one to stabilize an (extremely simplified) quadrotor - <a href="https://www.youtube.com/watch?v=_W4QTdgoy8g" class="postlink">https://www.youtube.com/watch?v=_W4QTdgoy8g</a></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Fri Apr 08, 2022 5:09 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">I know that this is an old topic but here I go. I am using the code that DrLeviathan has provided with pretty good results. My problem is that once in a while the missile won't hit the target but will go around the target in a spherical loop. Any pointers what could be optimized to fix this?</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Mon Apr 18, 2022 8:17 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I have a few ideas for making a homing missile smarter:<br>
+<br>
+<strong class="text-strong">(1)</strong> Reduce the value of <strong class="text-strong">EXPONENTIAL_TIMESCALE</strong>.  This will make the missile orient toward its intended target faster.  However, this just effectively reduces the orbit radius of the problem you're seeing and it makes the homing behavior more aggressive.  If the missile seems too smart/aggressive at the start you could try making the <strong class="text-strong">EXPONENTIAL_TIMESCALE</strong> dynamic instead of constant: reduce its value as the missile gets closer.  If you reduce the effective orbit radius to be smaller than that of your target, then the missile should always be able to hit a stationary target.<br>
+<br>
+The logic above only orients the missile.  It doesn't know or use linear velocity.  You could make it smarter by measuring the relative velocity between missile and target, and using that to adjust the missile's orientation.  I see two levels of doing this:<br>
+<br>
+<strong class="text-strong">(2)</strong> Rather than have the missile orient toward the target's current world-frame position... you could compute the target's position + velocity in the missile's local-frame, approximate the missile's time to arrival (using simple <strong class="text-strong">time=distance/rate</strong> formula which assumes the missile is traveling straight at the target with constant velocity), then orient the missile toward the target's future position.<br>
+<br>
+<strong class="text-strong">(3)</strong> Make the missile over correct its angular orientation. That is, rather than aim its orientation toward the target's future local-frame position, it should orient itself so that it adjusts its linear velocity to point at the target's future position.  The best strategy for velocity reorientation depends on how the missile manages to change it: Is it only via its thruster? (e.g. is it in a vacuum with no air-foils?) or does it have guiding fins in an atmospheric substrate that help deflect sideways velocity component toward missile-forward direction?<br>
+<br>
+<strong class="text-strong">(4)</strong> Finally, if you want to make a really smart missile that almost never misses... you could implement <strong class="text-strong">(3)</strong> but replace the naive first-order ETA approximation mentioned in <strong class="text-strong">(2)</strong> with a higher-order system that takes into consideration variable linear velocity and variable orientation.  The math here gets complicated and would require derivation of second-order analytic equations and maybe even some numeric integration loops.</div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Tue Apr 19, 2022 3:44 pm</strong></div>
+				<div class="author">by <strong>drleviathan</strong></div>
+				<div class="content">I forgot to mention some other ideas:<br>
+<br>
+<strong class="text-strong">(5)</strong> As hinted at in <strong class="text-strong">(3)</strong> where I mentioned fins + atmospheric substrate... if you provide a stronger coupling between the missile's forward direction and its linear velocity, such that when it changes direction it also tends to re-orient the existing velocity to point along the missile's new forward direction (e.g. give it "fins"), then it will be more likely to spiral in on its target rather than just orbit.<br>
+<br>
+<strong class="text-strong">(6)</strong> Rather than using pure exponential decay, which slows down as x gets close to zero, you could add a constant-ish term to the velocity relation so that the slewing of the missile remains fast enough to close the final angle within a single substep.  This would give you two knobs to tune instead of just one, and could cause the missile to overshoot if the knobs are adjusted too agressively: that is, it might wobble along the straight path once it is pointed in the right direction.
+<div class="codebox"><p>Code: <a href="viewtopic.php%3Ft=12309&amp;view=print.html#" onclick="selectCode(this); return false;">Select all</a></p><pre><code>        //     x(t) = Xo * exp(-t / tau)
+        //     v(t) = (-1/tau) x(t) - C * x_direction(t)
+        // where x_direction = x / |x| (with care not to divide by zero)
+        // and C = some constant D when |x| &gt; D * substep, else C = |x| / substep (or zero here might work)</code></pre></div></div>
+			</div>
+			<hr />
+					<div class="post">
+				<h3>Re: How to create a homing missile?</h3>
+				<div class="date">Posted: <strong>Thu Apr 21, 2022 5:48 pm</strong></div>
+				<div class="author">by <strong>paokakis</strong></div>
+				<div class="content">Thank you for the replies DrLeviathan. I reduced the exponential time scale and the results are much better now</div>
+			</div>
+			<hr />
+			</div>
+
+	<div id="page-footer" class="page-footer">
+		<div class="page-number">All times are <span title="UTC">UTC</span><br />Page <strong>1</strong> of <strong>1</strong></div>
+			<div class="copyright">
+				<p>Powered by <a href="https://www.phpbb.com/">phpBB</a>&reg; Forum Software &copy; phpBB Limited
+				</p>
+							</div>
+	</div>
+</div>
+
+</body>
+</html>
